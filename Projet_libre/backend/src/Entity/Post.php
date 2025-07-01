@@ -34,7 +34,7 @@ class Post
     #[ORM\JoinColumn(nullable: false)]
     private ?TechGroup $techGroup = null;
 
-    #[ORM\OneToMany(mappedBy: "post", targetEntity: Comment::class, orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: "post", orphanRemoval: true)]
     private Collection $comments;
 
 

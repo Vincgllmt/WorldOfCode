@@ -39,13 +39,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: "updated_date", type: "datetime")]
     private \DateTime $updatedDate;
 
-    #[ORM\OneToMany(mappedBy: "author", targetEntity: Post::class, orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Post::class, mappedBy: "author", orphanRemoval: true)]
     private Collection $posts;
 
-    #[ORM\OneToMany(mappedBy: "author", targetEntity: Comment::class, orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: "author", orphanRemoval: true)]
     private Collection $comments;
 
-    #[ORM\OneToMany(mappedBy: "creator", targetEntity: TechGroup::class)]
+    #[ORM\OneToMany(targetEntity: TechGroup::class, mappedBy: "creator")]
     private Collection $groups;
 
     #[ORM\ManyToMany(targetEntity: TechGroup::class, mappedBy: 'users')]

@@ -78,19 +78,19 @@ final class UserController extends AbstractController
     #[Route('api/user/{id}', name: 'user_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un utilisateur',
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
-        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 properties: [
                     new OA\Property(property: 'username', type: 'string'),
-                    new OA\Property(property: 'role', type: 'string', description: 'Uniquement modifiable par un admin')
-                ]
+                    new OA\Property(property: 'role', description: 'Uniquement modifiable par un admin', type: 'string')
+                ],
+                type: 'object'
             )
         ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
         responses: [
             new OA\Response(
                 response: 200,

@@ -32,7 +32,7 @@ class TechGroup
     #[ORM\JoinTable(name: 'techgroup_user')]
     private Collection $users;
 
-    #[ORM\OneToMany(mappedBy: 'techGroup', targetEntity: Post::class, orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Post::class, mappedBy: 'techGroup', orphanRemoval: true)]
     private Collection $posts;
 
 

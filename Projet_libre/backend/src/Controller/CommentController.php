@@ -76,10 +76,10 @@ class CommentController extends AbstractController
         summary: 'Créer un commentaire',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(type: 'object', properties: [
+            content: new OA\JsonContent(properties: [
                 new OA\Property(property: 'content', type: 'string'),
                 new OA\Property(property: 'postId', type: 'integer')
-            ])
+            ], type: 'object')
         ),
         responses: [
             new OA\Response(response: 201, description: 'Commentaire créé', content: new Model(type: CommentResponse::class)),
@@ -118,13 +118,13 @@ class CommentController extends AbstractController
     #[Route('/{id}', name: 'comment_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un commentaire',
-        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(type: 'object', properties: [
+            content: new OA\JsonContent(properties: [
                 new OA\Property(property: 'content', type: 'string')
-            ])
+            ], type: 'object')
         ),
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Commentaire mis à jour', content: new Model(type: CommentResponse::class)),
             new OA\Response(response: 403, description: 'Non autorisé'),

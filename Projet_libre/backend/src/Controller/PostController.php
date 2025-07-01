@@ -86,11 +86,11 @@ class PostController extends AbstractController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 properties: [
                     new OA\Property(property: 'content', type: 'string'),
                     new OA\Property(property: 'groupId', type: 'integer')
-                ]
+                ],
+                type: 'object'
             )
         ),
         responses: [
@@ -164,19 +164,19 @@ class PostController extends AbstractController
     #[Route('/{id}', name: 'post_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un post',
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
-        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 properties: [
                     new OA\Property(property: 'content', type: 'string'),
                     new OA\Property(property: 'groupId', type: 'integer', nullable: true)
-                ]
+                ],
+                type: 'object'
             )
         ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
         responses: [
             new OA\Response(response: 200, description: 'Post mis à jour', content: new Model(type: PostResponse::class)),
             new OA\Response(response: 403, description: 'Non autorisé'),

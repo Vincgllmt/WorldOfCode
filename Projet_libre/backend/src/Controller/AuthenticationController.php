@@ -31,12 +31,12 @@ class AuthenticationController extends AbstractController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 required: ['username', 'password'],
                 properties: [
                     new OA\Property(property: 'username', type: 'string', example: 'alice'),
                     new OA\Property(property: 'password', type: 'string', example: '12345678')
-                ]
+                ],
+                type: 'object'
             )
         ),
         responses: [
@@ -92,12 +92,12 @@ class AuthenticationController extends AbstractController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 required: ['username', 'password'],
                 properties: [
                     new OA\Property(property: 'username', type: 'string', example: 'alice'),
                     new OA\Property(property: 'password', type: 'string', example: '12345678')
-                ]
+                ],
+                type: 'object'
             )
         ),
         responses: [
@@ -105,10 +105,10 @@ class AuthenticationController extends AbstractController
                 response: 200,
                 description: 'Authentification réussie',
                 content: new OA\JsonContent(
-                    type: 'object',
                     properties: [
                         new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJK...')
-                    ]
+                    ],
+                    type: 'object'
                 )
             ),
             new OA\Response(response: 400, description: 'Champs manquants'),

@@ -88,11 +88,11 @@ class TechGroupController extends AbstractController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 properties: [
                     new OA\Property(property: 'name', type: 'string'),
                     new OA\Property(property: 'description', type: 'string', nullable: true)
-                ]
+                ],
+                type: 'object'
             )
         ),
         responses: [
@@ -129,19 +129,19 @@ class TechGroupController extends AbstractController
     #[Route('/{id}', name: 'group_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un groupe',
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
-        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: 'object',
                 properties: [
                     new OA\Property(property: 'name', type: 'string'),
                     new OA\Property(property: 'description', type: 'string', nullable: true)
-                ]
+                ],
+                type: 'object'
             )
         ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
         responses: [
             new OA\Response(response: 200, description: 'Groupe mis à jour', content: new Model(type: TechGroupResponse::class)),
             new OA\Response(response: 403, description: 'Non autorisé'),
