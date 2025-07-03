@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Dto;
+
+use OpenApi\Attributes as OA;
+
+#[OA\Schema(
+    title: "PostResponse",
+    description: "Représente un post dans les réponses API"
+)]
+class PostResponse
+{
+    #[OA\Property(
+        description: "Identifiant unique du post",
+        type: "integer",
+        example: 12
+    )]
+    public int $id;
+
+    #[OA\Property(
+        description: "Contenu textuel du post",
+        type: "string",
+        example: "Voici un exemple de contenu"
+    )]
+    public string $content;
+
+    #[OA\Property(
+        description: "Date de création du post",
+        type: "string",
+        example: "2025-06-06 14:30:00"
+    )]
+    public string $createdAt;
+
+    #[OA\Property(
+        type: "string",
+        example: "2025-06-06 15:00:00",
+        nullable: true
+    )]
+    public ?string $updatedAt = null;
+
+    #[OA\Property(
+        description: "Identifiant de l’auteur du post",
+        type: "integer",
+        example: 3
+    )]
+    public int $authorId;
+
+    #[OA\Property(
+        description: "Nom de l’auteur du post",
+        type: "string",
+        example: "alice"
+    )]
+    public string $authorUsername;
+
+    #[OA\Property(
+        description: "Identifiant du groupe tech",
+        type: "integer",
+        example: 2
+    )]
+    public int $techGroupId;
+
+    #[OA\Property(
+        description: "Nom du groupe tech",
+        type: "string",
+        example: "Symfony"
+    )]
+    public string $techGroupName;
+}

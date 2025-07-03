@@ -1,13 +1,14 @@
 {
-  "name": "Mon Projet DevContainer",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "backend",
+  "name": "NextJS Frontend DevContainer",
+  "dockerComposeFile": "../../docker-compose.yaml",
+  "service": "frontend",
   "workspaceFolder": "/app",
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
         "ms-azuretools.vscode-docker"
       ]
     }

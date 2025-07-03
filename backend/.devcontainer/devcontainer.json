@@ -1,0 +1,16 @@
+{
+  "name": "Symfony Backend DevContainer",
+  "dockerComposeFile": "../compose.yaml",
+  "service": "backend",
+  "workspaceFolder": "/var/www/backend",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "junstyle.php-cs-fixer",
+        "xdebug.php-debug",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}

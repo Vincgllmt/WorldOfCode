@@ -3,35 +3,48 @@ version: '3.8'
 services:
   backend:
     build: ./backend
+    container_name: projet_backend
     ports:
       - "9000:9000"
     volumes:
-      - .:/var/www/backend
+      - ./backend:/var/www/backend
     depends_on:
       - db
+    networks:
+      - projet_network
+
+  frontend:
+    build: ./frontend
+    container_name: projet_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - backend
+    networks:
+      - projet_network
 
   db:
     image: mysql:8.0
-    container_name: quest_mysql_8
+    container_name: projet_db
     ports:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: quest_web
+      MYSQL_DATABASE: projet_web
       MYSQL_USER: application
       MYSQL_PASSWORD: password
     volumes:
-      - mysql_data:/var/lib/mysql
-
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: npm run dev
+      - db_data:/var/lib/mysql
+    networks:
+      - projet_network
 
 volumes:
-  db-mysql_data:
+  db_data:
+
+networks:
+  projet_network:
+    driver: bridge
