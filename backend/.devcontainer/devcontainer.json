@@ -1,8 +1,8 @@
 {
   "name": "Symfony Backend DevContainer",
-  "dockerComposeFile": "../compose.yaml",
+  "dockerComposeFile": "../../docker-compose.yaml",
   "service": "backend",
-  "workspaceFolder": "/var/www/backend",
+  "workspaceFolder": "/app",
   "customizations": {
     "vscode": {
       "extensions": [
