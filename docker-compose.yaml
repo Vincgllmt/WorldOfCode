@@ -3,13 +3,15 @@ services:
     build: ./backend
     container_name: projet_backend
     ports:
-      - "9000:9000"
+      - "8090:8090"
     volumes:
       - ./backend:/var/www/backend
     depends_on:
       - db
     networks:
       - projet_network
+    working_dir: /var/www/backend
+    command: php -S 0.0.0.0:8090 -t public
 
   frontend:
     build: ./frontend
