@@ -25,7 +25,7 @@ class AuthenticationController extends AbstractController
         $this->userMapper = $userMapper;
     }
 
-    #[Route('api/register', name: 'register', methods: ['POST'])]
+    #[Route('api/register', name: 'register', methods: ['POST', 'OPTIONS'])]
     #[OA\Post(
         summary: 'Créer un nouveau compte utilisateur',
         requestBody: new OA\RequestBody(
