@@ -2,12 +2,12 @@
 
 import { useForm } from 'react-hook-form'
 import { useContext } from 'react'
-import { AdminAuthContext } from '@/src/contexts/AdminAuthContext'
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card'
-import { Input } from '@/src/components/ui/input'
-import { Label } from '@/src/components/ui/label'
-import { Button } from '@/src/components/ui/button'
-import type { LoginCredentials } from '@/src/interfaces/Authentification'
+import { AdminAuthContext } from '@/contexts/AdminAuthContext'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import type { LoginCredentials } from '@/interfaces/Authentification'
 
 export default function AdminLoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>()
@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label htmlFor="username">Nom d'utilisateur</Label>
+              <Label htmlFor="username">User Name</Label>
               <Input
                 id="username"
                 type="text"
