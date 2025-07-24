@@ -46,17 +46,8 @@ Cloner le projet et installer les dépendances :
 ```bash
 git clone git@rendu-git.etna-alternance.net:module-9999/activity-53534/group-1056533.git world-of-code
 cd world-of-code
-#Backend
-cd backend
-composer install
-composer run dev
-#Frontend
-cd ../frontend
-npm install
-npm run dev
+docker compose up
 ```
-> 🔧 *Changer une fois l'architecture complète.*
-
 ## 🧪 Tests
 
 ``` Bash
