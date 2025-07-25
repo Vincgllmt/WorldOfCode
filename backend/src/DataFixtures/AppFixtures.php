@@ -34,7 +34,7 @@ class AppFixtures extends Fixture
         $users = [$admin];
 
         // --- AUTRES USERS ---
-        for ($i = 0; $i < 90; $i++) {
+        for ($i = 0; $i < 30; $i++) {
             $user = new User();
             $user->setUsername($faker->userName);
             $user->setRole(UserRole::ROLE_USER);
@@ -42,71 +42,7 @@ class AppFixtures extends Fixture
             $user->setPassword($hashed);
             $manager->persist($user);
             $users[] = $user;
-        }
-
-        // --- GROUPS ---
-        $techNames = [
-
-            'React',
-            'Vue.js',
-            'Angular',
-            'Svelte',
-            'Next.js',
-            'Node.js',
-            'Symfony',
-            'Laravel',
-            'Spring Boot',
-            'Django',
-            'Docker',
-            'Kubernetes',
-            'Terraform',
-            'Ansible',
-            'GitLab CI',
-            'AWS',
-            'GCP',
-            'Azure',
-            'Heroku',
-            'Vercel',
-            'PostgreSQL',
-            'MongoDB',
-            'ElasticSearch',
-            'Redis',
-            'RabbitMQ'
-        ];
-
-        $groups = [];
-        foreach ($techNames as $name) {
-            $group = new TechGroup();
-            $group->setName($name);
-            $group->setDescription($faker->sentence());
-            $group->setCreator($faker->randomElement($users));
-            $manager->persist($group);
-            $groups[] = $group;
-        }
-
-
-        // --- POSTS ---
-        $posts = [];
-        foreach ($groups as $group) {
-            for ($i = 0; $i < rand(3, 15); $i++) {
-                $post = new Post();
-                $post->setContent($faker->paragraph);
-                $post->setAuthor($faker->randomElement($users));
-                $post->setTechGroup($group);
-                $manager->persist($post);
-                $posts[] = $post;
-            }
-        }
-
-        // --- COMMENTS ---
-        foreach ($posts as $post) {
-            for ($i = 0; $i < rand(2, 15); $i++) {
-                $comment = new Comment();
-                $comment->setContent($faker->sentence);
-                $comment->setAuthor($faker->randomElement($users));
-                $comment->setPost($post);
-                $manager->persist($comment);
-            }
+            $this->addReference('user_' . $i, $user);
         }
 
         $manager->flush();
