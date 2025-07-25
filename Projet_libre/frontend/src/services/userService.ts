@@ -3,7 +3,7 @@ import { getCookie } from 'cookies-next'
 import { User, UpdateUserPayload } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const getAllUsers = async (): Promise<User[]> => {
   const token = getCookie('token')

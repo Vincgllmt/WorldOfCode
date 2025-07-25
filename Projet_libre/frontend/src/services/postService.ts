@@ -1,7 +1,7 @@
 import { getCookie } from 'cookies-next'
 import { CreatePostPayload, Post, UpdatePostPayload } from '@/interfaces/post'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const createPost = async (data: CreatePostPayload): Promise<Post> => {
   const token = getCookie('token')
