@@ -12,47 +12,38 @@ export const AdminAuthContext = createContext<AdminAuthContextType | undefined>(
 
 export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    const storedToken = getCookie('token')
-    if (storedToken) {
-      setToken(storedToken as string)
-      authService
-        .getMe(storedToken as string)
-        .then(user => {
-          if (user.role !== 'ROLE_ADMIN') {
-            toast.error("Accès non autorisé")
-            router.push('/unauthorized')
-          } else {
-            setUser(user)
-          }
-        })
-        .catch(() => {
-          logout()
-        })
-        .finally(() => setIsLoading(false))
-    } else {
-      setIsLoading(false)
-    }
+    const token = getCookie('token')
+    if (!token) return setIsLoading(false)
+
+    authService.getMe(token as string)
+      .then(user => {
+        if (user.role !== 'ROLE_ADMIN') {
+          toast.error("Accès non autorisé")
+          router.push('/unauthorized')
+        } else {
+          setUser(user)
+        }
+      })
+      .catch(() => logout())
+      .finally(() => setIsLoading(false))
   }, [])
 
   const login = async (credentials: LoginCredentials) => {
     try {
       const authenticatedUser = await authService.login(credentials)
-      const storedToken = getCookie('token')
-      setUser(authenticatedUser)
-      setToken(storedToken as string)
 
       if (authenticatedUser.role !== 'ROLE_ADMIN') {
         toast.error('Vous n’avez pas accès à l’interface admin')
         return router.push('/unauthorized')
       }
 
+      setUser(authenticatedUser)
       toast.success('Connexion admin réussie ✅')
-      router.push('/admin') // redirection vers la page admin de ton choix
+      router.push('/')
     } catch (error) {
       toast.error('Échec de la connexion ❌')
       console.error(error)
@@ -62,14 +53,13 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout()
     setUser(null)
-    setToken(null)
     deleteCookie('token')
     toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }
 
   return (
-    <AdminAuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AdminAuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
       {children}
     </AdminAuthContext.Provider>
   )

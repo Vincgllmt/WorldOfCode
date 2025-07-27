@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label htmlFor="username">Nom d'utilisateur</Label>
+              <Label htmlFor="username">User Name</Label>
               <Input
                 id="username"
                 type="text"

@@ -1,16 +1,28 @@
-import { Providers } from '@/src/providers'
-import { AdminAuthProvider } from '@/src/contexts/AdminAuthContext'
-import { AdminLayoutShell } from '@/src/components/layout/AdminLayoutShell'
+'use client'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import './globals.css'
+import { ReactNode } from 'react'
+import { Toaster } from 'react-hot-toast'
+import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Geist, Geist_Mono } from 'next/font/google'
+
+// Fonts
+const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
+const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
+
+const queryClient = new QueryClient()
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
-      <body className="bg-gray-50 text-black antialiased">
-        <Providers>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-gray-50 text-black antialiased`}>
+        <QueryClientProvider client={queryClient}>
           <AdminAuthProvider>
-            <AdminLayoutShell>{children}</AdminLayoutShell>
+            {children}
+            <Toaster position="top-right" />
           </AdminAuthProvider>
-        </Providers>
+        </QueryClientProvider>
       </body>
     </html>
   )
