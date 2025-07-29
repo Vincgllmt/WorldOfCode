@@ -1,38 +1,61 @@
 'use client'
 
-import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useUpdateUser } from '@/hooks/useUsers'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { useUser, useUserGroups } from '@/hooks/useUsers'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ProfileDetails() {
   const { user } = useAuth()
-  const [username, setUsername] = useState(user?.username || '')
-  const updateUser = useUpdateUser()
+  const { data, isLoading, error } = useUser(user?.id)
+  const { data: groups, isLoading: loadingGroups } = useUserGroups(user?.id)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) return
-      updateUser.mutate({
-    id: user.id,
-    username,
-    role: user.role,
-  })
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-6 w-64" />
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return <p className="text-red-500">Erreur lors du chargement du profil.</p>
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="username">Nom</Label>
-        <Input
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p>
+          <strong>Nom d’utilisateur :</strong> {data.username}
+        </p>
+        <p>
+          <strong>Rôle :</strong> {data.role}
+        </p>
+        <p>
+          <strong>Date de création :</strong>{' '}
+          {new Date(data.creationDate).toLocaleDateString()}
+        </p>
+        <p>
+          <strong>Dernière mise à jour :</strong>{' '}
+          {new Date(data.updateDate).toLocaleDateString()}
+        </p>
       </div>
-      <Button type="submit">Mettre à jour</Button>
-    </form>
+
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold mt-4">Groupes rejoints</h2>
+        {loadingGroups ? (
+          <Skeleton className="h-6 w-60" />
+        ) : groups && groups.length > 0 ? (
+          <ul className="list-disc list-inside">
+            {groups.map((group) => (
+              <li key={group.id}>{group.name}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">Aucun groupe rejoint.</p>
+        )}
+      </div>
+    </div>
   )
 }

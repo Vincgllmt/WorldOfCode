@@ -1,14 +1,14 @@
-'use client'
-
 import ProfileDetails from '@/components/account/ProfileDetails'
-import DeleteAccountButton from '@/components/account/DeleteAccountButton'
+import UpdateProfileForm from '@/components/account/UpdateProfileForm'
 
 export default function ProfilePage() {
   return (
-    <div className="max-w-xl mx-auto mt-10 space-y-6">
-      <h1 className="text-2xl font-bold">Mon profil</h1>
-      <ProfileDetails />
-      <DeleteAccountButton />
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Mon profil</h1>
+      <div>
+        <ProfileDetails />
+        <UpdateProfileForm />
+      </div>
     </div>
   )
 }
