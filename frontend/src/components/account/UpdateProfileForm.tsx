@@ -1,39 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useUpdateUser } from '@/hooks/useUsers'
-import { Input } from '@/components/ui/input'
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { AuthenticatedUser } from '@/interfaces/Authentification'
+import UpdatePasswordForm from './UpdatePasswordForm'
 
-type Props = {
-  user: AuthenticatedUser
-}
-
-export default function UpdateProfileForm({ user }: Props) {
-  const [username, setUsername] = useState(user.username)
-  const [password, setPassword] = useState('')
-  const updateUser = useUpdateUser()
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    updateUser.mutate({ id: user.id, username, password })
-  }
-
+export default function UpdateProfileForm() {
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Input
-        label="Nom d'utilisateur"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <Input
-        label="Nouveau mot de passe"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <Button type="submit">Mettre à jour</Button>
-    </form>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">Modifier mon mot de passe</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg space-y-6">
+        <DialogTitle>Modifier mon mot de passe</DialogTitle>
+        <hr />
+        <UpdatePasswordForm />
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,3 +1,4 @@
+// frontend/src/interfaces/user.ts
 export interface User {
   id: number
   username: string
@@ -18,4 +19,10 @@ export interface UserGroup {
   description: string
   creatorId: number
   createdAt: string
+}
+
+export interface ChangePasswordPayload {
+  id: number
+  currentPassword: string
+  newPassword: string
 }
