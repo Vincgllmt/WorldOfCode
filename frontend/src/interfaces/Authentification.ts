@@ -1,4 +1,4 @@
-
+// frontend/src/interfaces/Authentification.ts
 export interface LoginCredentials {
   username: string
   password: string

@@ -1,4 +1,4 @@
-
+// frontend/src/interfaces/AuthContext.ts
 import { AuthenticatedUser, LoginCredentials } from './Authentification';
 
 export interface AuthContextType {
