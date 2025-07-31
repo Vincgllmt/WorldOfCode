@@ -10,7 +10,10 @@ export default function PostList() {
 
   return (
     <div className="space-y-4">
-      {posts?.map((post) => (
+     {posts
+      ?.slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((post) => (
         <PostItem key={post.id} post={post} />
       ))}
     </div>

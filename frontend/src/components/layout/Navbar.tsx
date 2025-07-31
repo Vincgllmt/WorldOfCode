@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -58,10 +57,15 @@ export default function Navbar() {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="font-medium cursor-pointer">
+                  {user.username}
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>Déconnexion</DropdownMenuItem>
             </DropdownMenuContent>
+
           </DropdownMenu>
         )}
       </div>

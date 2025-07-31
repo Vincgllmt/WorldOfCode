@@ -16,7 +16,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export default function UpdatePasswordForm() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const changePassword = useChangePassword()
 
   const {
@@ -33,7 +33,10 @@ export default function UpdatePasswordForm() {
       changePassword.mutate(
         { id: user.id, ...values },
         {
-          onSuccess: () => reset(),
+          onSuccess: () => {
+            reset()
+            logout() 
+          },
         }
       )
     }
