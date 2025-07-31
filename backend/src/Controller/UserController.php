@@ -5,6 +5,7 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Repository\UserRepository;
 use Symfony\Component\HttpFoundation\Request;
 use App\Enum\UserRole;
@@ -14,6 +15,7 @@ use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Dto\TechGroupResponse;
 use App\Mapper\TechGroupMapper;
+
 
 final class UserController extends AbstractController
 {
@@ -165,6 +167,68 @@ final class UserController extends AbstractController
 
         return $this->json(['success' => true]);
     }
+    ####
+    ##
+    ####
+    #[Route('api/user/{id}/password', name: 'user_change_password', methods: ['PUT'])]
+    #[OA\Put(
+        summary: 'Modifier son mot de passe',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'currentPassword', type: 'string'),
+                    new OA\Property(property: 'newPassword', type: 'string')
+                ],
+                type: 'object'
+            )
+        ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Mot de passe mis à jour'),
+            new OA\Response(response: 400, description: 'Requête invalide'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'User')]
+    public function changePassword(
+        int $id,
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher
+    ): JsonResponse {
+        $currentUser = $this->getUser();
+        $user = $this->repo->find($id);
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        if (!$this->isGranted('ROLE_ADMIN') && $user !== $currentUser) {
+            return $this->json(['error' => 'Access denied'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $currentPassword = $data['currentPassword'] ?? null;
+        $newPassword = $data['newPassword'] ?? null;
+
+        if (!$currentPassword || !$newPassword) {
+            return $this->json(['error' => 'Missing parameters'], 400);
+        }
+
+        if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
+            return $this->json(['error' => 'Current password is incorrect'], 403);
+        }
+
+        $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
+        $this->repo->save($user, true);
+
+        return $this->json(['message' => 'Password updated successfully']);
+    }
+
+
     ####
     ##
     ####

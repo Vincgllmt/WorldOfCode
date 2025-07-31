@@ -1,6 +1,6 @@
-
+// frontend/src/services/userService.ts
 import { getCookie } from 'cookies-next'
-import { User, UpdateUserPayload } from '@/interfaces/user'
+import { User, UpdateUserPayload, ChangePasswordPayload } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
@@ -72,6 +72,26 @@ export async function getUserById(userId: number): Promise<User> {
 
   if (!res.ok) {
     throw new Error('Erreur lors de la récupération de l’utilisateur')
+  }
+
+  return res.json()
+}
+
+export const changeUserPassword = async ({id, currentPassword, newPassword,}: ChangePasswordPayload): Promise<{ message: string }> => {
+  const token = getCookie('token')
+
+  const res = await fetch(`${API_URL}/api/user/${id}/password`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error?.error || 'Erreur lors du changement de mot de passe')
   }
 
   return res.json()

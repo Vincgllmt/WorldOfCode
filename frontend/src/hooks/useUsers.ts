@@ -1,7 +1,7 @@
-
+// frontend/src/hooks/useUsers.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById } from '@/services/userService'
-import { UpdateUserPayload } from '@/interfaces/user'
+import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById, changeUserPassword } from '@/services/userService'
+import { ChangePasswordPayload, UpdateUserPayload } from '@/interfaces/user'
 import toast from 'react-hot-toast'
 import { Group } from '@/interfaces/group'
 
@@ -62,5 +62,17 @@ export const useUser = (userId: number | undefined) => {
     queryKey: ['user', userId],
     queryFn: () => getUserById(userId!),
     enabled: typeof userId === 'number',
+  })
+}
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (data: ChangePasswordPayload) => changeUserPassword(data),
+    onSuccess: () => {
+      toast.success('Mot de passe mis à jour 🔐')
+    },
+    onError: () => {
+      toast.error('Erreur lors de la mise à jour du mot de passe ❌')
+    }
   })
 }
