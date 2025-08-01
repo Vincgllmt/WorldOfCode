@@ -1,4 +1,4 @@
-// frontend/src/services/userService.ts
+
 import { getCookie } from 'cookies-next'
 import { User, UpdateUserPayload, ChangePasswordPayload } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'

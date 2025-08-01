@@ -1,4 +1,3 @@
-// frontend/src/interfaces/user.ts
 export interface User {
   id: number
   username: string
