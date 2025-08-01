@@ -1,4 +1,3 @@
-// frontend/src/hooks/useUsers.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById, changeUserPassword } from '@/services/userService'
 import { ChangePasswordPayload, UpdateUserPayload } from '@/interfaces/user'
