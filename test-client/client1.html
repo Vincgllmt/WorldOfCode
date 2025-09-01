@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Client 1</title>
+</head>
+
+<body>
+    <h1>Client 1</h1>
+    <div id="chat"></div>
+    <input id="msg" placeholder="Type a message" />
+    <button id="send">Send</button>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io("http://localhost:8081");
+        const chatBox = document.getElementById("chat");
+        const msgInput = document.getElementById("msg");
+        const btnSend = document.getElementById("send");
+        const username = "Client 1";
+
+        socket.on("chat_message", (data) => {
+            const p = document.createElement("p");
+            p.textContent = `${data.user}: ${data.text}`;
+            chatBox.appendChild(p);
+        });
+
+        btnSend.onclick = () => {
+            const text = msgInput.value.trim();
+            if (text) {
+                socket.emit("chat_message", { user: username, text });
+                msgInput.value = "";
+            }
+        };
+    </script>
+</body>
+
+</html>
