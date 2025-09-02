@@ -1,6 +1,8 @@
 import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
+import { pool } from "./db.js";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -32,19 +34,12 @@ io.on("connection", (socket) => {
     const userId = socket.data.userId;
     console.log(`🔌 connected: ${socket.id} (user: ${userId})`);
 
-    /**
-     * --- SIMPLE CHAT GLOBAL ---
-     * pour les test à supprimer
-     */
-    socket.on("chat_message", ({ user, text }) => {
-        if (!text) return;
-        console.log(`💬 [GLOBAL] ${user}: ${text}`);
-        io.emit("chat_message", { user, text });
-    });
 
     /**
-     * --- CONVERSATION MODE (ROOMS) ---
+     * --- CONVERSATION MODE (2 users) ---
      */
+
+    // TODO: permet de recevoir les présences (qui est en ligne dans la conv).
     socket.on("join_conversation", ({ conversation_id }) => {
         if (!conversation_id) return;
         socket.join(conversation_id);
@@ -60,7 +55,7 @@ io.on("connection", (socket) => {
             status: "joined",
         });
     });
-
+    // TODO: permet de recevoir les présences (qui est en ligne dans la conv).
     socket.on("leave_conversation", ({ conversation_id }) => {
         if (!conversation_id) return;
         socket.leave(conversation_id);
@@ -73,24 +68,56 @@ io.on("connection", (socket) => {
         });
     });
 
-    socket.on("send_message", ({ conversation_id, temp_id, body, type }) => {
-        if (!conversation_id || !body) return;
+    // --- PERSIST MESSAGE ---
+    socket.on("send_message", async ({ conversation_id, temp_id, body, type }) => {
+        try {
+            if (!conversation_id || !body) return;
 
-        const payload = {
-            id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            conversation_id,
-            sender_id: userId,
-            body,
-            type: type || "text",
-            created_at: new Date().toISOString(),
-        };
+            const senderId = Number(userId);
+            if (!Number.isInteger(senderId)) {
+                socket.emit("ack", { temp_id, error: "unauthorized_user" });
+                return;
+            }
 
-        socket.emit("ack", { temp_id, ...payload });
+            const [rows] = await pool.execute(
+                "SELECT 1 FROM msg_conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1",
+                [conversation_id, senderId]
+            );
+            if (rows.length === 0) {
+                socket.emit("ack", { temp_id, error: "not_in_conversation" });
+                return;
+            }
 
-        // broadcast to the room
-        io.to(conversation_id).emit("message_created", payload);
+            const id = crypto.randomUUID();
+            const created = new Date();
+
+
+            await pool.execute(
+                `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+                [id, conversation_id, senderId, body, type || "text", created]
+            );
+            const payload = {
+                id,
+                conversation_id,
+                sender_id: senderId,
+                body,
+                type: type || "text",
+                created_at: created.toISOString(),
+            };
+
+
+            socket.emit("ack", { temp_id, ...payload });
+
+
+            io.to(conversation_id).emit("message_created", payload);
+        } catch (err) {
+            console.error("send_message error:", err);
+            socket.emit("ack", { temp_id, error: "db_insert_failed" });
+        }
     });
 
+    // TODO: permet de voir quand uhn utilisateur écrit 
     socket.on("typing", ({ conversation_id, is_typing }) => {
         if (!conversation_id) return;
         socket.to(conversation_id).emit("typing", {
@@ -99,12 +126,6 @@ io.on("connection", (socket) => {
             is_typing: Boolean(is_typing),
         });
     });
-
-    /**
-     * --- PING TEST ---
-     */
-    socket.on("ping_app", () => socket.emit("pong_app", { now: Date.now() }));
-
     socket.on("disconnect", () => {
         for (const [convId, set] of conversations.entries()) {
             if (set.has(socket.id)) {
