@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Client 2</title>
+</head>
+
+<body>
+    <h1>Client 2</h1>
+    <input id="msg" placeholder="Write message..." oninput="notifyTyping()" />
+    <button onclick="send()">Send</button>
+    <pre id="log"></pre>
+    <div id="typing"></div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io("http://localhost:8081", { auth: { userId: 67 } });
+        const convId = "06226d8f-999c-49f4-86ba-ce980ffc13c0"
+
+        socket.on("connect", () => {
+            log("✅ Connected as user 67");
+            socket.emit("join_conversation", { conversation_id: convId });
+        });
+        // Nettoyer pour éviter doublons
+        socket.off("message_created");
+        socket.off("ack");
+        socket.off("typing");
+
+
+        socket.on("message_created", (data) => {
+            if (data.sender_id === 67) return; // évite doublon pour toi
+            log("💬 " + data.body);
+        });
+
+        socket.on("ack", (data) => {
+            log("💬 " + data.body); // affiche ton message confirmé
+        });
+
+
+        function send() {
+            const body = document.getElementById("msg").value;
+            socket.emit("send_message", { conversation_id: convId, temp_id: Date.now(), body });
+        }
+
+        function log(m) {
+            const el = document.getElementById("log");
+            el.textContent += m + "\n";
+        }
+    </script>
+</body>
+
+</html>
