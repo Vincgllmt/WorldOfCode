@@ -91,7 +91,7 @@ io.on("connection", (socket) => {
             const id = crypto.randomUUID();
             const created = new Date();
 
-
+            console.log(body)
             await pool.execute(
                 `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
