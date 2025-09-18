@@ -252,4 +252,59 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
+
+    #[Route('/{id}/share', name: 'post_share', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Partager un post existant',
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'content', type: 'string', nullable: true),
+                    new OA\Property(property: 'groupId', type: 'integer', nullable: true)
+                ],
+                type: 'object'
+            )
+        ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Post partagé', content: new Model(type: PostResponse::class)),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    public function share(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $original = $this->repo->find($id);
+        if (!$original) {
+            return $this->json(['error' => 'Original post not found'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $content = $data['content'] ?? null;
+        $groupId = $data['groupId'] ?? null;
+
+        $group = null;
+        if ($groupId) {
+            $group = $this->groupRepo->find($groupId);
+            if (!$group) {
+                return $this->json(['error' => 'Group not found'], 404);
+            }
+        } else {
+            $group = $original->getTechGroup(); // défaut : même groupe que l’original
+        }
+
+        $post = new Post();
+        $post->setAuthor($this->getUser());
+        $post->setContent($content ?? '');
+        $post->setSharedFrom($original);
+        $post->setTechGroup($group);
+
+        $this->repo->save($post, true);
+
+        return $this->json($this->mapper->toDto($post), 201);
+    }
 }

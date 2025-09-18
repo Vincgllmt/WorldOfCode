@@ -37,6 +37,9 @@ class Post
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: "post", orphanRemoval: true)]
     private Collection $comments;
 
+    #[ORM\ManyToOne(targetEntity: Post::class)]
+    #[ORM\JoinColumn(name: "shared_from_id", referencedColumnName: "id", nullable: true, onDelete: "SET NULL")]
+    private ?Post $sharedFrom = null;
 
     public function __construct()
     {
@@ -86,6 +89,19 @@ class Post
     {
         return $this->author;
     }
+
+
+    public function getSharedFrom(): ?Post
+    {
+        return $this->sharedFrom;
+    }
+
+    public function setSharedFrom(?Post $post): self
+    {
+        $this->sharedFrom = $post;
+        return $this;
+    }
+
 
     public function setAuthor(User $author): self
     {
