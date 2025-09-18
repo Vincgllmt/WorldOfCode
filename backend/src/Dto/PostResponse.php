@@ -65,4 +65,11 @@ class PostResponse
         example: "Symfony"
     )]
     public string $techGroupName;
+
+    #[OA\Property(
+        description: "Post original partagé (si applicable)",
+        type: "object",
+        nullable: true
+    )]
+    public ?SharedPostResponse $sharedFrom = null;
 }
