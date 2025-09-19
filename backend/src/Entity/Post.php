@@ -41,9 +41,16 @@ class Post
     #[ORM\JoinColumn(name: "shared_from_id", referencedColumnName: "id", nullable: true, onDelete: "SET NULL")]
     private ?Post $sharedFrom = null;
 
+
+    #[ORM\OneToMany(targetEntity: Like::class, mappedBy: "post", orphanRemoval: true)]
+    private Collection $likes;
+
+
     public function __construct()
     {
         $this->comments = new ArrayCollection();
+
+        $this->likes = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -125,5 +132,15 @@ class Post
     public function getComments(): Collection
     {
         return $this->comments;
+    }
+
+    public function getLikes(): Collection
+    {
+        return $this->likes;
+    }
+
+    public function getLikesCount(): int
+    {
+        return $this->likes->count();
     }
 }

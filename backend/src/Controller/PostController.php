@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\Post;
+use App\Entity\Like;
 use App\Repository\PostRepository;
 use App\Repository\TechGroupRepository;
+use App\Repository\LikeRepository;
 use App\Dto\PostResponse;
 use App\Mapper\PostMapper;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -252,7 +254,9 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
-
+    ####
+    ##
+    ####
     #[Route('/{id}/share', name: 'post_share', methods: ['POST'])]
     #[OA\Post(
         summary: 'Partager un post existant',
@@ -294,7 +298,7 @@ class PostController extends AbstractController
                 return $this->json(['error' => 'Group not found'], 404);
             }
         } else {
-            $group = $original->getTechGroup(); // défaut : même groupe que l’original
+            $group = $original->getTechGroup();
         }
 
         $post = new Post();
@@ -306,5 +310,81 @@ class PostController extends AbstractController
         $this->repo->save($post, true);
 
         return $this->json($this->mapper->toDto($post), 201);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/like', name: 'post_like', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Ajoute un like à un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Like ajouté avec succès'),
+            new OA\Response(response: 400, description: 'Déjà liké'),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function like(int $id, LikeRepository $likeRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $user = $this->getUser();
+
+        // Vérifier si déjà liké
+        $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
+        if ($existing) {
+            return $this->json(['error' => 'Already liked'], 400);
+        }
+
+        $like = new Like();
+        $like->setUser($user);
+        $like->setPost($post);
+        $likeRepo->save($like);
+
+        return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/like', name: 'post_unlike', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Retire un like d\'un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Like retiré'),
+            new OA\Response(response: 400, description: 'Pas encore liké'),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function unlike(int $id, LikeRepository $likeRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $user = $this->getUser();
+
+        $like = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
+        if (!$like) {
+            return $this->json(['error' => 'Not liked yet'], 400);
+        }
+
+        $likeRepo->remove($like);
+
+        return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
     }
 }
