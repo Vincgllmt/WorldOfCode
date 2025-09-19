@@ -17,6 +17,7 @@ class PostMapper
         $dto->updatedAt = $post->getUpdatedAt()?->format('Y-m-d H:i:s');
         $dto->authorId = $post->getAuthor()->getId();
         $dto->techGroupId = $post->getTechGroup()->getId();
+        $dto->likesCount = $post->getLikes()->count();
         if ($post->getSharedFrom()) {
             $shared = new SharedPostResponse();
             $shared->id = $post->getSharedFrom()->getId();
