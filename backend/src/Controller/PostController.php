@@ -17,6 +17,10 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Mapper\CommentMapper;
 use App\Dto\CommentResponse;
+use App\Dto\LikeResponse;
+use App\Mapper\LikeMapper;
+
+
 
 #[Route('/api/post')]
 #[OA\Tag(name: 'Post')]
@@ -387,4 +391,93 @@ class PostController extends AbstractController
 
         return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
     }
+    ####
+    ##
+    ####
+    #[Route('/{id}/likes', name: 'post_likes', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Liste les utilisateurs qui ont liké un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste des utilisateurs ayant liké',
+                content: new OA\JsonContent(
+                    type: 'array',
+                    items: new OA\Items(ref: new Model(type: LikeResponse::class))
+                )
+            ),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function listLikes(int $id, LikeMapper $likeMapper): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $likes = $post->getLikes();
+        $data = array_map(fn($like) => $likeMapper->toDto($like), $likes->toArray());
+
+        return $this->json($data);
+    }
+    // ####
+    // ##
+    // ####
+    // #[Route('/{id}/report', name: 'post_report', methods: ['POST'])]
+    // #[OA\Post(
+    //     summary: 'Signaler un post',
+    //     requestBody: new OA\RequestBody(
+    //         required: false,
+    //         content: new OA\JsonContent(
+    //             properties: [
+    //                 new OA\Property(property: 'reason', type: 'string', example: 'Spam / contenu inapproprié')
+    //             ],
+    //             type: 'object'
+    //         )
+    //     ),
+    //     parameters: [
+    //         new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+    //     ],
+    //     responses: [
+    //         new OA\Response(response: 201, description: 'Signalement enregistré'),
+    //         new OA\Response(response: 400, description: 'Déjà signalé'),
+    //         new OA\Response(response: 404, description: 'Post non trouvé')
+    //     ]
+    // )]
+    // #[OA\Tag(name: 'Post')]
+    // public function report(int $id, Request $request, ReportRepository $reportRepo): JsonResponse
+    // {
+    //     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+    //     $post = $this->repo->find($id);
+    //     if (!$post) {
+    //         return $this->json(['error' => 'Post not found'], 404);
+    //     }
+
+    //     $user = $this->getUser();
+
+    //     $existing = $reportRepo->findOneBy(['post' => $post, 'user' => $user]);
+    //     if ($existing) {
+    //         return $this->json(['error' => 'Already reported'], 400);
+    //     }
+
+    //     $data = json_decode($request->getContent(), true);
+    //     $reason = $data['reason'] ?? null;
+
+    //     $report = new Report();
+    //     $report->setUser($user);
+    //     $report->setPost($post);
+    //     $report->setReason($reason);
+
+    //     $reportRepo->save($report);
+
+    //     return $this->json(['success' => true, 'message' => 'Post reported'], 201);
+    // }
 }

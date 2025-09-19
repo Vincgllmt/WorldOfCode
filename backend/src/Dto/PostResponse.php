@@ -72,4 +72,11 @@ class PostResponse
         nullable: true
     )]
     public ?SharedPostResponse $sharedFrom = null;
+
+    #[OA\Property(
+        description: "Nombre total de likes sur ce post",
+        type: "integer",
+        example: 5
+    )]
+    public int $likesCount = 0;
 }
