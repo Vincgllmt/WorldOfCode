@@ -37,10 +37,20 @@ class Post
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: "post", orphanRemoval: true)]
     private Collection $comments;
 
+    #[ORM\ManyToOne(targetEntity: Post::class)]
+    #[ORM\JoinColumn(name: "shared_from_id", referencedColumnName: "id", nullable: true, onDelete: "SET NULL")]
+    private ?Post $sharedFrom = null;
+
+
+    #[ORM\OneToMany(targetEntity: Like::class, mappedBy: "post", orphanRemoval: true)]
+    private Collection $likes;
+
 
     public function __construct()
     {
         $this->comments = new ArrayCollection();
+
+        $this->likes = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -87,6 +97,19 @@ class Post
         return $this->author;
     }
 
+
+    public function getSharedFrom(): ?Post
+    {
+        return $this->sharedFrom;
+    }
+
+    public function setSharedFrom(?Post $post): self
+    {
+        $this->sharedFrom = $post;
+        return $this;
+    }
+
+
     public function setAuthor(User $author): self
     {
         $this->author = $author;
@@ -109,5 +132,15 @@ class Post
     public function getComments(): Collection
     {
         return $this->comments;
+    }
+
+    public function getLikes(): Collection
+    {
+        return $this->likes;
+    }
+
+    public function getLikesCount(): int
+    {
+        return $this->likes->count();
     }
 }

@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\Post;
+use App\Entity\Like;
 use App\Repository\PostRepository;
 use App\Repository\TechGroupRepository;
+use App\Repository\LikeRepository;
 use App\Dto\PostResponse;
 use App\Mapper\PostMapper;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,6 +17,10 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Mapper\CommentMapper;
 use App\Dto\CommentResponse;
+use App\Dto\LikeResponse;
+use App\Mapper\LikeMapper;
+
+
 
 #[Route('/api/post')]
 #[OA\Tag(name: 'Post')]
@@ -252,4 +258,226 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
+    ####
+    ##
+    ####
+    #[Route('/{id}/share', name: 'post_share', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Partager un post existant',
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'content', type: 'string', nullable: true),
+                    new OA\Property(property: 'groupId', type: 'integer', nullable: true)
+                ],
+                type: 'object'
+            )
+        ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Post partagé', content: new Model(type: PostResponse::class)),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    public function share(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $original = $this->repo->find($id);
+        if (!$original) {
+            return $this->json(['error' => 'Original post not found'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $content = $data['content'] ?? null;
+        $groupId = $data['groupId'] ?? null;
+
+        $group = null;
+        if ($groupId) {
+            $group = $this->groupRepo->find($groupId);
+            if (!$group) {
+                return $this->json(['error' => 'Group not found'], 404);
+            }
+        } else {
+            $group = $original->getTechGroup();
+        }
+
+        $post = new Post();
+        $post->setAuthor($this->getUser());
+        $post->setContent($content ?? '');
+        $post->setSharedFrom($original);
+        $post->setTechGroup($group);
+
+        $this->repo->save($post, true);
+
+        return $this->json($this->mapper->toDto($post), 201);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/like', name: 'post_like', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Ajoute un like à un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Like ajouté avec succès'),
+            new OA\Response(response: 400, description: 'Déjà liké'),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function like(int $id, LikeRepository $likeRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $user = $this->getUser();
+
+        // Vérifier si déjà liké
+        $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
+        if ($existing) {
+            return $this->json(['error' => 'Already liked'], 400);
+        }
+
+        $like = new Like();
+        $like->setUser($user);
+        $like->setPost($post);
+        $likeRepo->save($like);
+
+        return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/like', name: 'post_unlike', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Retire un like d\'un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Like retiré'),
+            new OA\Response(response: 400, description: 'Pas encore liké'),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function unlike(int $id, LikeRepository $likeRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $user = $this->getUser();
+
+        $like = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
+        if (!$like) {
+            return $this->json(['error' => 'Not liked yet'], 400);
+        }
+
+        $likeRepo->remove($like);
+
+        return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/likes', name: 'post_likes', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Liste les utilisateurs qui ont liké un post',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste des utilisateurs ayant liké',
+                content: new OA\JsonContent(
+                    type: 'array',
+                    items: new OA\Items(ref: new Model(type: LikeResponse::class))
+                )
+            ),
+            new OA\Response(response: 404, description: 'Post non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'Post')]
+    public function listLikes(int $id, LikeMapper $likeMapper): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $post = $this->repo->find($id);
+        if (!$post) {
+            return $this->json(['error' => 'Post not found'], 404);
+        }
+
+        $likes = $post->getLikes();
+        $data = array_map(fn($like) => $likeMapper->toDto($like), $likes->toArray());
+
+        return $this->json($data);
+    }
+    // ####
+    // ##
+    // ####
+    // #[Route('/{id}/report', name: 'post_report', methods: ['POST'])]
+    // #[OA\Post(
+    //     summary: 'Signaler un post',
+    //     requestBody: new OA\RequestBody(
+    //         required: false,
+    //         content: new OA\JsonContent(
+    //             properties: [
+    //                 new OA\Property(property: 'reason', type: 'string', example: 'Spam / contenu inapproprié')
+    //             ],
+    //             type: 'object'
+    //         )
+    //     ),
+    //     parameters: [
+    //         new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+    //     ],
+    //     responses: [
+    //         new OA\Response(response: 201, description: 'Signalement enregistré'),
+    //         new OA\Response(response: 400, description: 'Déjà signalé'),
+    //         new OA\Response(response: 404, description: 'Post non trouvé')
+    //     ]
+    // )]
+    // #[OA\Tag(name: 'Post')]
+    // public function report(int $id, Request $request, ReportRepository $reportRepo): JsonResponse
+    // {
+    //     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+    //     $post = $this->repo->find($id);
+    //     if (!$post) {
+    //         return $this->json(['error' => 'Post not found'], 404);
+    //     }
+
+    //     $user = $this->getUser();
+
+    //     $existing = $reportRepo->findOneBy(['post' => $post, 'user' => $user]);
+    //     if ($existing) {
+    //         return $this->json(['error' => 'Already reported'], 400);
+    //     }
+
+    //     $data = json_decode($request->getContent(), true);
+    //     $reason = $data['reason'] ?? null;
+
+    //     $report = new Report();
+    //     $report->setUser($user);
+    //     $report->setPost($post);
+    //     $report->setReason($reason);
+
+    //     $reportRepo->save($report);
+
+    //     return $this->json(['success' => true, 'message' => 'Post reported'], 201);
+    // }
 }

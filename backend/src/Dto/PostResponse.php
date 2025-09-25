@@ -65,4 +65,18 @@ class PostResponse
         example: "Symfony"
     )]
     public string $techGroupName;
+
+    #[OA\Property(
+        description: "Post original partagé (si applicable)",
+        type: "object",
+        nullable: true
+    )]
+    public ?SharedPostResponse $sharedFrom = null;
+
+    #[OA\Property(
+        description: "Nombre total de likes sur ce post",
+        type: "integer",
+        example: 5
+    )]
+    public int $likesCount = 0;
 }
