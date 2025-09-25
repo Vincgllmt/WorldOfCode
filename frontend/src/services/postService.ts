@@ -1,5 +1,6 @@
+// frontend/src/services/postService.ts
 import { getCookie } from 'cookies-next'
-import { CreatePostPayload, Post, UpdatePostPayload } from '@/interfaces/post'
+import { CreatePostPayload, Liker, Post, UpdatePostPayload } from '@/interfaces/post'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
@@ -91,4 +92,66 @@ export async function deletePost(id: number): Promise<void> {
   })
 
   if (!res.ok) throw new Error('Erreur lors de la suppression du post')
+}
+
+export const likePost = async (postId: number): Promise<void> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error('Erreur lors du like du post')
+}
+
+export const unlikePost = async (postId: number): Promise<void> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error('Erreur lors du retrait du like')
+}
+
+export const getLikers = async (postId: number): Promise<Liker[]> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/post/${postId}/likes`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error('Impossible de récupérer les likers')
+  return res.json()
+}
+
+export const sharePost = async (postId: number): Promise<void> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/post/${postId}/share`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error('Erreur lors du partage du post')
+}
+
+export const reportPost = async (postId: number, reason?: string): Promise<void> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/report/post/${postId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: reason ? JSON.stringify({ reason }) : undefined
+  })
+  if (!res.ok) throw new Error('Erreur lors du signalement du post')
 }

@@ -1,3 +1,5 @@
+// frontend/src/interfaces/group.ts
+
 import { User } from "./user"
 
 export interface Group {
