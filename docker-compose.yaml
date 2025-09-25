@@ -26,6 +26,19 @@ services:
     networks:
       - projet_network
 
+  backoffice:
+    build: ./backoffice
+    container_name: projet_backoffice
+    ports:
+      - "2999:2999"
+    volumes:
+      - ./backoffice:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - backend
+    networks:
+      - projet_network
   db:
     image: mysql:8.0
     container_name: projet_db
