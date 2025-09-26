@@ -13,60 +13,60 @@ import PostFormByGroup from '@/components/post/PostFormByGroup'
 import PostListByGroup from '@/components/post/PostListByGroup'
 
 export default function GroupPage() {
-  const { id } = useParams()
-  const groupId = Number(id)
-  const queryClient = useQueryClient()
+    const { id } = useParams()
+    const groupId = Number(id)
+    const queryClient = useQueryClient()
 
-  const { user } = useAuth()
-  const { data: group, isLoading: groupLoading } = useGroup(groupId)
-  const { data: userGroups } = useUserGroups(user?.id)
-  const joinGroup = useJoinGroup()
+    const { user } = useAuth()
+    const { data: group, isLoading: groupLoading } = useGroup(groupId)
+    const { data: userGroups } = useUserGroups(user?.id)
+    const joinGroup = useJoinGroup()
 
-  const [localMembership, setLocalMembership] = useState(false)
+    const [localMembership, setLocalMembership] = useState(false)
 
-  const isMember = localMembership || userGroups?.some(g => g.id === groupId)
+    const isMember = localMembership || userGroups?.some(g => g.id === groupId)
 
-  const handleJoin = () => {
-    joinGroup.mutate(groupId, {
-      onSuccess: () => {
-        setLocalMembership(true)
-        queryClient.invalidateQueries({ queryKey: ['userGroups', user?.id] })
-        queryClient.invalidateQueries({ queryKey: ['group', groupId] })
-        queryClient.invalidateQueries({ queryKey: ['posts', 'group', groupId] })
-      },
-    })
-  }
+    const handleJoin = () => {
+        joinGroup.mutate(groupId, {
+            onSuccess: () => {
+                setLocalMembership(true)
+                queryClient.invalidateQueries({ queryKey: ['userGroups', user?.id] })
+                queryClient.invalidateQueries({ queryKey: ['group', groupId] })
+                queryClient.invalidateQueries({ queryKey: ['posts', 'group', groupId] })
+            },
+        })
+    }
 
-  if (groupLoading) {
+    if (groupLoading) {
+        return (
+            <div className="max-w-2xl mx-auto p-4 space-y-4">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-32 w-full" />
+            </div>
+        )
+    }
+
     return (
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
-        <Skeleton className="h-8 w-1/2" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-32 w-full" />
-      </div>
-    )
-  }
+        <div className="max-w-2xl mx-auto p-4 space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold">{group?.name}</h1>
+                <p className="text-muted-foreground">{group?.description}</p>
+            </div>
 
-  return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{group?.name}</h1>
-        <p className="text-muted-foreground">{group?.description}</p>
-      </div>
-
-      {!isMember ? (
-        <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-md shadow-sm">
-          <p className="mb-2">Vous devez rejoindre ce groupe pour accéder aux publications.</p>
-          <Button onClick={handleJoin} disabled={joinGroup.isPending}>
-            {joinGroup.isPending ? 'Adhésion...' : 'Rejoindre le groupe'}
-          </Button>
+            {!isMember ? (
+                <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-md shadow-sm">
+                    <p className="mb-2">Vous devez rejoindre ce groupe pour accéder aux publications.</p>
+                    <Button onClick={handleJoin} disabled={joinGroup.isPending}>
+                        {joinGroup.isPending ? 'Adhésion...' : 'Rejoindre le groupe'}
+                    </Button>
+                </div>
+            ) : (
+                <>
+                    <PostFormByGroup groupId={groupId} />
+                    <PostListByGroup groupId={groupId} />
+                </>
+            )}
         </div>
-      ) : (
-        <>
-          <PostFormByGroup groupId={groupId} />
-          <PostListByGroup groupId={groupId} />
-        </>
-      )}
-    </div>
-  )
+    )
 }
