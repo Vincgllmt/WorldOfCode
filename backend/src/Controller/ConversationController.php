@@ -31,7 +31,7 @@ class ConversationController extends AbstractController
 
     #[Route('', name: 'conversation_create', methods: ['POST'])]
     #[OA\Post(
-        summary: 'Create a new private conversation',
+        summary: 'Créer une nouvelle conversation privée',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(properties: [

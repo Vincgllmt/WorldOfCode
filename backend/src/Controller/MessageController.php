@@ -11,8 +11,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 
-#[Route('/api/messaging/messages')]
-#[OA\Tag(name: 'Messaging - Messages')]
+#[Route('/api/messaging/conversations')]
+#[OA\Tag(name: 'Messaging')]
 class MessageController extends AbstractController
 {
     public function __construct(
@@ -21,11 +21,11 @@ class MessageController extends AbstractController
         private MessageMapper $mapper
     ) {}
 
-    #[Route('/{conversationId}', name: 'messages_list', methods: ['GET'])]
+    #[Route('/{id}/messages', name: 'messages_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Récupère tous les messages d’une conversation',
         parameters: [
-            new OA\Parameter(name: 'conversationId', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
         ],
         responses: [
             new OA\Response(
@@ -39,16 +39,16 @@ class MessageController extends AbstractController
             new OA\Response(response: 404, description: 'Conversation non trouvée')
         ]
     )]
-    public function list(string $conversationId): JsonResponse
+    public function list(string $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $conversation = $this->convRepo->find($conversationId);
+        $conversation = $this->convRepo->find($id);
         if (!$conversation) {
             return $this->json(['error' => 'Conversation not found'], 404);
         }
 
-        $messages = $this->repo->findByConversationOrdered($conversationId);
+        $messages = $this->repo->findByConversationOrdered($id);
 
         $data = array_map([$this->mapper, 'toDto'], $messages);
 
