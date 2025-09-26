@@ -13,8 +13,8 @@
     <pre id="log"></pre>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        const socket = io("http://localhost:8081", { auth: { userId: 99 } });
-        const convId = "92054f77-599b-4582-86d4-761a1bdb8a15"
+        const socket = io("http://localhost:8081", { auth: { userId: 2 } });
+        const convId = "87e0bb7e-db1f-4b12-a555-d1ed3ab2c3cb"
 
         socket.on("connect", () => {
             log("✅ Connected as user 67");
@@ -26,7 +26,7 @@
 
 
         socket.on("message_created", (data) => {
-            if (data.sender_id === 99) return; // évite doublon pour toi
+            if (data.sender_id === 2) return; // évite doublon pour toi
             log("💬 " + data.body);
         });
 
