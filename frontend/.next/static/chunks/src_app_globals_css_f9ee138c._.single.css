@@ -539,10 +539,6 @@
     max-height: var(--radix-select-content-available-height);
   }
 
-  .max-h-72 {
-    max-height: calc(var(--spacing) * 72);
-  }
-
   .min-h-16 {
     min-height: calc(var(--spacing) * 16);
   }
@@ -710,10 +706,6 @@
     flex-direction: row;
   }
 
-  .flex-wrap {
-    flex-wrap: wrap;
-  }
-
   .items-center {
     align-items: center;
   }
@@ -784,10 +776,6 @@
 
   .justify-self-end {
     justify-self: flex-end;
-  }
-
-  .overflow-auto {
-    overflow: auto;
   }
 
   .overflow-hidden {
