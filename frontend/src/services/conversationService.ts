@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090"
 
 export async function getConversations(): Promise<Conversation[]> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/message/conversations`, {
+    const res = await fetch(`${API_URL}/api/messaging/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 

@@ -7,6 +7,7 @@ export interface Message {
     body: string
     type: 'text' | 'image' | 'file'
     senderUsername: string
+    senderId: string
     createdAt: string
     editedAt?: string | null
     deletedAt?: string | null
