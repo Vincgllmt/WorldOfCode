@@ -1,15 +1,15 @@
 import { Message } from "./message"
-import { ConversationParticipant } from "./conversationParticipant"
+import { Participant } from "./participant"
 
 
-export type ConversationType = 'direct' | 'group'
+export type ConversationType = "direct" | "group"
 
 export interface Conversation {
     id: string
     type: ConversationType
     title?: string | null
     createdAt: string
-    participants: ConversationParticipant[]
+    participants: Participant[]
     messages?: Message[]
 }
 

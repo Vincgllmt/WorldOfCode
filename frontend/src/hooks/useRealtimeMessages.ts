@@ -26,6 +26,7 @@ export const useRealtimeMessages = (conversationId: string, userId: string | num
         return () => {
             socket.off("message_created", onMessageCreated)
             socket.emit("leave_conversation", { conversation_id: conversationId })
+            socket.disconnect()
         }
     }, [conversationId, userId, refetch])
 
