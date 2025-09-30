@@ -11,6 +11,8 @@ services:
     networks:
       - projet_network
     working_dir: /var/www/backend
+    command: |
+      bash -c "php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:8090 -t public"
 
   frontend:
     build: ./frontend
@@ -42,7 +44,7 @@ services:
     volumes:
       - ./messagerie:/app
       - /app/node_modules
-    command: npm run start:dev
+    command: npm run dev
     depends_on:
       - db
     networks:
