@@ -70,52 +70,57 @@ io.on("connection", (socket) => {
 
     // --- PERSIST MESSAGE ---
     socket.on("send_message", async ({ conversation_id, temp_id, body, type }) => {
-        try {
-            if (!conversation_id || !body) return;
+    try {
+        if (!conversation_id || !body) return;
 
-            const senderId = Number(userId);
-            if (!Number.isInteger(senderId)) {
-                socket.emit("ack", { temp_id, error: "unauthorized_user" });
-                return;
-            }
-
-            const [rows] = await pool.execute(
-                "SELECT 1 FROM msg_conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1",
-                [conversation_id, senderId]
-            );
-            if (rows.length === 0) {
-                socket.emit("ack", { temp_id, error: "not_in_conversation" });
-                return;
-            }
-
-            const id = crypto.randomUUID();
-            const created = new Date();
-
-            console.log(body)
-            await pool.execute(
-                `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-                [id, conversation_id, senderId, body, type || "text", created]
-            );
-            const payload = {
-                id,
-                conversation_id,
-                sender_id: senderId,
-                body,
-                type: type || "text",
-                created_at: created.toISOString(),
-            };
-
-
-            socket.emit("ack", { temp_id, ...payload });
-
-
-            io.to(conversation_id).emit("message_created", payload);
-        } catch (err) {
-            console.error("send_message error:", err);
-            socket.emit("ack", { temp_id, error: "db_insert_failed" });
+        const senderId = Number(userId);
+        if (!Number.isInteger(senderId)) {
+        socket.emit("ack", { temp_id, error: "unauthorized_user" });
+        return;
         }
+
+        const [rows] = await pool.execute(
+        "SELECT 1 FROM msg_conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1",
+        [conversation_id, senderId]
+        );
+        if (rows.length === 0) {
+        socket.emit("ack", { temp_id, error: "not_in_conversation" });
+        return;
+        }
+
+        const id = crypto.randomUUID();
+        const created = new Date();
+
+        // Insérer le message
+        await pool.execute(
+        `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, conversation_id, senderId, body, type || "text", created]
+        );
+
+        // Mettre à jour la dernière date du message de la conversation
+        await pool.execute(
+        `UPDATE msg_conversations SET last_message_at = ? WHERE id = ?`,
+        [created, conversation_id]
+        );
+
+        const payload = {
+        id,
+        conversation_id,
+        sender_id: senderId,
+        body,
+        type: type || "text",
+        created_at: created.toISOString(),
+        };
+
+        socket.emit("ack", { temp_id, ...payload });
+        io.to(conversation_id).emit("message_created", payload);
+    } catch (err) {
+        console.error("send_message error:", err);
+        socket.emit("ack", { temp_id, error: "db_insert_failed" });
+    }
     });
+
 
     // TODO: permet de voir quand uhn utilisateur écrit 
     socket.on("typing", ({ conversation_id, is_typing }) => {
