@@ -26,6 +26,28 @@ services:
     networks:
       - projet_network
 
+  messagerie:
+    build: ./messagerie
+    container_name: projet_messagerie
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: application
+      DB_PASS: password
+      DB_NAME: projet_web
+      PORT: 8081
+      CORS_ORIGIN: "http://localhost:3000"
+    volumes:
+      - ./messagerie:/app
+      - /app/node_modules
+    command: npm run start:dev
+    depends_on:
+      - db
+    networks:
+      - projet_network
+
   db:
     image: mysql:8.0
     container_name: projet_db
@@ -38,6 +60,7 @@ services:
       MYSQL_PASSWORD: password
     volumes:
       - db_data:/var/lib/mysql
+      - ./messagerie/sql-init:/docker-entrypoint-initdb.d:ro
     networks:
       - projet_network
 
