@@ -22,6 +22,15 @@ class ConversationResponse
     #[OA\Property(example: "2025-09-02 09:30:00")]
     public string $createdAt;
 
-    #[OA\Property(type: "array", items: new OA\Items(type: "integer"))]
-    public array $participantIds;
+    #[OA\Property(
+        type: "array",
+        items: new OA\Items(
+            type: "object",
+            properties: [
+                "id" => ["type" => "integer"],
+                "username" => ["type" => "string"],
+            ]
+        )
+    )]
+    public array $participants;
 }
