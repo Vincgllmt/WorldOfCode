@@ -7,13 +7,16 @@ use App\Dto\ConversationResponse;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Dto\LastMessageResponse;
-use App\Repository\MessageRepository;
+use App\Repository\Messaging\MessageRepository;
+use App\Repository\Messaging\MessageReadRepository;
+use App\Entity\User;
 
 class ConversationMapper
 {
     public function __construct(
         private TokenStorageInterface $tokenStorage,
-        private MessageRepository $messageRepo
+        private MessageRepository $messageRepo,
+        private MessageReadRepository $messageReadRepo,
     ) {}
 
     public function toDto(Conversation $conv): ConversationResponse
@@ -57,6 +60,14 @@ class ConversationMapper
                 'id' => $lastMsg->getSender()->getId(),
                 'username' => $lastMsg->getSender()->getUsername(),
             ];
+
+            /** @var UserInterface|null $currentUser */
+            $currentUser = $this->tokenStorage->getToken()?->getUser();
+            if ($currentUser instanceof User) {
+                $msgDto->read = $this->messageReadRepo->isReadByUser($lastMsg, $currentUser);
+            } else {
+                $msgDto->read = false;
+            }
             $dto->lastMessage = $msgDto;
         }
         return $dto;
