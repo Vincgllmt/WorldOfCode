@@ -12,3 +12,5 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     if (!res.ok) throw new Error("Erreur lors du chargement des messages")
     return res.json()
 }
+
+

@@ -24,13 +24,21 @@ class ConversationResponse
 
     #[OA\Property(
         type: "array",
+        description: "Liste des participants à la conversation",
         items: new OA\Items(
             type: "object",
             properties: [
-                "id" => ["type" => "integer"],
-                "username" => ["type" => "string"],
+                new OA\Property(property: "id", type: "integer", example: 12),
+                new OA\Property(property: "username", type: "string", example: "eugenie"),
             ]
         )
     )]
     public array $participants;
+
+    #[OA\Property(
+        description: "Dernier message de la conversation",
+        ref: new OA\Schema(type: LastMessageResponse::class),
+        nullable: true
+    )]
+    public ?LastMessageResponse $lastMessage = null;
 }

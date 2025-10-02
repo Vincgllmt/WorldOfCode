@@ -6,7 +6,7 @@ use App\Entity\Messaging\Conversation;
 use App\Entity\Messaging\ConversationParticipant;
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Repository\ConversationRepository;
+use App\Repository\Messaging\ConversationRepository;
 use App\Mapper\ConversationMapper;
 use App\Dto\ConversationResponse;
 use Doctrine\ORM\EntityManagerInterface;

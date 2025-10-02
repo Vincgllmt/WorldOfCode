@@ -4,9 +4,17 @@ namespace App\Mapper;
 
 use App\Entity\Messaging\Message;
 use App\Dto\MessageResponse;
+use App\Repository\Messaging\MessageReadRepository;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use App\Entity\User;
 
 class MessageMapper
 {
+    public function __construct(
+        private TokenStorageInterface $tokenStorage,
+        private MessageReadRepository $messageReadRepo
+    ) {}
+
     public function toDto(Message $msg): MessageResponse
     {
         $dto = new MessageResponse();
@@ -16,10 +24,18 @@ class MessageMapper
         $dto->createdAt = $msg->getCreatedAt()->format('Y-m-d H:i:s');
         $dto->editedAt = $msg->getEditedAt()?->format('Y-m-d H:i:s');
         $dto->deletedAt = $msg->getDeletedAt()?->format('Y-m-d H:i:s');
-        $dto->senderId = $msg->getSender()->getId();
-        $dto->senderUsername = $msg->getSender()->getUsername();
-        $dto->conversationId = $msg->getConversation()->getId();
+        $dto->sender = [
+            'id' => (string) $msg->getSender()->getId(),
+            'username' => $msg->getSender()->getUsername(),
+        ];
 
+        $dto->conversationId = $msg->getConversation()->getId();
+        $currentUser = $this->tokenStorage->getToken()?->getUser();
+        if ($currentUser instanceof User) {
+            $dto->read = $this->messageReadRepo->isReadByUser($msg, $currentUser);
+        } else {
+            $dto->read = false;
+        }
         return $dto;
     }
 }
