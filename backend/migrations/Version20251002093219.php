@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20250926080251 extends AbstractMigration
+final class Version20251002093219 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -25,6 +25,7 @@ final class Version20250926080251 extends AbstractMigration
         $this->addSql('CREATE TABLE likes (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, post_id INT NOT NULL, created_at DATETIME NOT NULL, INDEX IDX_49CA4E7DA76ED395 (user_id), INDEX IDX_49CA4E7D4B89032C (post_id), UNIQUE INDEX UNIQ_49CA4E7DA76ED3954B89032C (user_id, post_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE msg_conversation_participants (conversation_id VARCHAR(36) NOT NULL, user_id INT NOT NULL, role VARCHAR(16) DEFAULT \'member\' NOT NULL, joined_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_94416A5E9AC0396 (conversation_id), INDEX IDX_94416A5EA76ED395 (user_id), PRIMARY KEY(conversation_id, user_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE msg_conversations (id VARCHAR(36) NOT NULL, type VARCHAR(16) NOT NULL, title VARCHAR(255) DEFAULT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE msg_message_reads (message_id VARCHAR(36) NOT NULL, user_id INT NOT NULL, read_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_CE28E200537A1329 (message_id), INDEX IDX_CE28E200A76ED395 (user_id), PRIMARY KEY(message_id, user_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE msg_messages (id VARCHAR(36) NOT NULL, conversation_id VARCHAR(36) NOT NULL, sender_id INT NOT NULL, body LONGTEXT NOT NULL, type VARCHAR(16) DEFAULT \'text\' NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', edited_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', deleted_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_8A18CF2A9AC0396 (conversation_id), INDEX IDX_8A18CF2AF624B39D (sender_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE post (id INT AUTO_INCREMENT NOT NULL, author_id INT NOT NULL, tech_group_id INT NOT NULL, shared_from_id INT DEFAULT NULL, content LONGTEXT NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME DEFAULT NULL, INDEX IDX_5A8A6C8DF675F31B (author_id), INDEX IDX_5A8A6C8DF85377BC (tech_group_id), INDEX IDX_5A8A6C8D5919D5BC (shared_from_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE reports (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, post_id INT NOT NULL, reason VARCHAR(255) DEFAULT NULL, created_at DATETIME NOT NULL, INDEX IDX_F11FA745A76ED395 (user_id), INDEX IDX_F11FA7454B89032C (post_id), UNIQUE INDEX UNIQ_F11FA745A76ED3954B89032C (user_id, post_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -39,6 +40,8 @@ final class Version20250926080251 extends AbstractMigration
         $this->addSql('ALTER TABLE likes ADD CONSTRAINT FK_49CA4E7D4B89032C FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE msg_conversation_participants ADD CONSTRAINT FK_94416A5E9AC0396 FOREIGN KEY (conversation_id) REFERENCES msg_conversations (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE msg_conversation_participants ADD CONSTRAINT FK_94416A5EA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE msg_message_reads ADD CONSTRAINT FK_CE28E200537A1329 FOREIGN KEY (message_id) REFERENCES msg_messages (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE msg_message_reads ADD CONSTRAINT FK_CE28E200A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE msg_messages ADD CONSTRAINT FK_8A18CF2A9AC0396 FOREIGN KEY (conversation_id) REFERENCES msg_conversations (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE msg_messages ADD CONSTRAINT FK_8A18CF2AF624B39D FOREIGN KEY (sender_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE post ADD CONSTRAINT FK_5A8A6C8DF675F31B FOREIGN KEY (author_id) REFERENCES user (id)');
@@ -62,6 +65,8 @@ final class Version20250926080251 extends AbstractMigration
         $this->addSql('ALTER TABLE likes DROP FOREIGN KEY FK_49CA4E7D4B89032C');
         $this->addSql('ALTER TABLE msg_conversation_participants DROP FOREIGN KEY FK_94416A5E9AC0396');
         $this->addSql('ALTER TABLE msg_conversation_participants DROP FOREIGN KEY FK_94416A5EA76ED395');
+        $this->addSql('ALTER TABLE msg_message_reads DROP FOREIGN KEY FK_CE28E200537A1329');
+        $this->addSql('ALTER TABLE msg_message_reads DROP FOREIGN KEY FK_CE28E200A76ED395');
         $this->addSql('ALTER TABLE msg_messages DROP FOREIGN KEY FK_8A18CF2A9AC0396');
         $this->addSql('ALTER TABLE msg_messages DROP FOREIGN KEY FK_8A18CF2AF624B39D');
         $this->addSql('ALTER TABLE post DROP FOREIGN KEY FK_5A8A6C8DF675F31B');
@@ -77,6 +82,7 @@ final class Version20250926080251 extends AbstractMigration
         $this->addSql('DROP TABLE likes');
         $this->addSql('DROP TABLE msg_conversation_participants');
         $this->addSql('DROP TABLE msg_conversations');
+        $this->addSql('DROP TABLE msg_message_reads');
         $this->addSql('DROP TABLE msg_messages');
         $this->addSql('DROP TABLE post');
         $this->addSql('DROP TABLE reports');

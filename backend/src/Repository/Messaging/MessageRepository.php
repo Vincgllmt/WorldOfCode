@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository;
+namespace App\Repository\Messaging;
 
 use App\Entity\Messaging\Message;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;

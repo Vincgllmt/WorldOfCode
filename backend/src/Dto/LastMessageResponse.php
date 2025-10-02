@@ -27,4 +27,8 @@ class LastMessageResponse
         ]
     )]
     public array $sender;
+
+
+    #[OA\Property(example: false)]
+    public bool $read;
 }
