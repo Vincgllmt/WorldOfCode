@@ -1,4 +1,3 @@
-// frontend/src/interfaces/post.ts
 export interface Post {
   id: number
   content: string
@@ -8,9 +7,17 @@ export interface Post {
   authorUsername: string
   techGroupId: number
   techGroupName: string
+
   likesCount?: number
   likedByMe?: boolean
   sharesCount?: number
+
+  repostOfId?: number
+  sharedPostId?: number
+  originalPostId?: number
+  repostOf?: Post
+  sharedPost?: Post
+  originalPost?: Post
 }
 
 export interface CreatePostPayload {

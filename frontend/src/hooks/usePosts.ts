@@ -12,7 +12,7 @@ import {
 } from '@/services/postService'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import {
+import type {
   CreatePostPayload,
   UpdatePostPayload,
   Post,
@@ -20,7 +20,9 @@ import {
 } from '@/interfaces/post'
 import { useAuth } from '@/hooks/useAuth'
 
-// ---------- LISTES / CRUD DE BASE ----------
+// -------------------------
+// LISTES / CRUD DE BASE
+// -------------------------
 export const usePosts = () => {
   const { data: posts, isLoading, error } = useQuery<Post[]>({
     queryKey: ['posts'],
@@ -74,7 +76,9 @@ export const usePostsByGroup = (groupId: number, enabled = true) => {
   })
 }
 
-// ---------- LIKES / LIKERS ----------
+// -------------------------
+// LIKES / LIKERS
+// -------------------------
 const postsKey = ['posts']
 const postKey = (id: number | string) => ['post', id]
 const groupPostsKey = (groupId: number) => ['posts', 'group', groupId]
@@ -92,7 +96,7 @@ type ToggleLikeArgs = {
   postId: number
   likedByMe?: boolean
   groupId?: number
-  currentUser?: { id: number; username: string } // pour mise à jour optimiste de la liste des likers
+  currentUser?: { id: number; username: string } // pour l’optimistic update de la liste des likers
 }
 
 type ToggleLikeContext = {
@@ -109,117 +113,117 @@ export const useToggleLike = () => {
 
   return useMutation({
     mutationFn: async ({ postId, likedByMe }: ToggleLikeArgs) => {
-      if (likedByMe) return unlikePost(postId)
-      return likePost(postId)
+      return likedByMe ? unlikePost(postId) : likePost(postId)
     },
 
-    // Optimistic update (likers + posts caches)
-    onMutate: async ({
-      postId,
-      likedByMe,
-      groupId,
-      currentUser,
-    }: ToggleLikeArgs): Promise<ToggleLikeContext> => {
-      // Stoppe les fetchs concurrents
+    onMutate: async ({ postId, likedByMe, groupId, currentUser }: ToggleLikeArgs): Promise<ToggleLikeContext> => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: likersKey(postId) }),
         queryClient.cancelQueries({ queryKey: postsKey }),
-        groupId
-          ? queryClient.cancelQueries({ queryKey: groupPostsKey(groupId) })
-          : Promise.resolve(),
+        groupId ? queryClient.cancelQueries({ queryKey: groupPostsKey(groupId) }) : Promise.resolve(),
         queryClient.cancelQueries({ queryKey: postKey(postId) }),
       ])
 
-      // Snapshots pour rollback
       const previousLikers = queryClient.getQueryData<Liker[]>(likersKey(postId))
       const previousPosts = queryClient.getQueryData<Post[]>(postsKey)
-      const previousGroupPosts = groupId
-        ? queryClient.getQueryData<Post[]>(groupPostsKey(groupId))
-        : undefined
+      const previousGroupPosts = groupId ? queryClient.getQueryData<Post[]>(groupPostsKey(groupId)) : undefined
       const previousPost = queryClient.getQueryData<Post>(postKey(postId))
 
-      // 1) Met à jour la liste des likers
+      // on met à jour la liste des likers
       if (currentUser) {
         queryClient.setQueryData<Liker[]>(likersKey(postId), (prev) => {
-          const existing = prev ?? []
-          const isAlreadyLiker = existing.some((u) => u.id === currentUser.id)
-          if (likedByMe && isAlreadyLiker) {
-            // on retire si on était en like
-            return existing.filter((u) => u.id !== currentUser.id)
-          }
-          if (!likedByMe && !isAlreadyLiker) {
-            // on ajoute si on n’était pas en like
-            return [...existing, currentUser]
-          }
-          return existing
+          const list = prev ?? []
+          const exists = list.some((u) => u.id === currentUser.id)
+          if (likedByMe && exists) return list.filter((u) => u.id !== currentUser.id) // unlike
+          if (!likedByMe && !exists) return [...list, currentUser] // like
+          return list
         })
       }
 
-      // 2) Met à jour les entités Post (liste + détail)
-      const applyToggleOnPost = (p: Post): Post => ({
+      //  on met aussi à jour la/les entités Post
+      const togglePost = (p: Post): Post => ({
         ...p,
         likedByMe: !likedByMe,
         likesCount: (p.likesCount ?? 0) + (likedByMe ? -1 : 1),
       })
 
-      // liste globale
       queryClient.setQueryData<Post[]>(postsKey, (prev) =>
-        prev ? prev.map((p) => (p.id === postId ? applyToggleOnPost(p) : p)) : prev
+        prev ? prev.map((p) => (p.id === postId ? togglePost(p) : p)) : prev
       )
-      // liste du groupe
       if (groupId) {
         queryClient.setQueryData<Post[]>(groupPostsKey(groupId), (prev) =>
-          prev ? prev.map((p) => (p.id === postId ? applyToggleOnPost(p) : p)) : prev
+          prev ? prev.map((p) => (p.id === postId ? togglePost(p) : p)) : prev
         )
       }
-      // détail
-      queryClient.setQueryData<Post>(postKey(postId), (prev) =>
-        prev ? applyToggleOnPost(prev) : prev
-      )
+      queryClient.setQueryData<Post>(postKey(postId), (prev) => (prev ? togglePost(prev) : prev))
 
-      return {
-        previousLikers,
-        previousPosts,
-        previousGroupPosts,
-        previousPost,
-        postId,
-        groupId,
-      }
+      return { previousLikers, previousPosts, previousGroupPosts, previousPost, postId, groupId }
     },
 
-    // Rollback en cas d'erreur
     onError: (error, variables, context) => {
       if (!context) return
       const { postId, groupId } = context
       queryClient.setQueryData(likersKey(postId), context.previousLikers)
       queryClient.setQueryData(postsKey, context.previousPosts)
-      if (groupId) {
-        queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts)
-      }
+      if (groupId) queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts)
       queryClient.setQueryData(postKey(postId), context.previousPost)
       toast.error('Impossible de mettre à jour le like ❌')
     },
 
-    // Revalidation légère (liste des likers)
     onSuccess: (_data, variables) => {
-      toast.success(variables.likedByMe ? 'Like retiré' : 'Post liké 👍')
+      // revalide la liste des likers pour être parfaitement aligné serveur
       queryClient.invalidateQueries({ queryKey: likersKey(variables.postId) })
     },
   })
 }
 
-// ---------- PARTAGE / REPORT ----------
+// -------------------------
+// PARTAGE / REPORT
+// -------------------------
 export const useSharePost = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (postId: number) => sharePost(postId),
+
+    onMutate: async (postId: number) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ['posts'] }),
+        queryClient.cancelQueries({ queryKey: ['post', postId] }),
+      ])
+      const previousPosts = queryClient.getQueryData<Post[]>(['posts'])
+      const previousPost  = queryClient.getQueryData<Post>(['post', postId])
+
+      const bump = (p: Post): Post =>
+        ({ ...p, sharesCount: (p.sharesCount ?? 0) + 1 })
+
+      // liste
+      queryClient.setQueryData<Post[]>(['posts'], prev =>
+        prev ? prev.map(p => (p.id === postId ? bump(p) : p)) : prev
+      )
+      // détail
+      queryClient.setQueryData<Post>(['post', postId], prev => prev ? bump(prev) : prev)
+
+      return { previousPosts, previousPost, postId }
+    },
+
+    onError: (_error, _variables, context) => {
+      if (!context) return
+      queryClient.setQueryData(['posts'], context.previousPosts)
+      queryClient.setQueryData(['post', context.postId], context.previousPost)
+      toast.error('Erreur lors du partage ❌')
+    },
+
     onSuccess: () => {
       toast.success('Post partagé 🎉')
-      queryClient.invalidateQueries({ queryKey: postsKey })
     },
-    onError: () => toast.error('Erreur lors du partage ❌'),
+
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] })
+      queryClient.invalidateQueries({ queryKey: ['post', variables] })
+    }
   })
 }
+
 
 export const useReportPost = () => {
   return useMutation({
@@ -230,27 +234,28 @@ export const useReportPost = () => {
   })
 }
 
-// ---------- Helper “état like” basé sur les likers (persiste au refresh) ----------
+// -------------------------
+// Helper “état like” basé sur les likers
+// -------------------------
 export const usePostLikeState = (postId: number, groupId?: number) => {
   const { user } = useAuth()
   const { data: likers } = useLikers(postId)
   const toggleLike = useToggleLike()
 
-  const likedByMe = !!likers?.some((u) => u.id === user?.id)
+  const myId = user?.id != null ? Number(user.id) : undefined
+  const likedByMe = myId != null && !!likers?.some((u) => u.id === myId)
   const likesCount = likers?.length ?? 0
 
-  const onToggle = () =>
+  const onToggle = () => {
+    // si l'user n'est pas encore chargé, on ne tente pas le toggle
+    if (myId == null || !user) return
     toggleLike.mutate({
       postId,
       likedByMe,
       groupId,
-      currentUser: user ? { id: user.id, username: user.username } : undefined,
+      currentUser: { id: myId, username: user.username },
     })
-
-  return {
-    likedByMe,
-    likesCount,
-    onToggle,
-    isPending: toggleLike.isPending,
   }
+
+  return { likedByMe, likesCount, onToggle, isPending: toggleLike.isPending }
 }

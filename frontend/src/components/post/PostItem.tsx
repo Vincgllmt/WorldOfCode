@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUpdatePost, useDeletePost } from '@/hooks/usePosts'
 import { useUser } from '@/hooks/useUsers'
 import { useGroup } from '@/hooks/useGroups'
-
+// import SharedPostPreview from './SharedPostPreview'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -30,9 +30,7 @@ import toast from 'react-hot-toast'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
-import CommentSection, {
-  CommentSectionHandle,
-} from '../comment/commentSection'
+import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
 
 export default function PostItem({ post }: { post: Post }) {
   const { user } = useAuth()
@@ -45,6 +43,7 @@ export default function PostItem({ post }: { post: Post }) {
   const [isEditing, setIsEditing] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [showComments, setShowComments] = useState(false)
+
   const editableRef = useRef<HTMLDivElement>(null)
   const commentRef = useRef<CommentSectionHandle>(null)
 
@@ -166,7 +165,7 @@ export default function PostItem({ post }: { post: Post }) {
         </div>
       </div>
 
-      {/* Contenu éditable */}
+      {/* Contenu (éditable si auteur) */}
       <div
         ref={isEditing ? editableRef : null}
         contentEditable={isEditing}
@@ -187,7 +186,10 @@ export default function PostItem({ post }: { post: Post }) {
         </div>
       )}
 
-      {/* Barre d’actions */}
+      {/* Preview du post d’origine si c’est un repost */}
+      {/* {isRepost(post) && <SharedPostPreview post={post} />} */}
+
+      {/* Barre d’actions (Like / Commenter / Partager) */}
       <PostActions
         post={post}
         className="pt-2"

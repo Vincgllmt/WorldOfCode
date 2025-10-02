@@ -56,11 +56,12 @@ export const useUserGroups = (userId?: number) => {
 }
 
 
-export const useUser = (userId: number | undefined) => {
+export const useUser = (userId: number | undefined, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['user', userId],
     queryFn: () => getUserById(userId!),
-    enabled: typeof userId === 'number',
+    enabled: typeof userId === 'number' && (options?.enabled ?? true),
+    ...options,
   })
 }
 

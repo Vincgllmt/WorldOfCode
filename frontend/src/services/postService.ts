@@ -1,4 +1,3 @@
-// frontend/src/services/postService.ts
 import { getCookie } from 'cookies-next'
 import { CreatePostPayload, Liker, Post, UpdatePostPayload } from '@/interfaces/post'
 
@@ -124,11 +123,18 @@ export const getLikers = async (postId: number): Promise<Liker[]> => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   })
   if (!res.ok) throw new Error('Impossible de récupérer les likers')
-  return res.json()
+
+  const raw = await res.json()
+  const normalize = (u: any): Liker => ({
+    id: Number(u?.id ?? u?.userId ?? u?.user_id ?? u?.user?.id),
+    username: String(u?.username ?? u?.user?.username ?? u?.name ?? u?.email ?? 'Utilisateur'),
+    avatarUrl: u?.avatarUrl ?? u?.avatar ?? null,
+  })
+  return Array.isArray(raw) ? raw.map(normalize).filter(l => Number.isFinite(l.id)) : []
 }
 
 export const sharePost = async (postId: number): Promise<void> => {

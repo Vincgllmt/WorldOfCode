@@ -293,7 +293,6 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-// frontend/src/services/userService.ts
 __turbopack_context__.s({
     "changeUserPassword": (()=>changeUserPassword),
     "deleteUser": (()=>deleteUser),
@@ -397,7 +396,6 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-// frontend/src/hooks/useUsers.ts
 __turbopack_context__.s({
     "useChangePassword": (()=>useChangePassword),
     "useDeleteUser": (()=>useDeleteUser),
@@ -688,12 +686,18 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
+// frontend/src/services/postService.ts
 __turbopack_context__.s({
     "createPost": (()=>createPost),
     "deletePost": (()=>deletePost),
     "getAllPosts": (()=>getAllPosts),
+    "getLikers": (()=>getLikers),
     "getPostById": (()=>getPostById),
     "getPostsByGroupId": (()=>getPostsByGroupId),
+    "likePost": (()=>likePost),
+    "reportPost": (()=>reportPost),
+    "sharePost": (()=>sharePost),
+    "unlikePost": (()=>unlikePost),
     "updatePost": (()=>updatePost)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
@@ -775,6 +779,71 @@ async function deletePost(id) {
     });
     if (!res.ok) throw new Error('Erreur lors de la suppression du post');
 }
+const likePost = async (postId)=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        }
+    });
+    if (!res.ok) throw new Error('Erreur lors du like du post');
+};
+const unlikePost = async (postId)=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        }
+    });
+    if (!res.ok) throw new Error('Erreur lors du retrait du like');
+};
+const getLikers = async (postId)=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    const res = await fetch(`${API_URL}/api/post/${postId}/likes`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        }
+    });
+    if (!res.ok) throw new Error('Impossible de récupérer les likers');
+    const raw = await res.json();
+    const normalize = (u)=>({
+            id: Number(u?.id ?? u?.userId ?? u?.user_id ?? u?.user?.id),
+            username: String(u?.username ?? u?.user?.username ?? u?.name ?? u?.email ?? 'Utilisateur'),
+            avatarUrl: u?.avatarUrl ?? u?.avatar ?? null
+        });
+    return Array.isArray(raw) ? raw.map(normalize).filter((l)=>Number.isFinite(l.id)) : [];
+};
+const sharePost = async (postId)=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    const res = await fetch(`${API_URL}/api/post/${postId}/share`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        }
+    });
+    if (!res.ok) throw new Error('Erreur lors du partage du post');
+};
+const reportPost = async (postId, reason)=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    const res = await fetch(`${API_URL}/api/report/post/${postId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        },
+        body: reason ? JSON.stringify({
+            reason
+        }) : undefined
+    });
+    if (!res.ok) throw new Error('Erreur lors du signalement du post');
+};
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }
@@ -784,11 +853,17 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
+// frontend/src/hooks/usePosts.ts
 __turbopack_context__.s({
     "useCreatePost": (()=>useCreatePost),
     "useDeletePost": (()=>useDeletePost),
+    "useLikers": (()=>useLikers),
+    "usePostLikeState": (()=>usePostLikeState),
     "usePosts": (()=>usePosts),
     "usePostsByGroup": (()=>usePostsByGroup),
+    "useReportPost": (()=>useReportPost),
+    "useSharePost": (()=>useSharePost),
+    "useToggleLike": (()=>useToggleLike),
     "useUpdatePost": (()=>useUpdatePost)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/services/postService.ts [app-client] (ecmascript)");
@@ -796,7 +871,9 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@tanstack/react-query/build/modern/useMutation.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$QueryClientProvider$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/react-hot-toast/dist/index.mjs [app-client] (ecmascript)");
-var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature(), _s2 = __turbopack_context__.k.signature(), _s3 = __turbopack_context__.k.signature(), _s4 = __turbopack_context__.k.signature();
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/useAuth.ts [app-client] (ecmascript)");
+var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature(), _s2 = __turbopack_context__.k.signature(), _s3 = __turbopack_context__.k.signature(), _s4 = __turbopack_context__.k.signature(), _s5 = __turbopack_context__.k.signature(), _s6 = __turbopack_context__.k.signature(), _s7 = __turbopack_context__.k.signature(), _s8 = __turbopack_context__.k.signature(), _s9 = __turbopack_context__.k.signature();
+;
 ;
 ;
 ;
@@ -920,6 +997,230 @@ const usePostsByGroup = (groupId, enabled = true)=>{
 _s4(usePostsByGroup, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
+    ];
+});
+// -------------------------
+// LIKES / LIKERS
+// -------------------------
+const postsKey = [
+    'posts'
+];
+const postKey = (id)=>[
+        'post',
+        id
+    ];
+const groupPostsKey = (groupId)=>[
+        'posts',
+        'group',
+        groupId
+    ];
+const likersKey = (postId)=>[
+        ...postKey(postId),
+        'likers'
+    ];
+const useLikers = (postId)=>{
+    _s5();
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"])({
+        queryKey: likersKey(postId),
+        queryFn: {
+            "useLikers.useQuery": ()=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getLikers"])(postId)
+        }["useLikers.useQuery"],
+        enabled: !!postId
+    });
+};
+_s5(useLikers, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
+    ];
+});
+const useToggleLike = ()=>{
+    _s6();
+    const queryClient = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$QueryClientProvider$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQueryClient"])();
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"])({
+        mutationFn: {
+            "useToggleLike.useMutation": async ({ postId, likedByMe })=>{
+                return likedByMe ? (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["unlikePost"])(postId) : (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["likePost"])(postId);
+            }
+        }["useToggleLike.useMutation"],
+        onMutate: {
+            "useToggleLike.useMutation": async ({ postId, likedByMe, groupId, currentUser })=>{
+                await Promise.all([
+                    queryClient.cancelQueries({
+                        queryKey: likersKey(postId)
+                    }),
+                    queryClient.cancelQueries({
+                        queryKey: postsKey
+                    }),
+                    groupId ? queryClient.cancelQueries({
+                        queryKey: groupPostsKey(groupId)
+                    }) : Promise.resolve(),
+                    queryClient.cancelQueries({
+                        queryKey: postKey(postId)
+                    })
+                ]);
+                const previousLikers = queryClient.getQueryData(likersKey(postId));
+                const previousPosts = queryClient.getQueryData(postsKey);
+                const previousGroupPosts = groupId ? queryClient.getQueryData(groupPostsKey(groupId)) : undefined;
+                const previousPost = queryClient.getQueryData(postKey(postId));
+                // on met à jour la liste des likers
+                if (currentUser) {
+                    queryClient.setQueryData(likersKey(postId), {
+                        "useToggleLike.useMutation": (prev)=>{
+                            const list = prev ?? [];
+                            const exists = list.some({
+                                "useToggleLike.useMutation.exists": (u)=>u.id === currentUser.id
+                            }["useToggleLike.useMutation.exists"]);
+                            if (likedByMe && exists) return list.filter({
+                                "useToggleLike.useMutation": (u)=>u.id !== currentUser.id
+                            }["useToggleLike.useMutation"]) // unlike
+                            ;
+                            if (!likedByMe && !exists) return [
+                                ...list,
+                                currentUser
+                            ] // like
+                            ;
+                            return list;
+                        }
+                    }["useToggleLike.useMutation"]);
+                }
+                //  on met aussi à jour la/les entités Post
+                const togglePost = {
+                    "useToggleLike.useMutation.togglePost": (p)=>({
+                            ...p,
+                            likedByMe: !likedByMe,
+                            likesCount: (p.likesCount ?? 0) + (likedByMe ? -1 : 1)
+                        })
+                }["useToggleLike.useMutation.togglePost"];
+                queryClient.setQueryData(postsKey, {
+                    "useToggleLike.useMutation": (prev)=>prev ? prev.map({
+                            "useToggleLike.useMutation": (p)=>p.id === postId ? togglePost(p) : p
+                        }["useToggleLike.useMutation"]) : prev
+                }["useToggleLike.useMutation"]);
+                if (groupId) {
+                    queryClient.setQueryData(groupPostsKey(groupId), {
+                        "useToggleLike.useMutation": (prev)=>prev ? prev.map({
+                                "useToggleLike.useMutation": (p)=>p.id === postId ? togglePost(p) : p
+                            }["useToggleLike.useMutation"]) : prev
+                    }["useToggleLike.useMutation"]);
+                }
+                queryClient.setQueryData(postKey(postId), {
+                    "useToggleLike.useMutation": (prev)=>prev ? togglePost(prev) : prev
+                }["useToggleLike.useMutation"]);
+                return {
+                    previousLikers,
+                    previousPosts,
+                    previousGroupPosts,
+                    previousPost,
+                    postId,
+                    groupId
+                };
+            }
+        }["useToggleLike.useMutation"],
+        onError: {
+            "useToggleLike.useMutation": (error, variables, context)=>{
+                if (!context) return;
+                const { postId, groupId } = context;
+                queryClient.setQueryData(likersKey(postId), context.previousLikers);
+                queryClient.setQueryData(postsKey, context.previousPosts);
+                if (groupId) queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts);
+                queryClient.setQueryData(postKey(postId), context.previousPost);
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Impossible de mettre à jour le like ❌');
+            }
+        }["useToggleLike.useMutation"],
+        onSuccess: {
+            "useToggleLike.useMutation": (_data, variables)=>{
+                // revalide la liste des likers pour être parfaitement aligné serveur
+                queryClient.invalidateQueries({
+                    queryKey: likersKey(variables.postId)
+                });
+            }
+        }["useToggleLike.useMutation"]
+    });
+};
+_s6(useToggleLike, "YK0wzM21ECnncaq5SECwU+/SVdQ=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$QueryClientProvider$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQueryClient"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"]
+    ];
+});
+const useSharePost = ()=>{
+    _s7();
+    const queryClient = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$QueryClientProvider$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQueryClient"])();
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"])({
+        mutationFn: {
+            "useSharePost.useMutation": (postId)=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["sharePost"])(postId)
+        }["useSharePost.useMutation"],
+        onSuccess: {
+            "useSharePost.useMutation": ()=>{
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Post partagé 🎉');
+                queryClient.invalidateQueries({
+                    queryKey: postsKey
+                });
+            }
+        }["useSharePost.useMutation"],
+        onError: {
+            "useSharePost.useMutation": ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Erreur lors du partage ❌')
+        }["useSharePost.useMutation"]
+    });
+};
+_s7(useSharePost, "YK0wzM21ECnncaq5SECwU+/SVdQ=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$QueryClientProvider$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQueryClient"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"]
+    ];
+});
+const useReportPost = ()=>{
+    _s8();
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"])({
+        mutationFn: {
+            "useReportPost.useMutation": ({ postId, reason })=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["reportPost"])(postId, reason)
+        }["useReportPost.useMutation"],
+        onSuccess: {
+            "useReportPost.useMutation": ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Signalement envoyé ✅')
+        }["useReportPost.useMutation"],
+        onError: {
+            "useReportPost.useMutation": ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Erreur lors du signalement ❌')
+        }["useReportPost.useMutation"]
+    });
+};
+_s8(useReportPost, "wwwtpB20p0aLiHIvSy5P98MwIUg=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"]
+    ];
+});
+const usePostLikeState = (postId, groupId)=>{
+    _s9();
+    const { user } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
+    const { data: likers } = useLikers(postId);
+    const toggleLike = useToggleLike();
+    const myId = user?.id != null ? Number(user.id) : undefined;
+    const likedByMe = myId != null && !!likers?.some((u)=>u.id === myId);
+    const likesCount = likers?.length ?? 0;
+    const onToggle = ()=>{
+        // si l'user n'est pas encore chargé, on ne tente pas le toggle
+        if (myId == null || !user) return;
+        toggleLike.mutate({
+            postId,
+            likedByMe,
+            groupId,
+            currentUser: {
+                id: myId,
+                username: user.username
+            }
+        });
+    };
+    return {
+        likedByMe,
+        likesCount,
+        onToggle,
+        isPending: toggleLike.isPending
+    };
+};
+_s9(usePostLikeState, "HKg90eoCUAGdslpCI5Zf0oh1sqM=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"],
+        useLikers,
+        useToggleLike
     ];
 });
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
@@ -1287,17 +1588,18 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
+// frontend/src/components/comment/commentSection.tsx
 __turbopack_context__.s({
-    "default": (()=>CommentSection)
+    "default": (()=>__TURBOPACK__default__export__)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/react-hook-form/dist/index.esm.mjs [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$module__evaluation$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/dist/esm/index.js [app-client] (ecmascript) <module evaluation>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$dist$2f$esm$2f$v3$2f$external$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__ = __turbopack_context__.i("[project]/node_modules/zod/dist/esm/v3/external.js [app-client] (ecmascript) <export * as z>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$hookform$2f$resolvers$2f$zod$2f$dist$2f$zod$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@hookform/resolvers/zod/dist/zod.mjs [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/useComments.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/useAuth.ts [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/input.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/dropdown-menu.tsx [app-client] (ecmascript)");
@@ -1320,25 +1622,34 @@ var _s = __turbopack_context__.k.signature();
 const schema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$dist$2f$esm$2f$v3$2f$external$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].object({
     content: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$dist$2f$esm$2f$v3$2f$external$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__z$3e$__["z"].string().min(1).max(200, 'Le commentaire ne peut pas dépasser 200 caractères')
 });
-function CommentSection({ postId }) {
+const CommentSection = /*#__PURE__*/ _s((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["forwardRef"])(_c = _s(({ postId }, ref)=>{
     _s();
     const { comments } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useComments"])();
     const { user } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
     const createComment = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCreateComment"])();
     const deleteComment = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useDeleteComment"])();
     const updateComment = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useUpdateComment"])();
-    const { register, handleSubmit, reset, formState: { errors } } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useForm"])({
+    const { register, handleSubmit, reset, setFocus, formState: { errors } } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useForm"])({
         resolver: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$hookform$2f$resolvers$2f$zod$2f$dist$2f$zod$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["zodResolver"])(schema)
     });
-    const [editingCommentId, setEditingCommentId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [editedContent, setEditedContent] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    // Expose focus vers l’extérieur (PostItem)
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useImperativeHandle"])(ref, {
+        "CommentSection.useImperativeHandle": ()=>({
+                focusComposer: ({
+                    "CommentSection.useImperativeHandle": ()=>setFocus('content')
+                })["CommentSection.useImperativeHandle"]
+            })
+    }["CommentSection.useImperativeHandle"]);
     const onSubmit = (data)=>{
         createComment.mutate({
             content: data.content,
             postId
         });
         reset();
+        setFocus('content');
     };
+    const [editingCommentId, setEditingCommentId] = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].useState(null);
+    const [editedContent, setEditedContent] = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].useState('');
     const handleEdit = (commentId, content)=>{
         setEditingCommentId(commentId);
         setEditedContent(content);
@@ -1364,22 +1675,22 @@ function CommentSection({ postId }) {
                         placeholder: "Ajouter un commentaire..."
                     }, void 0, false, {
                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                        lineNumber: 66,
-                        columnNumber: 9
+                        lineNumber: 82,
+                        columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                         type: "submit",
                         children: "Commenter"
                     }, void 0, false, {
                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                        lineNumber: 67,
-                        columnNumber: 9
+                        lineNumber: 86,
+                        columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/comment/commentSection.tsx",
-                lineNumber: 65,
-                columnNumber: 7
+                lineNumber: 81,
+                columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "space-y-4 mt-4",
@@ -1403,18 +1714,18 @@ function CommentSection({ postId }) {
                                                         className: "w-4 h-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                        lineNumber: 83,
-                                                        columnNumber: 25
+                                                        lineNumber: 102,
+                                                        columnNumber: 27
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                    lineNumber: 82,
-                                                    columnNumber: 23
+                                                    lineNumber: 101,
+                                                    columnNumber: 25
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                lineNumber: 81,
-                                                columnNumber: 21
+                                                lineNumber: 100,
+                                                columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
                                                 align: "end",
@@ -1424,33 +1735,33 @@ function CommentSection({ postId }) {
                                                         children: "✏️ Modifier"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                        lineNumber: 87,
-                                                        columnNumber: 23
+                                                        lineNumber: 106,
+                                                        columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
                                                         onClick: ()=>deleteComment.mutate(String(comment.id)),
                                                         children: "🗑️ Supprimer"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                        lineNumber: 90,
-                                                        columnNumber: 23
+                                                        lineNumber: 109,
+                                                        columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/comment/commentSection.tsx",
-                                                lineNumber: 86,
-                                                columnNumber: 21
+                                                lineNumber: 105,
+                                                columnNumber: 23
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                                        lineNumber: 80,
-                                        columnNumber: 19
+                                        lineNumber: 99,
+                                        columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                    lineNumber: 79,
-                                    columnNumber: 17
+                                    lineNumber: 98,
+                                    columnNumber: 19
                                 }, this),
                                 isEditing ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     contentEditable: true,
@@ -1460,15 +1771,15 @@ function CommentSection({ postId }) {
                                     children: editedContent
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                    lineNumber: 100,
-                                    columnNumber: 17
+                                    lineNumber: 118,
+                                    columnNumber: 19
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-sm text-gray-800",
                                     children: comment.content
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                    lineNumber: 112,
-                                    columnNumber: 17
+                                    lineNumber: 130,
+                                    columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "mt-1 text-xs text-muted-foreground",
@@ -1479,14 +1790,14 @@ function CommentSection({ postId }) {
                                             children: comment.authorUsername
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/comment/commentSection.tsx",
-                                            lineNumber: 116,
-                                            columnNumber: 21
+                                            lineNumber: 134,
+                                            columnNumber: 23
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                    lineNumber: 115,
-                                    columnNumber: 15
+                                    lineNumber: 133,
+                                    columnNumber: 17
                                 }, this),
                                 isEditing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                                     variant: "ghost",
@@ -1496,38 +1807,46 @@ function CommentSection({ postId }) {
                                     children: "💾 Enregistrer"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/comment/commentSection.tsx",
-                                    lineNumber: 121,
-                                    columnNumber: 17
+                                    lineNumber: 138,
+                                    columnNumber: 19
                                 }, this)
                             ]
                         }, comment.id, true, {
                             fileName: "[project]/src/components/comment/commentSection.tsx",
-                            lineNumber: 76,
-                            columnNumber: 13
+                            lineNumber: 96,
+                            columnNumber: 15
                         }, this);
                     }),
                     errors.content && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                         className: "text-sm text-red-500",
-                        children: 'Le commentaire doit être compris entre 1 et 200 caractères.'
+                        children: "Le commentaire doit être compris entre 1 et 200 caractères."
                     }, void 0, false, {
                         fileName: "[project]/src/components/comment/commentSection.tsx",
-                        lineNumber: 134,
-                        columnNumber: 11
+                        lineNumber: 147,
+                        columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/comment/commentSection.tsx",
-                lineNumber: 70,
-                columnNumber: 7
+                lineNumber: 90,
+                columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/comment/commentSection.tsx",
-        lineNumber: 64,
-        columnNumber: 5
+        lineNumber: 79,
+        columnNumber: 7
     }, this);
-}
-_s(CommentSection, "0RLsn5N/8k2mDdgjsW4oG92kiXw=", false, function() {
+}, "b2BtGvNdtU6ETALqdDnikoB+d/M=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useComments"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCreateComment"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useDeleteComment"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useUpdateComment"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useForm"]
+    ];
+})), "b2BtGvNdtU6ETALqdDnikoB+d/M=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useComments$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useComments"],
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"],
@@ -1537,9 +1856,12 @@ _s(CommentSection, "0RLsn5N/8k2mDdgjsW4oG92kiXw=", false, function() {
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useForm"]
     ];
 });
-_c = CommentSection;
-var _c;
-__turbopack_context__.k.register(_c, "CommentSection");
+_c1 = CommentSection;
+CommentSection.displayName = 'CommentSection';
+const __TURBOPACK__default__export__ = CommentSection;
+var _c, _c1;
+__turbopack_context__.k.register(_c, "CommentSection$forwardRef");
+__turbopack_context__.k.register(_c1, "CommentSection");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }

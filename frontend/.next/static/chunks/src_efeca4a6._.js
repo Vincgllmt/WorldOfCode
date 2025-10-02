@@ -349,7 +349,6 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-// frontend/src/services/postService.ts
 __turbopack_context__.s({
     "createPost": (()=>createPost),
     "deletePost": (()=>deletePost),
@@ -474,7 +473,13 @@ const getLikers = async (postId)=>{
         }
     });
     if (!res.ok) throw new Error('Impossible de récupérer les likers');
-    return res.json();
+    const raw = await res.json();
+    const normalize = (u)=>({
+            id: Number(u?.id ?? u?.userId ?? u?.user_id ?? u?.user?.id),
+            username: String(u?.username ?? u?.user?.username ?? u?.name ?? u?.email ?? 'Utilisateur'),
+            avatarUrl: u?.avatarUrl ?? u?.avatar ?? null
+        });
+    return Array.isArray(raw) ? raw.map(normalize).filter((l)=>Number.isFinite(l.id)) : [];
 };
 const sharePost = async (postId)=>{
     const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
@@ -655,7 +660,9 @@ _s4(usePostsByGroup, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
     ];
 });
-// ---------- LIKES / LIKERS ----------
+// -------------------------
+// LIKES / LIKERS
+// -------------------------
 const postsKey = [
     'posts'
 ];
@@ -693,14 +700,11 @@ const useToggleLike = ()=>{
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useMutation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useMutation"])({
         mutationFn: {
             "useToggleLike.useMutation": async ({ postId, likedByMe })=>{
-                if (likedByMe) return (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["unlikePost"])(postId);
-                return (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["likePost"])(postId);
+                return likedByMe ? (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["unlikePost"])(postId) : (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["likePost"])(postId);
             }
         }["useToggleLike.useMutation"],
-        // Optimistic update (likers + posts caches)
         onMutate: {
             "useToggleLike.useMutation": async ({ postId, likedByMe, groupId, currentUser })=>{
-                // Stoppe les fetchs concurrents
                 await Promise.all([
                     queryClient.cancelQueries({
                         queryKey: likersKey(postId)
@@ -715,61 +719,53 @@ const useToggleLike = ()=>{
                         queryKey: postKey(postId)
                     })
                 ]);
-                // Snapshots pour rollback
                 const previousLikers = queryClient.getQueryData(likersKey(postId));
                 const previousPosts = queryClient.getQueryData(postsKey);
                 const previousGroupPosts = groupId ? queryClient.getQueryData(groupPostsKey(groupId)) : undefined;
                 const previousPost = queryClient.getQueryData(postKey(postId));
-                // 1) Met à jour la liste des likers
+                // on met à jour la liste des likers
                 if (currentUser) {
                     queryClient.setQueryData(likersKey(postId), {
                         "useToggleLike.useMutation": (prev)=>{
-                            const existing = prev ?? [];
-                            const isAlreadyLiker = existing.some({
-                                "useToggleLike.useMutation.isAlreadyLiker": (u)=>u.id === currentUser.id
-                            }["useToggleLike.useMutation.isAlreadyLiker"]);
-                            if (likedByMe && isAlreadyLiker) {
-                                // on retire si on était en like
-                                return existing.filter({
-                                    "useToggleLike.useMutation": (u)=>u.id !== currentUser.id
-                                }["useToggleLike.useMutation"]);
-                            }
-                            if (!likedByMe && !isAlreadyLiker) {
-                                // on ajoute si on n’était pas en like
-                                return [
-                                    ...existing,
-                                    currentUser
-                                ];
-                            }
-                            return existing;
+                            const list = prev ?? [];
+                            const exists = list.some({
+                                "useToggleLike.useMutation.exists": (u)=>u.id === currentUser.id
+                            }["useToggleLike.useMutation.exists"]);
+                            if (likedByMe && exists) return list.filter({
+                                "useToggleLike.useMutation": (u)=>u.id !== currentUser.id
+                            }["useToggleLike.useMutation"]) // unlike
+                            ;
+                            if (!likedByMe && !exists) return [
+                                ...list,
+                                currentUser
+                            ] // like
+                            ;
+                            return list;
                         }
                     }["useToggleLike.useMutation"]);
                 }
-                // 2) Met à jour les entités Post (liste + détail)
-                const applyToggleOnPost = {
-                    "useToggleLike.useMutation.applyToggleOnPost": (p)=>({
+                //  on met aussi à jour la/les entités Post
+                const togglePost = {
+                    "useToggleLike.useMutation.togglePost": (p)=>({
                             ...p,
                             likedByMe: !likedByMe,
                             likesCount: (p.likesCount ?? 0) + (likedByMe ? -1 : 1)
                         })
-                }["useToggleLike.useMutation.applyToggleOnPost"];
-                // liste globale
+                }["useToggleLike.useMutation.togglePost"];
                 queryClient.setQueryData(postsKey, {
                     "useToggleLike.useMutation": (prev)=>prev ? prev.map({
-                            "useToggleLike.useMutation": (p)=>p.id === postId ? applyToggleOnPost(p) : p
+                            "useToggleLike.useMutation": (p)=>p.id === postId ? togglePost(p) : p
                         }["useToggleLike.useMutation"]) : prev
                 }["useToggleLike.useMutation"]);
-                // liste du groupe
                 if (groupId) {
                     queryClient.setQueryData(groupPostsKey(groupId), {
                         "useToggleLike.useMutation": (prev)=>prev ? prev.map({
-                                "useToggleLike.useMutation": (p)=>p.id === postId ? applyToggleOnPost(p) : p
+                                "useToggleLike.useMutation": (p)=>p.id === postId ? togglePost(p) : p
                             }["useToggleLike.useMutation"]) : prev
                     }["useToggleLike.useMutation"]);
                 }
-                // détail
                 queryClient.setQueryData(postKey(postId), {
-                    "useToggleLike.useMutation": (prev)=>prev ? applyToggleOnPost(prev) : prev
+                    "useToggleLike.useMutation": (prev)=>prev ? togglePost(prev) : prev
                 }["useToggleLike.useMutation"]);
                 return {
                     previousLikers,
@@ -781,24 +777,20 @@ const useToggleLike = ()=>{
                 };
             }
         }["useToggleLike.useMutation"],
-        // Rollback en cas d'erreur
         onError: {
             "useToggleLike.useMutation": (error, variables, context)=>{
                 if (!context) return;
                 const { postId, groupId } = context;
                 queryClient.setQueryData(likersKey(postId), context.previousLikers);
                 queryClient.setQueryData(postsKey, context.previousPosts);
-                if (groupId) {
-                    queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts);
-                }
+                if (groupId) queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts);
                 queryClient.setQueryData(postKey(postId), context.previousPost);
                 __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Impossible de mettre à jour le like ❌');
             }
         }["useToggleLike.useMutation"],
-        // Revalidation légère (liste des likers)
         onSuccess: {
             "useToggleLike.useMutation": (_data, variables)=>{
-                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success(variables.likedByMe ? 'Like retiré' : 'Post liké 👍');
+                // revalide la liste des likers pour être parfaitement aligné serveur
                 queryClient.invalidateQueries({
                     queryKey: likersKey(variables.postId)
                 });
@@ -819,16 +811,88 @@ const useSharePost = ()=>{
         mutationFn: {
             "useSharePost.useMutation": (postId)=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$postService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["sharePost"])(postId)
         }["useSharePost.useMutation"],
-        onSuccess: {
-            "useSharePost.useMutation": ()=>{
-                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Post partagé 🎉');
-                queryClient.invalidateQueries({
-                    queryKey: postsKey
-                });
+        onMutate: {
+            "useSharePost.useMutation": async (postId)=>{
+                await Promise.all([
+                    queryClient.cancelQueries({
+                        queryKey: [
+                            'posts'
+                        ]
+                    }),
+                    queryClient.cancelQueries({
+                        queryKey: [
+                            'post',
+                            postId
+                        ]
+                    })
+                ]);
+                const previousPosts = queryClient.getQueryData([
+                    'posts'
+                ]);
+                const previousPost = queryClient.getQueryData([
+                    'post',
+                    postId
+                ]);
+                const bump = {
+                    "useSharePost.useMutation.bump": (p)=>({
+                            ...p,
+                            sharesCount: (p.sharesCount ?? 0) + 1
+                        })
+                }["useSharePost.useMutation.bump"];
+                // liste
+                queryClient.setQueryData([
+                    'posts'
+                ], {
+                    "useSharePost.useMutation": (prev)=>prev ? prev.map({
+                            "useSharePost.useMutation": (p)=>p.id === postId ? bump(p) : p
+                        }["useSharePost.useMutation"]) : prev
+                }["useSharePost.useMutation"]);
+                // détail
+                queryClient.setQueryData([
+                    'post',
+                    postId
+                ], {
+                    "useSharePost.useMutation": (prev)=>prev ? bump(prev) : prev
+                }["useSharePost.useMutation"]);
+                return {
+                    previousPosts,
+                    previousPost,
+                    postId
+                };
             }
         }["useSharePost.useMutation"],
         onError: {
-            "useSharePost.useMutation": ()=>__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Erreur lors du partage ❌')
+            "useSharePost.useMutation": (_error, _variables, context)=>{
+                if (!context) return;
+                queryClient.setQueryData([
+                    'posts'
+                ], context.previousPosts);
+                queryClient.setQueryData([
+                    'post',
+                    context.postId
+                ], context.previousPost);
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].error('Erreur lors du partage ❌');
+            }
+        }["useSharePost.useMutation"],
+        onSuccess: {
+            "useSharePost.useMutation": ()=>{
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Post partagé 🎉');
+            }
+        }["useSharePost.useMutation"],
+        onSettled: {
+            "useSharePost.useMutation": (_data, _error, variables)=>{
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        'posts'
+                    ]
+                });
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        'post',
+                        variables
+                    ]
+                });
+            }
         }["useSharePost.useMutation"]
     });
 };
@@ -862,17 +926,22 @@ const usePostLikeState = (postId, groupId)=>{
     const { user } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAuth"])();
     const { data: likers } = useLikers(postId);
     const toggleLike = useToggleLike();
-    const likedByMe = !!likers?.some((u)=>u.id === user?.id);
+    const myId = user?.id != null ? Number(user.id) : undefined;
+    const likedByMe = myId != null && !!likers?.some((u)=>u.id === myId);
     const likesCount = likers?.length ?? 0;
-    const onToggle = ()=>toggleLike.mutate({
+    const onToggle = ()=>{
+        // si l'user n'est pas encore chargé, on ne tente pas le toggle
+        if (myId == null || !user) return;
+        toggleLike.mutate({
             postId,
             likedByMe,
             groupId,
-            currentUser: user ? {
-                id: user.id,
+            currentUser: {
+                id: myId,
                 username: user.username
-            } : undefined
+            }
         });
+    };
     return {
         likedByMe,
         likesCount,
@@ -1028,7 +1097,7 @@ _s(useGroups, "Z3b93vmhJEnCPN4ovcxRGbOtffM=", false, function() {
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
     ];
 });
-const useGroup = (id)=>{
+const useGroup = (id, options)=>{
     _s1();
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"])({
         queryKey: [
@@ -1038,7 +1107,8 @@ const useGroup = (id)=>{
         queryFn: {
             "useGroup.useQuery": ()=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$groupService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getGroupById"])(id)
         }["useGroup.useQuery"],
-        enabled: !!id
+        enabled: !!id && (options?.enabled ?? true),
+        ...options
     });
 };
 _s1(useGroup, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
@@ -1554,7 +1624,7 @@ _s3(useUserGroups, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"]
     ];
 });
-const useUser = (userId)=>{
+const useUser = (userId, options)=>{
     _s4();
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$tanstack$2f$react$2d$query$2f$build$2f$modern$2f$useQuery$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useQuery"])({
         queryKey: [
@@ -1564,7 +1634,8 @@ const useUser = (userId)=>{
         queryFn: {
             "useUser.useQuery": ()=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$userService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getUserById"])(userId)
         }["useUser.useQuery"],
-        enabled: typeof userId === 'number'
+        enabled: typeof userId === 'number' && (options?.enabled ?? true),
+        ...options
     });
 };
 _s4(useUser, "4ZpngI1uv+Uo3WQHEZmTQ5FNM+k=", false, function() {
@@ -1877,6 +1948,7 @@ __turbopack_context__.s({
     "default": (()=>PostActions)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/utils.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Heart$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/heart.js [app-client] (ecmascript) <export default as Heart>");
@@ -1884,6 +1956,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$send$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Send$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/send.js [app-client] (ecmascript) <export default as Send>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/usePosts.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/react-hot-toast/dist/index.mjs [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/alert-dialog.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 'use client';
@@ -1892,18 +1965,24 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-function PostActions({ post, className, onCommentClick, copyLinkOnShare, postUrl }) {
+;
+;
+function PostActions({ post, className, onCommentClick, copyLinkOnShare = false, postUrl }) {
     _s();
+    // Etat like dérivé depuis la liste des likers (persiste au refresh)
     const { likedByMe, likesCount, onToggle, isPending } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePostLikeState"])(post.id, post.techGroupId);
+    // Partage + confirmation
     const share = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSharePost"])();
-    const handleShare = async ()=>{
+    const [confirmShareOpen, setConfirmShareOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const handleConfirmShare = async ()=>{
         share.mutate(post.id, {
             onSuccess: async ()=>{
                 if (copyLinkOnShare && postUrl) {
                     try {
                         await navigator.clipboard.writeText(postUrl);
                         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Lien du post copié 📋');
-                    } catch  {}
+                    } catch  {
+                    /* noop: l’API de partage a réussi, seule la copie a échoué */ }
                 }
             }
         });
@@ -1926,12 +2005,12 @@ function PostActions({ post, className, onCommentClick, copyLinkOnShare, postUrl
                             className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])('h-6 w-6', likedByMe && 'fill-current')
                         }, void 0, false, {
                             fileName: "[project]/src/components/post/PostActions.tsx",
-                            lineNumber: 54,
+                            lineNumber: 76,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/post/PostActions.tsx",
-                        lineNumber: 45,
+                        lineNumber: 67,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1944,36 +2023,103 @@ function PostActions({ post, className, onCommentClick, copyLinkOnShare, postUrl
                             className: "h-6 w-6"
                         }, void 0, false, {
                             fileName: "[project]/src/components/post/PostActions.tsx",
-                            lineNumber: 64,
+                            lineNumber: 87,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/post/PostActions.tsx",
-                        lineNumber: 57,
+                        lineNumber: 80,
                         columnNumber: 9
                     }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                        variant: "ghost",
-                        size: "icon",
-                        className: "h-8 w-8",
-                        onClick: handleShare,
-                        "aria-label": "Partager le post",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$send$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Send$3e$__["Send"], {
-                            className: "h-6 w-6"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/post/PostActions.tsx",
-                            lineNumber: 74,
-                            columnNumber: 11
-                        }, this)
-                    }, void 0, false, {
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialog"], {
+                        open: confirmShareOpen,
+                        onOpenChange: setConfirmShareOpen,
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                                variant: "ghost",
+                                size: "icon",
+                                className: "h-8 w-8",
+                                onClick: ()=>setConfirmShareOpen(true),
+                                "aria-label": "Partager le post",
+                                disabled: share.isPending,
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$send$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Send$3e$__["Send"], {
+                                    className: "h-6 w-6"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/post/PostActions.tsx",
+                                    lineNumber: 100,
+                                    columnNumber: 13
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                lineNumber: 92,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogContent"], {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogHeader"], {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogTitle"], {
+                                                children: "Partager ce post ?"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                                lineNumber: 105,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogDescription"], {
+                                                children: "Il apparaîtra dans votre flux comme un repost. Confirmez-vous le partage ?"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                                lineNumber: 106,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/post/PostActions.tsx",
+                                        lineNumber: 104,
+                                        columnNumber: 13
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogFooter"], {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogCancel"], {
+                                                children: "Annuler"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                                lineNumber: 111,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogAction"], {
+                                                onClick: ()=>{
+                                                    handleConfirmShare();
+                                                    setConfirmShareOpen(false);
+                                                },
+                                                children: "Partager"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                                lineNumber: 112,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/post/PostActions.tsx",
+                                        lineNumber: 110,
+                                        columnNumber: 13
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/post/PostActions.tsx",
+                                lineNumber: 103,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
                         fileName: "[project]/src/components/post/PostActions.tsx",
-                        lineNumber: 67,
+                        lineNumber: 91,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/post/PostActions.tsx",
-                lineNumber: 44,
+                lineNumber: 65,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1981,21 +2127,21 @@ function PostActions({ post, className, onCommentClick, copyLinkOnShare, postUrl
                 children: [
                     likesCount,
                     " ",
-                    likesCount > 1 ? "J'aime" : "J'aime"
+                    `J'aime`
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/post/PostActions.tsx",
-                lineNumber: 79,
+                lineNumber: 126,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/post/PostActions.tsx",
-        lineNumber: 42,
+        lineNumber: 63,
         columnNumber: 5
     }, this);
 }
-_s(PostActions, "YilxplKP3oxRXjNyqvIeP4qcDEc=", false, function() {
+_s(PostActions, "8Y+tJsIe7h+rnUPVaqypJXdrT7M=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePostLikeState"],
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSharePost"]
@@ -2508,6 +2654,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useAuth$2e$t
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$usePosts$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/usePosts.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useUsers$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/useUsers.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$useGroups$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/useGroups.ts [app-client] (ecmascript)");
+// import SharedPostPreview from './SharedPostPreview'
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/utils.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/dropdown-menu.tsx [app-client] (ecmascript)");
@@ -2601,17 +2748,17 @@ function PostItem({ post }) {
                                     className: "h-4 w-4"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 99,
+                                    lineNumber: 98,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/post/PostItem.tsx",
-                                lineNumber: 98,
+                                lineNumber: 97,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/post/PostItem.tsx",
-                            lineNumber: 97,
+                            lineNumber: 96,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -2622,7 +2769,7 @@ function PostItem({ post }) {
                                     children: "✏️ Modifier"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 103,
+                                    lineNumber: 102,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2631,7 +2778,7 @@ function PostItem({ post }) {
                                     children: "🗑️ Supprimer"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 106,
+                                    lineNumber: 105,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2642,31 +2789,31 @@ function PostItem({ post }) {
                                             className: "mr-2 h-4 w-4"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/post/PostItem.tsx",
-                                            lineNumber: 116,
+                                            lineNumber: 115,
                                             columnNumber: 17
                                         }, this),
                                         " Signaler"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 112,
+                                    lineNumber: 111,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/post/PostItem.tsx",
-                            lineNumber: 102,
+                            lineNumber: 101,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/post/PostItem.tsx",
-                    lineNumber: 96,
+                    lineNumber: 95,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 95,
+                lineNumber: 94,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialog"], {
@@ -2680,20 +2827,20 @@ function PostItem({ post }) {
                                     children: "Supprimer ce post ?"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 127,
+                                    lineNumber: 126,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogDescription"], {
                                     children: "Cette action est irréversible. Le post sera définitivement supprimé."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 128,
+                                    lineNumber: 127,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/post/PostItem.tsx",
-                            lineNumber: 126,
+                            lineNumber: 125,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogFooter"], {
@@ -2702,7 +2849,7 @@ function PostItem({ post }) {
                                     children: "Annuler"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 133,
+                                    lineNumber: 132,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogAction"], {
@@ -2711,24 +2858,24 @@ function PostItem({ post }) {
                                     children: "Confirmer"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/post/PostItem.tsx",
-                                    lineNumber: 134,
+                                    lineNumber: 133,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/post/PostItem.tsx",
-                            lineNumber: 132,
+                            lineNumber: 131,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/post/PostItem.tsx",
-                    lineNumber: 125,
+                    lineNumber: 124,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 124,
+                lineNumber: 123,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2739,13 +2886,13 @@ function PostItem({ post }) {
                         children: author.username.slice(0, 2).toUpperCase()
                     }, void 0, false, {
                         fileName: "[project]/src/components/post/PostItem.tsx",
-                        lineNumber: 147,
+                        lineNumber: 146,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
                         className: "w-10 h-10 rounded-full"
                     }, void 0, false, {
                         fileName: "[project]/src/components/post/PostItem.tsx",
-                        lineNumber: 151,
+                        lineNumber: 150,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2755,13 +2902,13 @@ function PostItem({ post }) {
                                 children: author.username
                             }, void 0, false, {
                                 fileName: "[project]/src/components/post/PostItem.tsx",
-                                lineNumber: 155,
+                                lineNumber: 154,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
                                 className: "h-4 w-32 mb-1"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/post/PostItem.tsx",
-                                lineNumber: 157,
+                                lineNumber: 156,
                                 columnNumber: 13
                             }, this),
                             group ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$badge$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Badge"], {
@@ -2770,25 +2917,25 @@ function PostItem({ post }) {
                                 children: group.name
                             }, void 0, false, {
                                 fileName: "[project]/src/components/post/PostItem.tsx",
-                                lineNumber: 160,
+                                lineNumber: 159,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
                                 className: "h-4 w-24"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/post/PostItem.tsx",
-                                lineNumber: 164,
+                                lineNumber: 163,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/post/PostItem.tsx",
-                        lineNumber: 153,
+                        lineNumber: 152,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 145,
+                lineNumber: 144,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2799,7 +2946,7 @@ function PostItem({ post }) {
                 children: post.content
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 170,
+                lineNumber: 169,
                 columnNumber: 7
             }, this),
             isAuthor && isEditing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2811,12 +2958,12 @@ function PostItem({ post }) {
                     children: "💾 Enregistrer"
                 }, void 0, false, {
                     fileName: "[project]/src/components/post/PostItem.tsx",
-                    lineNumber: 184,
+                    lineNumber: 183,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 183,
+                lineNumber: 182,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$post$2f$PostActions$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -2827,7 +2974,7 @@ function PostItem({ post }) {
                 postUrl: `${__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_SITE_URL ?? ''}/post/${post.id}`
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 191,
+                lineNumber: 193,
                 columnNumber: 7
             }, this),
             showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2837,18 +2984,18 @@ function PostItem({ post }) {
                     postId: post.id
                 }, void 0, false, {
                     fileName: "[project]/src/components/post/PostItem.tsx",
-                    lineNumber: 202,
+                    lineNumber: 204,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/post/PostItem.tsx",
-                lineNumber: 201,
+                lineNumber: 203,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/post/PostItem.tsx",
-        lineNumber: 92,
+        lineNumber: 91,
         columnNumber: 5
     }, this);
 }
