@@ -39,3 +39,15 @@ export async function createConversation(
     if (!res.ok) throw new Error("Erreur lors de la création de la conversation")
     return res.json()
 }
+
+
+export async function markConversationAsRead(conversationId: string) {
+    const token = getCookie("token")
+    await fetch(`${API_URL}/api/messaging/conversations/${conversationId}/read`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+    })
+}

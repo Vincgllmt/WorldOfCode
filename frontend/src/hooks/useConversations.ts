@@ -3,14 +3,42 @@ import {
     getConversations,
     getConversationById,
     createConversation,
+    markConversationAsRead
 } from "@/services/conversationService"
 import { CreateConversationPayload } from "@/interfaces/conversation"
 import toast from "react-hot-toast"
+import { Conversation } from "@/interfaces/conversation"
+import { useEffect } from "react"
+import { socket } from "@/lib/socket"
 
-export const useConversations = () => {
+export function useConversationRealtime(userId?: string | number) {
+    const queryClient = useQueryClient()
+
+    useEffect(() => {
+        if (!userId) return
+
+        if (!socket.connected) {
+            socket.auth = { userId }
+            socket.connect()
+        }
+
+        const onMessageCreated = (data: any) => {
+            queryClient.invalidateQueries({ queryKey: ["conversations"] })
+        }
+
+        socket.on("message_created", onMessageCreated)
+
+        return () => {
+            socket.off("message_created", onMessageCreated)
+        }
+    }, [userId, queryClient])
+}
+
+export function useConversations() {
     return useQuery({
         queryKey: ["conversations"],
         queryFn: getConversations,
+        refetchInterval: 1000,
     })
 }
 
@@ -33,6 +61,33 @@ export const useCreateConversation = () => {
         },
         onError: () => {
             toast.error("Erreur lors de la création de la conversation ❌")
+        },
+    })
+}
+
+
+export function useMarkConversationAsRead() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (conversationId: string) => markConversationAsRead(conversationId),
+        onSuccess: (_, conversationId) => {
+
+            queryClient.invalidateQueries({ queryKey: ["conversations"] })
+
+            queryClient.setQueryData<Conversation[]>(["conversations"], (old: Conversation[] | undefined) => {
+                if (!old) return old
+                return old.map(conv =>
+                    conv.id === conversationId
+                        ? {
+                            ...conv,
+                            lastMessage: conv.lastMessage
+                                ? { ...conv.lastMessage, read: true }
+                                : undefined
+                        }
+                        : conv
+                )
+            })
         },
     })
 }

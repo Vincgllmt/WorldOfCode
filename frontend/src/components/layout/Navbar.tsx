@@ -1,29 +1,40 @@
-'use client'
+"use client"
 
 import { MessageCircle } from "lucide-react"
-import Link from 'next/link'
-import { useAuth } from '@/hooks/useAuth'
-import { usePathname } from 'next/navigation'
+import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
+import { usePathname } from "next/navigation"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
-import { isActive } from '@/lib/navigation'
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
+import { isActive } from "@/lib/navigation"
+import { useConversations, useConversationRealtime } from "@/hooks/useConversations"
 
 
 export default function Navbar() {
     const { user, logout } = useAuth()
     const pathname = usePathname()
+    useConversationRealtime(user?.id)
+    const { data: conversations } = useConversations()
+
+
+    const hasUnread = conversations?.some(
+        (c) =>
+            c.lastMessage &&
+            !c.lastMessage.read &&
+            c.lastMessage.sender?.id !== user?.id
+    )
 
     const navLinks = [
-        { label: 'Accueil', href: '/' },
-        { label: 'Groupes', href: '/group' },
-        { label: 'Messagerie', href: '/message', icon: MessageCircle, iconOnly: true },
+        { label: "Accueil", href: "/" },
+        { label: "Groupes", href: "/group" },
+        { label: "Messagerie", href: "/message", icon: MessageCircle, iconOnly: true },
     ]
 
     return (
@@ -40,14 +51,21 @@ export default function Navbar() {
                         key={link.href}
                         href={link.href}
                         className={cn(
-                            'text-sm font-medium hover:text-primary transition',
+                            "relative text-sm font-medium hover:text-primary transition",
                             isActive(link.href, pathname)
-                                ? 'text-primary underline underline-offset-4'
-                                : 'text-muted-foreground'
-
+                                ? "text-primary underline underline-offset-4"
+                                : "text-muted-foreground"
                         )}
                     >
-                        {link.icon && <link.icon className="h-4 w-4" />}
+                        {link.icon && (
+                            <div className="relative">
+                                <link.icon className="h-5 w-5" />
+                                {/* Pastille si messages non lus */}
+                                {link.href === "/message" && hasUnread && (
+                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                                )}
+                            </div>
+                        )}
                         {!link.iconOnly && link.label}
                     </Link>
                 ))}
@@ -66,13 +84,12 @@ export default function Navbar() {
                             <DropdownMenuItem asChild>
                                 <Link href="/profile" className="font-medium cursor-pointer">
                                     {user.username}
-                                    <MessageCircle className="h-5 w-5" />
+                                    <MessageCircle className="h-5 w-5 ml-2" />
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={logout}>Déconnexion</DropdownMenuItem>
                         </DropdownMenuContent>
-
                     </DropdownMenu>
                 )}
             </div>
