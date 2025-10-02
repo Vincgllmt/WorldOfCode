@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Messaging\Message;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use App\Entity\Messaging\Conversation;
 
 /**
  * @extends ServiceEntityRepository<Message>
@@ -32,9 +33,7 @@ class MessageRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * Récupère les messages d’une conversation par ordre chronologique
-     */
+
     public function findByConversationOrdered(string $conversationId): array
     {
         return $this->createQueryBuilder('m')
@@ -43,5 +42,17 @@ class MessageRepository extends ServiceEntityRepository
             ->orderBy('m.createdAt', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+
+    public function findLastByConversation(Conversation $conv): ?Message
+    {
+        return $this->createQueryBuilder('m')
+            ->andWhere('m.conversation = :conv')
+            ->setParameter('conv', $conv)
+            ->orderBy('m.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }

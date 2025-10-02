@@ -33,4 +33,10 @@ class ConversationResponse
         )
     )]
     public array $participants;
+
+    #[OA\Property(
+        ref: "#/components/schemas/LastMessageResponse",
+        nullable: true
+    )]
+    public ?LastMessageResponse $lastMessage = null;
 }
