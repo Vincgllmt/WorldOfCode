@@ -88,13 +88,15 @@ const login = async (credentials)=>{
     const { token } = await res.json();
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["setCookie"])('token', token, {
         path: '/'
-    });
-    return await getMe(token);
+    }) // ✅ Token stocké uniquement ici
+    ;
+    return await getMe();
 };
-const getMe = async (token)=>{
-    const res = await fetch(`${("TURBOPACK compile-time value", "http://localhost:8090")}/api/me`, {
+const getMe = async ()=>{
+    const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
+    if (!token) throw new Error('Token manquant');
+    const res = await fetch(`${API_URL}/api/me`, {
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         },
         cache: 'no-store'
@@ -140,15 +142,15 @@ const AuthProvider = ({ children })=>{
     const [user, setUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
+    // vérifier s'il existe déjà un token
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AuthProvider.useEffect": ()=>{
             const storedToken = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCookie"])('token');
             if (storedToken) {
-                (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$authService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getMe"])(storedToken).then(setUser).catch({
-                    "AuthProvider.useEffect": ()=>{
-                        logout();
-                    }
-                }["AuthProvider.useEffect"]).finally({
+                (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$authService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getMe"])().then(setUser).catch({
+                    "AuthProvider.useEffect": ()=>logout()
+                }["AuthProvider.useEffect"]) // si token invalide → logout
+                .finally({
                     "AuthProvider.useEffect": ()=>setIsLoading(false)
                 }["AuthProvider.useEffect"]);
             } else {
@@ -170,7 +172,6 @@ const AuthProvider = ({ children })=>{
     const logout = ()=>{
         (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$services$2f$authService$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["logout"])();
         setUser(null);
-        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookies$2d$next$2f$lib$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["deleteCookie"])('token');
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].success('Déconnexion réussie 👋');
         router.push('/login');
     };
@@ -185,7 +186,7 @@ const AuthProvider = ({ children })=>{
         children: children
     }, void 0, false, {
         fileName: "[project]/src/contexts/AuthContext.tsx",
-        lineNumber: 54,
+        lineNumber: 52,
         columnNumber: 5
     }, this);
 };

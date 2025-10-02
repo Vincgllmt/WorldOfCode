@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useState, useEffect, ReactNode } from 'react'
-import { getCookie, deleteCookie } from 'cookies-next'
+import { getCookie } from 'cookies-next'
 import { useRouter } from 'next/navigation'
 import * as authService from '@/services/authService'
 import { AuthContextType } from '@/interfaces/AuthContext'
@@ -15,15 +15,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
+  // vérifier s'il existe déjà un token
   useEffect(() => {
     const storedToken = getCookie('token')
     if (storedToken) {
       authService
-        .getMe(storedToken as string)
+        .getMe()
         .then(setUser)
-        .catch(() => {
-          logout()
-        })
+        .catch(() => logout()) // si token invalide → logout
         .finally(() => setIsLoading(false))
     } else {
       setIsLoading(false)
@@ -45,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout()
     setUser(null)
-    deleteCookie('token')
     toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }
