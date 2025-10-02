@@ -1,4 +1,4 @@
-import { Message } from "./message"
+import { Message, LastMessage } from "./message"
 import { Participant } from "./participant"
 
 
@@ -10,6 +10,7 @@ export interface Conversation {
     title?: string | null
     createdAt: string
     participants: Participant[]
+    lastMessage?: LastMessage
     messages?: Message[]
 }
 
