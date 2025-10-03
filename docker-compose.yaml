@@ -19,7 +19,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-
+      - /app/node_modules
     command: npm run dev
     depends_on:
       - backend
@@ -33,12 +33,13 @@ services:
       - "2999:3000"
     volumes:
       - ./backoffice:/app
-
+      - /app/node_modules
     command: npm run dev
     depends_on:
       - backend
     networks:
       - projet_network
+
   messagerie:
     build: ./messagerie
     container_name: projet_messagerie
@@ -54,6 +55,7 @@ services:
       CORS_ORIGIN: "http://localhost:3000"
     volumes:
       - ./messagerie:/app
+      - /app/node_modules
     command: npm run dev
     depends_on:
       - db
