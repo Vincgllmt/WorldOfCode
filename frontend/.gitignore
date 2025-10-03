@@ -1,10 +1,10 @@
 # --- Dépendances ---
-node_modules/
+/node_modules/
 .pnp.*
 .pnp.js
 .yarn/*
 !.yarn/patches
-!.yarn/plugins
+!.yarn/pluging
 !.yarn/releases
 !.yarn/versions
 
