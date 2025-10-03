@@ -54,18 +54,14 @@ class MessageResponse
     public ?string $deletedAt = null;
 
     #[OA\Property(
-        description: "ID de l’auteur du message",
-        type: "integer",
-        example: 66
+        description: "Auteur du message",
+        type: "object",
+        properties: [
+            new OA\Property(property: "id", type: "string", example: "32"),
+            new OA\Property(property: "username", type: "string", example: "user1234"),
+        ]
     )]
-    public int $senderId;
-
-    #[OA\Property(
-        description: "Nom d’utilisateur de l’auteur",
-        type: "string",
-        example: "eugenie"
-    )]
-    public string $senderUsername;
+    public array $sender = [];
 
     #[OA\Property(
         description: "ID de la conversation",
@@ -73,4 +69,11 @@ class MessageResponse
         example: "06226d8f-999c-49f4-86ba-ce980ffc13c0"
     )]
     public string $conversationId;
+
+    #[OA\Property(
+        description: "Indique si le message a été lu par l’utilisateur courant",
+        type: "boolean",
+        example: false
+    )]
+    public bool $read = false;
 }

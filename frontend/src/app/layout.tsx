@@ -16,22 +16,22 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 const queryClient = new QueryClient()
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
+    const pathname = usePathname()
 
-  // Masquer la navbar pour les routes /login et /register
-  const hideNavbar = pathname === '/login' || pathname === '/register'
+    // Masquer la navbar pour les routes /login et /register
+    const hideNavbar = pathname === '/login' || pathname === '/register'
 
-  return (
-    <html lang="fr">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black`}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            {!hideNavbar && <Navbar />}
-            {children}
-            <Toaster position="top-right" />
-          </AuthProvider>
-        </QueryClientProvider>
-      </body>
-    </html>
-  )
+    return (
+        <html lang="fr">
+            <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black`}>
+                <QueryClientProvider client={queryClient}>
+                    <AuthProvider>
+                        {!hideNavbar && <Navbar />}
+                        {children}
+                        <Toaster position="top-right" />
+                    </AuthProvider>
+                </QueryClientProvider>
+            </body>
+        </html>
+    )
 }
