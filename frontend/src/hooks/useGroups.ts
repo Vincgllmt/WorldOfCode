@@ -25,11 +25,12 @@ export const useGroups = () => {
   }
 }
 
-export const useGroup = (id: number) => {
+export const useGroup = (id: number, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['group', id],
     queryFn: () => getGroupById(id),
-    enabled: !!id
+    enabled: !!id && (options?.enabled ?? true),
+    ...options, // permet de surcharger si besoin (staleTime, retry, etc.)
   })
 }
 

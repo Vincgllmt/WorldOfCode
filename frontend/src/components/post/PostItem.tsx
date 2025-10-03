@@ -1,13 +1,12 @@
 'use client'
 
 import { Post } from '@/interfaces/post'
-import CommentSection from '../comment/commentSection'
 import { useState, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useUpdatePost, useDeletePost } from '@/hooks/usePosts'
 import { useUser } from '@/hooks/useUsers'
 import { useGroup } from '@/hooks/useGroups'
-
+// import SharedPostPreview from './SharedPostPreview'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -26,10 +25,12 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from '@/components/ui/alert-dialog'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Flag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
+import PostActions from './PostActions'
+import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
 
 export default function PostItem({ post }: { post: Post }) {
   const { user } = useAuth()
@@ -41,7 +42,10 @@ export default function PostItem({ post }: { post: Post }) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+
   const editableRef = useRef<HTMLDivElement>(null)
+  const commentRef = useRef<CommentSectionHandle>(null)
 
   const isAuthor = post.authorId === user?.id
 
@@ -78,6 +82,11 @@ export default function PostItem({ post }: { post: Post }) {
     })
   }
 
+  const openCommentsAndFocus = () => {
+    setShowComments(true)
+    queueMicrotask(() => commentRef.current?.focusComposer())
+  }
+
   return (
     <div className="bg-green-50 rounded-xl shadow p-4 space-y-2 relative">
       {/* Dropdown menu auteur */}
@@ -98,6 +107,12 @@ export default function PostItem({ post }: { post: Post }) {
                 className="text-red-600"
               >
                 🗑️ Supprimer
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => toast('Signalement envoyé ✅')}
+                className="text-red-600"
+              >
+                <Flag className="mr-2 h-4 w-4" /> Signaler
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -150,7 +165,7 @@ export default function PostItem({ post }: { post: Post }) {
         </div>
       </div>
 
-      {/* Contenu éditable */}
+      {/* Contenu (éditable si auteur) */}
       <div
         ref={isEditing ? editableRef : null}
         contentEditable={isEditing}
@@ -171,10 +186,24 @@ export default function PostItem({ post }: { post: Post }) {
         </div>
       )}
 
+      {/* Preview du post d’origine si c’est un repost */}
+      {/* {isRepost(post) && <SharedPostPreview post={post} />} */}
+
+      {/* Barre d’actions (Like / Commenter / Partager) */}
+      <PostActions
+        post={post}
+        className="pt-2"
+        onCommentClick={openCommentsAndFocus}
+        copyLinkOnShare
+        postUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/post/${post.id}`}
+      />
+
       {/* Commentaires */}
-      <div className="rounded-xl shadow p-4 bg-white space-y-2">
-        <CommentSection postId={post.id} />
-      </div>
+      {showComments && (
+        <div className="rounded-xl shadow p-4 bg-white space-y-2">
+          <CommentSection ref={commentRef} postId={post.id} />
+        </div>
+      )}
     </div>
   )
 }

@@ -474,7 +474,7 @@ function triggerUpdate(msg) {
 
 var { m: module } = __turbopack_context__;
 {
-__turbopack_context__.r("[next]/entry/page-loader.ts { PAGE => \"[project]/node_modules/next/app.js [client] (ecmascript)\" } [client] (ecmascript)");
+__turbopack_context__.r("[next]/entry/page-loader.ts { PAGE => \"[project]/node_modules/.pnpm/next@15.4.3_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/app.js [client] (ecmascript)\" } [client] (ecmascript)");
 }}),
 }]);
 
