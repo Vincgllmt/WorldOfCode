@@ -14,6 +14,7 @@ export default function CustomEmojiPicker({ onSelect }: EmojiPickerProps) {
                 lazyLoadEmojis
                 width={300}
                 height={400}
+
             />
         </div>
     )
