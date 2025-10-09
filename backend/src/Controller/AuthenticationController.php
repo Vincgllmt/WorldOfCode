@@ -16,6 +16,8 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Service\PasswordValidator;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+
 
 
 class AuthenticationController extends AbstractController
@@ -127,8 +129,11 @@ class AuthenticationController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         JWTTokenManagerInterface $jwtManager,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        RateLimiterFactory $loginAttemptsLimiter
     ): JsonResponse {
+
+
         $data = json_decode($request->getContent(), true);
 
         $username = $data['username'] ?? null;
@@ -136,6 +141,15 @@ class AuthenticationController extends AbstractController
 
         if (!$username || !$plainPassword) {
             return $this->json(['error' => 'Missing username or password'], 400);
+        }
+
+        // bloquer si trop de tentative - multi IP
+        $key = sprintf('%s_%s', strtolower($username), $request->getClientIp());
+        $limiter = $loginAttemptsLimiter->create($key);
+
+
+        if (false === $limiter->consume(1)->isAccepted()) {
+            return $this->json(['error' => 'Too many login attempts. Please try again later.'], 429);
         }
 
         $user = $userRepository->findOneBy(['username' => $username]);
