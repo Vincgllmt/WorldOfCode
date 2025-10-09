@@ -15,6 +15,8 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
+use App\Service\PasswordValidator;
+
 
 class AuthenticationController extends AbstractController
 {
@@ -68,6 +70,11 @@ class AuthenticationController extends AbstractController
 
         if ($existingUser) {
             return $this->json(['error' => 'Username already exists'], 409);
+        }
+
+        $error = PasswordValidator::validate($plainPassword);
+        if ($error) {
+            return $this->json(['error' => $error], 400);
         }
 
         $user = new User();
