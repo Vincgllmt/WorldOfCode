@@ -19,7 +19,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     const token = getCookie('token')
     if (!token) return setIsLoading(false)
 
-    authService.getMe(token as string)
+    authService.getMe()
       .then(user => {
         if (user.role !== 'ROLE_ADMIN') {
           toast.error("Accès non autorisé")
