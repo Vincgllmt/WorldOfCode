@@ -24,7 +24,10 @@ export const useRealtimeMessages = (conversationId: string, userId: string | num
         if (!conversationId || !userId) return
 
         if (!socket.connected) {
-            socket.auth = { userId }
+            socket.auth = {
+                token: user?.token, // 🔐 envoie le JWT au handshake
+                userId: user?.id
+            };
             socket.connect()
         }
 
@@ -46,6 +49,11 @@ export const useRealtimeMessages = (conversationId: string, userId: string | num
     const sendMessage = (body: string) => {
         if (!body.trim() || !user) return
         const tempId = Date.now().toString()
+        console.log("📤 Envoi message via socket :", {
+            conversationId,
+            tempId,
+            body,
+        });
 
         socket.emit("send_message", {
             conversation_id: conversationId,
