@@ -14,7 +14,7 @@ export default function ConversationPage() {
     const { user } = useAuth()
     const userId = user?.id?.toString()
 
-    const { messages, sendMessage } = useRealtimeMessages(id, userId)
+    const { messages, sendMessage, typingUsers } = useRealtimeMessages(id, userId)
     const { data: conversations } = useConversations()
     const { mutate: markAsRead } = useMarkConversationAsRead()
 
@@ -35,8 +35,17 @@ export default function ConversationPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] p-4">
             <ConversationHeader title={title} />
-            <MessageList messages={messages || []} userId={userId} convType={conv?.type} />
-            <MessageInput onSend={sendMessage} />
+            {/* <MessageList messages={messages || []} userId={userId} convType={conv?.type} /> */}
+            <MessageList
+                messages={messages || []}
+                userId={userId}
+                convType={conv?.type}
+                typingUsers={typingUsers}
+                otherUsername={otherUser?.username}
+            />
+            <MessageInput onSend={sendMessage} conversationId={id} />
+
+            {/* <MessageInput onSend={sendMessage} /> */}
         </div>
     )
 }

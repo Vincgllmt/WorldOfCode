@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 import dotenv from "dotenv";
 import { pool } from "./db.js";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -15,23 +16,48 @@ const io = new Server(server, {
     cors: { origin: CORS_ORIGIN }
 });
 
-// In-memory room tracking (for presence)
+
 const conversations = new Map();
 
-// TODO: remplacer par un JWT
+import fs from "fs";
+console.log("/app/src/config/jwt/public.pem");
+const publicKey = fs.readFileSync("/app/src/config/jwt/public.pem", "utf8");
+
+
+
 io.use((socket, next) => {
-    const userId =
-        socket.handshake.auth?.userId || socket.handshake.query?.userId;
-    if (!userId) {
-        socket.data.userId = `guest:${socket.id}`;
-    } else {
-        socket.data.userId = String(userId);
+    try {
+        const token =
+            socket.handshake.auth?.token ||
+            socket.handshake.headers?.authorization?.split(" ")[1];
+
+        if (!token) {
+            return next(new Error("Missing authentication token"));
+        }
+
+        const decoded = jwt.verify(token, publicKey, { algorithms: ["RS256"] });
+
+        // ✅ tu stockes à la fois le username (JWT) et l’id (du handshake)
+        socket.data.user = decoded;
+        socket.data.userId = socket.handshake.auth?.userId;
+
+        console.log(`✅ JWT valide pour ${decoded.username} (id: ${socket.data.userId})`);
+
+        next();
+    } catch (err) {
+        console.error("❌ Invalid token:", err.message);
+        next(new Error("Invalid or expired token"));
     }
-    return next();
 });
+
+
 
 io.on("connection", (socket) => {
     const userId = socket.data.userId;
+
+
+    console.log(socket.data);
+
     console.log(`🔌 connected: ${socket.id} (user: ${userId})`);
 
 
@@ -70,55 +96,56 @@ io.on("connection", (socket) => {
 
     // --- PERSIST MESSAGE ---
     socket.on("send_message", async ({ conversation_id, temp_id, body, type }) => {
-    try {
-        if (!conversation_id || !body) return;
+        console.log(body)
+        try {
+            if (!conversation_id || !body) return;
 
-        const senderId = Number(userId);
-        if (!Number.isInteger(senderId)) {
-        socket.emit("ack", { temp_id, error: "unauthorized_user" });
-        return;
-        }
+            const senderId = Number(userId);
+            if (!Number.isInteger(senderId)) {
+                socket.emit("ack", { temp_id, error: "unauthorized_user" });
+                return;
+            }
 
-        const [rows] = await pool.execute(
-        "SELECT 1 FROM msg_conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1",
-        [conversation_id, senderId]
-        );
-        if (rows.length === 0) {
-        socket.emit("ack", { temp_id, error: "not_in_conversation" });
-        return;
-        }
+            const [rows] = await pool.execute(
+                "SELECT 1 FROM msg_conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1",
+                [conversation_id, senderId]
+            );
+            if (rows.length === 0) {
+                socket.emit("ack", { temp_id, error: "not_in_conversation" });
+                return;
+            }
 
-        const id = crypto.randomUUID();
-        const created = new Date();
+            const id = crypto.randomUUID();
+            const created = new Date();
 
-        // Insérer le message
-        await pool.execute(
-        `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+            // Insérer le message
+            await pool.execute(
+                `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, conversation_id, senderId, body, type || "text", created]
-        );
+                [id, conversation_id, senderId, body, type || "text", created]
+            );
 
-        // Mettre à jour la dernière date du message de la conversation
-        await pool.execute(
-        `UPDATE msg_conversations SET last_message_at = ? WHERE id = ?`,
-        [created, conversation_id]
-        );
+            // Mettre à jour la dernière date du message de la conversation
+            await pool.execute(
+                `UPDATE msg_conversations SET last_message_at = ? WHERE id = ?`,
+                [created, conversation_id]
+            );
 
-        const payload = {
-        id,
-        conversation_id,
-        sender_id: senderId,
-        body,
-        type: type || "text",
-        created_at: created.toISOString(),
-        };
+            const payload = {
+                id,
+                conversation_id,
+                sender_id: senderId,
+                body,
+                type: type || "text",
+                created_at: created.toISOString(),
+            };
 
-        socket.emit("ack", { temp_id, ...payload });
-        io.to(conversation_id).emit("message_created", payload);
-    } catch (err) {
-        console.error("send_message error:", err);
-        socket.emit("ack", { temp_id, error: "db_insert_failed" });
-    }
+            socket.emit("ack", { temp_id, ...payload });
+            io.to(conversation_id).emit("message_created", payload);
+        } catch (err) {
+            console.error("send_message error:", err);
+            socket.emit("ack", { temp_id, error: "db_insert_failed" });
+        }
     });
 
 
@@ -131,6 +158,8 @@ io.on("connection", (socket) => {
             is_typing: Boolean(is_typing),
         });
     });
+
+
     socket.on("disconnect", () => {
         for (const [convId, set] of conversations.entries()) {
             if (set.has(socket.id)) {
