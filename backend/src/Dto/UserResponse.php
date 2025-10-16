@@ -32,6 +32,28 @@ class UserResponse
     public string $role;
 
     #[OA\Property(
+        description: "Prénom de l'utilisateur",
+        type: "string",
+        example: "Alice"
+    )]
+    public string $firstname;
+
+    #[OA\Property(
+        description: "Nom de famille de l'utilisateur",
+        type: "string",
+        example: "Dupont"
+    )]
+    public string $lastname;
+
+    #[OA\Property(
+        description: "Adresse email de l'utilisateur",
+        type: "string",
+        example: "alice@example.com"
+    )]
+    public string $email;
+
+
+    #[OA\Property(
         description: "Date de création du compte",
         type: "string",
         example: "2025-06-06 14:00:00",
