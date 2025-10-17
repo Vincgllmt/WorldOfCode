@@ -49,8 +49,11 @@ class PostController extends AbstractController
     public function list(): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        $posts = $this->repo->findAll();
-        $data = array_map([$this->mapper, 'toDto'], $posts);
+        $user = $this->getUser();
+
+        $posts = $this->repo->findAllWithLikes();
+
+        $data = array_map(fn($post) => $this->mapper->toDto($post, $user), $posts);
 
         return $this->json($data);
     }
@@ -74,24 +77,14 @@ class PostController extends AbstractController
     )]
     public function get(int $id): JsonResponse
     {
-        // $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        // $post = $this->repo->find($id);
-
-        // if (!$post) {
-        //     return $this->json(['error' => 'Post not found'], 404);
-        // }
-
-        // return $this->json($this->mapper->toDto($post));
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $user = $this->getUser();
 
-        // 🔹 Charger toutes les relations
         $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
 
-        // 🔹 Mapper avec utilisateur connecté
         $dto = $this->mapper->toDto($post, $user);
 
         return $this->json($dto);
@@ -346,53 +339,27 @@ class PostController extends AbstractController
     #[OA\Tag(name: 'Post')]
     public function like(int $id, LikeRepository $likeRepo): JsonResponse
     {
-        // $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // $post = $this->repo->findWithLikes($id);
-
-        // if (!$post) {
-        //     return $this->json(['error' => 'Post not found'], 404);
-        // }
-
-        // $user = $this->getUser();
-
-        // // Vérifier si déjà liké
-        // $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
-        // if ($existing) {
-        //     return $this->json(['error' => 'Already liked'], 400);
-        // }
-
-        // $like = new Like();
-        // $like->setUser($user);
-        // $like->setPost($post);
-        // $likeRepo->save($like);
-
-        // return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $user = $this->getUser();
 
-        // 🔹 Charger le post avec les likes (et leurs users)
         $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
 
-        // 🔹 Vérifier si déjà liké
         $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
         if ($existing) {
             return $this->json(['error' => 'Already liked'], 400);
         }
 
-        // 🔹 Ajouter le like
         $like = new Like();
         $like->setUser($user);
         $like->setPost($post);
         $likeRepo->save($like);
 
-        // 🔹 Recharger le post avec ses likes actualisés
         $post = $this->repo->findWithLikes($id);
 
-        // 🔹 Mapper avec l'utilisateur connecté pour avoir likedByUser = true
         $dto = $this->mapper->toDto($post, $user);
 
         return $this->json($dto);
