@@ -11,6 +11,9 @@ services:
     networks:
       - projet_network
     working_dir: /var/www/backend
+    dns: # mail dev
+      - 8.8.8.8 # mail dev
+      - 1.1.1.1 # mail dev
 
   frontend:
     build: ./frontend

@@ -28,6 +28,7 @@ security:
     - { path: ^/api/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/user, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/doc, roles: PUBLIC_ACCESS }
+    - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }
     - { path: ^/doc.json, roles: PUBLIC_ACCESS }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
