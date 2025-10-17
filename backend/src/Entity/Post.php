@@ -45,12 +45,16 @@ class Post
     #[ORM\OneToMany(targetEntity: Like::class, mappedBy: "post", orphanRemoval: true)]
     private Collection $likes;
 
+    #[ORM\OneToMany(mappedBy: "sharedFrom", targetEntity: Post::class)]
+    private Collection $sharedPosts;
 
     public function __construct()
     {
         $this->comments = new ArrayCollection();
 
         $this->likes = new ArrayCollection();
+
+        $this->sharedPosts = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -142,5 +146,9 @@ class Post
     public function getLikesCount(): int
     {
         return $this->likes->count();
+    }
+    public function getSharedPosts(): Collection
+    {
+        return $this->sharedPosts;
     }
 }
