@@ -17,7 +17,7 @@ class PasswordResetService
 
     public function __construct(UserRepository $userRepository)
     {
-        $dsn = 'smtp://c604fad8c7693e:c01416259056a9@sandbox.smtp.mailtrap.io:2525';
+        $dsn = 'smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587';
         $transport = Transport::fromDsn($dsn);
         $this->mailer = new Mailer($transport);
         $this->userRepository = $userRepository;
