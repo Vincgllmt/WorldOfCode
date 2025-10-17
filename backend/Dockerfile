@@ -5,7 +5,12 @@ RUN curl -sS https://get.symfony.com/cli/installer | bash && \
 
 WORKDIR /var/www/backend
 
-RUN apt-get update && apt-get install -y git unzip libicu-dev && \
+# RUN apt-get update && apt-get install -y git unzip libicu-dev && \
+#     docker-php-ext-install intl pdo pdo_mysql
+
+
+RUN apt-get update && apt-get install -y \
+    git unzip libicu-dev iputils-ping ca-certificates && \
     docker-php-ext-install intl pdo pdo_mysql
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
