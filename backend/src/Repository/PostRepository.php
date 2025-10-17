@@ -38,23 +38,6 @@ class PostRepository extends ServiceEntityRepository
     ####
     ##
     ####
-    // src/Repository/PostRepository.php
-
-    // public function findWithLikes(int $id): ?Post
-    // {
-    //     return $this->createQueryBuilder('p')
-    //         ->leftJoin('p.author', 'a')
-    //         ->leftJoin('p.techGroup', 'g')
-    //         ->leftJoin('p.sharedFrom', 'sf')
-    //         ->leftJoin('sf.author', 'sfa')
-    //         ->leftJoin('p.likes', 'l')
-    //         ->leftJoin('l.user', 'u')
-    //         ->addSelect('a', 'g', 'sf', 'sfa', 'l', 'u')
-    //         ->where('p.id = :id')
-    //         ->setParameter('id', $id)
-    //         ->getQuery()
-    //         ->getOneOrNullResult();
-    // }
     public function findWithLikes(int $id): ?Post
     {
         return $this->createQueryBuilder('p')
@@ -73,5 +56,21 @@ class PostRepository extends ServiceEntityRepository
             ->setParameter('id', $id)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+    ####
+    ##
+    ####
+    public function findAllWithLikes(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.author', 'a')->addSelect('a')
+            ->leftJoin('p.techGroup', 'g')->addSelect('g')
+            ->leftJoin('p.sharedFrom', 'sf')->addSelect('sf')
+            ->leftJoin('sf.author', 'sfa')->addSelect('sfa')
+            ->leftJoin('p.likes', 'l')->addSelect('l')
+            ->leftJoin('l.user', 'u')->addSelect('u')
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }
