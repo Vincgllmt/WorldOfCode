@@ -74,14 +74,27 @@ class PostController extends AbstractController
     )]
     public function get(int $id): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        $post = $this->repo->find($id);
+        // $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        // $post = $this->repo->find($id);
 
+        // if (!$post) {
+        //     return $this->json(['error' => 'Post not found'], 404);
+        // }
+
+        // return $this->json($this->mapper->toDto($post));
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $user = $this->getUser();
+
+        // 🔹 Charger toutes les relations
+        $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
 
-        return $this->json($this->mapper->toDto($post));
+        // 🔹 Mapper avec utilisateur connecté
+        $dto = $this->mapper->toDto($post, $user);
+
+        return $this->json($dto);
     }
     ####
     ##
@@ -333,27 +346,56 @@ class PostController extends AbstractController
     #[OA\Tag(name: 'Post')]
     public function like(int $id, LikeRepository $likeRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        // $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $post = $this->repo->find($id);
+        // $post = $this->repo->findWithLikes($id);
+
+        // if (!$post) {
+        //     return $this->json(['error' => 'Post not found'], 404);
+        // }
+
+        // $user = $this->getUser();
+
+        // // Vérifier si déjà liké
+        // $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
+        // if ($existing) {
+        //     return $this->json(['error' => 'Already liked'], 400);
+        // }
+
+        // $like = new Like();
+        // $like->setUser($user);
+        // $like->setPost($post);
+        // $likeRepo->save($like);
+
+        // return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $user = $this->getUser();
+
+        // 🔹 Charger le post avec les likes (et leurs users)
+        $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
 
-        $user = $this->getUser();
-
-        // Vérifier si déjà liké
+        // 🔹 Vérifier si déjà liké
         $existing = $likeRepo->findOneBy(['post' => $post, 'user' => $user]);
         if ($existing) {
             return $this->json(['error' => 'Already liked'], 400);
         }
 
+        // 🔹 Ajouter le like
         $like = new Like();
         $like->setUser($user);
         $like->setPost($post);
         $likeRepo->save($like);
 
-        return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
+        // 🔹 Recharger le post avec ses likes actualisés
+        $post = $this->repo->findWithLikes($id);
+
+        // 🔹 Mapper avec l'utilisateur connecté pour avoir likedByUser = true
+        $dto = $this->mapper->toDto($post, $user);
+
+        return $this->json($dto);
     }
     ####
     ##
@@ -427,57 +469,4 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
-    // ####
-    // ##
-    // ####
-    // #[Route('/{id}/report', name: 'post_report', methods: ['POST'])]
-    // #[OA\Post(
-    //     summary: 'Signaler un post',
-    //     requestBody: new OA\RequestBody(
-    //         required: false,
-    //         content: new OA\JsonContent(
-    //             properties: [
-    //                 new OA\Property(property: 'reason', type: 'string', example: 'Spam / contenu inapproprié')
-    //             ],
-    //             type: 'object'
-    //         )
-    //     ),
-    //     parameters: [
-    //         new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
-    //     ],
-    //     responses: [
-    //         new OA\Response(response: 201, description: 'Signalement enregistré'),
-    //         new OA\Response(response: 400, description: 'Déjà signalé'),
-    //         new OA\Response(response: 404, description: 'Post non trouvé')
-    //     ]
-    // )]
-    // #[OA\Tag(name: 'Post')]
-    // public function report(int $id, Request $request, ReportRepository $reportRepo): JsonResponse
-    // {
-    //     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-    //     $post = $this->repo->find($id);
-    //     if (!$post) {
-    //         return $this->json(['error' => 'Post not found'], 404);
-    //     }
-
-    //     $user = $this->getUser();
-
-    //     $existing = $reportRepo->findOneBy(['post' => $post, 'user' => $user]);
-    //     if ($existing) {
-    //         return $this->json(['error' => 'Already reported'], 400);
-    //     }
-
-    //     $data = json_decode($request->getContent(), true);
-    //     $reason = $data['reason'] ?? null;
-
-    //     $report = new Report();
-    //     $report->setUser($user);
-    //     $report->setPost($post);
-    //     $report->setReason($reason);
-
-    //     $reportRepo->save($report);
-
-    //     return $this->json(['success' => true, 'message' => 'Post reported'], 201);
-    // }
 }

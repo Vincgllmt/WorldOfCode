@@ -79,4 +79,18 @@ class PostResponse
         example: 5
     )]
     public int $likesCount = 0;
+
+    #[OA\Property(
+        description: "Indique si le post est liké par l’utilisateur connecté",
+        type: "boolean",
+        example: true
+    )]
+
+    public bool $likedByUser = false;
+    #[OA\Property(
+        description: "Nombre de fois que le post a été partagé",
+        type: "integer",
+        example: 3
+    )]
+    public int $sharedCount = 0;
 }
