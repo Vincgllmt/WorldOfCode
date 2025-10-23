@@ -1,3 +1,4 @@
+// frontend/src/components/post/PostItem.tsx
 'use client'
 
 import { Post } from '@/interfaces/post'
@@ -6,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUpdatePost, useDeletePost } from '@/hooks/usePosts'
 import { useUser } from '@/hooks/useUsers'
 import { useGroup } from '@/hooks/useGroups'
-// import SharedPostPreview from './SharedPostPreview'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -32,13 +32,16 @@ import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
 import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
 
+// ⬇️ NEW
+import PostHeader from './PostHeader'
+
 export default function PostItem({ post }: { post: Post }) {
   const { user } = useAuth()
   const updatePost = useUpdatePost()
   const deletePost = useDeletePost()
 
-  const { data: author } = useUser(post.authorId)
-  const { data: group } = useGroup(post.techGroupId)
+  const { data: author, isLoading: authorLoading } = useUser(post.authorId)
+  const { data: group, isLoading: groupLoading } = useGroup(post.techGroupId)
 
   const [isEditing, setIsEditing] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
@@ -47,6 +50,7 @@ export default function PostItem({ post }: { post: Post }) {
   const editableRef = useRef<HTMLDivElement>(null)
   const commentRef = useRef<CommentSectionHandle>(null)
 
+  const currentUserId = user?.id ?? 0
   const isAuthor = post.authorId === user?.id
 
   const handleSave = () => {
@@ -54,18 +58,13 @@ export default function PostItem({ post }: { post: Post }) {
     if (!content.trim()) return
 
     updatePost.mutate(
-      {
-        id: post.id,
-        data: { content, groupId: post.techGroupId },
-      },
+      { id: post.id, data: { content, groupId: post.techGroupId } },
       {
         onSuccess: () => {
           toast.success('Post mis à jour ✅')
           setIsEditing(false)
         },
-        onError: () => {
-          toast.error('Erreur lors de la mise à jour ❌')
-        },
+        onError: () => toast.error('Erreur lors de la mise à jour ❌'),
       }
     )
   }
@@ -76,9 +75,7 @@ export default function PostItem({ post }: { post: Post }) {
         toast.success('Post supprimé 🗑️')
         setShowDialog(false)
       },
-      onError: () => {
-        toast.error('Erreur lors de la suppression ❌')
-      },
+      onError: () => toast.error('Erreur lors de la suppression ❌'),
     })
   }
 
@@ -130,50 +127,51 @@ export default function PostItem({ post }: { post: Post }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDelete}
-            >
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={handleDelete}>
               Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Header auteur */}
-      <div className="flex items-center gap-2">
-        {author ? (
-          <div className="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm">
-            {author.username.slice(0, 2).toUpperCase()}
-          </div>
-        ) : (
+      {/* --- NEW: Header auteur (avatar + username + Follow toggle) --- */}
+      {authorLoading ? (
+        <div className="flex items-center gap-2">
           <Skeleton className="w-10 h-10 rounded-full" />
-        )}
-        <div>
-          {author ? (
-            <p className="font-semibold">{author.username}</p>
-          ) : (
-            <Skeleton className="h-4 w-32 mb-1" />
-          )}
-          {group ? (
-            <Badge variant="outline" className="text-xs">
-              {group.name}
-            </Badge>
-          ) : (
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-4 w-32" />
             <Skeleton className="h-4 w-24" />
-          )}
+          </div>
         </div>
-      </div>
+      ) : author ? (
+        <>
+          <PostHeader
+            currentUserId={currentUserId}
+            authorId={post.authorId}
+            authorUsername={author.username}
+            // authorAvatarUrl={author.avatarUrl ?? null /* si dispo dans useUser */}
+            isAuthorFollowedByMe={post.isAuthorFollowedByMe /* si dispo côté Post */}
+            className="mb-1"
+          />
+          {/* Badge du groupe sous le header */}
+          <div>
+            {groupLoading ? (
+              <Skeleton className="h-4 w-24" />
+            ) : group ? (
+              <Badge variant="outline" className="text-xs">
+                {group.name}
+              </Badge>
+            ) : null}
+          </div>
+        </>
+      ) : null}
 
       {/* Contenu (éditable si auteur) */}
       <div
         ref={isEditing ? editableRef : null}
         contentEditable={isEditing}
         suppressContentEditableWarning
-        className={cn(
-          'text-base p-2',
-          isEditing && 'border rounded border-yellow-300 bg-yellow-50'
-        )}
+        className={cn('text-base p-2', isEditing && 'border rounded border-yellow-300 bg-yellow-50')}
       >
         {post.content}
       </div>
@@ -185,9 +183,6 @@ export default function PostItem({ post }: { post: Post }) {
           </Button>
         </div>
       )}
-
-      {/* Preview du post d’origine si c’est un repost */}
-      {/* {isRepost(post) && <SharedPostPreview post={post} />} */}
 
       {/* Barre d’actions (Like / Commenter / Partager) */}
       <PostActions

@@ -1,3 +1,4 @@
+// frontend/src/hooks/useComments.ts
 import { createComment, deleteComment, getAllComments, updateComment } from "@/services/commentService"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
@@ -42,7 +43,7 @@ export const useUpdateComment = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: updateComment, 
+    mutationFn: updateComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
       toast.success('Commentaire mis à jour avec succès ✏️')
