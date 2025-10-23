@@ -72,19 +72,19 @@ class AuthenticationController extends AbstractController
         $email = $data['email'] ?? null;
 
         if (!$username || !$plainPassword || !$firstname || !$lastname || !$email) {
-            return $this->json(['error' => 'Missing required fields'], 400);
+            return $this->json(['error' => 'Il manque un/des champs obligatoire. '], 400);
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return $this->json(['error' => 'Invalid email format'], 400);
+            return $this->json(['error' => 'Mauvais format de mail.'], 400);
         }
 
         if ($userRepository->findByUsernameInsensitive($username)) {
-            return $this->json(['error' => 'Username already exists'], 409);
+            return $this->json(['error' => 'Ce nom d\'utilisateur est déjà pris.'], 409);
         }
 
         if ($userRepository->findOneBy(['email' => $email])) {
-            return $this->json(['error' => 'Email already exists'], 409);
+            return $this->json(['error' => 'Un compte avec cet email existe déjà.'], 409);
         }
 
         $error = PasswordValidator::validate($plainPassword);
@@ -303,7 +303,7 @@ class AuthenticationController extends AbstractController
         $success = $passwordResetService->resetPassword($token, $newPassword, $passwordHasher);
 
         if (!$success) {
-            return $this->json(['error' => 'Invalid or expired token'], 400);
+            return $this->json(['error' => 'Le lien est invalide ou expiré. Veuillez regénérer une modification de mot de passe.'], 400);
         }
 
         return $this->json(['message' => 'Password successfully reset.'], 200);
