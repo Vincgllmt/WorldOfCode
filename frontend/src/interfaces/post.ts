@@ -18,6 +18,7 @@ export interface Post {
   repostOf?: Post
   sharedPost?: Post
   originalPost?: Post
+  isAuthorFollowedByMe?: boolean
 }
 
 export interface CreatePostPayload {
