@@ -3,39 +3,24 @@ import type { NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = ['/login', '/unauthorized', '/_next', '/favicon.ico']
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   const { pathname } = request.nextUrl
 
-  // Routes publiques → on laisse passer
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
-    return NextResponse.next()
-  }
+  const isPublic = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+  const isAuthRoute = ['/login'].includes(pathname)
 
-  //  Pas de token → rediriger vers login
-  if (!token) {
+  // Pas de token → login
+  if (!isPublic && !token) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Vérification du rôle
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (!res.ok) throw new Error('Invalid token')
-
-    const user = await res.json()
-
-    if (user.role !== 'ROLE_ADMIN') {
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
-    }
-
-    return NextResponse.next()
-  } catch (error) {
-    console.error('[Middleware Auth Error]', error)
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Déjà connecté et sur login → accueil
+  if (isAuthRoute && token) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
+
+  return NextResponse.next()
 }
 
 export const config = {
