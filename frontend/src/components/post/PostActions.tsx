@@ -1,3 +1,4 @@
+
 'use client'
 
 import * as React from 'react'
@@ -22,7 +23,6 @@ type PostActionsProps = {
   post: Post
   className?: string
   onCommentClick?: () => void
-  /** Copie l’URL du post lors du partage */
   copyLinkOnShare?: boolean
   postUrl?: string
 }
