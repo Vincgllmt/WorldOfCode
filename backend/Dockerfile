@@ -2,7 +2,7 @@ FROM php:8.3-cli
 
 # Installer dépendances nécessaires + extensions PHP
 RUN apt-get update && \
-    apt-get install -y git unzip libicu-dev libzip-dev libxml2-dev && \
+    apt-get install -y git unzip libicu-dev libzip-dev libxml2-dev iputils-ping ca-certificates && \
     docker-php-ext-install intl pdo pdo_mysql zip && \
     docker-php-ext-enable intl pdo_mysql zip && \
     rm -rf /var/lib/apt/lists/*

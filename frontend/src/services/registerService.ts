@@ -1,20 +1,28 @@
-import { AuthenticatedUser, LoginCredentials } from "@/interfaces/Authentification"
+import { AuthenticatedUser, RegisterCredentials } from "@/interfaces/Authentification"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
+export const register = async (credentials: RegisterCredentials): Promise<AuthenticatedUser> => {
+    const res = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+    })
 
-export const register = async (credentials: LoginCredentials): Promise<AuthenticatedUser> => {
-  const res = await fetch(`${API_URL}/api/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
-  })
+    let data: any = null
+    try {
+        data = await res.json()
+    } catch {
 
-  if (res.status === 409) {
-    throw new Error("Nom d'utilisateur déjà pris")
-  }
+    }
 
-  if (!res.ok) throw new Error('Erreur lors de création du compte')
+    if (!res.ok) {
+        const errorMessage =
+            data?.error || data?.message || 'Erreur lors de la création du compte'
+        throw new Error(errorMessage)
+    }
 
-  return await res.json()
+    return data
+
 }
+
