@@ -22,7 +22,9 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
   const [query, setQuery] = useState<string>('')
   const [open, setOpen] = useState<boolean>(false)
   const [activeIndex, setActiveIndex] = useState<number>(-1)
+  const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const blurTimeout = useRef<number>()
   const listboxId = useId()
   const router = useRouter()
 
@@ -80,11 +82,23 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     })
   }, [items.length])
 
+  useEffect(() => {
+    return () => {
+      if (blurTimeout.current) {
+        window.clearTimeout(blurTimeout.current)
+      }
+    }
+  }, [])
+
   const handleSelect = (item: SearchItem) => {
+    if (blurTimeout.current) {
+      window.clearTimeout(blurTimeout.current)
+    }
     router.push(item.href)
     setQuery('')
     setOpen(false)
     setActiveIndex(-1)
+    setIsExpanded(false)
     inputRef.current?.blur()
   }
 
@@ -122,12 +136,21 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
       event.preventDefault()
       setOpen(false)
       setActiveIndex(-1)
+      if (!query) {
+        setIsExpanded(false)
+      }
       return
     }
   }
 
   const highlightedItemId =
     activeIndex >= 0 && activeIndex < items.length ? `${listboxId}-item-${activeIndex}` : undefined
+
+  const containerClasses = cn(
+    'relative transition-all duration-200 ease-out basis-full sm:basis-auto',
+    isExpanded ? 'w-full sm:w-64 lg:w-[22rem]' : 'w-full sm:w-36 lg:w-48',
+    className
+  )
 
   const renderSection = (
     title: string,
@@ -180,7 +203,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
   return (
     <Popover open={shouldDisplayPopover} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className={cn('relative w-full max-w-xs sm:max-w-sm lg:max-w-md', className)}>
+        <div className={containerClasses}>
           <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             <Search className="h-4 w-4" aria-hidden />
           </div>
@@ -193,9 +216,21 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
               setQuery(value)
               setActiveIndex(-1)
               setOpen(value.trim().length > 0)
+              if (value.trim().length > 0) {
+                setIsExpanded(true)
+              }
             }}
             onFocus={() => {
+              if (blurTimeout.current) {
+                window.clearTimeout(blurTimeout.current)
+              }
+              setIsExpanded(true)
               if (debouncedQuery.length > 0) setOpen(true)
+            }}
+            onBlur={() => {
+              blurTimeout.current = window.setTimeout(() => {
+                setIsExpanded(false)
+              }, 120)
             }}
             onKeyDown={handleKeyDown}
             role="combobox"
@@ -215,6 +250,8 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
         align="start"
         className="w-[min(20rem,90vw)] p-0"
         sideOffset={8}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
         aria-live="polite"
       >
         <div
