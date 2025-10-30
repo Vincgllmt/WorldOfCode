@@ -24,7 +24,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
   const [activeIndex, setActiveIndex] = useState<number>(-1)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const blurTimeout = useRef<number>()
+  const blurTimeout = useRef<number>(0)
   const listboxId = useId()
   const router = useRouter()
 
