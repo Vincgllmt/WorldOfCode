@@ -1,6 +1,6 @@
 
 import { getCookie } from 'cookies-next'
-import { User, UpdateUserPayload, ChangePasswordPayload } from '@/interfaces/user'
+import { User, UpdateUserPayload, ChangePasswordPayload, PublicUser } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
@@ -45,7 +45,7 @@ export const deleteUser = async (id: number): Promise<void> => {
 
 export async function getUserGroups(userId: number): Promise<Group[]> {
   const token = getCookie('token')
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}/groups`, {
+  const res = await fetch(`${API_URL}/api/user/${userId}/groups`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -57,12 +57,13 @@ export async function getUserGroups(userId: number): Promise<Group[]> {
     throw new Error('Erreur lors de la récupération des groupes utilisateur')
   }
 
-  return res.json()
+  const data = (await res.json()) as Group[]
+  return data
 }
 
-export async function getUserById(userId: number): Promise<User> {
+export async function getUserById(userId: number): Promise<PublicUser> {
   const token = getCookie('token')
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}`, {
+  const res = await fetch(`${API_URL}/api/user/${userId}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -74,7 +75,8 @@ export async function getUserById(userId: number): Promise<User> {
     throw new Error('Erreur lors de la récupération de l’utilisateur')
   }
 
-  return res.json()
+  const user = (await res.json()) as PublicUser
+  return user
 }
 
 export const changeUserPassword = async ({id, currentPassword, newPassword,}: ChangePasswordPayload): Promise<{ message: string }> => {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById, changeUserPassword } from '@/services/userService'
-import { ChangePasswordPayload, UpdateUserPayload } from '@/interfaces/user'
+import { ChangePasswordPayload, UpdateUserPayload, PublicUser } from '@/interfaces/user'
 import toast from 'react-hot-toast'
 import { Group } from '@/interfaces/group'
 
@@ -57,7 +57,7 @@ export const useUserGroups = (userId?: number) => {
 
 
 export const useUser = (userId: number | undefined, options?: { enabled?: boolean }) => {
-  return useQuery({
+  return useQuery<PublicUser, Error>({
     queryKey: ['user', userId],
     queryFn: () => getUserById(userId!),
     enabled: typeof userId === 'number' && (options?.enabled ?? true),

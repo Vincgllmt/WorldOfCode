@@ -25,3 +25,8 @@ export interface ChangePasswordPayload {
   currentPassword: string
   newPassword: string
 }
+
+export type PublicUser = User & {
+  email: string | null
+  avatarUrl?: string | null
+}

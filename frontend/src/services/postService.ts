@@ -37,6 +37,12 @@ export const getAllPosts = async (): Promise<Post[]> => {
   return data
 }
 
+export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
+  const posts = await getAllPosts()
+  // TODO: remplacer par un appel GET `${API_URL}/api/post/user/${userId}` quand disponible
+  return posts.filter((post) => post.authorId === userId)
+}
+
 export const getPostById = async (id  : string): Promise<Post> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/api/post/${id}`, {
