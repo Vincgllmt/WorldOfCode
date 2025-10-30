@@ -1,14 +1,32 @@
-import ProfileDetails from '@/components/account/ProfileDetails'
-import UpdateProfileForm from '@/components/account/UpdateProfileForm'
+'use client'
+
+import UserProfilePage from '@/components/account/UserProfilePage'
+import { useAuth } from '@/hooks/useAuth'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ProfilePage() {
-  return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Mon profil</h1>
-      <div>
-        <ProfileDetails />
-        <UpdateProfileForm />
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-96 w-full rounded-3xl" />
       </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-muted-foreground">
+        Vous devez être connecté pour accéder à votre profil.
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <UserProfilePage userId={user.id} />
     </div>
   )
 }
