@@ -45,7 +45,7 @@ export default function Navbar() {
                     World of Code
                 </Link>
 
-                <NavbarSearch className="w-full flex-1 min-w-[220px] sm:max-w-sm lg:max-w-md" />
+                <NavbarSearch className="flex-1" />
 
                 <div className="ml-auto flex items-center gap-4 sm:gap-6">
                     {navLinks.map((link) => (
