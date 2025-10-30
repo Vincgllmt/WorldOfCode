@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useFollowers, useFollowing } from '@/hooks/useFollow'
 import { useUserPosts } from '@/hooks/useUserProfile'
 
@@ -15,6 +17,14 @@ const sortByUsername = <T extends { username: string }>(list: T[] | undefined): 
   [...(list ?? [])].sort((a, b) =>
     a.username.localeCompare(b.username, 'fr', { sensitivity: 'base' }),
   )
+
+const getInitials = (username: string): string => {
+  if (!username) return ''
+  const parts = username.trim().split(/\s+/u)
+  if (parts.length === 1) return parts[0]?.slice(0, 2)?.toUpperCase() ?? ''
+  const [first, second] = parts
+  return `${first?.[0] ?? ''}${second?.[0] ?? ''}`.toUpperCase()
+}
 
 export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false)
@@ -67,11 +77,18 @@ export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
           {followersList.length > 0 ? (
             <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
               {followersList.map((follower) => (
-                <li
-                  key={follower.id}
-                  className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground"
-                >
-                  {follower.username}
+                <li key={follower.id}>
+                  <Link
+                    href={`/user/${follower.id}`}
+                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Avatar className="h-8 w-8 border border-border/70">
+                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                        {getInitials(follower.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{follower.username}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -98,11 +115,18 @@ export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
           {followingList.length > 0 ? (
             <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
               {followingList.map((user) => (
-                <li
-                  key={user.id}
-                  className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground"
-                >
-                  {user.username}
+                <li key={user.id}>
+                  <Link
+                    href={`/user/${user.id}`}
+                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Avatar className="h-8 w-8 border border-border/70">
+                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                        {getInitials(user.username)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{user.username}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
