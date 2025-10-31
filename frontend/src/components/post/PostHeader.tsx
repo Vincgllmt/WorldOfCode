@@ -41,12 +41,14 @@ export default function PostHeader({
         <div className="text-sm font-medium">{authorUsername}</div>
       </div>
 
-      <FollowToggleButton
-        currentUserId={currentUserId}
-        targetUserId={authorId}
-        initialIsFollowing={isAuthorFollowedByMe}
-        size="sm"
-      />
+      {currentUserId !== authorId ? (
+        <FollowToggleButton
+          currentUserId={currentUserId}
+          targetUserId={authorId}
+          initialIsFollowing={isAuthorFollowedByMe}
+          size="sm"
+        />
+      ) : null}
     </div>
   )
 }
