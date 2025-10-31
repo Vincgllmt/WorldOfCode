@@ -22,7 +22,7 @@ export function useConversationRealtime(userId?: string | number) {
             socket.connect()
         }
 
-        const onMessageCreated = (data: any) => {
+        const onMessageCreated = () => {
             queryClient.invalidateQueries({ queryKey: ["conversations"] })
         }
 

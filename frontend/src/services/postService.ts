@@ -3,6 +3,25 @@ import { CreatePostPayload, Liker, Post, UpdatePostPayload } from '@/interfaces/
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
+type RawLiker = {
+  id?: number | string | null
+  userId?: number | string | null
+  user_id?: number | string | null
+  user?: {
+    id?: number | string | null
+    username?: string | null
+    avatarUrl?: string | null
+    avatar?: string | null
+    email?: string | null
+    name?: string | null
+  } | null
+  username?: string | null
+  name?: string | null
+  email?: string | null
+  avatarUrl?: string | null
+  avatar?: string | null
+}
+
 export const createPost = async (data: CreatePostPayload): Promise<Post> => {
   const token = getCookie('token')
   console.log('Token utilisé pour le POST :', token)
@@ -135,7 +154,7 @@ export const getLikers = async (postId: number): Promise<Liker[]> => {
   if (!res.ok) throw new Error('Impossible de récupérer les likers')
 
   const raw = await res.json()
-  const normalize = (u: any): Liker => ({
+  const normalize = (u: RawLiker): Liker => ({
     id: Number(u?.id ?? u?.userId ?? u?.user_id ?? u?.user?.id),
     username: String(u?.username ?? u?.user?.username ?? u?.name ?? u?.email ?? 'Utilisateur'),
     avatarUrl: u?.avatarUrl ?? u?.avatar ?? null,

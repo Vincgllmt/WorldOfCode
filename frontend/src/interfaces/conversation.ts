@@ -15,7 +15,7 @@ export interface Conversation {
 }
 
 export interface CreateConversationPayload {
-    participantId: string
-    title?: string
+    targetUserId: number
+    title?: string | null
     type?: ConversationType
 }
