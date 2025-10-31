@@ -119,7 +119,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
     }
 
     createConversation.mutate(
-      { participantId: String(selectedContactId), type: 'direct' },
+      { targetUserId: selectedContactId, type: 'direct' },
       {
         onSuccess: (conversation) => {
           handleSelectConversation(conversation.id)
