@@ -9,20 +9,32 @@ import {
 import type { Follower, Following } from '@/interfaces/follow'
 
 // --- FOLLOWERS (GET) ---
-export const useFollowers = (userId: number) => {
+export const useFollowers = (userId?: number) => {
   const { data: followers, isLoading, error } = useQuery({
     queryKey: ['followers', userId],
-    queryFn: () => getFollowers(userId),
+    queryFn: () => {
+      if (typeof userId !== 'number') {
+        return Promise.resolve([] as Follower[])
+      }
+      return getFollowers(userId)
+    },
+    enabled: typeof userId === 'number',
   })
 
   return { followers, isLoading, error }
 }
 
 // --- FOLLOWING (GET) ---
-export const useFollowing = (userId: number) => {
+export const useFollowing = (userId?: number) => {
   const { data: following, isLoading, error } = useQuery({
     queryKey: ['following', userId],
-    queryFn: () => getFollowing(userId),
+    queryFn: () => {
+      if (typeof userId !== 'number') {
+        return Promise.resolve([] as Following[])
+      }
+      return getFollowing(userId)
+    },
+    enabled: typeof userId === 'number',
   })
 
   return { following, isLoading, error }

@@ -6,6 +6,7 @@ import {
     markConversationAsRead
 } from "@/services/conversationService"
 import { CreateConversationPayload } from "@/interfaces/conversation"
+import { Message } from "@/interfaces/message"
 import toast from "react-hot-toast"
 import { Conversation } from "@/interfaces/conversation"
 import { useEffect } from "react"
@@ -22,7 +23,7 @@ export function useConversationRealtime(userId?: string | number) {
             socket.connect()
         }
 
-        const onMessageCreated = (data: any) => {
+        const onMessageCreated = (_message: Message) => {
             queryClient.invalidateQueries({ queryKey: ["conversations"] })
         }
 
