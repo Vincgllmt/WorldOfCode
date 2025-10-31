@@ -49,7 +49,13 @@ export const useRealtimeMessages = (
         }
 
         // --- Gestion du "typing" ---
-        const onTyping = ({ conversation_id, user_id, is_typing }) => {
+        type TypingEventPayload = {
+            conversation_id: string
+            user_id: string | number
+            is_typing: boolean
+        }
+
+        const onTyping = ({ conversation_id, user_id, is_typing }: TypingEventPayload) => {
             if (conversation_id !== conversationId || user_id === userId) return
 
             setTypingUsers((prev) =>

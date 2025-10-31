@@ -1,0 +1,344 @@
+'use client'
+
+import * as React from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Loader2, MessageCircle, UserPlus } from 'lucide-react'
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useCreateConversation, useConversations } from '@/hooks/useConversations'
+import { useFollowers, useFollowing } from '@/hooks/useFollow'
+import { useAuth } from '@/hooks/useAuth'
+
+type MessagePanelProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSelectConversation?: (conversationId: string) => void
+}
+
+type Contact = {
+  id: number
+  username: string
+  relation: 'follower' | 'following' | 'mutual'
+}
+
+export function MessagePanel({ open, onOpenChange, onSelectConversation }: MessagePanelProps) {
+  const router = useRouter()
+  const { user } = useAuth()
+  const userId = user?.id
+
+  const { data: conversations, isLoading: isLoadingConversations, isError: conversationsError } =
+    useConversations()
+
+  const { followers, isLoading: isLoadingFollowers } = useFollowers(userId)
+  const { following, isLoading: isLoadingFollowing } = useFollowing(userId)
+
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'conversations' | 'new'>('conversations')
+  const [contactQuery, setContactQuery] = useState('')
+
+  const createConversation = useCreateConversation()
+
+  const contacts = useMemo<Contact[]>(() => {
+    const map = new Map<number, Contact>()
+
+    followers?.forEach((follower) => {
+      map.set(follower.id, {
+        id: follower.id,
+        username: follower.username,
+        relation: 'follower',
+      })
+    })
+
+    following?.forEach((followed) => {
+      const existing = map.get(followed.id)
+      map.set(followed.id, {
+        id: followed.id,
+        username: followed.username,
+        relation: existing ? 'mutual' : 'following',
+      })
+    })
+
+    return Array.from(map.values()).sort((a, b) => a.username.localeCompare(b.username))
+  }, [followers, following])
+
+  const selectedContact = useMemo(
+    () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
+    [contacts, selectedContactId]
+  )
+
+  const filteredContacts = useMemo(() => {
+    const normalizedQuery = contactQuery.trim().toLowerCase()
+    if (!normalizedQuery) {
+      return contacts
+    }
+    return contacts.filter((contact) =>
+      contact.username.toLowerCase().includes(normalizedQuery)
+    )
+  }, [contacts, contactQuery])
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedContactId(null)
+      setActiveTab('conversations')
+      setContactQuery('')
+    }
+  }, [open])
+
+  const handleSelectConversation = (conversationId: string) => {
+    onOpenChange(false)
+    if (onSelectConversation) {
+      onSelectConversation(conversationId)
+    } else {
+      router.push(`/message?c=${conversationId}`)
+    }
+  }
+
+  const handleCreateConversation = () => {
+    if (!selectedContactId) {
+      return
+    }
+
+    createConversation.mutate(
+      { participantId: String(selectedContactId), type: 'direct' },
+      {
+        onSuccess: (conversation) => {
+          handleSelectConversation(conversation.id)
+          setSelectedContactId(null)
+        },
+      }
+    )
+  }
+
+  const renderConversationList = () => {
+    if (isLoadingConversations) {
+      return (
+        <div className="space-y-3" role="status" aria-live="polite">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={`conv-skeleton-${index}`} className="flex items-center gap-3">
+              <Skeleton className="size-10 rounded-full" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (conversationsError) {
+      return (
+        <p className="text-sm text-destructive" role="alert">
+          Impossible de charger vos conversations pour le moment.
+        </p>
+      )
+    }
+
+    if (!conversations?.length) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          <MessageCircle className="size-6" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-foreground">Aucune conversation pour le moment</p>
+            <p>Démarrez un échange via l’onglet “Nouveau message”.</p>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <ul className="space-y-2" role="list">
+        {conversations.map((conversation) => {
+          const hasUnread = conversation.lastMessage ? !conversation.lastMessage.read : false
+          const title =
+            conversation.title ??
+            conversation.participants
+              .filter((participant) => participant.id !== userId)
+              .map((participant) => participant.username)
+              .join(', ')
+
+          const preview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
+
+          return (
+            <li key={conversation.id} role="listitem">
+              <button
+                type="button"
+                onClick={() => handleSelectConversation(conversation.id)}
+                className="flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition hover:border-accent hover:bg-accent/40 focus-visible:border-ring focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Avatar className="size-10">
+                  <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold leading-tight text-foreground">
+                      {title || 'Conversation'}
+                    </span>
+                    {hasUnread && (
+                      <Badge variant="secondary" className="shrink-0 text-xs font-medium">
+                        Non lu
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="line-clamp-2 text-xs text-muted-foreground">{preview}</span>
+                </div>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    )
+  }
+
+  const renderNewMessage = () => {
+    if (!userId) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Connectez-vous pour démarrer une conversation.
+        </p>
+      )
+    }
+
+    const isBusy = createConversation.isPending
+    const isLoadingContacts = isLoadingFollowers || isLoadingFollowing
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <Command
+            className="bg-background"
+            search={contactQuery}
+            onSearchChange={setContactQuery}
+          >
+            <CommandInput
+              placeholder="Rechercher un contact..."
+              aria-label="Rechercher un contact"
+            />
+            <CommandList>
+              {isLoadingContacts ? (
+                <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  Chargement des contacts...
+                </div>
+              ) : (
+                <CommandGroup heading="Contacts">
+                  {filteredContacts.length === 0 ? (
+                    <CommandEmpty>Aucun contact trouvé.</CommandEmpty>
+                  ) : (
+                    filteredContacts.map((contact) => (
+                      <CommandItem
+                        key={contact.id}
+                        value={contact.username}
+                        onSelect={() => setSelectedContactId(contact.id)}
+                      >
+                        <Avatar className="size-8">
+                          <AvatarFallback>
+                            {contact.username.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-foreground">
+                            {contact.username}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {contact.relation === 'mutual'
+                              ? 'Abonné·e mutuel·le'
+                              : contact.relation === 'follower'
+                                ? 'Vous suit'
+                                : 'Vous le suivez'}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </div>
+        {selectedContact && (
+          <div className="flex items-center gap-3 rounded-lg border p-3">
+            <Avatar className="size-10">
+              <AvatarFallback>{selectedContact.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-foreground">{selectedContact.username}</span>
+              <span className="text-xs text-muted-foreground">
+                {selectedContact.relation === 'mutual'
+                  ? 'Abonné·e mutuel·le'
+                  : selectedContact.relation === 'follower'
+                    ? 'Vous suit'
+                    : 'Vous le suivez'}
+              </span>
+            </div>
+          </div>
+        )}
+        <Button
+          type="button"
+          className="w-full"
+          onClick={handleCreateConversation}
+          disabled={!selectedContactId || isBusy}
+        >
+          {isBusy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Démarrage...
+            </>
+          ) : (
+            <>
+              <UserPlus className="size-4" aria-hidden="true" />
+              Démarrer
+            </>
+          )}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[360px] sm:w-[400px]">
+        <SheetHeader>
+          <SheetTitle>Messagerie</SheetTitle>
+          <SheetDescription>Retrouvez vos conversations ou démarrez un nouvel échange.</SheetDescription>
+        </SheetHeader>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'conversations' | 'new')}
+          className="mt-4"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="conversations">Conversations</TabsTrigger>
+            <TabsTrigger value="new">Nouveau message</TabsTrigger>
+          </TabsList>
+          <TabsContent value="conversations" className="mt-4">
+            <div className="max-h-[60vh] overflow-y-auto pr-1">{renderConversationList()}</div>
+          </TabsContent>
+          <TabsContent value="new" className="mt-4">
+            {renderNewMessage()}
+          </TabsContent>
+        </Tabs>
+      </SheetContent>
+    </Sheet>
+  )
+}

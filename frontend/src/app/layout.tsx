@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Navbar from '@/components/layout/Navbar'
 import { usePathname } from 'next/navigation'
+import { MessageFab } from '@/components/messaging/MessageFab'
 
 // Fonts
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     <AuthProvider>
                         {!hideNavbar && <Navbar />}
                         {children}
+                        {!hideNavbar && <MessageFab />}
                         <Toaster position="top-right" />
                     </AuthProvider>
                 </QueryClientProvider>

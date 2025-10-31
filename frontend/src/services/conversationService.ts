@@ -15,7 +15,7 @@ export async function getConversations(): Promise<Conversation[]> {
 
 export async function getConversationById(id: string): Promise<Conversation> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/message/conversations/${id}`, {
+    const res = await fetch(`${API_URL}/api/messaging/conversations/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -27,7 +27,7 @@ export async function createConversation(
     payload: CreateConversationPayload
 ): Promise<Conversation> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/message/conversations`, {
+    const res = await fetch(`${API_URL}/api/messaging/conversations`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -41,7 +41,7 @@ export async function createConversation(
 }
 
 
-export async function markConversationAsRead(conversationId: string) {
+export async function markConversationAsRead(conversationId: string): Promise<void> {
     const token = getCookie("token")
     await fetch(`${API_URL}/api/messaging/conversations/${conversationId}/read`, {
         method: "POST",
