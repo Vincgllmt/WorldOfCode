@@ -1,5 +1,6 @@
 "use client"
 
+import { MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { usePathname } from "next/navigation"
@@ -34,6 +35,7 @@ export default function Navbar() {
     const navLinks = [
         { label: "Accueil", href: "/" },
         { label: "Groupes", href: "/group" },
+        { label: "Messagerie", href: "/message", icon: MessageCircle, iconOnly: true },
     ]
 
     return (
@@ -46,20 +48,28 @@ export default function Navbar() {
                 <NavbarSearch className="flex" />
 
                 <div className="ml-auto flex items-center gap-4 sm:gap-6">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={cn(
-                                    "relative text-sm font-medium transition hover:text-primary",
-                                    isActive(link.href, pathname)
-                                        ? "text-primary underline underline-offset-4"
-                                        : "text-muted-foreground"
-                                )}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                    {navLinks.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className={cn(
+                                "relative text-sm font-medium transition hover:text-primary",
+                                isActive(link.href, pathname)
+                                    ? "text-primary underline underline-offset-4"
+                                    : "text-muted-foreground"
+                            )}
+                        >
+                            {link.icon && (
+                                <div className="relative">
+                                    <link.icon className="h-5 w-5" />
+                                    {link.href === "/message" && hasUnread && (
+                                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                                    )}
+                                </div>
+                            )}
+                            {!link.iconOnly && link.label}
+                        </Link>
+                    ))}
 
                     {user && (
                         <DropdownMenu>
@@ -74,6 +84,7 @@ export default function Navbar() {
                                 <DropdownMenuItem asChild>
                                     <Link href="/profile" className="cursor-pointer font-medium">
                                         {user.username}
+                                        <MessageCircle className="ml-2 h-5 w-5" />
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
