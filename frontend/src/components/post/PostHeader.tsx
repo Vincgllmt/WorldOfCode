@@ -1,4 +1,3 @@
-// frontend/src/components/post/PostHeader.tsx
 'use client'
 
 import Image from 'next/image'

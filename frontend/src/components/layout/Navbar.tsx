@@ -84,7 +84,6 @@ export default function Navbar() {
                                 <DropdownMenuItem asChild>
                                     <Link href="/profile" className="cursor-pointer font-medium">
                                         {user.username}
-                                        <MessageCircle className="ml-2 h-5 w-5" />
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />

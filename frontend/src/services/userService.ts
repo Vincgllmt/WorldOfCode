@@ -19,13 +19,15 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user/${data.id}`, {
-    method: 'PUT',
+  const { id, ...payload } = data
+  const res = await fetch(`${API_URL}/api/user/${id}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify(data)
+    credentials: 'include',
+    body: JSON.stringify(payload)
   })
   if (!res.ok) throw new Error('Erreur lors de la mise à jour')
   return res.json()

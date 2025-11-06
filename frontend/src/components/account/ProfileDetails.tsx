@@ -33,12 +33,21 @@ export default function ProfileDetails() {
           <strong>Rôle :</strong> {data.role}
         </p>
         <p>
+          <strong>Prénom :</strong> {data.firstname ?? '—'}
+        </p>
+        <p>
+          <strong>Nom :</strong> {data.lastname ?? '—'}
+        </p>
+        <p>
+          <strong>Email :</strong> {data.email}
+        </p>
+        <p>
           <strong>Date de création :</strong>{' '}
           {new Date(data.creationDate).toLocaleDateString()}
         </p>
         <p>
           <strong>Dernière mise à jour :</strong>{' '}
-          {new Date(data.updateDate).toLocaleDateString()}
+          {new Date(data.updatedDate).toLocaleDateString()}
         </p>
       </div>
 

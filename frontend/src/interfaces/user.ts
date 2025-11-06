@@ -2,14 +2,21 @@ export interface User {
   id: number
   username: string
   role: 'ROLE_USER' | 'ROLE_ADMIN'
+  email: string
+  firstname: string | null
+  lastname: string | null
   creationDate: string
-  updateDate: string
+  updatedDate: string
+  avatarUrl?: string | null
 }
 
 export interface UpdateUserPayload {
   id: number
-  username: string
-  role: 'ROLE_USER' | 'ROLE_ADMIN'
+  username?: string
+  role?: 'ROLE_USER' | 'ROLE_ADMIN'
+  email?: string
+  firstname?: string | null
+  lastname?: string | null
 }
 
 export interface UserGroup {
@@ -26,7 +33,4 @@ export interface ChangePasswordPayload {
   newPassword: string
 }
 
-export type PublicUser = User & {
-  email: string | null
-  avatarUrl?: string | null
-}
+export type PublicUser = User
