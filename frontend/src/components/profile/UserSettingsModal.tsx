@@ -10,7 +10,13 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useUser, useUpdateUser, useChangePassword } from '@/hooks/useUsers'
+import {
+  useUser,
+  useUpdateUser,
+  useChangePassword,
+  useDeleteUser,
+} from '@/hooks/useUsers'
+import { useAuth } from '@/hooks/useAuth'
 import type { PublicUser } from '@/interfaces/user'
 import {
   passwordChangeSchema,
@@ -18,6 +24,17 @@ import {
   type PasswordChangeFormValues,
   type UserProfileFormValues,
 } from '@/interfaces/user.schemas'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 type UserSettingsModalProps = {
   userId: number
@@ -30,7 +47,10 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
   const { data: user, isLoading } = useUser(userId, { enabled: open })
   const updateUser = useUpdateUser()
   const changePassword = useChangePassword()
+  const deleteUser = useDeleteUser()
+  const { logout } = useAuth()
   const queryClient = useQueryClient()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const profileForm = useForm<UserProfileFormValues>({
     resolver: zodResolver(userProfileSchema),
@@ -65,11 +85,13 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
       setActiveTab('profile')
       profileForm.reset()
       passwordForm.reset()
+      setDeleteDialogOpen(false)
     }
   }, [open, profileForm, passwordForm])
 
   const isProfileSubmitting = profileForm.formState.isSubmitting || updateUser.isPending
   const isPasswordSubmitting = passwordForm.formState.isSubmitting || changePassword.isPending
+  const isDeletePending = deleteUser.isPending
 
   const profileErrorMessages = profileForm.formState.errors
   const passwordErrorMessages = passwordForm.formState.errors
@@ -115,6 +137,15 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
       }
     )
   })
+  const handleDeleteAccount = () => {
+    deleteUser.mutate(userId, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false)
+        onOpenChange(false)
+        logout()
+      },
+    })
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,6 +283,43 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
             </TabsContent>
           </Tabs>
         )}
+
+        <div className="mt-8 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-destructive">Zone dangereuse</h3>
+              <p className="text-sm text-muted-foreground">
+                Supprimer définitivement votre compte et toutes vos données associées.
+              </p>
+            </div>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isDeletePending}>
+                  {isDeletePending ? 'Suppression…' : 'Supprimer mon compte'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer votre compte ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est irréversible. Toutes vos publications, abonnements et données
+                    seront supprimés définitivement.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletePending}>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeletePending}
+                  >
+                    Confirmer la suppression
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )
