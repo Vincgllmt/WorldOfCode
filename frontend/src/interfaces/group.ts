@@ -8,6 +8,7 @@ export interface Group {
   users?: User[]
   description: string
   createdAt: string
+  joinedByUser?: boolean
 }
 
 export interface CreateGroupPayload {

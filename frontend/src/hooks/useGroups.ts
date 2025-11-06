@@ -6,9 +6,10 @@ import {
   updateGroup,
   deleteGroup,
   joinGroup,
+  leaveGroup,
   getGroupById
 } from '@/services/groupService'
-import { CreateGroupPayload, UpdateGroupPayload } from '@/interfaces/group'
+import { CreateGroupPayload, Group, UpdateGroupPayload } from '@/interfaces/group'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
@@ -94,5 +95,70 @@ export const useJoinGroup = () => {
     onError: () => {
       toast.error('Erreur lors de la tentative de rejoindre le groupe ❌')
     }
+  })
+}
+
+export const useToggleGroupMembership = () => {
+  const queryClient = useQueryClient()
+
+  type ToggleInput = {
+    groupId: number
+    currentlyJoined: boolean
+  }
+
+  type ToggleContext = {
+    previousGroups?: Group[]
+    previousGroup?: Group
+  }
+
+  return useMutation<boolean, Error, ToggleInput, ToggleContext>({
+    mutationFn: async ({ groupId, currentlyJoined }) => {
+      if (currentlyJoined) {
+        await leaveGroup(groupId)
+        return false
+      }
+      await joinGroup(groupId)
+      return true
+    },
+    onMutate: async ({ groupId, currentlyJoined }) => {
+      await queryClient.cancelQueries({ queryKey: ['groups'] })
+      await queryClient.cancelQueries({ queryKey: ['group', groupId] })
+      await queryClient.cancelQueries({ queryKey: ['user-groups'] })
+
+      const previousGroups = queryClient.getQueryData<Group[]>(['groups'])
+      const previousGroup = queryClient.getQueryData<Group>(['group', groupId])
+
+      queryClient.setQueryData<Group[]>(['groups'], (old) =>
+        old
+          ? old.map((g) =>
+              g.id === groupId ? { ...g, joinedByUser: !currentlyJoined } : g
+            )
+          : old
+      )
+
+      queryClient.setQueryData<Group>(['group', groupId], (old) =>
+        old ? { ...old, joinedByUser: !currentlyJoined } : old
+      )
+
+      return { previousGroups, previousGroup }
+    },
+    onError: (_error, { groupId }, context) => {
+      if (context?.previousGroups) {
+        queryClient.setQueryData(['groups'], context.previousGroups)
+      }
+      if (context?.previousGroup) {
+        queryClient.setQueryData(['group', groupId], context.previousGroup)
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] })
+      toast.error('Action impossible ❌')
+    },
+    onSuccess: (joined) => {
+      toast.success(joined ? 'Inscription au groupe réussie ✅' : 'Désabonnement réussi ✅')
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] })
+    },
   })
 }
