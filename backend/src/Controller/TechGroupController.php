@@ -8,6 +8,7 @@ use App\Dto\TechGroupResponse;
 use App\Mapper\TechGroupMapper;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Annotation\Route;
 use OpenApi\Attributes as OA;
@@ -16,6 +17,9 @@ use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Mapper\PostMapper;
 use App\Dto\PostResponse;
+use App\Entity\User;
+use App\Service\TechGroupMembershipService;
+use Doctrine\ORM\EntityNotFoundException;
 
 #[Route('/api/group')]
 #[OA\Tag(name: 'TechGroup')]
@@ -25,7 +29,8 @@ class TechGroupController extends AbstractController
         private TechGroupRepository $repo,
         private TechGroupMapper $mapper,
         private UserMapper $userMapper,
-        private PostMapper $postMapper
+        private PostMapper $postMapper,
+        private TechGroupMembershipService $membershipService
     ) {}
 
     #[Route('', name: 'group_list', methods: ['GET'])]
@@ -244,20 +249,54 @@ class TechGroupController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $group = $this->repo->find($id);
-        if (!$group) {
-            return $this->json(['error' => 'Group not found'], 404);
-        }
-
         $user = $this->getUser();
-        if ($group->getUsers()->contains($user)) {
-            return $this->json(['message' => 'Already a member of the group.'], 200);
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $group->addUser($user);
-        $this->repo->save($group, true);
+        try {
+            $joined = $this->membershipService->join($id, $user);
+        } catch (EntityNotFoundException) {
+            return $this->json(['error' => 'Group not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!$joined) {
+            return $this->json(['message' => 'Already a member of the group.']);
+        }
 
         return $this->json(['message' => 'Successfully joined the group.']);
+    }
+    ####
+    ##
+    ####
+    #[Route('/{id}/join', name: 'group_leave', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Quitter un groupe en tant qu’utilisateur connecté',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Utilisateur retiré (ou déjà absent) du groupe'),
+            new OA\Response(response: 401, description: 'Non authentifié'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
+    public function leaveGroup(int $id): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        try {
+            $this->membershipService->leave($id, $user);
+        } catch (EntityNotFoundException) {
+            return $this->json(['error' => 'Group not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
     ####
     ##
