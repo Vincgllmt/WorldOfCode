@@ -80,8 +80,23 @@ export async function joinGroup(id:number): Promise<void> {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
-    }
+    },
+    credentials: 'include',
   })
 
   if (!res.ok) throw new Error('Erreur lors de la demande d\'adhésion au groupe')
+}
+
+export async function leaveGroup(id: number): Promise<void> {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/group/${id}/join`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: 'include',
+  })
+
+  if (!res.ok) throw new Error('Erreur lors du départ du groupe')
 }
