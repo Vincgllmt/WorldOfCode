@@ -1,7 +1,6 @@
-// frontend/src/components/comment/commentSection.tsx
 'use client'
 
-import React, { forwardRef, useImperativeHandle } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +13,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +60,7 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
 
     const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null)
     const [editedContent, setEditedContent] = React.useState<string>('')
+    const editTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
     const handleEdit = (commentId: number, content: string) => {
       setEditingCommentId(commentId)
@@ -73,7 +74,22 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
       setEditedContent('')
     }
 
-    const filteredComments = comments?.filter(c => c.postId === postId) || []
+    useEffect(() => {
+      if (editingCommentId !== null && editTextareaRef.current) {
+        editTextareaRef.current.focus()
+        const length = editTextareaRef.current.value.length
+        editTextareaRef.current.setSelectionRange(length, length)
+      }
+    }, [editingCommentId])
+
+    const filteredComments =
+      comments
+        ?.filter((c) => c.postId === postId)
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ) ?? []
 
     return (
       <div>
@@ -115,17 +131,15 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
                 )}
 
                 {isEditing ? (
-                  <div
-                    contentEditable
-                    suppressContentEditableWarning
+                  <Textarea
+                    ref={editTextareaRef}
+                    value={editedContent}
+                    onChange={(event) => setEditedContent(event.target.value)}
                     className={cn(
-                      'border border-yellow-400 rounded bg-yellow-100 p-2 text-sm text-gray-800',
-                      'outline-none'
+                      'border border-yellow-400 bg-yellow-100 text-sm text-gray-800'
                     )}
-                    onInput={e => setEditedContent((e.target as HTMLDivElement).innerText)}
-                  >
-                    {editedContent}
-                  </div>
+                    maxLength={200}
+                  />
                 ) : (
                   <p className="text-sm text-gray-800">{comment.content}</p>
                 )}

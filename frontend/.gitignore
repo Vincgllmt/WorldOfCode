@@ -16,6 +16,7 @@ pnpm-debug.log*
 
 # --- Environnements ---
 .env
+.env.local
 .env.*.local
 
 # --- Build & production ---
@@ -37,3 +38,4 @@ Thumbs.db
 
 # --- Autres fichiers temporaires ---
 *.log
+next-env.d.ts
