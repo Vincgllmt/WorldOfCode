@@ -1,4 +1,3 @@
-// frontend/src/components/post/PostItem.tsx
 'use client'
 
 import { Post } from '@/interfaces/post'
