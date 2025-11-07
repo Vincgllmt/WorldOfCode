@@ -15,6 +15,9 @@ use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Dto\TechGroupResponse;
 use App\Mapper\TechGroupMapper;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Validator\ConstraintViolationListInterface;
+use App\Dto\UserUpdateRequest;
 
 
 final class UserController extends AbstractController
@@ -22,7 +25,8 @@ final class UserController extends AbstractController
     public function __construct(
         private UserRepository $repo,
         private UserMapper $mapper,
-        private TechGroupMapper $groupMapper
+        private TechGroupMapper $groupMapper,
+        private ValidatorInterface $validator
     ) {}
 
     #[Route('api/user', name: 'user_list', methods: ['GET'])]
@@ -82,13 +86,7 @@ final class UserController extends AbstractController
         summary: 'Met à jour un utilisateur',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'username', type: 'string'),
-                    new OA\Property(property: 'role', description: 'Uniquement modifiable par un admin', type: 'string')
-                ],
-                type: 'object'
-            )
+            content: new Model(type: UserUpdateRequest::class)
         ),
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
@@ -100,7 +98,9 @@ final class UserController extends AbstractController
                 content: new Model(type: UserResponse::class)
             ),
             new OA\Response(response: 403, description: 'Accès interdit'),
-            new OA\Response(response: 404, description: 'Utilisateur non trouvé')
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé'),
+            new OA\Response(response: 409, description: 'Nom ou email déjà utilisés'),
+            new OA\Response(response: 422, description: 'Erreurs de validation')
         ]
     )]
     #[OA\Tag(name: 'User')]
@@ -117,17 +117,40 @@ final class UserController extends AbstractController
             return $this->json(['error' => 'Access denied'], 403);
         }
 
-        $data = json_decode($request->getContent(), true);
-
-        if (isset($data['username'])) {
-            $user->setUsername($data['username']);
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            return $this->json(['error' => 'Invalid JSON payload'], 400);
         }
 
-        if (isset($data['role'])) {
-            if (!$this->isGranted('ROLE_ADMIN')) {
-                return $this->json(['error' => 'Only admins can modify roles'], 403);
-            }
-            $user->setRole(UserRole::from($data['role']));
+        $dto = UserUpdateRequest::fromArray($payload);
+        $violations = $this->validator->validate($dto);
+        if (count($violations) > 0) {
+            return $this->json(
+                ['error' => 'Validation failed', 'details' => $this->formatViolations($violations)],
+                422
+            );
+        }
+
+        if ($this->repo->existsOtherWithUsername($user->getId(), $dto->username)) {
+            return $this->json(['error' => 'Username already in use'], 409);
+        }
+
+        if ($this->repo->existsOtherWithEmail($user->getId(), $dto->email)) {
+            return $this->json(['error' => 'Email already in use'], 409);
+        }
+
+        $targetRole = UserRole::from($dto->role);
+        if (!$this->isGranted('ROLE_ADMIN') && $targetRole !== $user->getRole()) {
+            return $this->json(['error' => 'Only admins can modify roles'], 403);
+        }
+
+        $user->setUsername($dto->username)
+            ->setFirstname($dto->firstname)
+            ->setLastname($dto->lastname)
+            ->setEmail($dto->email);
+
+        if ($this->isGranted('ROLE_ADMIN')) {
+            $user->setRole($targetRole);
         }
 
         $this->repo->save($user, true);
@@ -264,5 +287,21 @@ final class UserController extends AbstractController
         $data = array_map(fn($group) => $this->groupMapper->toDto($group), $groups->toArray());
 
         return $this->json($data);
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    private function formatViolations(ConstraintViolationListInterface $violations): array
+    {
+        $errors = [];
+        foreach ($violations as $violation) {
+            $errors[] = [
+                'field' => (string) $violation->getPropertyPath(),
+                'message' => $violation->getMessage(),
+            ];
+        }
+
+        return $errors;
     }
 }

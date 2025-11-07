@@ -13,7 +13,7 @@
         "doctrine/orm": "^3.3",
         "lexik/jwt-authentication-bundle": "^2.20",
         "nelmio/api-doc-bundle": "^5.3",
-        "nelmio/cors-bundle": "^2.5",
+        "nelmio/cors-bundle": "^2.6",
         "ramsey/uuid": "^4.9",
         "symfony/asset": "6.4.*",
         "symfony/console": "6.4.*",
@@ -27,6 +27,7 @@
         "symfony/security-bundle": "6.4.*",
         "symfony/twig-bundle": "6.4.*",
         "symfony/uid": "6.4.*",
+        "symfony/validator": "6.4.*",
         "symfony/yaml": "6.4.*"
     },
     "require-dev": {

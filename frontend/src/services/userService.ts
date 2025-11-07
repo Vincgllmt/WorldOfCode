@@ -21,7 +21,7 @@ export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
   const token = getCookie('token')
   const { id, ...payload } = data
   const res = await fetch(`${API_URL}/api/user/${id}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`

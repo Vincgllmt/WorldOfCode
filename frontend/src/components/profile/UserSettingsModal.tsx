@@ -3,21 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  useUser,
-  useUpdateUser,
-  useChangePassword,
-  useDeleteUser,
-} from '@/hooks/useUsers'
+import { useUser, useUpdateUser, useChangePassword, useDeleteUser } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
-import type { PublicUser } from '@/interfaces/user'
 import {
   passwordChangeSchema,
   userProfileSchema,
@@ -49,12 +42,12 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
   const changePassword = useChangePassword()
   const deleteUser = useDeleteUser()
   const { logout } = useAuth()
-  const queryClient = useQueryClient()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const profileForm = useForm<UserProfileFormValues>({
     resolver: zodResolver(userProfileSchema),
     defaultValues: {
+      username: '',
       firstname: '',
       lastname: '',
       email: '',
@@ -73,6 +66,7 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
   useEffect(() => {
     if (user && open) {
       profileForm.reset({
+        username: user.username,
         firstname: user.firstname ?? '',
         lastname: user.lastname ?? '',
         email: user.email,
@@ -97,27 +91,24 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
   const passwordErrorMessages = passwordForm.formState.errors
 
   const handleProfileSubmit = profileForm.handleSubmit(async (values) => {
+    const role = user?.role ?? 'ROLE_USER'
+    const confirmed = window.confirm('Vous allez être déconnecté pour appliquer ces changements. Continuer ?')
+    if (!confirmed) {
+      return
+    }
     const payload = {
       id: userId,
+      username: values.username,
       firstname: values.firstname,
       lastname: values.lastname,
       email: values.email,
+      role,
     }
 
     updateUser.mutate(payload, {
-      onSuccess: (updated) => {
-        if (user) {
-          const nextUser: PublicUser = { ...user, ...updated }
-          queryClient.setQueryData(['user', userId], nextUser)
-          profileForm.reset({
-            firstname: nextUser.firstname ?? '',
-            lastname: nextUser.lastname ?? '',
-            email: nextUser.email,
-          })
-        } else {
-          queryClient.invalidateQueries({ queryKey: ['user', userId] })
-        }
+      onSuccess: () => {
         onOpenChange(false)
+        logout()
       },
     })
   })
@@ -169,6 +160,21 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
 
             <TabsContent value="profile">
               <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Nom d’utilisateur</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    autoComplete="username"
+                    {...profileForm.register('username')}
+                  />
+                  {profileErrorMessages.username ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {profileErrorMessages.username.message}
+                    </p>
+                  ) : null}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="firstname">Prénom</Label>
                   <Input
@@ -287,9 +293,8 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
         <div className="mt-8 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-destructive">Zone dangereuse</h3>
               <p className="text-sm text-muted-foreground">
-                Supprimer définitivement votre compte et toutes vos données associées.
+                Supprimer définitivement votre compte et toutes vos données.
               </p>
             </div>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

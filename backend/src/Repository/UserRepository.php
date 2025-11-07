@@ -38,6 +38,34 @@ class UserRepository extends ServiceEntityRepository
     ####
     ##
     ####
+    public function existsOtherWithUsername(int $userId, string $username): bool
+    {
+        return (bool) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->where('LOWER(u.username) = LOWER(:username)')
+            ->andWhere('u.id != :id')
+            ->setParameter('username', $username)
+            ->setParameter('id', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+    ####
+    ##
+    ####
+    public function existsOtherWithEmail(int $userId, string $email): bool
+    {
+        return (bool) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->where('LOWER(u.email) = LOWER(:email)')
+            ->andWhere('u.id != :id')
+            ->setParameter('email', $email)
+            ->setParameter('id', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+    ####
+    ##
+    ####
     public function remove(User $user, bool $flush = false): void
     {
         $this->getEntityManager()->remove($user);
