@@ -12,11 +12,11 @@ export interface User {
 
 export interface UpdateUserPayload {
   id: number
-  username?: string
-  role?: 'ROLE_USER' | 'ROLE_ADMIN'
-  email?: string
-  firstname?: string | null
-  lastname?: string | null
+  username: string
+  role: 'ROLE_USER' | 'ROLE_ADMIN'
+  email: string
+  firstname: string | null
+  lastname: string | null
 }
 
 export interface UserGroup {
