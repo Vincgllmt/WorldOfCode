@@ -1,13 +1,12 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useGroup, useJoinGroup } from '@/hooks/useGroups'
+import { useMemo } from 'react'
+import { useGroup } from '@/hooks/useGroups'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-
-import { Button } from '@/components/ui/button'
+import GroupJoinToggle from '@/components/group/GroupJoinToggle'
+import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import PostFormByGroup from '@/components/post/PostFormByGroup'
 import PostListByGroup from '@/components/post/PostListByGroup'
@@ -15,27 +14,15 @@ import PostListByGroup from '@/components/post/PostListByGroup'
 export default function GroupPage() {
     const { id } = useParams()
     const groupId = Number(id)
-    const queryClient = useQueryClient()
 
     const { user } = useAuth()
     const { data: group, isLoading: groupLoading } = useGroup(groupId)
     const { data: userGroups } = useUserGroups(user?.id)
-    const joinGroup = useJoinGroup()
 
-    const [localMembership, setLocalMembership] = useState(false)
-
-    const isMember = localMembership || userGroups?.some(g => g.id === groupId)
-
-    const handleJoin = () => {
-        joinGroup.mutate(groupId, {
-            onSuccess: () => {
-                setLocalMembership(true)
-                queryClient.invalidateQueries({ queryKey: ['userGroups', user?.id] })
-                queryClient.invalidateQueries({ queryKey: ['group', groupId] })
-                queryClient.invalidateQueries({ queryKey: ['posts', 'group', groupId] })
-            },
-        })
-    }
+    const isMember = useMemo(() => {
+        if (!user?.id) return false
+        return userGroups?.some((g) => g.id === groupId) ?? false
+    }, [user?.id, userGroups, groupId])
 
     if (groupLoading) {
         return (
@@ -47,19 +34,37 @@ export default function GroupPage() {
         )
     }
 
-    return (
-        <div className="max-w-2xl mx-auto p-4 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">{group?.name}</h1>
-                <p className="text-muted-foreground">{group?.description}</p>
+    if (!group) {
+        return (
+            <div className="max-w-2xl mx-auto p-4">
+                <p className="text-center text-red-500">Groupe introuvable.</p>
             </div>
+        )
+    }
+
+    const normalizedGroup = {
+        ...group,
+        joinedByUser: isMember,
+    }
+
+    return (
+        <div className="max-w-3xl mx-auto p-4 space-y-6">
+            <Card className="border border-border/70 bg-card p-5 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold">{group.name}</h1>
+                        <p className="text-muted-foreground">
+                            {group.description || 'Aucune description pour ce groupe.'}
+                        </p>
+                    </div>
+                    <GroupJoinToggle group={normalizedGroup} />
+                </div>
+            </Card>
 
             {!isMember ? (
                 <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-md shadow-sm">
                     <p className="mb-2">Vous devez rejoindre ce groupe pour accéder aux publications.</p>
-                    <Button onClick={handleJoin} disabled={joinGroup.isPending}>
-                        {joinGroup.isPending ? 'Adhésion...' : 'Rejoindre le groupe'}
-                    </Button>
+                    <GroupJoinToggle group={normalizedGroup} className="min-w-[180px]" />
                 </div>
             ) : (
                 <>
