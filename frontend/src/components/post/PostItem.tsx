@@ -34,7 +34,12 @@ import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
 // ⬇️ NEW
 import PostHeader from './PostHeader'
 
-export default function PostItem({ post }: { post: Post }) {
+type PostItemProps = {
+  post: Post
+  defaultShowComments?: boolean
+}
+
+export default function PostItem({ post, defaultShowComments = false }: PostItemProps) {
   const { user } = useAuth()
   const updatePost = useUpdatePost()
   const deletePost = useDeletePost()
@@ -44,7 +49,7 @@ export default function PostItem({ post }: { post: Post }) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
-  const [showComments, setShowComments] = useState(false)
+  const [showComments, setShowComments] = useState(defaultShowComments)
 
   const editableRef = useRef<HTMLDivElement>(null)
   const commentRef = useRef<CommentSectionHandle>(null)
