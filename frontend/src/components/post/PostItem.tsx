@@ -30,8 +30,6 @@ import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
 import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
-
-// ⬇️ NEW
 import PostHeader from './PostHeader'
 
 type PostItemProps = {
