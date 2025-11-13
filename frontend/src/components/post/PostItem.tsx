@@ -136,7 +136,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* --- NEW: Header auteur (avatar + username + Follow toggle) --- */}
+      {/* --- Header auteur (avatar + username + Follow toggle) --- */}
       {authorLoading ? (
         <div className="flex items-center gap-2">
           <Skeleton className="w-10 h-10 rounded-full" />
@@ -151,8 +151,8 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
             currentUserId={currentUserId}
             authorId={post.authorId}
             authorUsername={author.username}
-            // authorAvatarUrl={author.avatarUrl ?? null /* si dispo dans useUser */}
-            isAuthorFollowedByMe={post.isAuthorFollowedByMe /* si dispo côté Post */}
+            // authorAvatarUrl={author.avatarUrl ?? null /}
+            isAuthorFollowedByMe={post.isAuthorFollowedByMe }
             className="mb-1"
           />
           {/* Badge du groupe sous le header */}
