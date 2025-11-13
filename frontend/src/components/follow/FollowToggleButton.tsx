@@ -1,4 +1,3 @@
-// frontend/src/components/follow/FollowToggleButton.tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
