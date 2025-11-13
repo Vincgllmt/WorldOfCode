@@ -1,4 +1,3 @@
-// frontend/src/hooks/useComments.ts
 import { createComment, deleteComment, getAllComments, updateComment } from "@/services/commentService"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"

@@ -1,4 +1,3 @@
-// frontend/src/services/commentService.ts
 import { getCookie } from 'cookies-next'
 import { Comment, CreateCommentPayload, UpdateCommentPayload } from '@/interfaces/comment'
 

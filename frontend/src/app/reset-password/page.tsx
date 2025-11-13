@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
         mutate({ token, password: data.password })
     }
 
-    // ✅ même logique de validation que sur RegisterPage
+    //  même logique de validation que sur RegisterPage
     const isPasswordValid =
         passwordValue.length >= 12 &&
         /[A-Z]/.test(passwordValue) &&

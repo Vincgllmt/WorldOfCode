@@ -1,4 +1,3 @@
-// frontend/src/components/account/ProfileDetails.tsx
 'use client'
 import { useAuth } from '@/hooks/useAuth'
 import { useUser, useUserGroups } from '@/hooks/useUsers'

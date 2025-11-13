@@ -30,11 +30,14 @@ import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
 import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
-
-// ⬇️ NEW
 import PostHeader from './PostHeader'
 
-export default function PostItem({ post }: { post: Post }) {
+type PostItemProps = {
+  post: Post
+  defaultShowComments?: boolean
+}
+
+export default function PostItem({ post, defaultShowComments = false }: PostItemProps) {
   const { user } = useAuth()
   const updatePost = useUpdatePost()
   const deletePost = useDeletePost()
@@ -44,7 +47,7 @@ export default function PostItem({ post }: { post: Post }) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
-  const [showComments, setShowComments] = useState(false)
+  const [showComments, setShowComments] = useState(defaultShowComments)
 
   const editableRef = useRef<HTMLDivElement>(null)
   const commentRef = useRef<CommentSectionHandle>(null)
@@ -133,7 +136,7 @@ export default function PostItem({ post }: { post: Post }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* --- NEW: Header auteur (avatar + username + Follow toggle) --- */}
+      {/* --- Header auteur (avatar + username + Follow toggle) --- */}
       {authorLoading ? (
         <div className="flex items-center gap-2">
           <Skeleton className="w-10 h-10 rounded-full" />
@@ -148,8 +151,8 @@ export default function PostItem({ post }: { post: Post }) {
             currentUserId={currentUserId}
             authorId={post.authorId}
             authorUsername={author.username}
-            // authorAvatarUrl={author.avatarUrl ?? null /* si dispo dans useUser */}
-            isAuthorFollowedByMe={post.isAuthorFollowedByMe /* si dispo côté Post */}
+            // authorAvatarUrl={author.avatarUrl ?? null /}
+            isAuthorFollowedByMe={post.isAuthorFollowedByMe }
             className="mb-1"
           />
           {/* Badge du groupe sous le header */}

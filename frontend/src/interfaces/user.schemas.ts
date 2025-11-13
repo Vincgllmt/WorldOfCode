@@ -4,6 +4,11 @@ const passwordComplexity =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[ !"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]).{12,}$/
 
 export const userProfileSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Le nom d’utilisateur doit contenir au moins 3 caractères')
+    .max(255, 'Le nom d’utilisateur est trop long'),
   firstname: z
     .string()
     .trim()
