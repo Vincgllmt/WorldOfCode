@@ -7,12 +7,8 @@ use Doctrine\ORM\Mapping as ORM;
 use DateTimeImmutable;
 
 #[ORM\Entity]
-#[ORM\Table(
-    name: "msg_messages",
-    indexes: [
-        new ORM\Index(name: "idx_msg_conv_created", columns: ["conversation_id", "created_at"])
-    ]
-)]
+#[ORM\Table(name: "msg_messages")]
+#[ORM\Index(name: "idx_msg_conv_created", columns: ["conversation_id", "created_at"])]
 #[ORM\HasLifecycleCallbacks]
 class Message
 {
