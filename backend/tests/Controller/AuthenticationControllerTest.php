@@ -11,10 +11,10 @@ class AuthenticationControllerTest extends WebTestCase
 {
     private $client;
     private $entityManager;
-    private $username = 'Gustave';
+    private $username = 'KiryuKazuma';
     private $userData = [
-        'username' => 'Gustave',
-        'password' => 'forThoseWhoComeAfter',
+        'username' => 'KiryuKazuma',
+        'password' => 'DragonOfDojima',
     ];
 
     protected function setUp(): void
@@ -72,7 +72,7 @@ class AuthenticationControllerTest extends WebTestCase
         $this->assertArrayNotHasKey('password', $responseData);
     }
 
-    public function testRegisterNOK(): void
+    public function testRegisterWithUsernameAlreadyUsed(): void
     {
         // First registration should succeed
         $this->registerUser();
@@ -99,7 +99,7 @@ class AuthenticationControllerTest extends WebTestCase
         $this->assertArrayHasKey('token', $responseData);
     }
 
-    public function testAuthNOK(): void
+    public function testAuthWithoutRegistering(): void
     {
         // Attempt to authenticate without registering
         $this->client->request(
@@ -132,15 +132,111 @@ class AuthenticationControllerTest extends WebTestCase
         $this->assertArrayHasKey('id', $responseData);
         $this->assertArrayHasKey('username', $responseData);
         $this->assertArrayHasKey('role', $responseData);
-        $this->assertEquals($this->username, $responseData['username']);
+        $this->assertEquals('KiryuKazuma', $responseData['username']);
     }
 
-    public function testMeNOK(): void
+    public function testMeWithoutAuth(): void
     {
         // Attempt to access /api/me without authentication
         $this->client->request('GET', '/api/me');
 
         $this->assertEquals(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testRegisterWithMissingUsername(): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/register',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['password' => 'password123'])
+        );
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testRegisterWithMissingPassword(): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/register',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['username' => 'TestUser'])
+        );
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testRegisterWithEmptyData(): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/register',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([])
+        );
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAuthWithInvalidPassword(): void
+    {
+        $this->registerUser();
+
+        $this->client->request(
+            'POST',
+            '/api/authenticate',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'username' => $this->username,
+                'password' => 'wrongPassword'
+            ])
+        );
+
+        $this->assertEquals(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAuthWithMissingCredentials(): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/authenticate',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([])
+        );
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testMeWithInvalidToken(): void
+    {
+        $this->client->request(
+            'GET',
+            '/api/me',
+            [],
+            [],
+            ['HTTP_AUTHORIZATION' => 'Bearer invalid_token_here']
+        );
+
+        $this->assertEquals(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeExistingUser();
+        parent::tearDown();
+        $this->entityManager->close();
+        $this->entityManager = null;
     }
 
 }
