@@ -68,8 +68,7 @@ class MessageController extends AbstractController
             new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string"))
         ],
         responses: [
-            new OA\Response(response: 200, description: "Messages marqués comme lus"),
-            new OA\Response(response: 404, description: "Conversation non trouvée")
+            new OA\Response(response: 200, description: "Messages marqués comme lus")
         ]
     )]
     public function markConversationAsRead(
