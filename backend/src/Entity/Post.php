@@ -20,6 +20,10 @@ class Post
     #[ORM\Column(type: "text")]
     private string $content;
 
+    #[ORM\Column(type: "string", length: 255, nullable: true)]
+    private ?string $imageUrl = null;
+
+
     #[ORM\Column(name: "created_at", type: "datetime")]
     private DateTime $createdAt;
 
@@ -82,6 +86,17 @@ class Post
     public function setContent(string $content): self
     {
         $this->content = $content;
+        return $this;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): self
+    {
+        $this->imageUrl = $imageUrl;
         return $this;
     }
 

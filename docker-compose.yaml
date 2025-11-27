@@ -4,6 +4,13 @@ services:
     container_name: projet_backend
     ports:
       - "8090:8090"
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: admin1234
+      MINIO_BUCKET: uploads
+      MINIO_PUBLIC_URL: http://localhost:9000/uploads
+
     volumes:
       - ./backend:/var/www/backend
     depends_on:
@@ -79,9 +86,42 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - projet_network
+    
+  minio:
+    image: minio/minio:latest
+    container_name: projet_minio
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console d’administration
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin1234
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - projet_network
+  
+  minio-mc:
+    image: minio/mc
+    container_name: projet_minio_mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 admin admin1234;
+      mc mb local/uploads || true;
+      mc anonymous set download local/uploads;
+      exit 0
+      "
+    networks:
+      - projet_network
+
 
 volumes:
   db_data:
+  minio_data:
 
 networks:
   projet_network:
