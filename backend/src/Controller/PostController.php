@@ -117,6 +117,7 @@ class PostController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $content = $data['content'] ?? null;
+        $imageUrl = $data['imageUrl'] ?? null;
         $groupId = $data['groupId'] ?? null;
 
         if (!$content || !$groupId) {
@@ -130,6 +131,7 @@ class PostController extends AbstractController
 
         $post = new Post();
         $post->setContent($content);
+        $post->setImageUrl($imageUrl);
         $post->setAuthor($this->getUser());
         $post->setTechGroup($group);
 
