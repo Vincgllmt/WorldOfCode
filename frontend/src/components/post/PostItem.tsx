@@ -1,11 +1,5 @@
 'use client'
 
-import { Post } from '@/interfaces/post'
-import { useState, useRef } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useUpdatePost, useDeletePost } from '@/hooks/usePosts'
-import { useUser } from '@/hooks/useUsers'
-import { useGroup } from '@/hooks/useGroups'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -25,66 +19,41 @@ import {
   AlertDialogDescription,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Flag } from 'lucide-react'
-import toast from 'react-hot-toast'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
-import CommentSection, { CommentSectionHandle } from '../comment/commentSection'
+import CommentSection from '../comment/commentSection'
 import PostHeader from './PostHeader'
+import PostContent from './PostContent'
+import type { Post } from '@/interfaces/post'
+import { usePostItem } from '@/hooks/usePostItem'
 
 type PostItemProps = {
-  post: Post
-  defaultShowComments?: boolean
+  readonly post: Post
+  readonly defaultShowComments?: boolean
 }
 
 export default function PostItem({ post, defaultShowComments = false }: PostItemProps) {
-  const { user } = useAuth()
-  const updatePost = useUpdatePost()
-  const deletePost = useDeletePost()
-
-  const { data: author, isLoading: authorLoading } = useUser(post.authorId)
-  const { data: group, isLoading: groupLoading } = useGroup(post.techGroupId)
-
-  const [isEditing, setIsEditing] = useState(false)
-  const [showDialog, setShowDialog] = useState(false)
-  const [showComments, setShowComments] = useState(defaultShowComments)
-
-  const editableRef = useRef<HTMLDivElement>(null)
-  const commentRef = useRef<CommentSectionHandle>(null)
-
-  const currentUserId = user?.id ?? 0
-  const isAuthor = post.authorId === user?.id
-
-  const handleSave = () => {
-    const content = editableRef.current?.innerText || ''
-    if (!content.trim()) return
-
-    updatePost.mutate(
-      { id: post.id, data: { content, groupId: post.techGroupId } },
-      {
-        onSuccess: () => {
-          toast.success('Post mis à jour ✅')
-          setIsEditing(false)
-        },
-        onError: () => toast.error('Erreur lors de la mise à jour ❌'),
-      }
-    )
-  }
-
-  const handleDelete = () => {
-    deletePost.mutate(post.id, {
-      onSuccess: () => {
-        toast.success('Post supprimé 🗑️')
-        setShowDialog(false)
-      },
-      onError: () => toast.error('Erreur lors de la suppression ❌'),
-    })
-  }
-
-  const openCommentsAndFocus = () => {
-    setShowComments(true)
-    queueMicrotask(() => commentRef.current?.focusComposer())
-  }
+  const {
+    author,
+    authorLoading,
+    group,
+    groupLoading,
+    isEditing,
+    setIsEditing,
+    showDialog,
+    setShowDialog,
+    showComments,
+    setShowComments,
+    editableRef,
+    commentRef,
+    currentUserId,
+    isAuthor,
+    sanitizedContent,
+    handleSave,
+    handleDelete,
+    openCommentsAndFocus,
+  } = usePostItem(post, defaultShowComments)
 
   return (
     <div className="bg-green-50 rounded-xl shadow p-4 space-y-2 relative">
@@ -152,7 +121,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
             authorId={post.authorId}
             authorUsername={author.username}
             // authorAvatarUrl={author.avatarUrl ?? null /}
-            isAuthorFollowedByMe={post.isAuthorFollowedByMe }
+            isAuthorFollowedByMe={post.isAuthorFollowedByMe}
             className="mb-1"
           />
           {/* Badge du groupe sous le header */}
@@ -169,14 +138,20 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
       ) : null}
 
       {/* Contenu (éditable si auteur) */}
-      <div
-        ref={isEditing ? editableRef : null}
-        contentEditable={isEditing}
-        suppressContentEditableWarning
-        className={cn('text-base p-2', isEditing && 'border rounded border-yellow-300 bg-yellow-50')}
-      >
-        {post.content}
-      </div>
+      {isEditing ? (
+        <div
+          ref={editableRef}
+          contentEditable
+          suppressContentEditableWarning
+          className={cn(
+            'text-base p-3 rounded-lg border border-yellow-300 bg-yellow-50',
+            'leading-relaxed focus:outline-none focus:ring-2 focus:ring-yellow-400'
+          )}
+          dangerouslySetInnerHTML={{ __html: sanitizedContent || '<p></p>' }}
+        />
+      ) : (
+        <PostContent content={post.content} />
+      )}
 
       {isAuthor && isEditing && (
         <div className="flex justify-end">

@@ -64,7 +64,6 @@ export default function GroupPage() {
             {!isMember ? (
                 <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-md shadow-sm">
                     <p className="mb-2">Vous devez rejoindre ce groupe pour accéder aux publications.</p>
-                    <GroupJoinToggle group={normalizedGroup} className="min-w-[180px]" />
                 </div>
             ) : (
                 <>

@@ -21,18 +21,21 @@ export interface Post {
   isAuthorFollowedByMe?: boolean
 }
 
-export interface CreatePostPayload {
-  content: string
-  groupId: number
+export interface PostFormValues {
+  readonly content: string
+  readonly groupId: number
 }
 
-export interface UpdatePostPayload {
-  content: string
-  groupId: number
-}
+export type CreatePostPayload = PostFormValues
+
+export type UpdatePostPayload = PostFormValues
 
 export interface Liker {
   id: number
   username: string
   avatarUrl?: string | null
+}
+
+export interface UploadImageResponse {
+  readonly url: string
 }

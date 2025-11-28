@@ -4,6 +4,8 @@ namespace App\Repository;
 
 use App\Entity\Post;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -62,6 +64,37 @@ class PostRepository extends ServiceEntityRepository
     ####
     public function findAllWithLikes(): array
     {
+        return $this->createBaseQueryBuilder()
+            ->getQuery()
+            ->getResult();
+    }
+    ####
+    ##
+    ####
+    /**
+     * @return array{items: Post[], totalItems: int}
+     */
+    public function findPaginatedWithLikes(int $page, int $limit): array
+    {
+        $page = max($page, 1);
+        $limit = max($limit, 1);
+
+        $query = $this->createBaseQueryBuilder()
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery();
+
+        $paginator = new Paginator($query);
+        $items = iterator_to_array($paginator, false);
+
+        return [
+            'items' => $items,
+            'totalItems' => count($paginator),
+        ];
+    }
+
+    private function createBaseQueryBuilder(): QueryBuilder
+    {
         return $this->createQueryBuilder('p')
             ->leftJoin('p.author', 'a')->addSelect('a')
             ->leftJoin('p.techGroup', 'g')->addSelect('g')
@@ -69,8 +102,6 @@ class PostRepository extends ServiceEntityRepository
             ->leftJoin('sf.author', 'sfa')->addSelect('sfa')
             ->leftJoin('p.likes', 'l')->addSelect('l')
             ->leftJoin('l.user', 'u')->addSelect('u')
-            ->orderBy('p.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('p.createdAt', 'DESC');
     }
 }
