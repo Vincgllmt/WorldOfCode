@@ -35,6 +35,10 @@ class PostController extends AbstractController
     #[Route('', name: 'post_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste tous les posts',
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -46,13 +50,34 @@ class PostController extends AbstractController
             )
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $user = $this->getUser();
 
-        $posts = $this->repo->findAllWithLikes();
+        $page = (int) $request->query->get('page', 0);
+        $limit = (int) $request->query->get('limit', 0);
+        $usePagination = $page > 0 || $limit > 0;
 
+        if ($usePagination) {
+            $page = max($page, 1);
+            $limit = $limit > 0 ? min($limit, 100) : 10;
+
+            $paginated = $this->repo->findPaginatedWithLikes($page, $limit);
+            $items = array_map(fn($post) => $this->mapper->toDto($post, $user), $paginated['items']);
+            $totalItems = $paginated['totalItems'];
+            $totalPages = (int) ceil($totalItems / $limit);
+
+            return $this->json([
+                'items' => $items,
+                'page' => $page,
+                'limit' => $limit,
+                'totalPages' => $totalPages,
+                'totalItems' => $totalItems,
+            ]);
+        }
+
+        $posts = $this->repo->findAllWithLikes();
         $data = array_map(fn($post) => $this->mapper->toDto($post, $user), $posts);
 
         return $this->json($data);

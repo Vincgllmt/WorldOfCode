@@ -10,7 +10,7 @@ import {
   likePost,
   getLikers,
 } from '@/services/postService'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type {
   CreatePostPayload,
@@ -20,13 +20,26 @@ import type {
 } from '@/interfaces/post'
 import { useAuth } from '@/hooks/useAuth'
 
+const postsKey = ['posts'] as const
+const infinitePostsKey = ['posts', 'infinite'] as const
+const postKey = (id: number | string) => ['post', id] as const
+const groupPostsKey = (groupId: number) => ['posts', 'group', groupId] as const
+const likersKey = (postId: number) => [...postKey(postId), 'likers'] as const
+
+const invalidatePostLists = (queryClient: QueryClient) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: postsKey }),
+    queryClient.invalidateQueries({ queryKey: infinitePostsKey, exact: false }),
+  ])
+
 // -------------------------
 // LISTES / CRUD DE BASE
 // -------------------------
-export const usePosts = () => {
+export const usePosts = (enabled = true) => {
   const { data: posts, isLoading, error } = useQuery<Post[]>({
-    queryKey: ['posts'],
+    queryKey: postsKey,
     queryFn: getAllPosts,
+    enabled,
   })
   return { posts, isLoading, error }
 }
@@ -35,8 +48,8 @@ export const useCreatePost = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreatePostPayload) => createPost(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    onSuccess: async () => {
+      await invalidatePostLists(queryClient)
       toast.success('Post publié avec succès 🎉')
     },
     onError: () => toast.error('Erreur lors de la création du post ❌'),
@@ -48,8 +61,8 @@ export const useUpdatePost = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdatePostPayload }) =>
       updatePost(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    onSuccess: async () => {
+      await invalidatePostLists(queryClient)
       toast.success('Post mis à jour avec succès ✏️')
     },
     onError: () => toast.error('Erreur lors de la mise à jour du post ❌'),
@@ -60,8 +73,8 @@ export const useDeletePost = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => deletePost(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
+    onSuccess: async () => {
+      await invalidatePostLists(queryClient)
       toast.success('Post supprimé avec succès 🗑️')
     },
     onError: () => toast.error('Erreur lors de la suppression du post ❌'),
@@ -79,11 +92,6 @@ export const usePostsByGroup = (groupId: number, enabled = true) => {
 // -------------------------
 // LIKES / LIKERS
 // -------------------------
-const postsKey = ['posts']
-const postKey = (id: number | string) => ['post', id]
-const groupPostsKey = (groupId: number) => ['posts', 'group', groupId]
-const likersKey = (postId: number) => [...postKey(postId), 'likers']
-
 export const useLikers = (postId: number) => {
   return useQuery<Liker[]>({
     queryKey: likersKey(postId),
@@ -187,29 +195,30 @@ export const useSharePost = () => {
 
     onMutate: async (postId: number) => {
       await Promise.all([
-        queryClient.cancelQueries({ queryKey: ['posts'] }),
-        queryClient.cancelQueries({ queryKey: ['post', postId] }),
+        queryClient.cancelQueries({ queryKey: postsKey }),
+        queryClient.cancelQueries({ queryKey: infinitePostsKey, exact: false }),
+        queryClient.cancelQueries({ queryKey: postKey(postId) }),
       ])
-      const previousPosts = queryClient.getQueryData<Post[]>(['posts'])
-      const previousPost  = queryClient.getQueryData<Post>(['post', postId])
+      const previousPosts = queryClient.getQueryData<Post[]>(postsKey)
+      const previousPost  = queryClient.getQueryData<Post>(postKey(postId))
 
       const bump = (p: Post): Post =>
         ({ ...p, sharesCount: (p.sharesCount ?? 0) + 1 })
 
       // liste
-      queryClient.setQueryData<Post[]>(['posts'], prev =>
+      queryClient.setQueryData<Post[]>(postsKey, prev =>
         prev ? prev.map(p => (p.id === postId ? bump(p) : p)) : prev
       )
       // détail
-      queryClient.setQueryData<Post>(['post', postId], prev => prev ? bump(prev) : prev)
+      queryClient.setQueryData<Post>(postKey(postId), prev => prev ? bump(prev) : prev)
 
       return { previousPosts, previousPost, postId }
     },
 
     onError: (_error, _variables, context) => {
       if (!context) return
-      queryClient.setQueryData(['posts'], context.previousPosts)
-      queryClient.setQueryData(['post', context.postId], context.previousPost)
+      queryClient.setQueryData(postsKey, context.previousPosts)
+      queryClient.setQueryData(postKey(context.postId), context.previousPost)
       toast.error('Erreur lors du partage ❌')
     },
 
@@ -217,9 +226,9 @@ export const useSharePost = () => {
       toast.success('Post partagé 🎉')
     },
 
-    onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      queryClient.invalidateQueries({ queryKey: ['post', variables] })
+    onSettled: async (_data, _error, variables) => {
+      await invalidatePostLists(queryClient)
+      queryClient.invalidateQueries({ queryKey: postKey(variables) })
     }
   })
 }
