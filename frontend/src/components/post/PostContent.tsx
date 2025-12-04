@@ -5,12 +5,12 @@ import { useSanitizedContent } from '@/hooks/useSanitizedContent'
 import styles from './PostContent.module.css'
 
 export interface PostContentProps {
-  readonly content: string
+  readonly content: string | null
   readonly className?: string
 }
 
 export default function PostContent({ content, className }: PostContentProps) {
-  const sanitized = useSanitizedContent(content)
+  const sanitized = useSanitizedContent(content ?? '')
 
   return (
     <div

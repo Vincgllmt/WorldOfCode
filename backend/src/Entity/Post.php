@@ -17,8 +17,8 @@ class Post
     #[ORM\Column(type: "integer")]
     private ?int $id = null;
 
-    #[ORM\Column(type: "text")]
-    private string $content;
+    #[ORM\Column(type: "text", nullable: true)]
+    private ?string $content = null;
 
     #[ORM\Column(type: "string", length: 255, nullable: true)]
     private ?string $imageUrl = null;
@@ -78,12 +78,12 @@ class Post
         return $this->id;
     }
 
-    public function getContent(): string
+    public function getContent(): ?string
     {
         return $this->content;
     }
 
-    public function setContent(string $content): self
+    public function setContent(?string $content): self
     {
         $this->content = $content;
         return $this;
