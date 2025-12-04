@@ -49,7 +49,7 @@ export async function searchUsers({ q, limit = 5 }: SearchUsersParams): Promise<
       const data = (await res.json()) as UserPreview[]
       return data.slice(0, limit)
     }
-  } catch (error) {
+  } catch {
     // ignore and fallback
   }
 
@@ -82,7 +82,7 @@ export async function searchGroups({ q, limit = 5 }: SearchGroupsParams): Promis
       const data = (await res.json()) as GroupPreview[]
       return data.slice(0, limit)
     }
-  } catch (error) {
+  } catch {
     // ignore and fallback
   }
 

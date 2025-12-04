@@ -25,8 +25,10 @@ import PostActions from './PostActions'
 import CommentSection from '../comment/commentSection'
 import PostHeader from './PostHeader'
 import PostContent from './PostContent'
+import SharedPostCard from './SharedPostCard'
 import type { Post } from '@/interfaces/post'
 import { usePostItem } from '@/hooks/usePostItem'
+import toast from 'react-hot-toast'
 
 type PostItemProps = {
   readonly post: Post
@@ -34,6 +36,8 @@ type PostItemProps = {
 }
 
 export default function PostItem({ post, defaultShowComments = false }: PostItemProps) {
+  const sharedPost = post.sharedPost ?? null
+  const isShare = sharedPost !== null
   const {
     author,
     authorLoading,
@@ -44,7 +48,6 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
     showDialog,
     setShowDialog,
     showComments,
-    setShowComments,
     editableRef,
     commentRef,
     currentUserId,
@@ -149,9 +152,17 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
           )}
           dangerouslySetInnerHTML={{ __html: sanitizedContent || '<p></p>' }}
         />
-      ) : (
+      ) : post.content ? (
         <PostContent content={post.content} />
-      )}
+      ) : isShare ? (
+        <p className="text-sm text-slate-600"></p>
+      ) : null}
+
+      {sharedPost ? (
+        <div className="mt-4">
+          <SharedPostCard post={sharedPost} />
+        </div>
+      ) : null}
 
       {isAuthor && isEditing && (
         <div className="flex justify-end">

@@ -17,6 +17,7 @@ import type {
   UpdatePostPayload,
   Post,
   Liker,
+  SharePostPayload,
 } from '@/interfaces/post'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -116,6 +117,9 @@ type ToggleLikeContext = {
   groupId?: number
 }
 
+type ShareVariables = { readonly postId: number; readonly payload: SharePostPayload }
+type ShareContext = { previousPosts: Post[] | undefined; previousPost: Post | undefined; postId: number }
+
 export const useToggleLike = () => {
   const queryClient = useQueryClient()
 
@@ -152,6 +156,7 @@ export const useToggleLike = () => {
       const togglePost = (p: Post): Post => ({
         ...p,
         likedByMe: !likedByMe,
+        likedByUser: !likedByMe,
         likesCount: (p.likesCount ?? 0) + (likedByMe ? -1 : 1),
       })
 
@@ -190,10 +195,10 @@ export const useToggleLike = () => {
 // -------------------------
 export const useSharePost = () => {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (postId: number) => sharePost(postId),
+  return useMutation<Post, Error, ShareVariables, ShareContext>({
+    mutationFn: ({ postId, payload }) => sharePost({ postId, payload }),
 
-    onMutate: async (postId: number) => {
+    onMutate: async ({ postId }) => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: postsKey }),
         queryClient.cancelQueries({ queryKey: infinitePostsKey, exact: false }),
@@ -203,7 +208,7 @@ export const useSharePost = () => {
       const previousPost  = queryClient.getQueryData<Post>(postKey(postId))
 
       const bump = (p: Post): Post =>
-        ({ ...p, sharesCount: (p.sharesCount ?? 0) + 1 })
+        ({ ...p, sharedCount: (p.sharedCount ?? 0) + 1 })
 
       // liste
       queryClient.setQueryData<Post[]>(postsKey, prev =>
@@ -228,7 +233,9 @@ export const useSharePost = () => {
 
     onSettled: async (_data, _error, variables) => {
       await invalidatePostLists(queryClient)
-      queryClient.invalidateQueries({ queryKey: postKey(variables) })
+      if (variables) {
+        queryClient.invalidateQueries({ queryKey: postKey(variables.postId) })
+      }
     }
   })
 }
