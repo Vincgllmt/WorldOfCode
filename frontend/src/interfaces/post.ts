@@ -1,24 +1,23 @@
 export interface Post {
-  id: number
-  content: string
-  createdAt: string
-  updatedAt: string
-  authorId: number
-  authorUsername: string
-  techGroupId: number
-  techGroupName: string
+  readonly id: number
+  readonly content: string | null
+  readonly createdAt: string
+  readonly updatedAt: string | null
+  readonly authorId: number
+  readonly authorUsername: string
+  readonly techGroupId: number
+  readonly techGroupName: string
+  readonly likesCount: number
+  readonly likedByUser: boolean
+  readonly sharedCount: number
+  readonly sharedPost?: Post | null
+  readonly likedByMe?: boolean 
+  readonly isAuthorFollowedByMe?: boolean
+}
 
-  likesCount?: number
-  likedByMe?: boolean
-  sharesCount?: number
-
-  repostOfId?: number
-  sharedPostId?: number
-  originalPostId?: number
-  repostOf?: Post
-  sharedPost?: Post
-  originalPost?: Post
-  isAuthorFollowedByMe?: boolean
+export interface SharePostPayload {
+  readonly content?: string | null
+  readonly groupId?: number
 }
 
 export interface PostFormValues {
@@ -28,7 +27,10 @@ export interface PostFormValues {
 
 export type CreatePostPayload = PostFormValues
 
-export type UpdatePostPayload = PostFormValues
+export interface UpdatePostPayload {
+  readonly content: string | null
+  readonly groupId: number
+}
 
 export interface Liker {
   id: number

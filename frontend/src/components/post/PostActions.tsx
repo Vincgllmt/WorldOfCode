@@ -18,6 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 type PostActionsProps = {
   post: Post
@@ -43,20 +45,28 @@ export default function PostActions({
   // Partage + confirmation
   const share = useSharePost()
   const [confirmShareOpen, setConfirmShareOpen] = React.useState(false)
+  const [shareComment, setShareComment] = React.useState('')
 
   const handleConfirmShare = async () => {
-    share.mutate(post.id, {
-      onSuccess: async () => {
-        if (copyLinkOnShare && postUrl) {
-          try {
-            await navigator.clipboard.writeText(postUrl)
-            toast.success('Lien du post copié 📋')
-          } catch {
-            /* noop: l’API de partage a réussi, seule la copie a échoué */
-          }
-        }
+    share.mutate(
+      {
+        postId: post.id,
+        payload: { content: shareComment.trim() === '' ? null : shareComment.trim() },
       },
-    })
+      {
+        onSuccess: async () => {
+          if (copyLinkOnShare && postUrl) {
+            try {
+              await navigator.clipboard.writeText(postUrl)
+              toast.success('Lien du post copié 📋')
+            } catch {
+              /* noop: l’API de partage a réussi, seule la copie a échoué */
+            }
+          }
+        },
+        onSettled: () => setShareComment(''),
+      }
+    )
   }
 
   return (
@@ -88,7 +98,13 @@ export default function PostActions({
         </Button>
 
         {/* Partager (avec confirmation) */}
-        <AlertDialog open={confirmShareOpen} onOpenChange={setConfirmShareOpen}>
+        <AlertDialog
+          open={confirmShareOpen}
+          onOpenChange={(open) => {
+            setConfirmShareOpen(open)
+            if (!open) setShareComment('')
+          }}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -104,9 +120,19 @@ export default function PostActions({
             <AlertDialogHeader>
               <AlertDialogTitle>Partager ce post ?</AlertDialogTitle>
               <AlertDialogDescription>
-                Il apparaîtra dans votre flux comme un repost. Confirmez-vous le partage ?
+                Ajoutez un commentaire (optionnel) et confirmez le partage dans votre flux.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="share-comment">Votre commentaire (optionnel)</Label>
+              <Textarea
+                id="share-comment"
+                value={shareComment}
+                onChange={(event) => setShareComment(event.target.value)}
+                placeholder="Ajouter un contexte ou un avis..."
+                disabled={share.isPending}
+              />
+            </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
               <AlertDialogAction
@@ -114,6 +140,7 @@ export default function PostActions({
                   handleConfirmShare()
                   setConfirmShareOpen(false)
                 }}
+                disabled={share.isPending}
               >
                 Partager
               </AlertDialogAction>

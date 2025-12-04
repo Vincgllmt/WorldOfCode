@@ -20,9 +20,10 @@ class PostResponse
     #[OA\Property(
         description: "Contenu textuel du post",
         type: "string",
-        example: "Voici un exemple de contenu"
+        example: "Voici un exemple de contenu",
+        nullable: true
     )]
-    public string $content;
+    public ?string $content = null;
 
     #[OA\Property(
         description: "Date de création du post",
@@ -71,7 +72,7 @@ class PostResponse
         type: "object",
         nullable: true
     )]
-    public ?SharedPostResponse $sharedFrom = null;
+    public ?SharedPostResponse $sharedPost = null;
 
     #[OA\Property(
         description: "Nombre total de likes sur ce post",
@@ -85,7 +86,6 @@ class PostResponse
         type: "boolean",
         example: true
     )]
-
     public bool $likedByUser = false;
     #[OA\Property(
         description: "Nombre de fois que le post a été partagé",

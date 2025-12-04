@@ -1,5 +1,5 @@
 import { getCookie } from 'cookies-next'
-import { CreatePostPayload, Liker, Post, UpdatePostPayload } from '@/interfaces/post'
+import { CreatePostPayload, Liker, Post, SharePostPayload, UpdatePostPayload } from '@/interfaces/post'
 import type { FetchPostsPaginatedParams, PaginatedPostsResponse } from '@/interfaces/postPagination'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
@@ -208,16 +208,25 @@ export const getLikers = async (postId: number): Promise<Liker[]> => {
   return Array.isArray(raw) ? raw.map(normalize).filter(l => Number.isFinite(l.id)) : []
 }
 
-export const sharePost = async (postId: number): Promise<void> => {
+export const sharePost = async ({
+  postId,
+  payload,
+}: {
+  readonly postId: number
+  readonly payload: SharePostPayload
+}): Promise<Post> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/api/post/${postId}/share`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Erreur lors du partage du post')
+
+  return res.json()
 }
 
 export const reportPost = async (postId: number, reason?: string): Promise<void> => {

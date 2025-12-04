@@ -34,14 +34,15 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
   const handleSave = () => {
     const rawHtml = editableRef.current?.innerHTML ?? ''
     const cleanedHtml = sanitizeHtml(rawHtml)
+    const plainText = stripHtml(cleanedHtml).trim()
 
-    if (!stripHtml(cleanedHtml).trim()) {
+    if (!plainText && !post.sharedPost) {
       toast.error('Le contenu ne peut pas être vide')
       return
     }
 
     updatePost.mutate(
-      { id: post.id, data: { content: cleanedHtml, groupId: post.techGroupId } },
+      { id: post.id, data: { content: plainText ? cleanedHtml : null, groupId: post.techGroupId } },
       {
         onSuccess: () => {
           toast.success('Post mis à jour ✅')

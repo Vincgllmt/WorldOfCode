@@ -140,11 +140,21 @@ class PostController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid payload'], 400);
+        }
+
         $content = $data['content'] ?? null;
         $groupId = $data['groupId'] ?? null;
+        if (is_string($content)) {
+            $content = trim($content);
+            if ($content === '') {
+                $content = null;
+            }
+        }
 
-        if (!$content || !$groupId) {
+        if ($content === null || trim((string) $content) === '' || !$groupId) {
             return $this->json(['error' => 'Missing content or groupId'], 400);
         }
 
@@ -234,11 +244,15 @@ class PostController extends AbstractController
             return $this->json(['error' => 'Access denied'], 403);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid payload'], 400);
+        }
+
         $content = $data['content'] ?? null;
         $groupId = $data['groupId'] ?? null;
 
-        if ($content) {
+        if (array_key_exists('content', $data)) {
             $post->setContent($content);
         }
 
@@ -322,7 +336,11 @@ class PostController extends AbstractController
             return $this->json(['error' => 'Original post not found'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid payload'], 400);
+        }
+
         $content = $data['content'] ?? null;
         $groupId = $data['groupId'] ?? null;
 
@@ -338,13 +356,13 @@ class PostController extends AbstractController
 
         $post = new Post();
         $post->setAuthor($this->getUser());
-        $post->setContent($content ?? '');
+        $post->setContent($content);
         $post->setSharedFrom($original);
         $post->setTechGroup($group);
 
         $this->repo->save($post, true);
 
-        return $this->json($this->mapper->toDto($post), 201);
+        return $this->json($this->mapper->toDto($post, $this->getUser()), 201);
     }
     ####
     ##

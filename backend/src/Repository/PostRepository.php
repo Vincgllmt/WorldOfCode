@@ -48,6 +48,7 @@ class PostRepository extends ServiceEntityRepository
 
             // 🔹 relations liées au partage
             ->leftJoin('p.sharedFrom', 'sf')->addSelect('sf')
+            ->leftJoin('sf.techGroup', 'sfg')->addSelect('sfg')
             ->leftJoin('sf.author', 'sfa')->addSelect('sfa')
 
             // 🔹 relations liées aux likes
@@ -99,6 +100,7 @@ class PostRepository extends ServiceEntityRepository
             ->leftJoin('p.author', 'a')->addSelect('a')
             ->leftJoin('p.techGroup', 'g')->addSelect('g')
             ->leftJoin('p.sharedFrom', 'sf')->addSelect('sf')
+            ->leftJoin('sf.techGroup', 'sfg')->addSelect('sfg')
             ->leftJoin('sf.author', 'sfa')->addSelect('sfa')
             ->leftJoin('p.likes', 'l')->addSelect('l')
             ->leftJoin('l.user', 'u')->addSelect('u')
