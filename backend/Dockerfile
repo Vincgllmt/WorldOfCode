@@ -36,10 +36,11 @@ RUN composer install --no-scripts --no-autoloader --prefer-dist --no-interaction
 COPY . .
 
 # Copier le script d'entrée et le rendre exécutable
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
 
 EXPOSE 8090
