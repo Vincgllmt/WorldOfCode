@@ -79,6 +79,9 @@
           "php bin/console doctrine:schema:create --env=test",
           "vendor/bin/phpunit"
         ],
+        "generate-jwt-keys": [
+            "php bin/console lexik:jwt:generate-keypair --overwrite"
+        ],
 
       "post-install-cmd": [
             "@auto-scripts"
