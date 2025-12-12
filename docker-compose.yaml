@@ -13,7 +13,7 @@ services:
 
     volumes:
       - ./backend:/var/www/backend
-      - ./backend/config/jwt:/var/www/backend/config/jwt
+      - jwt_keys:/var/www/backend/config/jwt
     depends_on:
       - db
     networks:
@@ -67,7 +67,7 @@ services:
     volumes:
       - ./messagerie:/app
       - /app/node_modules
-      - ./backend/config/jwt:/app/src/config/jwt
+      - jwt_keys:/app/src/config/jwt
     command: npm run dev
     depends_on:
       - db
@@ -124,6 +124,7 @@ services:
 volumes:
   db_data:
   minio_data:
+  jwt_keys:
 
 networks:
   projet_network:
