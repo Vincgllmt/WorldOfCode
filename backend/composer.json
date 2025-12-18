@@ -82,6 +82,9 @@
         "generate-jwt-keys": [
             "php bin/console lexik:jwt:generate-keypair --overwrite"
         ],
+        "fixtures": [
+            "php bin/console doctrine:fixtures:load --no-interaction"
+        ],
 
       "post-install-cmd": [
             "@auto-scripts"

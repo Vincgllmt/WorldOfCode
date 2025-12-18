@@ -46,11 +46,12 @@ Cloner le projet et installer les dépendances :
 ```bash
 git clone git@rendu-git.etna-alternance.net:module-9999/activity-53534/group-1056533.git world-of-code
 cd world-of-code
-docker compose up
+docker compose up -d
 ```
 ## 🧪 Tests
 
 ``` Bash
+# dans le conteneur backend | local backend/
 composer run test
 ```
 
@@ -91,4 +92,17 @@ php bin/console doctrine:fixtures:load --no-interaction
 
 ## 📄 Documentation
 
-> 🔧 *TBD.*
+### Documentation API
+L'API est documentée avec Swagger. Vous pouvez y accéder via l'URL suivante une fois le projet lancé :
+```
+http://localhost:8090/doc
+```
+
+### Documentation test unitaires
+La documentation des tests unitaires est disponible ici : [Documentation TU](backend/tests/README.md)
+
+## Scripts utiles
+Voici quelques scripts utiles pour le développement et la maintenance du projet :
+- `composer run test` : Lancer les tests unitaires
+- `composer run fixtures` : Charger les fixtures dans la base de données
+- `composer run generate-jwt-keys` : Générer les clés JWT pour l'authentification
