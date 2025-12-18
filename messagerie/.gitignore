@@ -1,2 +1,4 @@
 node_modules
-src/config/*.pem
+src/config/jwt/*.pem
+config/jwt/*.pem
+.env
