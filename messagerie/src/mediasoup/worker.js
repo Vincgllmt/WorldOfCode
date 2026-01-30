@@ -5,8 +5,9 @@ let worker;
 export async function initMediaSoupWorker() {
     worker = await mediasoup.createWorker({
         rtcMinPort: 40000,
-        rtcMaxPort: 49999,
+        rtcMaxPort: 40100,
     });
+
 
     worker.on("died", () => {
         console.error("💥 MediaSoup worker died");

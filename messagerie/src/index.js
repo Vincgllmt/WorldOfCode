@@ -24,17 +24,25 @@ const io = new Server(server, {
 const conversations = new Map();
 
 import fs from "fs";
-console.log("/app/src/config/jwt/public.pem");
+
+
 const publicKey = fs.readFileSync("/app/src/config/jwt/public.pem", "utf8");
 //const publicKey = fs.readFileSync("./config/jwt/public.pem", "utf8");
 
 
 io.use((socket, next) => {
     try {
+
         const token =
             socket.handshake.auth?.token ||
             socket.handshake.headers?.authorization?.split(" ")[1];
 
+        const parts = token.split(".");
+        if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+            console.log("JWT exp:", payload.exp, "=>", new Date(payload.exp * 1000).toISOString());
+            console.log("Now    :", new Date().toISOString());
+        }
         if (!token) {
             return next(new Error("Missing authentication token"));
         }

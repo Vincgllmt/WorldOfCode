@@ -2,10 +2,21 @@ import { io } from "socket.io-client";
 import * as mediasoupClient from "mediasoup-client";
 
 const CONV_ID = "test-conversation";
-const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NjYwNjI5NTYsImV4cCI6MTc2NjA2NjU1Niwicm9sZXMiOlsiUk9MRV9VU0VSIl0sInVzZXJuYW1lIjoiVGVzdDEyMy5UZXN0MTIzLiJ9.U9aXqVGuxzylv7-vgwGTfQik7REc1mCwMjyVhqJaCkihU5Pfm6P6cah36A__3kaEcHVVydb9NO4MJIC-HTCzHof9n53dEi1YzC17SdJ2QyCpxFsfZ2ohbka1YOp7ZNM10YHW7awsSOJzl-4Du6ngITG7L5Oj5RXjJYx3IJ7APta9kBphE06Yb0mdmmVTr-iXkWmEFSsoFGOBZj5svpHeNmK4aqjQhSBtjv1Jkpt1BDZXuCzP3jT9oXrG57U0f3p4YzEhYInvXAVvx7Tvgjo0zjuRxDjxXN99uCEhj49rGx-eOJBy08Ed0ih064a-FPJk5LqbMJw7ysikyWv3IoiR_Q";
 
-const socket = io("http://localhost:8083", {
-    auth: { token: TOKEN, userId: 1 },
+const params = new URLSearchParams(window.location.search);
+const USER_ID = Number(params.get("user") || 1);
+
+// Mets 2 tokens valides ici
+const TOKENS = {
+    1: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3Njk3NzExOTMsImV4cCI6MTc2OTc3NDc5Mywicm9sZXMiOlsiUk9MRV9VU0VSIl0sInVzZXJuYW1lIjoidGVzdDEyMzQifQ.WgwrSxYBC-EYz6fvtQ9OK4cNIK5AzZ_AesBhAYqCBRCPOAWlGqP9sneoPt1AfnHlYMLN51GzgC7KeWndNWGNoZXqKQU-cd0n3s-6tVt_hk1Q3MKAmxybu-aDiEW3DVVyTKAJ6z7zllnO98PzQ2fBb3QeM5mlVJznzTQbI1aIK41ymz1MFXezkP8SvlM8dWaiKPNC8-c7ZhLx7MBDfuXg8uGl6uNhe8--WznZiRDRAnJV16VguAtEvK0UHaHQOe4cgY8bcDMUQE4brVyEcJHp1A6nw6jClUWjIAPXhj7RYyYoM_0NAvpJv5oyJc4p7iaLZntIBaolQz3nz-X7Xtcbag",
+    2: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3Njk3NzExMzgsImV4cCI6MTc2OTc3NDczOCwicm9sZXMiOlsiUk9MRV9VU0VSIl0sInVzZXJuYW1lIjoidGVzdDEyMzQ1In0.u1CUo-hRbCUKXg8QTgmJX6ex4-GdBWy-0UnkKHxC5AcQ79zGLm_KghI88WR9ITet1rqSFqacYYZ0TmbKRN9NzizLSINqXS_b07-_c-l-7U6y0jGyPvtpsULquOqco4iFkkKuD2YGpv-PvXbkLmoTL-jmMqbmCP-oTovsBci7-EFMKeFlpezLX_HTKLGy7QNmmQ_X5h4-GlLjpGuFs8enu7zF9LBlhemwE0bEyS_QgIsQENPYcQRjeyaz5kpIKHbgec8QJ9jJgRcihanL2VVtRKmJecJz6ezmJ6eBMHzVVCrI_IoKjFHtHYufYoi9jGxA678qW4skxRxYQPkWs4yg-Q",
+};
+
+const TOKEN = TOKENS[USER_ID];
+
+const socket = io("http://localhost:8081", {
+    auth: { token: TOKEN, userId: USER_ID },
+    transports: ["websocket"],
 });
 
 let device;
@@ -89,7 +100,8 @@ document.body.innerHTML = `
 `;
 
 
-
+document.getElementById("local-fallback").textContent = `User ${USER_ID}`;
+document.querySelector("h1").textContent = `🎥 MediaSoup POC — User ${USER_ID}`;
 
 /**
  * ===== JOIN VIDEO =====
@@ -246,7 +258,10 @@ socket.on("producer_closed", ({ producerId }) => {
  */
 async function consumeProducer(producerId) {
     console.log(`📥 Consuming producer: ${producerId}`);
-
+    if (document.querySelector(`[data-producer-id="${producerId}"]`)) {
+        console.log("⏭️ already mounted", producerId);
+        return;
+    }
     const consumerData = await emit("consume", {
         conversation_id: CONV_ID,
         producerId,
@@ -254,22 +269,46 @@ async function consumeProducer(producerId) {
     });
 
     const consumer = await recvTransport.consume(consumerData);
+    try {
+        await consumer.resume?.();
+    } catch (e) { }
 
     const stream = new MediaStream();
     stream.addTrack(consumer.track);
 
+    // if (consumer.kind === "video") {
+    //     const video = document.createElement("video");
+    //     video.dataset.producerId = producerId;
+    //     video.srcObject = stream;
+    //     video.autoplay = true;
+    //     video.playsInline = true;
+    //     video.muted = true;
+    //     video.className =
+    //         "w-full h-full object-cover rounded-xl border-2 border-transparent transition-colors";
+
+
+    //     remoteVideoElement = video;
+    //     document.getElementById("remote-videos").appendChild(video);
+    // }
     if (consumer.kind === "video") {
         const video = document.createElement("video");
         video.dataset.producerId = producerId;
         video.srcObject = stream;
+
         video.autoplay = true;
         video.playsInline = true;
+        video.muted = true; // ✅ allow autoplay
         video.className =
             "w-full h-full object-cover rounded-xl border-2 border-transparent transition-colors";
 
-
         remoteVideoElement = video;
         document.getElementById("remote-videos").appendChild(video);
+        try {
+            await video.play();
+            console.log("▶️ remote video playing", producerId);
+        } catch (e) {
+            console.warn("⚠️ remote video play blocked", e);
+        }
     }
 
 
