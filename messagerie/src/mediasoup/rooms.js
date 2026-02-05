@@ -25,15 +25,28 @@ export async function getOrCreateVideoRoom(conversationId) {
 /**
  * 🔥 CLEANUP GLOBAL PAR SOCKET
  * Supprime TOUTES les ressources MediaSoup associées à un socket
+ * @param {string} socketId - ID du socket à nettoyer
+ * @param {object} io - Instance Socket.IO
+ * @param {string} [specificConversationId] - Si fourni, nettoie seulement cette conversation
  */
-export function removePeerFromAllRooms(socketId, io) {
-    for (const [roomId, room] of videoRooms.entries()) {
+export function removePeerFromAllRooms(socketId, io, specificConversationId = null) {
+    for (const [conversationId, room] of videoRooms.entries()) {
+        // Si un ID spécifique est fourni, ne traiter que cette conversation
+        if (specificConversationId && conversationId !== specificConversationId) continue;
+
         const peer = room.peers.get(socketId);
         if (!peer) continue;
 
+        // Room Socket.IO pour la vidéo (préfixée)
+        const videoRoomId = `video:${conversationId}`;
+
+        console.log(`🧹 Cleaning up peer ${socketId} from room ${videoRoomId}`);
+        console.log(`   - ${peer.producers.length} producers to close`);
+
         // 🔥 informer les autres peers AVANT de fermer
         peer.producers.forEach(producer => {
-            io.to(roomId).emit("producer_closed", {
+            console.log(`   📤 Emitting producer_closed for ${producer.id} to room ${videoRoomId}`);
+            io.to(videoRoomId).emit("producer_closed", {
                 producerId: producer.id,
             });
             producer.close();
@@ -44,8 +57,11 @@ export function removePeerFromAllRooms(socketId, io) {
 
         room.peers.delete(socketId);
 
+        console.log(`   ✅ Peer removed. Remaining peers in room: ${room.peers.size}`);
+
         if (room.peers.size === 0) {
-            videoRooms.delete(roomId);
+            console.log(`   🗑️ Room ${conversationId} is empty, deleting`);
+            videoRooms.delete(conversationId);
         }
     }
 }

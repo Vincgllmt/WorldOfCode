@@ -4,9 +4,13 @@ import { useConversations } from "@/hooks/useConversations"
 import Link from "next/link"
 import clsx from "clsx"
 import { useAuth } from '@/hooks/useAuth'
+import { useParams } from "next/navigation"
+
 export default function MessagingLayout({ children }: { children: React.ReactNode }) {
     const { data: conversations, isLoading } = useConversations()
-    const { user, logout } = useAuth()
+    const { user } = useAuth()
+    const params = useParams<{ id?: string }>()
+    const currentConversationId = params?.id
     return (
         <div className="flex h-[calc(100vh-64px)]">
             {/* Liste des conversations */}
@@ -23,10 +27,12 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                     .map((conv) => {
                         console.log(conv.lastMessage?.sender?.username)
 
+                        // Ne pas afficher "non lu" si c'est la conversation actuellement ouverte
                         const isUnread =
                             conv.lastMessage &&
                             !conv.lastMessage.read &&
-                            conv.lastMessage.sender?.id !== user?.id
+                            conv.lastMessage.sender?.id !== user?.id &&
+                            conv.id !== currentConversationId
 
 
                         return (

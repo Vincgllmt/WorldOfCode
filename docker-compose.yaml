@@ -89,6 +89,7 @@ services:
       PORT: 8081
       CORS_ORIGIN: "http://localhost:3000"
       MEDIASOUP_ANNOUNCED_IP: "192.168.1.109" # ATTENTION : mettre l'ip du serveur ici, ou de votre machine en mode dev
+
     volumes:
       - ./messagerie:/app
       - /app/node_modules

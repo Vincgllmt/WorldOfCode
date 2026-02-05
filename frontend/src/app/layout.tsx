@@ -5,10 +5,12 @@ import './globals.css'
 import { ReactNode } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { VideoCallProvider } from '@/contexts/VideoCallContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Navbar from '@/components/layout/Navbar'
 import { usePathname } from 'next/navigation'
 import { MessageFab } from '@/components/messaging/MessageFab'
+import { VideoCallGlobal } from '@/components/video/VideoCallGlobal'
 
 // Fonts
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -27,10 +29,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black`}>
                 <QueryClientProvider client={queryClient}>
                     <AuthProvider>
-                        {!hideNavbar && <Navbar />}
-                        {children}
-                        {!hideNavbar && <MessageFab />}
-                        <Toaster position="top-right" />
+                        <VideoCallProvider>
+                            {!hideNavbar && <Navbar />}
+                            {children}
+                            {!hideNavbar && <MessageFab />}
+                            <Toaster position="top-right" />
+                            {/* Composant d'appel vidéo global */}
+                            <VideoCallGlobal />
+                        </VideoCallProvider>
                     </AuthProvider>
                 </QueryClientProvider>
             </body>
