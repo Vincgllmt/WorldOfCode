@@ -49,15 +49,11 @@ cd world-of-code
 docker compose up -d
 ```
 
-Il faudrait ensuite générer les clés JWT pour le backend :
+Il faut ensuite générer les clés JWT pour le backend :
 
 ```bash
+docker compose exec backend composer install
 docker compose exec backend php bin/console lexik:jwt:generate-keypair
-```
-
-Puis relancer les docker pour synchroniser les clés avec les messagerie:
-
-```bash
 docker compose restart
 ```
 
