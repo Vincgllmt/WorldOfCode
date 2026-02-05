@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/register', '/api']
+const PUBLIC_ROUTES = ['/login', '/register', '/api', '/reset-password']
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
@@ -10,19 +10,18 @@ export function middleware(request: NextRequest) {
   const isPublic = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
   const isAuthRoute = ['/login', '/register'].includes(pathname)
 
-  // Non connecté et route privée  rediriger vers login
+  // Non connecté et route privée → rediriger vers login
   if (!isPublic && !token) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Déjà connecté et sur login/register → rediriger vers home
+  // Déjà connecté et sur login/register → rediriger vers la page d'accueil
   if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL('/home', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()
 }
-
 
 export const config = {
   matcher: [

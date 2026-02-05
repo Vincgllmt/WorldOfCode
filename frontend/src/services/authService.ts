@@ -1,3 +1,4 @@
+
 import { setCookie, deleteCookie } from 'cookies-next'
 import type { LoginCredentials, AuthenticatedUser, TokenResponse } from '@/interfaces/Authentification'
 

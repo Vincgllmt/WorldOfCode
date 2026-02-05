@@ -1,0 +1,21 @@
+export interface User {
+  id: number
+  username: string
+  role: 'ROLE_USER' | 'ROLE_ADMIN'
+  creationDate: string
+  updateDate: string
+}
+
+export interface UpdateUserPayload {
+  id: number
+  username: string
+  role: 'ROLE_USER' | 'ROLE_ADMIN'
+}
+
+export interface UserGroup {
+  id: number
+  name: string
+  description: string
+  creatorId: number
+  createdAt: string
+}

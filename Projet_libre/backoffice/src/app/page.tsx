@@ -6,7 +6,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-
 import AdminUserPanel from '@/components/adminPanel/AdminUserPanel'
 import AdminGroupPanel from '@/components/adminPanel/AdminGroupPanel'
 import AdminPostPanel from '@/components/adminPanel/AdminPostPanel'

@@ -19,17 +19,14 @@ export default function Navbar() {
   const pathname = usePathname()
 
   const navLinks = [
-    { label: 'Accueil', href: '/home' },
+    { label: 'Accueil', href: '/' },
     { label: 'Groupes', href: '/group' },
-    ...(user?.role === 'ROLE_ADMIN'
-      ? [{ label: 'AdminDashboard', href: '/admindashboard' }]
-      : []),
   ]
 
   return (
     <nav className="w-full bg-green-50 border-b shadow-sm px-6 py-4 flex items-center justify-between">
       {/* Logo */}
-      <Link href="/home" className="text-xl font-bold text-black">
+      <Link href="/" className="text-xl font-bold text-black">
         World of Code
       </Link>
 
