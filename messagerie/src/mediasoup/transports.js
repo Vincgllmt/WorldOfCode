@@ -17,7 +17,10 @@ export async function createWebRtcTransport(router) {
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
+        initialAvailableOutgoingBitrate: 600000,
     });
+
+    await transport.setMaxIncomingBitrate(1500000);
 
     console.log("🚀 WebRTC transport created", {
         listenIps: transport.listenIps,

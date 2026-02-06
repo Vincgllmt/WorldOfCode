@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useVideoCallContext } from "@/contexts/VideoCallContext"
 import { LocalVideo } from "./LocalVideo"
 import { RemoteVideo } from "./RemoteVideo"
@@ -12,15 +13,24 @@ export function VideoCallGlobal() {
         callState,
         isMuted,
         isCameraOff,
+        isScreenSharing,
         localStream,
+        screenStream,
         remoteStreams,
         endCall,
         toggleMute,
         toggleCamera,
+        toggleScreenShare,
         setMinimized,
     } = useVideoCallContext()
 
+    // ID du flux sélectionné pour la vue principale (null = premier flux)
+    const [mainStreamId, setMainStreamId] = useState<string | null>(null)
+
     if (!isCallActive) return null
+
+    // Quelqu'un d'autre partage déjà (plus d'1 flux vidéo distant = caméra + écran)
+    const someoneElseIsSharing = remoteStreams.size > 1 && !isScreenSharing
 
     // === MODE MINIMISÉ (Picture-in-Picture) ===
     if (isMinimized) {
@@ -145,48 +155,104 @@ export function VideoCallGlobal() {
                     </div>
                 )}
 
-                {callState === "connected" && (
-                    <>
-                        {/* Vidéos distantes */}
-                        {remoteStreams.size > 0 ? (
-                            <div className={`absolute inset-0 p-2 ${
-                                remoteStreams.size === 1
-                                    ? "flex items-center justify-center"
-                                    : "grid grid-cols-1 md:grid-cols-2 gap-2"
-                            }`}>
-                                {Array.from(remoteStreams.entries()).map(([producerId, stream]) => (
-                                    <div
-                                        key={producerId}
-                                        className={`rounded-lg overflow-hidden bg-muted ${
-                                            remoteStreams.size === 1 ? "w-full h-full" : ""
-                                        }`}
-                                    >
-                                        <RemoteVideo stream={stream} producerId={producerId} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center">
-                                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
-                                    <UserIcon className="w-10 h-10 text-muted-foreground" />
+                {callState === "connected" && (() => {
+                    const remoteEntries = Array.from(remoteStreams.entries())
+                    const showLocalScreen = mainStreamId === "__local_screen__" && screenStream
+                    const validMainId = !showLocalScreen && mainStreamId && remoteStreams.has(mainStreamId) ? mainStreamId : null
+                    const mainRemoteEntry = validMainId
+                        ? [validMainId, remoteStreams.get(validMainId)!] as [string, MediaStream]
+                        : remoteEntries[0] || null
+                    // Flux distants non affichés en plein écran
+                    const secondaryEntries = showLocalScreen
+                        ? remoteEntries
+                        : mainRemoteEntry
+                            ? remoteEntries.filter(([id]) => id !== mainRemoteEntry[0])
+                            : []
+                    const hasScreenContent = showLocalScreen || remoteEntries.length > 1
+
+                    return (
+                        <>
+                            {/* Flux principal en plein écran */}
+                            {showLocalScreen ? (
+                                <div className="absolute inset-0 bg-black">
+                                    <video
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        className="w-full h-full object-contain"
+                                        ref={(el) => {
+                                            if (el && screenStream) el.srcObject = screenStream
+                                        }}
+                                    />
                                 </div>
-                                <p className="text-muted-foreground">En attente des autres participants...</p>
-                            </div>
-                        )}
+                            ) : mainRemoteEntry ? (
+                                <div className="absolute inset-0">
+                                    <RemoteVideo stream={mainRemoteEntry[1]} producerId={mainRemoteEntry[0]} contain={hasScreenContent} />
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                                        <UserIcon className="w-10 h-10 text-muted-foreground" />
+                                    </div>
+                                    <p className="text-muted-foreground">En attente des autres participants...</p>
+                                </div>
+                            )}
 
-                        {/* Vidéo locale (picture-in-picture) */}
-                        <LocalVideo stream={localStream} isCameraOff={isCameraOff} />
+                            {/* Flux secondaires en PiP cliquables (en haut à gauche) */}
+                            {secondaryEntries.length > 0 && (
+                                <div className="absolute top-16 left-4 flex flex-col gap-2 z-10">
+                                    {secondaryEntries.map(([producerId, stream]) => (
+                                        <button
+                                            key={producerId}
+                                            onClick={() => setMainStreamId(producerId)}
+                                            className="w-40 h-24 rounded-lg overflow-hidden shadow-lg border-2 border-white/50 hover:border-blue-400 transition-colors cursor-pointer"
+                                            title="Cliquer pour agrandir"
+                                        >
+                                            <RemoteVideo stream={stream} producerId={producerId} />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
 
-                        {/* Contrôles */}
-                        <VideoControls
-                            isMuted={isMuted}
-                            isCameraOff={isCameraOff}
-                            onToggleMute={toggleMute}
-                            onToggleCamera={toggleCamera}
-                            onEndCall={endCall}
-                        />
-                    </>
-                )}
+                            {/* Preview écran partagé (PiP cliquable en bas à gauche) */}
+                            {screenStream && !showLocalScreen && (
+                                <button
+                                    onClick={() => setMainStreamId("__local_screen__")}
+                                    className="absolute bottom-24 left-4 w-48 h-28 bg-card rounded-lg overflow-hidden shadow-lg border-2 border-blue-500 hover:border-blue-400 transition-colors cursor-pointer z-10"
+                                    title="Cliquer pour agrandir"
+                                >
+                                    <video
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        className="w-full h-full object-contain bg-black"
+                                        ref={(el) => {
+                                            if (el && screenStream) el.srcObject = screenStream
+                                        }}
+                                    />
+                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/70 rounded text-xs text-white">
+                                        Votre écran
+                                    </div>
+                                </button>
+                            )}
+
+                            {/* Vidéo locale (picture-in-picture) */}
+                            <LocalVideo stream={localStream} isCameraOff={isCameraOff} />
+
+                            {/* Contrôles */}
+                            <VideoControls
+                                isMuted={isMuted}
+                                isCameraOff={isCameraOff}
+                                isScreenSharing={isScreenSharing}
+                                screenShareDisabled={someoneElseIsSharing}
+                                onToggleMute={toggleMute}
+                                onToggleCamera={toggleCamera}
+                                onToggleScreenShare={toggleScreenShare}
+                                onEndCall={endCall}
+                            />
+                        </>
+                    )
+                })()}
             </div>
         </div>
     )

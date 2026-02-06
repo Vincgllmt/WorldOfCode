@@ -9,7 +9,9 @@ import {
     createTransport,
     produceTrack,
     consumeProducer,
+    closeProducer,
     getLocalMediaStream,
+    getScreenShareStream,
     createStreamFromTrack,
 } from "@/lib/video/mediasoupClient"
 import type {
@@ -30,8 +32,10 @@ export function useVideoCall({
     const [callState, setCallState] = useState<CallState>("idle")
     const [isMuted, setIsMuted] = useState(false)
     const [isCameraOff, setIsCameraOff] = useState(false)
+    const [isScreenSharing, setIsScreenSharing] = useState(false)
     const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+    const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
 
     // === Refs MediaSoup ===
     const deviceRef = useRef<Device | null>(null)
@@ -39,6 +43,7 @@ export function useVideoCall({
     const recvTransportRef = useRef<MediasoupTypes.Transport | null>(null)
     const videoProducerRef = useRef<MediasoupTypes.Producer | null>(null)
     const audioProducerRef = useRef<MediasoupTypes.Producer | null>(null)
+    const screenProducerRef = useRef<MediasoupTypes.Producer | null>(null)
     const consumersRef = useRef<Map<string, MediasoupTypes.Consumer>>(new Map())
     const localStreamRef = useRef<MediaStream | null>(null)
 
@@ -139,6 +144,7 @@ export function useVideoCall({
         // Fermer les producers
         videoProducerRef.current?.close()
         audioProducerRef.current?.close()
+        screenProducerRef.current?.close()
 
         // Fermer les consumers
         consumersRef.current.forEach((consumer) => consumer.close())
@@ -163,14 +169,17 @@ export function useVideoCall({
         recvTransportRef.current = null
         videoProducerRef.current = null
         audioProducerRef.current = null
+        screenProducerRef.current = null
         localStreamRef.current = null
 
         // Reset de l'état
         setRemoteStreams(new Map())
         setLocalStream(null)
+        setScreenStream(null)
         setCallState("idle")
         setIsMuted(false)
         setIsCameraOff(false)
+        setIsScreenSharing(false)
 
         onCallEnded?.()
     }, [conversationId, onCallEnded])
@@ -198,6 +207,44 @@ export function useVideoCall({
             setIsCameraOff(!isCameraOff)
         }
     }, [isCameraOff])
+
+    // === Toggle partage d'écran ===
+    const toggleScreenShare = useCallback(async () => {
+        if (!sendTransportRef.current) return
+
+        if (isScreenSharing) {
+            // Stopper les tracks, notifier le serveur, fermer le producer
+            if (screenStream) {
+                screenStream.getTracks().forEach((track) => track.stop())
+            }
+            if (screenProducerRef.current) {
+                closeProducer(conversationId, screenProducerRef.current)
+            }
+            screenProducerRef.current = null
+            setScreenStream(null)
+            setIsScreenSharing(false)
+        } else {
+            try {
+                const stream = await getScreenShareStream()
+                const screenTrack = stream.getVideoTracks()[0]
+
+                screenTrack.onended = () => {
+                    if (screenProducerRef.current) {
+                        closeProducer(conversationId, screenProducerRef.current)
+                    }
+                    screenProducerRef.current = null
+                    setScreenStream(null)
+                    setIsScreenSharing(false)
+                }
+
+                screenProducerRef.current = await produceTrack(sendTransportRef.current!, screenTrack)
+                setScreenStream(stream)
+                setIsScreenSharing(true)
+            } catch {
+                // L'utilisateur a annulé le sélecteur d'écran
+            }
+        }
+    }, [isScreenSharing, screenStream, conversationId])
 
     // === Écouter les événements socket ===
     useEffect(() => {
@@ -247,11 +294,14 @@ export function useVideoCall({
         callState,
         isMuted,
         isCameraOff,
+        isScreenSharing,
         remoteStreams,
         localStream,
+        screenStream,
         startCall,
         endCall,
         toggleMute,
         toggleCamera,
+        toggleScreenShare,
     }
 }

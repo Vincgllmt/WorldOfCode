@@ -5,8 +5,11 @@ import type { VideoControlsProps } from "@/interfaces/video"
 export function VideoControls({
     isMuted,
     isCameraOff,
+    isScreenSharing,
+    screenShareDisabled,
     onToggleMute,
     onToggleCamera,
+    onToggleScreenShare,
     onEndCall,
 }: VideoControlsProps) {
     return (
@@ -43,6 +46,22 @@ export function VideoControls({
                 ) : (
                     <MicIcon className="w-6 h-6 text-foreground" />
                 )}
+            </button>
+
+            {/* Toggle Partage d'écran */}
+            <button
+                onClick={onToggleScreenShare}
+                disabled={screenShareDisabled}
+                className={`p-4 rounded-full transition-colors ${
+                    screenShareDisabled
+                        ? "bg-muted opacity-50 cursor-not-allowed"
+                        : isScreenSharing
+                            ? "bg-blue-500 hover:bg-blue-600"
+                            : "bg-secondary hover:bg-accent"
+                }`}
+                title={screenShareDisabled ? "Un partage d'écran est déjà en cours" : isScreenSharing ? "Arrêter le partage" : "Partager l'écran"}
+            >
+                <ScreenShareIcon className={`w-6 h-6 ${isScreenSharing ? "text-white" : "text-foreground"}`} />
             </button>
 
             {/* Raccrocher */}
@@ -132,6 +151,25 @@ function MicOffIcon({ className }: { className?: string }) {
                 d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
             />
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
+        </svg>
+    )
+}
+
+function ScreenShareIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className={className}
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25Z"
+            />
         </svg>
     )
 }

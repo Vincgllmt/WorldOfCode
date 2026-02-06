@@ -135,6 +135,28 @@ export function registerVideoHandlers(socket, io) {
         });
     });
 
+    // Fermer un producer spécifique (ex: arrêt partage d'écran)
+    socket.on("close_producer", async ({ conversation_id, producerId }) => {
+        try {
+            const room = await getOrCreateVideoRoom(conversation_id);
+            const peer = room.peers.get(socket.id);
+            if (!peer) return;
+
+            const producerIndex = peer.producers.findIndex(p => p.id === producerId);
+            if (producerIndex === -1) return;
+
+            const producer = peer.producers[producerIndex];
+            producer.close();
+            peer.producers.splice(producerIndex, 1);
+
+            const videoRoomId = `video:${conversation_id}`;
+            console.log(`🎥 Producer closed: ${producerId} by ${socket.id}`);
+            socket.to(videoRoomId).emit("producer_closed", { producerId });
+        } catch (error) {
+            console.error("❌ Error closing producer:", error);
+        }
+    });
+
     // Quitter un appel vidéo sans se déconnecter du socket
     socket.on("leave_video", ({ conversation_id }) => {
         if (!conversation_id) return;

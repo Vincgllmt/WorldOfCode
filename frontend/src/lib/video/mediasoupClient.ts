@@ -132,11 +132,39 @@ export async function consumeProducer(
     return consumer
 }
 
+// === Fermer un producer et notifier le serveur ===
+export function closeProducer(
+    conversationId: string,
+    producer: MediasoupTypes.Producer
+): void {
+    socket.emit("close_producer", {
+        conversation_id: conversationId,
+        producerId: producer.id,
+    })
+    producer.close()
+}
+
 // === Obtenir le flux média local (caméra + micro) ===
 export async function getLocalMediaStream(): Promise<MediaStream> {
     return navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+            width: { ideal: 1280, max: 1280 },
+            height: { ideal: 720, max: 720 },
+            frameRate: { ideal: 24, max: 24 },
+        },
         audio: true,
+    })
+}
+
+// === Obtenir le flux de partage d'écran ===
+export async function getScreenShareStream(): Promise<MediaStream> {
+    return navigator.mediaDevices.getDisplayMedia({
+        video: {
+            width: { max: 1920 },
+            height: { max: 1080 },
+            frameRate: { max: 5 },
+        },
+        audio: false,
     })
 }
 

@@ -19,7 +19,9 @@ import {
     createTransport,
     produceTrack,
     consumeProducer,
+    closeProducer,
     getLocalMediaStream,
+    getScreenShareStream,
     createStreamFromTrack,
 } from "@/lib/video/mediasoupClient"
 import type {
@@ -35,7 +37,9 @@ interface VideoCallContextType {
     callState: CallState
     isMuted: boolean
     isCameraOff: boolean
+    isScreenSharing: boolean
     localStream: MediaStream | null
+    screenStream: MediaStream | null
     remoteStreams: Map<string, MediaStream>
     currentConversationId: string | null
 
@@ -44,6 +48,7 @@ interface VideoCallContextType {
     endCall: () => void
     toggleMute: () => void
     toggleCamera: () => void
+    toggleScreenShare: () => void
     setMinimized: (minimized: boolean) => void
 }
 
@@ -58,7 +63,9 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
     const [callState, setCallState] = useState<CallState>("idle")
     const [isMuted, setIsMuted] = useState(false)
     const [isCameraOff, setIsCameraOff] = useState(false)
+    const [isScreenSharing, setIsScreenSharing] = useState(false)
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+    const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
     const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
 
@@ -68,6 +75,7 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
     const recvTransportRef = useRef<MediasoupTypes.Transport | null>(null)
     const videoProducerRef = useRef<MediasoupTypes.Producer | null>(null)
     const audioProducerRef = useRef<MediasoupTypes.Producer | null>(null)
+    const screenProducerRef = useRef<MediasoupTypes.Producer | null>(null)
     const consumersRef = useRef<Map<string, MediasoupTypes.Consumer>>(new Map())
     const localStreamRef = useRef<MediaStream | null>(null)
 
@@ -114,6 +122,7 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         // Fermer les producers
         videoProducerRef.current?.close()
         audioProducerRef.current?.close()
+        screenProducerRef.current?.close()
 
         // Fermer les consumers
         consumersRef.current.forEach((consumer) => consumer.close())
@@ -135,11 +144,14 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         recvTransportRef.current = null
         videoProducerRef.current = null
         audioProducerRef.current = null
+        screenProducerRef.current = null
         localStreamRef.current = null
 
         // Reset de l'état des streams
         setRemoteStreams(new Map())
         setLocalStream(null)
+        setScreenStream(null)
+        setIsScreenSharing(false)
     }, [])
 
     // Démarrer l'appel
@@ -232,6 +244,7 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         setCallState("idle")
         setIsMuted(false)
         setIsCameraOff(false)
+        setIsScreenSharing(false)
         setIsCallActive(false)
         setIsMinimized(false)
         setCurrentConversationId(null)
@@ -260,6 +273,45 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
             setIsCameraOff(!isCameraOff)
         }
     }, [isCameraOff])
+
+    // Toggle partage d'écran
+    const toggleScreenShare = useCallback(async () => {
+        if (!sendTransportRef.current) return
+
+        if (isScreenSharing) {
+            // Arrêter le partage : stopper les tracks, notifier le serveur, fermer le producer
+            if (screenStream) {
+                screenStream.getTracks().forEach((track) => track.stop())
+            }
+            if (screenProducerRef.current && currentConversationId) {
+                closeProducer(currentConversationId, screenProducerRef.current)
+            }
+            screenProducerRef.current = null
+            setScreenStream(null)
+            setIsScreenSharing(false)
+        } else {
+            try {
+                const stream = await getScreenShareStream()
+                const screenTrack = stream.getVideoTracks()[0]
+
+                // Écouter l'arrêt natif du navigateur (bouton "Arrêter le partage")
+                screenTrack.onended = () => {
+                    if (screenProducerRef.current && currentConversationId) {
+                        closeProducer(currentConversationId, screenProducerRef.current)
+                    }
+                    screenProducerRef.current = null
+                    setScreenStream(null)
+                    setIsScreenSharing(false)
+                }
+
+                screenProducerRef.current = await produceTrack(sendTransportRef.current!, screenTrack)
+                setScreenStream(stream)
+                setIsScreenSharing(true)
+            } catch {
+                // L'utilisateur a annulé le sélecteur d'écran
+            }
+        }
+    }, [isScreenSharing, screenStream, currentConversationId])
 
     // Set minimized
     const setMinimized = useCallback((minimized: boolean) => {
@@ -337,13 +389,16 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
                 callState,
                 isMuted,
                 isCameraOff,
+                isScreenSharing,
                 localStream,
+                screenStream,
                 remoteStreams,
                 currentConversationId,
                 startCall,
                 endCall,
                 toggleMute,
                 toggleCamera,
+                toggleScreenShare,
                 setMinimized,
             }}
         >

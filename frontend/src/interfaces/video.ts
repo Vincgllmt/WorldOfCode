@@ -58,8 +58,11 @@ export interface VideoCallProps {
 export interface VideoControlsProps {
     isMuted: boolean
     isCameraOff: boolean
+    isScreenSharing: boolean
+    screenShareDisabled?: boolean
     onToggleMute: () => void
     onToggleCamera: () => void
+    onToggleScreenShare: () => void
     onEndCall: () => void
 }
 
@@ -72,6 +75,7 @@ export interface LocalVideoProps {
 export interface RemoteVideoProps {
     stream: MediaStream
     producerId: string
+    contain?: boolean
 }
 
 // === État du hook useVideoCall ===
@@ -79,6 +83,7 @@ export interface VideoCallState {
     callState: CallState
     isMuted: boolean
     isCameraOff: boolean
+    isScreenSharing: boolean
     remoteStreams: Map<string, MediaStream>
 }
 
@@ -91,8 +96,10 @@ export interface UseVideoCallOptions {
 // === Retour du hook useVideoCall ===
 export interface UseVideoCallReturn extends VideoCallState {
     localStream: MediaStream | null
+    screenStream: MediaStream | null
     startCall: () => Promise<void>
     endCall: () => void
     toggleMute: () => void
     toggleCamera: () => void
+    toggleScreenShare: () => void
 }

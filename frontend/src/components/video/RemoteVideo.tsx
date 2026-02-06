@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react"
 import type { RemoteVideoProps } from "@/interfaces/video"
 
-export function RemoteVideo({ stream, producerId }: RemoteVideoProps) {
+export function RemoteVideo({ stream, producerId, contain }: RemoteVideoProps) {
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
@@ -19,7 +19,7 @@ export function RemoteVideo({ stream, producerId }: RemoteVideoProps) {
             playsInline
             muted // La vidéo est muted, l'audio est géré séparément
             data-producer-id={producerId}
-            className="w-full h-full object-cover"
+            className={`w-full h-full ${contain ? "object-contain bg-black" : "object-cover"}`}
         />
     )
 }
