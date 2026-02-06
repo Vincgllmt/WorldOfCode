@@ -19,7 +19,6 @@ export default function ConversationPage() {
     const { data: conversations } = useConversations()
     const { mutate: markAsRead } = useMarkConversationAsRead()
 
-    // Contexte global pour les appels vidéo
     const { startCall, isCallActive } = useVideoCallContext()
 
     const conv = conversations?.find((c) => c.id === id)
@@ -43,7 +42,7 @@ export default function ConversationPage() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] p-4">
+        <div className="flex flex-col h-full">
             <ConversationHeader title={title} onStartCall={handleStartCall} />
             <MessageList
                 messages={messages || []}
