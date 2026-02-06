@@ -23,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
     // Masquer la navbar pour les routes /login et /register
     const hideNavbar = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === "/reset-password"
+    const hideMessageFab = hideNavbar || pathname.startsWith('/message')
 
     return (
         <html lang="fr">
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         <VideoCallProvider>
                             {!hideNavbar && <Navbar />}
                             {children}
-                            {!hideNavbar && <MessageFab />}
+                            {!hideMessageFab && <MessageFab />}
                             <Toaster position="top-right" />
                             {/* Composant d'appel vidéo global */}
                             <VideoCallGlobal />

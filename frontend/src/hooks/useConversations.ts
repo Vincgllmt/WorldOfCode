@@ -22,8 +22,32 @@ export function useConversationRealtime(userId?: string | number) {
             socket.connect()
         }
 
-        const onMessageCreated = () => {
-            queryClient.invalidateQueries({ queryKey: ["conversations"] })
+        // Mise à jour directe du cache au lieu d'un re-fetch réseau
+        const onMessageCreated = (data: {
+            id: string
+            conversation_id: string
+            sender_id: number
+            body: string
+            type: string
+            created_at: string
+        }) => {
+            queryClient.setQueryData<Conversation[]>(["conversations"], (old) => {
+                if (!old) return old
+                return old.map((conv) =>
+                    conv.id === data.conversation_id
+                        ? {
+                              ...conv,
+                              lastMessage: {
+                                  id: data.id,
+                                  body: data.body,
+                                  createdAt: data.created_at,
+                                  sender: { id: data.sender_id, username: "" },
+                                  read: data.sender_id === Number(userId),
+                              },
+                          }
+                        : conv
+                )
+            })
         }
 
         socket.on("message_created", onMessageCreated)
@@ -38,7 +62,7 @@ export function useConversations() {
     return useQuery({
         queryKey: ["conversations"],
         queryFn: getConversations,
-        refetchInterval: 1000,
+        staleTime: 30_000,
     })
 }
 
