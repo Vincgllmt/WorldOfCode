@@ -56,6 +56,8 @@ services:
     container_name: projet_messagerie
     ports:
       - "8081:8081"
+      - "40000-40100:40000-40100/udp"
+      - "40000-40100:40000-40100/tcp"
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -64,6 +66,7 @@ services:
       DB_NAME: projet_web
       PORT: 8081
       CORS_ORIGIN: "http://localhost:3000"
+      MEDIASOUP_ANNOUNCED_IP: "192.168.1.109" # ATTENTION : mettre l'ip du serveur ici, ou de votre machine en mode dev cmd : ifconfig | grep "inet "
     volumes:
       - ./messagerie:/app
       - /app/node_modules
@@ -88,13 +91,13 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - projet_network
-    
+
   minio:
     image: minio/minio:latest
     container_name: projet_minio
     ports:
       - "9000:9000"   # API S3
-      - "9001:9001"   # Console d’administration
+      - "9001:9001"   # Console d'administration
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: admin1234
@@ -103,7 +106,7 @@ services:
       - minio_data:/data
     networks:
       - projet_network
-  
+
   minio-mc:
     image: minio/mc
     container_name: projet_minio_mc
@@ -119,7 +122,6 @@ services:
       "
     networks:
       - projet_network
-
 
 volumes:
   db_data:

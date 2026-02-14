@@ -8,6 +8,7 @@ import { useEffect } from "react"
 import { ConversationHeader } from "@/components/message/ConversationHeader"
 import { MessageList } from "@/components/message/MessageList"
 import { MessageInput } from "@/components/message/MessageInput"
+import { useVideoCallContext } from "@/contexts/VideoCallContext"
 
 export default function ConversationPage() {
     const { id } = useParams<{ id: string }>()
@@ -17,6 +18,8 @@ export default function ConversationPage() {
     const { messages, sendMessage, typingUsers } = useRealtimeMessages(id, userId)
     const { data: conversations } = useConversations()
     const { mutate: markAsRead } = useMarkConversationAsRead()
+
+    const { startCall, isCallActive } = useVideoCallContext()
 
     const conv = conversations?.find((c) => c.id === id)
     const otherUser =
@@ -32,10 +35,15 @@ export default function ConversationPage() {
         }
     }, [id, markAsRead])
 
+    const handleStartCall = () => {
+        if (!isCallActive) {
+            startCall(id)
+        }
+    }
+
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] p-4">
-            <ConversationHeader title={title} />
-            {/* <MessageList messages={messages || []} userId={userId} convType={conv?.type} /> */}
+        <div className="flex flex-col h-full">
+            <ConversationHeader title={title} onStartCall={handleStartCall} />
             <MessageList
                 messages={messages || []}
                 userId={userId}
@@ -44,8 +52,6 @@ export default function ConversationPage() {
                 otherUsername={otherUser?.username}
             />
             <MessageInput onSend={sendMessage} conversationId={id} />
-
-            {/* <MessageInput onSend={sendMessage} /> */}
         </div>
     )
 }

@@ -3,7 +3,7 @@
 import { MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -21,15 +21,21 @@ import NavbarSearch from "@/components/layout/NavbarSearch"
 export default function Navbar() {
     const { user, logout } = useAuth()
     const pathname = usePathname()
+    const searchParams = useSearchParams()
     useConversationRealtime(user?.id)
     const { data: conversations } = useConversations()
 
+    // Récupérer l'ID de la conversation actuellement ouverte
+    const currentConversationId = pathname === "/message" || pathname.startsWith("/message/")
+        ? searchParams.get("c") || pathname.split("/message/")[1]
+        : null
 
     const hasUnread = conversations?.some(
         (c) =>
             c.lastMessage &&
             !c.lastMessage.read &&
-            c.lastMessage.sender?.id !== user?.id
+            c.lastMessage.sender?.id !== user?.id &&
+            c.id !== currentConversationId // Ne pas compter la conversation actuellement ouverte
     )
 
     const navLinks = [

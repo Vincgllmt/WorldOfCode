@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getMessages } from "@/services/messageService"
 import { socket } from "@/lib/socket"
@@ -24,15 +24,25 @@ export const useRealtimeMessages = (
     const { user } = useAuth()
     const { data: messages, isLoading, error, refetch } = useMessages(conversationId)
     const queryClient = useQueryClient()
+    const refetchRef = useRef(refetch)
 
+    // Garder la ref à jour
+    useEffect(() => {
+        refetchRef.current = refetch
+    }, [refetch])
 
     const [typingUsers, setTypingUsers] = useState<string[]>([])
 
     useEffect(() => {
-        if (!conversationId || !userId) return
+        console.log("🔵 useEffect triggered", { conversationId, userId, user: !!user })
+        if (!conversationId || !userId) {
+            console.log("🔴 Missing conversationId or userId, returning")
+            return
+        }
 
-
+        console.log("🟢 Socket connected?", socket.connected)
         if (!socket.connected) {
+            console.log("🟡 Connecting socket...")
             socket.auth = {
                 token: user?.token,
                 userId: user?.id,
@@ -41,11 +51,13 @@ export const useRealtimeMessages = (
         }
 
         // 🧩 Join la conversation
+        console.log("🟢 Emitting join_conversation", conversationId)
         socket.emit("join_conversation", { conversation_id: conversationId })
 
         // --- Gestion des nouveaux messages ---
-        const onMessageCreated = (data: Message) => {
-            refetch()
+        const onMessageCreated = (data: any) => {
+            console.log("📩 message_created received!", data)
+            refetchRef.current()
         }
 
         // --- Gestion du "typing" ---
@@ -65,23 +77,30 @@ export const useRealtimeMessages = (
             )
         }
 
+        console.log("🟢 Registering socket listeners")
         socket.on("message_created", onMessageCreated)
         socket.on("typing", onTyping)
 
         // Cleanup
         return () => {
+            console.log("🔴 Cleanup: removing listeners")
             socket.off("message_created", onMessageCreated)
             socket.off("typing", onTyping)
             socket.emit("leave_conversation", { conversation_id: conversationId })
-            socket.disconnect()
+            // Ne PAS déconnecter le socket ici - il peut être utilisé par d'autres fonctionnalités (appel vidéo)
         }
-    }, [conversationId, userId, refetch])
+    }, [conversationId, userId, user])
 
     // --- Envoi de message ---
     const sendMessage = (body: string) => {
-        if (!body.trim() || !user) return
+        console.log("📤 sendMessage called", { body, user: !!user, conversationId })
+        if (!body.trim() || !user) {
+            console.log("🔴 sendMessage: missing body or user")
+            return
+        }
         const tempId = Date.now().toString()
 
+        console.log("📤 Emitting send_message to socket")
         socket.emit("send_message", {
             conversation_id: conversationId,
             temp_id: tempId,
