@@ -26,6 +26,9 @@ class Conversation
     #[ORM\Column(name: "created_at", type: "datetime_immutable")]
     private DateTimeImmutable $createdAt;
 
+    #[ORM\Column(name: "last_message_at", type: "datetime_immutable", nullable: true)]
+    private ?DateTimeImmutable $lastMessageAt = null;
+
     #[ORM\OneToMany(
         mappedBy: "conversation",
         targetEntity: ConversationParticipant::class,
@@ -94,6 +97,17 @@ class Conversation
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getLastMessageAt(): ?DateTimeImmutable
+    {
+        return $this->lastMessageAt;
+    }
+
+    public function setLastMessageAt(?DateTimeImmutable $lastMessageAt): self
+    {
+        $this->lastMessageAt = $lastMessageAt;
+        return $this;
     }
 
     /**

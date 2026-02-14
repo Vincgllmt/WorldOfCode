@@ -39,7 +39,7 @@ export default function Navbar() {
     )
 
     const navLinks = [
-        { label: "Accueil", href: "/" },
+        { label: "Accueil", href: "/home" },
         { label: "Groupes", href: "/group" },
         { label: "Messagerie", href: "/message", icon: MessageCircle, iconOnly: true },
     ]
@@ -47,7 +47,7 @@ export default function Navbar() {
     return (
         <nav className="sticky top-0 z-50 w-full border-b bg-green-50/95 px-6 py-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-green-50/80">
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
-                <Link href="/" className="text-xl font-bold text-black">
+                <Link href="/home" className="text-xl font-bold text-black">
                     World of Code
                 </Link>
 
