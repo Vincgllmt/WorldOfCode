@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useResetPassword } from '@/hooks/useAuth'
 import { Eye, EyeOff } from 'lucide-react'
+import Link from 'next/link'
 import Image from 'next/image'
 import { PasswordRules } from '@/components/register/PasswordRules' // ✅ réutilisé
 
@@ -39,19 +40,35 @@ export default function ResetPasswordPage() {
         /[^A-Za-z0-9]/.test(passwordValue)
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-green-400 via-green-200 to-white px-4">
+        <div className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col">
+            {/* Navbar Landing */}
+            <nav className="bg-green-50/80 backdrop-blur-md border-b border-green-200">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                    <Link href="/">
+                        <Image
+                            src="/logo2.png"
+                            alt="World of Code"
+                            width={160}
+                            height={50}
+                            className="h-12 w-auto"
+                        />
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link href="/login">
+                            <Button variant="outline" size="sm">Se connecter</Button>
+                        </Link>
+                        <Link href="/register">
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">S&apos;inscrire</Button>
+                        </Link>
+                    </div>
+                </div>
+            </nav>
+
+            <div className="flex-1 flex justify-center items-center px-4">
             <Card className="w-full max-w-md shadow-md">
                 <CardHeader className="flex flex-col items-center space-y-2">
-                    <Image
-                        src="/logo-woc.png"
-                        alt="World of Code logo"
-                        width={120}
-                        height={120}
-                        className="mb-2"
-                        priority
-                    />
                     <CardTitle className="text-l font-semibold text-gray-800">
-                        Mot de passe oublié
+                        Réinitialiser le mot de passe
                     </CardTitle>
                 </CardHeader>
 
@@ -94,6 +111,7 @@ export default function ResetPasswordPage() {
                     </form>
                 </CardContent>
             </Card>
+            </div>
         </div>
     )
 }
