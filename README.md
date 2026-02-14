@@ -48,6 +48,15 @@ git clone git@rendu-git.etna-alternance.net:module-9999/activity-53534/group-105
 cd world-of-code
 docker compose up -d
 ```
+
+Il faut ensuite générer les clés JWT pour le backend :
+
+```bash
+docker compose exec backend composer install
+docker compose exec backend php bin/console lexik:jwt:generate-keypair
+docker compose restart
+```
+
 ## 🧪 Tests
 
 ``` Bash
