@@ -28,7 +28,7 @@ export default function RegisterPage() {
         /[^A-Za-z0-9]/.test(passwordValue)
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-green-50 px-4">
+        <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-green-400 via-green-200 to-white px-4">
             <div className="w-full max-w-md space-y-4">
                 <Card className="shadow-md">
                     <CardHeader className="flex flex-col items-center space-y-2">

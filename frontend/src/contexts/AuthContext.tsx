@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const authenticatedUser = await authService.login(credentials)
       setUser(authenticatedUser)
       toast.success('Connexion réussie ✅')
-      router.push('/')
+      router.push('/home')
     } catch (error) {
       toast.error('Échec de la connexion ❌')
       console.error(error)

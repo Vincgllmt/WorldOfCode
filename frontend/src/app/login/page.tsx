@@ -22,7 +22,7 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-green-50 px-4">
+        <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-green-400 via-green-200 to-white px-4">
             <Card className="w-full max-w-md shadow-md">
                 <CardHeader className="flex flex-col items-center space-y-2">
                     <Image

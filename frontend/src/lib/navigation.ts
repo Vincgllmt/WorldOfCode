@@ -1,6 +1,6 @@
 export function isActive(href: string, pathname: string): boolean {
-    if (href === "/") {
-        return pathname === "/"
+    if (href === "/home") {
+        return pathname === "/home"
     }
     return pathname.startsWith(href)
 }
