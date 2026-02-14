@@ -122,6 +122,16 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                 if (node.y > canvas.height) { node.y = canvas.height; node.vy *= -0.5 }
             }
 
+            // Fonction couleur selon position Y (vert clair en haut → vert foncé en bas)
+            const getColor = (y: number, alpha: number) => {
+                const t = Math.min(1, Math.max(0, y / canvas.height)) // 0 = haut, 1 = bas
+                // Haut: rgb(187, 247, 208) = green-200 → Bas: rgb(21, 128, 61) = green-700
+                const r = Math.round(187 - t * (187 - 21))
+                const g = Math.round(247 - t * (247 - 128))
+                const b = Math.round(208 - t * (208 - 61))
+                return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(4)})`
+            }
+
             // Dessiner les connexions
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
@@ -131,10 +141,11 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
 
                     if (dist < CONNECTION_DIST) {
                         const opacity = (1 - dist / CONNECTION_DIST) * 0.55
+                        const midY = (nodes[i].y + nodes[j].y) / 2
                         ctx.beginPath()
                         ctx.moveTo(nodes[i].x, nodes[i].y)
                         ctx.lineTo(nodes[j].x, nodes[j].y)
-                        ctx.strokeStyle = `rgba(21, 128, 61, ${opacity.toFixed(4)})`
+                        ctx.strokeStyle = getColor(midY, opacity)
                         ctx.lineWidth = 1.5
                         ctx.stroke()
                     }
@@ -150,10 +161,11 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
 
                     if (dist < MOUSE_RADIUS) {
                         const opacity = (1 - dist / MOUSE_RADIUS) * 0.5
+                        const midY = (node.y + mouse.y) / 2
                         ctx.beginPath()
                         ctx.moveTo(node.x, node.y)
                         ctx.lineTo(mouse.x, mouse.y)
-                        ctx.strokeStyle = `rgba(21, 128, 61, ${opacity.toFixed(4)})`
+                        ctx.strokeStyle = getColor(midY, opacity)
                         ctx.lineWidth = 1.2
                         ctx.stroke()
                     }
@@ -167,8 +179,8 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                     node.x, node.y, 0,
                     node.x, node.y, node.radius * 3
                 )
-                gradient.addColorStop(0, 'rgba(21, 128, 61, 0.5)')
-                gradient.addColorStop(1, 'rgba(21, 128, 61, 0)')
+                gradient.addColorStop(0, getColor(node.y, 0.5))
+                gradient.addColorStop(1, getColor(node.y, 0))
                 ctx.beginPath()
                 ctx.arc(node.x, node.y, node.radius * 4, 0, Math.PI * 2)
                 ctx.fillStyle = gradient
@@ -177,7 +189,7 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                 // Point central
                 ctx.beginPath()
                 ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
-                ctx.fillStyle = 'rgba(21, 128, 61, 0.85)'
+                ctx.fillStyle = getColor(node.y, 0.85)
                 ctx.fill()
             }
 
@@ -264,7 +276,7 @@ export default function LandingPage() {
             {/* Contenu principal */}
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 gap-6">
                 {/* Logo + accroche */}
-                <div className="text-center bg-white/30 backdrop-blur-[1px] rounded-3xl px-10 py-8">
+                <div className="text-center">
                     <Image
                         src="/logo-woc.png"
                         alt="World of Code"
