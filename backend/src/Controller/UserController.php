@@ -289,6 +289,63 @@ final class UserController extends AbstractController
         return $this->json($data);
     }
 
+    ####
+    ##
+    ####
+    #[Route('api/user/{id}/theme', name: 'user_update_theme', methods: ['PUT'])]
+    #[OA\Put(
+        summary: 'Met à jour le thème d\'interface de l\'utilisateur',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'theme', type: 'string', example: 'dark')
+                ],
+                type: 'object'
+            )
+        ),
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Thème mis à jour',
+                content: new Model(type: UserResponse::class)
+            ),
+            new OA\Response(response: 400, description: 'Thème invalide'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé')
+        ]
+    )]
+    #[OA\Tag(name: 'User')]
+    public function updateTheme(int $id, Request $request): JsonResponse
+    {
+        $currentUser = $this->getUser();
+        $user = $this->repo->find($id);
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        if (!$this->isGranted('ROLE_ADMIN') && $user !== $currentUser) {
+            return $this->json(['error' => 'Access denied'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $theme = $data['theme'] ?? null;
+
+        $allowedThemes = ['light', 'dark', 'cyberpunk-dark', 'cyberpunk-light'];
+        if ($theme !== null && !in_array($theme, $allowedThemes, true)) {
+            return $this->json(['error' => 'Invalid theme. Allowed: ' . implode(', ', $allowedThemes)], 400);
+        }
+
+        $user->setTheme($theme);
+        $this->repo->save($user, true);
+
+        return $this->json($this->mapper->toDto($user));
+    }
+
     /**
      * @return array<int, array<string, string>>
      */

@@ -18,6 +18,7 @@ class UserMapper
         $dto->role = $user->getRole()->value;
         $dto->creationDate = $user->getCreationDate()?->format('Y-m-d H:i:s');
         $dto->updatedDate = $user->getUpdatedDate()?->format('Y-m-d H:i:s');
+        $dto->theme = $user->getTheme();
         return $dto;
     }
 }

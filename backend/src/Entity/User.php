@@ -256,4 +256,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->resetToken = $resetToken;
         return $this;
     }
+
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $theme = null;
+
+    public function getTheme(): ?string
+    {
+        return $this->theme;
+    }
+
+    public function setTheme(?string $theme): self
+    {
+        $this->theme = $theme;
+        return $this;
+    }
 }
