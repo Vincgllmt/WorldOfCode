@@ -106,7 +106,7 @@ export default function FollowToggleButton({
         )
       : isFollowing
       ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
-      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+      : 'bg-primary text-primary-foreground hover:bg-primary/90 btn-cyber-primary'
 
   return (
     <Button

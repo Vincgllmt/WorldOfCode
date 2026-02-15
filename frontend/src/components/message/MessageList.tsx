@@ -59,7 +59,7 @@ export function MessageList({
     return (
         <div
             ref={parentRef}
-            className="relative flex-1 overflow-y-auto px-4 bg-gradient-to-b from-green-50 via-gray-50 to-gray-100 dark:from-background dark:via-background dark:to-muted/30"
+            className="msg-list-bg relative flex-1 overflow-y-auto px-4"
         >
             <div
                 style={{
@@ -108,15 +108,15 @@ export function MessageList({
                                     <div
                                         className={`px-3 py-2 break-words ${isMe
                                             ? isContinuation
-                                                ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
-                                                : "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                                                ? "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                                                : "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                                             : isContinuation
                                                 ? "bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
                                                 : "bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
                                             }`}
                                     >
                                         <p className="text-[15px] leading-relaxed">{m.body}</p>
-                                        <p className={`text-[10px] mt-1 text-right ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                        <p className={`text-[10px] mt-1 text-right ${isMe ? "msg-time text-primary-foreground/70" : "text-muted-foreground"}`}>
                                             {formatMessageTime(m.createdAt)}
                                         </p>
                                     </div>

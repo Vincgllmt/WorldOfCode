@@ -12,7 +12,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             defaultTheme="light"
             enableSystem
             disableTransitionOnChange
-            themes={['light', 'dark']}
+            themes={['light', 'dark', 'cyberpunk-dark', 'cyberpunk-light']}
         >
             {children}
         </NextThemesProvider>

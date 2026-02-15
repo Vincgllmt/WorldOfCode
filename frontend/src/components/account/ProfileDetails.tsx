@@ -61,7 +61,7 @@ export default function ProfileDetails() {
             ))}
           </ul>
         ) : (
-          <p className="text-gray-500">Aucun groupe rejoint.</p>
+          <p className="text-muted-foreground">Aucun groupe rejoint.</p>
         )}
       </div>
     </div>

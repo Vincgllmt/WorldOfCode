@@ -80,7 +80,7 @@ export function MessageInput({ onSend, conversationId }: Props) {
                 <button
                     onClick={handleSend}
                     disabled={!input.trim()}
-                    className="p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="btn-cyber-primary p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                     <Send className="h-5 w-5" />
                 </button>

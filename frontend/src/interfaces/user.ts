@@ -8,6 +8,7 @@ export interface User {
   creationDate: string
   updatedDate: string
   avatarUrl?: string | null
+  theme?: string | null
 }
 
 export interface UpdateUserPayload {

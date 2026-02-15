@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation'
 import { MessageFab } from '@/components/messaging/MessageFab'
 import { VideoCallGlobal } from '@/components/video/VideoCallGlobal'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { ThemeSyncer } from '@/components/providers/ThemeSyncer'
 
 // Fonts
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <ThemeProvider>
                     <QueryClientProvider client={queryClient}>
                         <AuthProvider>
+                            <ThemeSyncer />
                             <VideoCallProvider>
                                 {!hideNavbar && <Navbar />}
                                 {children}

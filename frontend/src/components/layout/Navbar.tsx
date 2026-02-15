@@ -46,7 +46,7 @@ export default function Navbar() {
     ]
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b bg-green-50/95 dark:bg-background/95 px-6 py-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-green-50/80 dark:supports-[backdrop-filter]:bg-background/80 dark:border-b-green-600">
+        <nav className="navbar-themed sticky top-0 z-50 w-full border-b px-6 py-4 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
                 <Link href="/home" className="text-xl font-bold text-foreground">
                     World of Code

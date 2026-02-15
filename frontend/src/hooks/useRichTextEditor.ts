@@ -66,18 +66,26 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
           }
         })
 
-        // Dark mode pour le contenu de l'iframe
+        // Thème dynamique pour le contenu de l'iframe (dark, cyberpunk-dark, etc.)
         editor.on('init', () => {
+          const themeMap: Record<string, { bg: string; fg: string }> = {
+            dark:            { bg: '#1f2937', fg: '#f9fafb' },
+            'cyberpunk-dark': { bg: '#12121c', fg: '#e0f2fe' },
+            'cyberpunk-light': { bg: '#f0f9ff', fg: '#0c1222' },
+          }
+          const defaultColors = { bg: '#ffffff', fg: '#111827' }
+
           const applyTheme = () => {
-            const isDark = document.documentElement.classList.contains('dark')
+            const htmlClass = document.documentElement.className
+            const matched = Object.keys(themeMap).find((cls) => htmlClass.includes(cls))
+            const { bg, fg } = matched ? themeMap[matched] : defaultColors
             const iframeBody = editor.getBody()
             if (iframeBody) {
-              iframeBody.style.backgroundColor = isDark ? '#1f2937' : '#ffffff'
-              iframeBody.style.color = isDark ? '#f9fafb' : '#111827'
+              iframeBody.style.backgroundColor = bg
+              iframeBody.style.color = fg
             }
           }
           applyTheme()
-          // Observer les changements de thème
           const observer = new MutationObserver(applyTheme)
           observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
           editor.on('remove', () => observer.disconnect())

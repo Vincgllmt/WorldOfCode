@@ -81,6 +81,20 @@ export async function getUserById(userId: number): Promise<PublicUser> {
   return user
 }
 
+export const updateUserTheme = async (userId: number, theme: string): Promise<User> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/user/${userId}/theme`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ theme }),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la mise à jour du thème')
+  return res.json()
+}
+
 export const changeUserPassword = async ({id, currentPassword, newPassword,}: ChangePasswordPayload): Promise<{ message: string }> => {
   const token = getCookie('token')
 

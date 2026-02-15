@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
     role: 'ROLE_USER' | 'ROLE_ADMIN'
     creationDate: string
     updatedDate: string
+    theme?: string | null
 }
 
 export interface RegisterResponse {
