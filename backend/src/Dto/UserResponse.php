@@ -68,4 +68,12 @@ class UserResponse
         nullable: true
     )]
     public ?string $updatedDate = null;
+
+    #[OA\Property(
+        description: "Thème d'interface choisi par l'utilisateur",
+        type: "string",
+        example: "dark",
+        nullable: true
+    )]
+    public ?string $theme = null;
 }
