@@ -65,6 +65,23 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
             setTimeout(addParagraphAfterCode, 0)
           }
         })
+
+        // Dark mode pour le contenu de l'iframe
+        editor.on('init', () => {
+          const applyTheme = () => {
+            const isDark = document.documentElement.classList.contains('dark')
+            const iframeBody = editor.getBody()
+            if (iframeBody) {
+              iframeBody.style.backgroundColor = isDark ? '#1f2937' : '#ffffff'
+              iframeBody.style.color = isDark ? '#f9fafb' : '#111827'
+            }
+          }
+          applyTheme()
+          // Observer les changements de thème
+          const observer = new MutationObserver(applyTheme)
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+          editor.on('remove', () => observer.disconnect())
+        })
       },
     }
 

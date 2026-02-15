@@ -78,38 +78,40 @@
   --sidebar-ring: oklch(0.707 0.022 261.325);
 }
 
+/* Palette 3 : Moderne + Vert */
+/* Pour ajouter un thème : copier ce bloc, le renommer .theme-nom, et changer les valeurs */
 .dark {
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.928 0.006 264.531);
-  --primary-foreground: oklch(0.21 0.034 264.665);
-  --secondary: oklch(0.278 0.033 256.848);
-  --secondary-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.278 0.033 256.848);
-  --accent-foreground: oklch(0.985 0.002 247.839);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.278 0.033 256.848);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: #111827;           /* gray-900 */
+  --foreground: #f9fafb;           /* gray-50 */
+  --card: #1f2937;                 /* gray-800 */
+  --card-foreground: #f9fafb;      /* gray-50 */
+  --popover: #1f2937;              /* gray-800 */
+  --popover-foreground: #f9fafb;   /* gray-50 */
+  --primary: #4ade80;              /* green-400 lumineux */
+  --primary-foreground: #111827;   /* gray-900 */
+  --secondary: #374151;            /* gray-700 */
+  --secondary-foreground: #f9fafb; /* gray-50 */
+  --muted: #374151;                /* gray-700 */
+  --muted-foreground: #9ca3af;     /* gray-400 */
+  --accent: #374151;               /* gray-700 */
+  --accent-foreground: #f9fafb;    /* gray-50 */
+  --destructive: #ef4444;          /* red-500 */
+  --border: #374151;               /* gray-700 */
+  --input: #374151;                /* gray-700 */
+  --ring: #4ade80;                 /* green-400 */
+  --chart-1: #4ade80;              /* green-400 */
+  --chart-2: #2dd4bf;              /* teal-400 */
+  --chart-3: #facc15;              /* yellow-400 */
+  --chart-4: #a78bfa;              /* violet-400 */
+  --chart-5: #fb923c;              /* orange-400 */
+  --sidebar: #111827;              /* gray-900 */
+  --sidebar-foreground: #f9fafb;
+  --sidebar-primary: #4ade80;
+  --sidebar-primary-foreground: #111827;
+  --sidebar-accent: #1f2937;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #374151;
+  --sidebar-ring: #4ade80;
 }
 
 @layer base {
@@ -120,4 +122,43 @@
     @apply bg-background text-foreground;
     margin: 0;
   }
+}
+
+/* TinyMCE dark mode */
+.dark .tox.tox-tinymce {
+  border-color: #374151 !important;
+}
+.dark .tox .tox-edit-area__iframe {
+  background-color: #1f2937 !important;
+}
+.dark .tox .tox-editor-header,
+.dark .tox .tox-toolbar__primary,
+.dark .tox .tox-toolbar__overflow,
+.dark .tox .tox-toolbar,
+.dark .tox .tox-toolbar__group,
+.dark .tox .tox-menubar,
+.dark .tox .tox-statusbar {
+  background-color: #1f2937 !important;
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+}
+.dark .tox .tox-tbtn,
+.dark .tox .tox-mbtn {
+  color: #f9fafb !important;
+  background: transparent !important;
+}
+.dark .tox .tox-tbtn svg {
+  fill: #f9fafb !important;
+}
+.dark .tox .tox-tbtn:hover,
+.dark .tox .tox-mbtn:hover {
+  background-color: #374151 !important;
+  background: #374151 !important;
+}
+.dark .tox .tox-statusbar__text-container {
+  color: #9ca3af !important;
+}
+.dark .tox .tox-toolbar-overlord {
+  background-color: #1f2937 !important;
+  background: #1f2937 !important;
 }

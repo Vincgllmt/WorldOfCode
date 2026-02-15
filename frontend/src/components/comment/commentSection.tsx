@@ -109,7 +109,7 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
             const isEditing = editingCommentId === comment.id
 
             return (
-              <div key={comment.id} className="relative bg-gray-100 rounded-lg p-3 shadow-sm">
+              <div key={comment.id} className="relative bg-muted rounded-lg p-3 shadow-sm">
                 {isAuthor && (
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
