@@ -59,7 +59,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
   } = usePostItem(post, defaultShowComments)
 
   return (
-    <div className="bg-green-50 rounded-xl shadow p-4 space-y-2 relative">
+    <div className="bg-card rounded-xl shadow p-4 space-y-2 relative">
       {/* Dropdown menu auteur */}
       {isAuthor && !isEditing && (
         <div className="absolute top-2 right-2">
@@ -183,7 +183,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
 
       {/* Commentaires */}
       {showComments && (
-        <div className="rounded-xl shadow p-4 bg-white space-y-2">
+        <div className="rounded-xl shadow p-4 bg-background space-y-2">
           <CommentSection ref={commentRef} postId={post.id} />
         </div>
       )}

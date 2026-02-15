@@ -8,11 +8,11 @@ type SharedPostCardProps = {
 
 export default function SharedPostCard({ post }: SharedPostCardProps) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-900">{post.authorUsername}</div>
-          <div className="text-xs text-slate-500">
+          <div className="text-sm font-semibold text-card-foreground">{post.authorUsername}</div>
+          <div className="text-xs text-muted-foreground">
             Publication originale • {post.techGroupName}
           </div>
         </div>
@@ -24,11 +24,11 @@ export default function SharedPostCard({ post }: SharedPostCardProps) {
       {post.content ? (
         <PostContent content={post.content} className="mt-3" />
       ) : (
-        <p className="mt-3 text-sm text-slate-600">Pas de contenu textuel pour cette publication.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Pas de contenu textuel pour cette publication.</p>
       )}
 
       {post.sharedPost ? (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-muted-foreground">
           Cette publication était déjà un partage. Seule la publication immédiate est affichée pour éviter une
           boucle infinie.
         </p>

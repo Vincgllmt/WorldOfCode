@@ -31,17 +31,17 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
     return (
         <div className="flex h-[calc(100vh-64px)]">
             {/* Sidebar conversations */}
-            <div className="w-[360px] border-r border-gray-200 bg-white flex flex-col">
+            <div className="w-[360px] border-r border-border bg-background flex flex-col">
                 {/* Header sidebar */}
-                <div className="px-5 py-4 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">Messages</h2>
+                <div className="px-5 py-4 border-b border-border">
+                    <h2 className="text-xl font-bold text-foreground">Messages</h2>
                 </div>
 
                 {/* Liste */}
                 <div className="flex-1 overflow-y-auto">
                     {isLoading && (
-                        <div className="flex items-center justify-center py-10 text-gray-400">
-                            <div className="w-5 h-5 border-2 border-gray-300 border-t-green-500 rounded-full animate-spin" />
+                        <div className="flex items-center justify-center py-10 text-muted-foreground">
+                            <div className="w-5 h-5 border-2 border-muted border-t-primary rounded-full animate-spin" />
                         </div>
                     )}
 
@@ -70,15 +70,15 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                     className={clsx(
                                         "flex items-center gap-3 px-4 py-3 transition-colors relative",
                                         isActive
-                                            ? "bg-green-50 border-l-3 border-l-green-500"
-                                            : "hover:bg-gray-50 border-l-3 border-l-transparent"
+                                            ? "bg-accent border-l-3 border-l-primary"
+                                            : "hover:bg-muted/50 border-l-3 border-l-transparent"
                                     )}
                                 >
                                     {/* Avatar */}
                                     <Avatar className="h-12 w-12 shrink-0">
                                         <AvatarFallback className={clsx(
                                             "text-sm font-semibold",
-                                            isActive ? "bg-green-200 text-green-800" : "bg-gray-200 text-gray-600"
+                                            isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                                         )}>
                                             {initials}
                                         </AvatarFallback>
@@ -89,14 +89,14 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                         <div className="flex items-center justify-between">
                                             <span className={clsx(
                                                 "truncate text-[15px]",
-                                                isUnread ? "font-bold text-gray-900" : "font-medium text-gray-900"
+                                                isUnread ? "font-bold text-foreground" : "font-medium text-foreground"
                                             )}>
                                                 {displayName}
                                             </span>
                                             {conv.lastMessage && (
                                                 <span className={clsx(
                                                     "text-xs shrink-0 ml-2",
-                                                    isUnread ? "text-green-600 font-semibold" : "text-gray-400"
+                                                    isUnread ? "text-primary font-semibold" : "text-muted-foreground"
                                                 )}>
                                                     {formatTime(conv.lastMessage.createdAt)}
                                                 </span>
@@ -105,12 +105,12 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                         <div className="flex items-center justify-between mt-0.5">
                                             <span className={clsx(
                                                 "text-sm truncate",
-                                                isUnread ? "font-semibold text-gray-700" : "text-gray-500"
+                                                isUnread ? "font-semibold text-foreground" : "text-muted-foreground"
                                             )}>
                                                 {conv.lastMessage ? conv.lastMessage.body : "Aucun message"}
                                             </span>
                                             {isUnread && (
-                                                <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                                <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                                                     1
                                                 </span>
                                             )}
@@ -121,7 +121,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                         })}
 
                     {!isLoading && conversations?.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                             <MessageCircle className="h-12 w-12 mb-3 stroke-1" />
                             <p className="text-sm">Aucune conversation</p>
                         </div>
@@ -130,7 +130,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Conversation sélectionnée */}
-            <div className="flex-1 flex flex-col bg-gray-50">{children}</div>
+            <div className="flex-1 flex flex-col bg-muted/50">{children}</div>
         </div>
     )
 }

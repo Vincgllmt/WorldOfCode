@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { isActive } from "@/lib/navigation"
 import { useConversations, useConversationRealtime } from "@/hooks/useConversations"
 import NavbarSearch from "@/components/layout/NavbarSearch"
+import { ThemeToggle } from "@/components/layout/ThemeToggle"
 
 
 export default function Navbar() {
@@ -45,9 +46,9 @@ export default function Navbar() {
     ]
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b bg-green-50/95 px-6 py-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-green-50/80">
+        <nav className="navbar-themed sticky top-0 z-50 w-full border-b px-6 py-4 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
-                <Link href="/home" className="text-xl font-bold text-black">
+                <Link href="/home" className="text-xl font-bold text-foreground">
                     World of Code
                 </Link>
 
@@ -76,6 +77,8 @@ export default function Navbar() {
                             {!link.iconOnly && link.label}
                         </Link>
                     ))}
+
+                    <ThemeToggle />
 
                     {user && (
                         <DropdownMenu>

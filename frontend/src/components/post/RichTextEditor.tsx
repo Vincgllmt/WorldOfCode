@@ -46,7 +46,7 @@ export default function RichTextEditor({
   const { editorInit, handleEditorChange } = useRichTextEditor(onChange)
 
   return (
-    <div className={cn('rounded-lg border bg-white shadow-sm', className)}>
+    <div className={cn('rounded-lg border bg-background shadow-sm', className)}>
       <TinyMCEEditor
         id={id}
         value={value}

@@ -48,6 +48,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login')
   }
 
+  const setUserTheme = (theme: string) => {
+    if (user) {
+      setUser({ ...user, theme })
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -56,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         login,
         logout,
+        setUserTheme,
       }}
     >
       {children}

@@ -42,13 +42,13 @@ export function MessageInput({ onSend, conversationId }: Props) {
     }
 
     return (
-        <div className="px-4 py-3 bg-white border-t border-gray-200">
+        <div className="px-4 py-3 bg-background border-t border-border">
             <div className="flex items-center gap-2 relative">
                 {/* Emoji */}
                 <button
                     type="button"
                     onClick={() => setShowPicker((prev) => !prev)}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+                    className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 >
                     <Smile className="h-5 w-5" />
                 </button>
@@ -72,7 +72,7 @@ export function MessageInput({ onSend, conversationId }: Props) {
                             handleSend()
                         }
                     }}
-                    className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-[15px] text-gray-900 placeholder-gray-400 outline-none focus:bg-gray-200 transition-colors"
+                    className="flex-1 bg-muted rounded-full px-4 py-2.5 text-[15px] text-foreground placeholder-muted-foreground outline-none focus:bg-muted/80 transition-colors"
                     placeholder="Écrire un message..."
                 />
 
@@ -80,7 +80,7 @@ export function MessageInput({ onSend, conversationId }: Props) {
                 <button
                     onClick={handleSend}
                     disabled={!input.trim()}
-                    className="p-2.5 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="btn-cyber-primary p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                     <Send className="h-5 w-5" />
                 </button>

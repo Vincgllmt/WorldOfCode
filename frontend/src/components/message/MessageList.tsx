@@ -59,8 +59,7 @@ export function MessageList({
     return (
         <div
             ref={parentRef}
-            className="relative flex-1 overflow-y-auto px-4"
-            style={{ background: "linear-gradient(180deg, #e8f5e9 0%, #f1f5f1 40%, #f5f5f5 100%)" }}
+            className="msg-list-bg relative flex-1 overflow-y-auto px-4"
         >
             <div
                 style={{
@@ -92,7 +91,7 @@ export function MessageList({
                         >
                             {showDateSep && (
                                 <div className="flex items-center justify-center py-3">
-                                    <span className="px-3 py-1 bg-white/80 text-gray-500 text-xs font-medium rounded-full shadow-sm">
+                                    <span className="px-3 py-1 bg-card/80 text-muted-foreground text-xs font-medium rounded-full shadow-sm">
                                         {formatDateSeparator(m.createdAt)}
                                     </span>
                                 </div>
@@ -101,7 +100,7 @@ export function MessageList({
                             <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
                                 <div className="max-w-[70%]">
                                     {convType === "group" && !isMe && !isContinuation && (
-                                        <div className="text-xs font-semibold text-green-700 mb-0.5 ml-1">
+                                        <div className="text-xs font-semibold text-primary mb-0.5 ml-1">
                                             {m.sender.username}
                                         </div>
                                     )}
@@ -109,15 +108,15 @@ export function MessageList({
                                     <div
                                         className={`px-3 py-2 break-words ${isMe
                                             ? isContinuation
-                                                ? "bg-green-500 text-white rounded-2xl rounded-tr-md"
-                                                : "bg-green-500 text-white rounded-2xl rounded-br-md"
+                                                ? "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                                                : "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                                             : isContinuation
-                                                ? "bg-white text-gray-900 shadow-sm rounded-2xl rounded-tl-md"
-                                                : "bg-white text-gray-900 shadow-sm rounded-2xl rounded-bl-md"
+                                                ? "bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
+                                                : "bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
                                             }`}
                                     >
                                         <p className="text-[15px] leading-relaxed">{m.body}</p>
-                                        <p className={`text-[10px] mt-1 text-right ${isMe ? "text-green-100" : "text-gray-400"}`}>
+                                        <p className={`text-[10px] mt-1 text-right ${isMe ? "msg-time text-primary-foreground/70" : "text-muted-foreground"}`}>
                                             {formatMessageTime(m.createdAt)}
                                         </p>
                                     </div>
@@ -130,13 +129,13 @@ export function MessageList({
 
             {typingUsers.length > 0 && (
                 <div className="sticky bottom-0 left-0 pb-2 pt-1">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-2xl shadow-sm">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-card rounded-2xl shadow-sm">
                         <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0s]" />
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0s]" />
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.15s]" />
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.3s]" />
                         </div>
-                        <span className="text-xs text-gray-400">est en train d&apos;écrire</span>
+                        <span className="text-xs text-muted-foreground">est en train d&apos;écrire</span>
                     </div>
                 </div>
             )}

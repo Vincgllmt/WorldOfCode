@@ -6,4 +6,5 @@ export interface AuthContextType {
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
   logout: () => void
+  setUserTheme: (theme: string) => void
 }

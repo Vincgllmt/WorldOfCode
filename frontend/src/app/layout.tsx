@@ -11,6 +11,8 @@ import Navbar from '@/components/layout/Navbar'
 import { usePathname } from 'next/navigation'
 import { MessageFab } from '@/components/messaging/MessageFab'
 import { VideoCallGlobal } from '@/components/video/VideoCallGlobal'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { ThemeSyncer } from '@/components/providers/ThemeSyncer'
 
 // Fonts
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -26,20 +28,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     const hideMessageFab = hideNavbar || pathname.startsWith('/message')
 
     return (
-        <html lang="fr">
-            <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black`}>
-                <QueryClientProvider client={queryClient}>
-                    <AuthProvider>
-                        <VideoCallProvider>
-                            {!hideNavbar && <Navbar />}
-                            {children}
-                            {!hideMessageFab && <MessageFab />}
-                            <Toaster position="top-right" />
-                            {/* Composant d'appel vidéo global */}
-                            <VideoCallGlobal />
-                        </VideoCallProvider>
-                    </AuthProvider>
-                </QueryClientProvider>
+        <html lang="fr" suppressHydrationWarning>
+            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                <ThemeProvider>
+                    <QueryClientProvider client={queryClient}>
+                        <AuthProvider>
+                            <ThemeSyncer />
+                            <VideoCallProvider>
+                                {!hideNavbar && <Navbar />}
+                                {children}
+                                {!hideMessageFab && <MessageFab />}
+                                <Toaster position="top-right" />
+                                {/* Composant d'appel vidéo global */}
+                                <VideoCallGlobal />
+                            </VideoCallProvider>
+                        </AuthProvider>
+                    </QueryClientProvider>
+                </ThemeProvider>
             </body>
         </html>
     )

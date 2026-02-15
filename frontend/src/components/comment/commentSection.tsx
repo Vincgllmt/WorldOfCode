@@ -109,7 +109,7 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
             const isEditing = editingCommentId === comment.id
 
             return (
-              <div key={comment.id} className="relative bg-gray-100 rounded-lg p-3 shadow-sm">
+              <div key={comment.id} className="relative bg-muted rounded-lg p-3 shadow-sm">
                 {isAuthor && (
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
@@ -136,12 +136,12 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
                     value={editedContent}
                     onChange={(event) => setEditedContent(event.target.value)}
                     className={cn(
-                      'border border-yellow-400 bg-yellow-100 text-sm text-gray-800'
+                      'border border-yellow-400 bg-yellow-100 text-sm text-foreground'
                     )}
                     maxLength={200}
                   />
                 ) : (
-                  <p className="text-sm text-gray-800">{comment.content}</p>
+                  <p className="text-sm text-foreground">{comment.content}</p>
                 )}
 
                 <div className="mt-1 text-xs text-muted-foreground">
