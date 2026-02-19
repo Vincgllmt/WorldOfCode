@@ -7,6 +7,7 @@ import { useInfinitePosts } from '@/hooks/useInfinitePosts'
 import { usePosts } from '@/hooks/usePosts'
 import PostItem from './PostItem'
 import type { Post } from '@/interfaces/post'
+import { motion } from 'framer-motion'
 
 type PostListProps = {
   readonly posts?: Post[] | null
@@ -18,6 +19,19 @@ type PostListProps = {
 }
 
 const DEFAULT_LIMIT = 10
+
+const postVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.08,
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  }),
+}
 
 export default function PostList({
   posts,
@@ -106,7 +120,25 @@ export default function PostList({
   }, [sourcePosts, shouldUseInfinite])
 
   if (loading) {
-    return <p>Chargement...</p>
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-card rounded-xl shadow p-4 space-y-3 animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-muted" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 w-32 bg-muted rounded" />
+                <div className="h-3 w-24 bg-muted rounded" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-full bg-muted rounded" />
+              <div className="h-4 w-3/4 bg-muted rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (errorState) {
@@ -119,17 +151,31 @@ export default function PostList({
 
   return (
     <div className="space-y-4">
-      {orderedPosts.map((post: Post) => (
-        <PostItem key={post.id} post={post} defaultShowComments={defaultShowComments} />
+      {orderedPosts.map((post: Post, index: number) => (
+        <motion.div
+          key={post.id}
+          custom={index}
+          variants={postVariants}
+          initial="hidden"
+          animate="visible"
+          viewport={{ once: true }}
+        >
+          <PostItem post={post} defaultShowComments={defaultShowComments} />
+        </motion.div>
       ))}
 
       {shouldUseInfinite && hasNextPage && (
         <div
           ref={loadMoreRef}
-          className="flex justify-center py-4 text-sm text-muted-foreground"
+          className="flex justify-center py-4"
           aria-live="polite"
         >
-          {isFetchingNextPage ? 'Chargement...' : 'Chargement de nouveaux posts…'}
+          {isFetchingNextPage && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
+              Chargement...
+            </div>
+          )}
         </div>
       )}
     </div>

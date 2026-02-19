@@ -70,6 +70,9 @@ export default function Navbar() {
                                 <div className="relative">
                                     <link.icon className="h-5 w-5" />
                                     {link.href === "/message" && hasUnread && (
+                                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                                    )}
+                                    {link.href === "/message" && hasUnread && (
                                         <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
                                     )}
                                 </div>

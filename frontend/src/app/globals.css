@@ -3,6 +3,17 @@
 
 @custom-variant dark (&:is(.dark *, .cyberpunk-dark *));
 
+/* Shimmer effect pour les skeletons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-pulse {
+  animation: shimmer 1.8s ease-in-out infinite !important;
+  background: linear-gradient(90deg, var(--muted) 25%, var(--accent) 50%, var(--muted) 75%) !important;
+  background-size: 200% 100% !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

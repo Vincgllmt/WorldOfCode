@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import GroupJoinToggle from '@/components/group/GroupJoinToggle'
+import { motion } from 'framer-motion'
 
 export default function GroupsPage() {
   const { groups, isLoading, error } = useGroups()
@@ -57,10 +58,16 @@ export default function GroupsPage() {
             Aucun groupe ne correspond à « {searchTerm} ».
           </p>
         ) : (
-          filteredGroups.map((group) => (
-            <Card
+          filteredGroups.map((group, index) => (
+            <motion.div
               key={group.id}
-              className="flex h-full flex-col justify-between gap-4 border border-border/60 transition hover:border-border hover:shadow-sm"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.06, duration: 0.35 }}
+              whileHover={{ scale: 1.02, y: -4 }}
+            >
+            <Card
+              className="flex h-full flex-col justify-between gap-4 border border-border/60 transition-shadow hover:border-border hover:shadow-md cursor-pointer"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="space-y-1">
@@ -91,6 +98,7 @@ export default function GroupsPage() {
               </Link>
               </CardFooter>
             </Card>
+            </motion.div>
           ))
         )}
       </div>
