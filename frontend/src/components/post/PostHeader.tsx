@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import FollowToggleButton from '@/components/follow/FollowToggleButton'
 
@@ -37,7 +38,9 @@ export default function PostHeader({
             <div className="h-full w-full" aria-hidden />
           )}
         </div>
-        <div className="text-sm font-medium">{authorUsername}</div>
+        <Link href={`/user/${authorId}`} className="text-sm font-medium hover:underline hover:text-primary transition">
+          {authorUsername}
+        </Link>
       </div>
 
       {currentUserId !== authorId ? (

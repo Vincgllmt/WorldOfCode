@@ -6,6 +6,7 @@ import type { Post } from '@/interfaces/post'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Heart, MessageCircle, Send } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSharePost, usePostLikeState } from '@/hooks/usePosts'
 import toast from 'react-hot-toast'
 import {
@@ -58,7 +59,7 @@ export default function PostActions({
           if (copyLinkOnShare && postUrl) {
             try {
               await navigator.clipboard.writeText(postUrl)
-              toast.success('Lien du post copié 📋')
+              toast.success('Lien du post copié')
             } catch {
               /* noop: l’API de partage a réussi, seule la copie a échoué */
             }
@@ -77,13 +78,30 @@ export default function PostActions({
         <Button
           variant="ghost"
           size="icon"
-          className={cn('h-8 w-8', likedByMe && 'text-red-500')}
+          className={cn('h-8 w-8 relative', likedByMe && 'text-red-500')}
           onClick={onToggle}
           aria-pressed={likedByMe}
           aria-label={likedByMe ? 'Retirer le like' : 'Liker le post'}
           disabled={isPending}
         >
-          <Heart className={cn('h-6 w-6', likedByMe && 'fill-current')} />
+          <motion.div
+            whileTap={{ scale: 0.75 }}
+            animate={likedByMe ? { scale: [1, 1.3, 0.9, 1.1, 1] } : { scale: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <Heart className={cn('h-6 w-6', likedByMe && 'fill-current')} />
+          </motion.div>
+          <AnimatePresence>
+            {likedByMe && (
+              <motion.span
+                className="absolute inset-0 rounded-full bg-red-500/20"
+                initial={{ scale: 0, opacity: 1 }}
+                animate={{ scale: 2.5, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              />
+            )}
+          </AnimatePresence>
         </Button>
 
         {/* Commenter */}

@@ -19,7 +19,6 @@ export const useCreateComment = () => {
     mutationFn: createComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
-      toast.success('Commentaire publié avec succès 🎉')
     },
     onError: () => toast.error('Erreur lors de la création du commentaire')
   })
@@ -32,7 +31,6 @@ export const useDeleteComment = () => {
     mutationFn: deleteComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
-      toast.success('Commentaire supprimé avec succès 🗑️')
     },
     onError: () => toast.error('Erreur lors de la suppression du commentaire')
   })
@@ -45,7 +43,6 @@ export const useUpdateComment = () => {
     mutationFn: updateComment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
-      toast.success('Commentaire mis à jour avec succès ✏️')
     },
     onError: () => toast.error('Erreur lors de la mise à jour du commentaire')
   })

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const schema = z.object({
   content: z.string().min(1).max(200, 'Le commentaire ne peut pas dépasser 200 caractères'),
@@ -104,12 +105,20 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
 
         {/* Liste des commentaires */}
         <div className="space-y-4 mt-4">
-          {filteredComments.map(comment => {
+          <AnimatePresence initial>
+          {filteredComments.map((comment, index) => {
             const isAuthor = comment.authorId === user?.id
             const isEditing = editingCommentId === comment.id
 
             return (
-              <div key={comment.id} className="relative bg-muted rounded-lg p-3 shadow-sm">
+              <motion.div
+                key={comment.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
+                transition={{ delay: index * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="relative bg-muted rounded-lg p-3 shadow-sm"
+              >
                 {isAuthor && (
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
@@ -153,9 +162,10 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
                     💾 Enregistrer
                   </Button>
                 )}
-              </div>
+              </motion.div>
             )
           })}
+          </AnimatePresence>
 
           {errors.content && (
             <p className="text-sm text-red-500">

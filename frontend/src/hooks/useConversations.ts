@@ -57,10 +57,9 @@ export const useCreateConversation = () => {
         mutationFn: (payload: CreateConversationPayload) => createConversation(payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["conversations"] })
-            toast.success("Conversation créée avec succès ✅")
         },
         onError: () => {
-            toast.error("Erreur lors de la création de la conversation ❌")
+            toast.error("Erreur lors de la création de la conversation")
         },
     })
 }

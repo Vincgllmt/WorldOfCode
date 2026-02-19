@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,6 +13,8 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import RichTextEditor from './RichTextEditor'
 import { Controller, usePostFormController } from '@/hooks/usePostFormController'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Check } from 'lucide-react'
 
 type PostFormProps = {
   readonly presetGroupId?: number
@@ -28,6 +31,14 @@ export default function PostForm({
   onSuccess,
   submitLabel = 'Publier',
 }: PostFormProps = {}) {
+  const [showSuccess, setShowSuccess] = useState(false)
+
+  const handleSuccess = () => {
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 2000)
+    onSuccess?.()
+  }
+
   const {
     control,
     handleSubmit,
@@ -38,7 +49,7 @@ export default function PostForm({
     groupIdValue,
     setGroupId,
     onSubmit,
-  } = usePostFormController(presetGroupId, onSuccess)
+  } = usePostFormController(presetGroupId, handleSuccess)
 
   const displaySelector =
     showGroupSelector ?? typeof presetGroupId === 'undefined'
@@ -46,8 +57,31 @@ export default function PostForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className={cn('space-y-4 rounded-xl bg-muted p-6 shadow-sm', className)}
+      className={cn('relative space-y-4 rounded-xl bg-muted p-6 shadow-sm overflow-hidden', className)}
     >
+      {/* Flash de succès */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 backdrop-blur-sm rounded-xl"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.2, 1] }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-primary-foreground font-medium shadow-lg"
+            >
+              <Check className="h-5 w-5" />
+              Post publié !
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-2">
         <Controller
           control={control}

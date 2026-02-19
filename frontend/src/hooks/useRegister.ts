@@ -9,8 +9,7 @@ export const useRegister = () => {
 
     return useMutation<RegisterResponse, Error, RegisterCredentials>({
         mutationFn: register,
-        onSuccess: (data) => {
-            toast.success(`Bienvenue ${data.username} `)
+        onSuccess: () => {
             router.push('/login')
         },
         onError: (error) => {

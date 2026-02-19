@@ -42,10 +42,9 @@ export const useCreateGroup = () => {
     mutationFn: (data: CreateGroupPayload) => createGroup(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
-      toast.success('Groupe créé avec succès ✅')
     },
     onError: () => {
-      toast.error('Erreur lors de la création du groupe ❌')
+      toast.error('Erreur lors de la création du groupe')
     }
   })
 }
@@ -57,10 +56,9 @@ export const useUpdateGroup = () => {
     mutationFn: (data: UpdateGroupPayload) => updateGroup(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
-      toast.success('Groupe mis à jour avec succès ✏️')
     },
     onError: () => {
-      toast.error('Erreur lors de la mise à jour ❌')
+      toast.error('Erreur lors de la mise à jour')
     }
   })
 }
@@ -72,10 +70,9 @@ export const useDeleteGroup = () => {
     mutationFn: (id: number) => deleteGroup(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
-      toast.success('Groupe supprimé avec succès 🗑️')
     },
     onError: () => {
-      toast.error('Erreur lors de la suppression ❌')
+      toast.error('Erreur lors de la suppression')
     }
   })
 }
@@ -89,11 +86,10 @@ export const useJoinGroup = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       queryClient.invalidateQueries({ queryKey: ['group', id] })
-      toast.success('Groupe rejoint avec succès 🙌')
       Router.refresh()
     },
     onError: () => {
-      toast.error('Erreur lors de la tentative de rejoindre le groupe ❌')
+      toast.error('Erreur lors de la tentative de rejoindre le groupe')
     }
   })
 }
@@ -150,11 +146,9 @@ export const useToggleGroupMembership = () => {
         queryClient.setQueryData(['group', groupId], context.previousGroup)
       }
       queryClient.invalidateQueries({ queryKey: ['user-groups'] })
-      toast.error('Action impossible ❌')
+      toast.error('Action impossible')
     },
-    onSuccess: (joined) => {
-      toast.success(joined ? 'Inscription au groupe réussie ✅' : 'Désabonnement réussi ✅')
-    },
+    onSuccess: () => {},
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] })
