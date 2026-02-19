@@ -33,10 +33,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const authenticatedUser = await authService.login(credentials)
       setUser(authenticatedUser)
-      toast.success('Connexion réussie ✅')
       router.push('/home')
     } catch (error) {
-      toast.error('Échec de la connexion ❌')
+      toast.error('Échec de la connexion')
       console.error(error)
     }
   }
@@ -44,7 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout()
     setUser(null)
-    toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }
 

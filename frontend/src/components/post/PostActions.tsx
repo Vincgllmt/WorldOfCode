@@ -59,7 +59,7 @@ export default function PostActions({
           if (copyLinkOnShare && postUrl) {
             try {
               await navigator.clipboard.writeText(postUrl)
-              toast.success('Lien du post copié 📋')
+              toast.success('Lien du post copié')
             } catch {
               /* noop: l’API de partage a réussi, seule la copie a échoué */
             }

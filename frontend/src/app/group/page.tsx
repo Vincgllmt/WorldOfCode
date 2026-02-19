@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import GroupJoinToggle from '@/components/group/GroupJoinToggle'
+import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
 
 export default function GroupsPage() {
@@ -38,7 +39,9 @@ export default function GroupsPage() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Groupes techniques</h1>
+      <h1 className="text-2xl font-bold font-mono">
+        <span className="text-primary">&lt;</span>Groupes<span className="text-primary">/&gt;</span>
+      </h1>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
@@ -71,13 +74,16 @@ export default function GroupsPage() {
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="space-y-1">
-                <CardTitle>
+                <CardTitle className="flex items-center gap-2">
                   <Link
                     href={`/group/${group.id}`}
                     className="text-lg font-semibold leading-tight tracking-tight hover:text-primary"
                   >
                     {group.name}
                   </Link>
+                  <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 text-muted-foreground">
+                    &lt;{group.name.toLowerCase().replace(/\s+/g, '-')}&gt;
+                  </Badge>
                 </CardTitle>
                 {group.description ? (
                   <p className="text-sm text-muted-foreground line-clamp-3">

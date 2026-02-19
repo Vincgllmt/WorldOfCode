@@ -51,9 +51,8 @@ export const useCreatePost = () => {
     mutationFn: (data: CreatePostPayload) => createPost(data),
     onSuccess: async () => {
       await invalidatePostLists(queryClient)
-      toast.success('Post publié avec succès 🎉')
     },
-    onError: () => toast.error('Erreur lors de la création du post ❌'),
+    onError: () => toast.error('Erreur lors de la création du post'),
   })
 }
 
@@ -64,9 +63,8 @@ export const useUpdatePost = () => {
       updatePost(id, data),
     onSuccess: async () => {
       await invalidatePostLists(queryClient)
-      toast.success('Post mis à jour avec succès ✏️')
     },
-    onError: () => toast.error('Erreur lors de la mise à jour du post ❌'),
+    onError: () => toast.error('Erreur lors de la mise à jour du post'),
   })
 }
 
@@ -76,9 +74,8 @@ export const useDeletePost = () => {
     mutationFn: (id: number) => deletePost(id),
     onSuccess: async () => {
       await invalidatePostLists(queryClient)
-      toast.success('Post supprimé avec succès 🗑️')
     },
-    onError: () => toast.error('Erreur lors de la suppression du post ❌'),
+    onError: () => toast.error('Erreur lors de la suppression du post'),
   })
 }
 
@@ -180,7 +177,7 @@ export const useToggleLike = () => {
       queryClient.setQueryData(postsKey, context.previousPosts)
       if (groupId) queryClient.setQueryData(groupPostsKey(groupId), context.previousGroupPosts)
       queryClient.setQueryData(postKey(postId), context.previousPost)
-      toast.error('Impossible de mettre à jour le like ❌')
+      toast.error('Impossible de mettre à jour le like')
     },
 
     onSuccess: (_data, variables) => {
@@ -224,12 +221,10 @@ export const useSharePost = () => {
       if (!context) return
       queryClient.setQueryData(postsKey, context.previousPosts)
       queryClient.setQueryData(postKey(context.postId), context.previousPost)
-      toast.error('Erreur lors du partage ❌')
+      toast.error('Erreur lors du partage')
     },
 
-    onSuccess: () => {
-      toast.success('Post partagé 🎉')
-    },
+    onSuccess: () => {},
 
     onSettled: async (_data, _error, variables) => {
       await invalidatePostLists(queryClient)
@@ -245,8 +240,8 @@ export const useReportPost = () => {
   return useMutation({
     mutationFn: ({ postId, reason }: { postId: number; reason?: string }) =>
       reportPost(postId, reason),
-    onSuccess: () => toast.success('Signalement envoyé ✅'),
-    onError: () => toast.error('Erreur lors du signalement ❌'),
+    onSuccess: () => toast.success('Signalement envoyé'),
+    onError: () => toast.error('Erreur lors du signalement'),
   })
 }
 

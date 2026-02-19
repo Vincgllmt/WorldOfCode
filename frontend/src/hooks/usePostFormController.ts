@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCreatePost } from '@/hooks/usePosts'
 import { useGroups } from '@/hooks/useGroups'
-import toast from 'react-hot-toast'
 import type { PostFormValues } from '@/interfaces/post'
 
 const stripHtml = (value: string): string => value.replace(/<[^>]*>/g, '')
@@ -54,7 +53,6 @@ export const usePostFormController = (
   const onSubmit = (data: PostFormValues) => {
     createPost.mutate(data, {
       onSuccess: () => {
-        toast.success('Post publié avec succès 🎉')
         reset({ content: '', groupId: presetGroupId })
         onSuccess?.()
       },

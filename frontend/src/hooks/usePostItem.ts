@@ -45,10 +45,9 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
       { id: post.id, data: { content: plainText ? cleanedHtml : null, groupId: post.techGroupId } },
       {
         onSuccess: () => {
-          toast.success('Post mis à jour ✅')
           setIsEditing(false)
         },
-        onError: () => toast.error('Erreur lors de la mise à jour ❌'),
+        onError: () => toast.error('Erreur lors de la mise à jour'),
       }
     )
   }
@@ -56,16 +55,19 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
   const handleDelete = () => {
     deletePost.mutate(post.id, {
       onSuccess: () => {
-        toast.success('Post supprimé 🗑️')
         setShowDialog(false)
       },
-      onError: () => toast.error('Erreur lors de la suppression ❌'),
+      onError: () => toast.error('Erreur lors de la suppression'),
     })
   }
 
   const openCommentsAndFocus = () => {
-    setShowComments(true)
-    queueMicrotask(() => commentRef.current?.focusComposer())
+    setShowComments((prev) => {
+      if (!prev) {
+        queueMicrotask(() => commentRef.current?.focusComposer())
+      }
+      return !prev
+    })
   }
 
   return {

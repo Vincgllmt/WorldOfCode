@@ -80,7 +80,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
                 🗑️ Supprimer
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => toast('Signalement envoyé ✅')}
+                onClick={() => toast('Signalement envoyé')}
                 className="text-red-600"
               >
                 <Flag className="mr-2 h-4 w-4" /> Signaler

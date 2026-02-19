@@ -46,12 +46,11 @@ export const useFollowUser = () => {
 
   return useMutation({
     mutationFn: followUser,
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['followers'] })
       queryClient.invalidateQueries({ queryKey: ['following'] })
-      toast.success(res.message || 'Utilisateur suivi 🎉')
     },
-    onError: () => toast.error('Erreur lors du suivi de l’utilisateur'),
+    onError: () => toast.error('Erreur lors du suivi de l\u2019utilisateur'),
   })
 }
 
@@ -61,11 +60,10 @@ export const useUnfollowUser = () => {
 
   return useMutation({
     mutationFn: unfollowUser,
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['followers'] })
       queryClient.invalidateQueries({ queryKey: ['following'] })
-      toast.success(res.message || 'Utilisateur désabonné')
     },
-    onError: () => toast.error('Erreur lors du désabonnement de l’utilisateur'),
+    onError: () => toast.error('Erreur lors du d\u00e9sabonnement de l\u2019utilisateur'),
   })
 }

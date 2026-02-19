@@ -25,10 +25,9 @@ export const useUpdateUser = () => {
     mutationFn: (data: UpdateUserPayload) => updateUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('Utilisateur mis à jour ✅')
     },
     onError: () => {
-      toast.error('Erreur lors de la mise à jour ❌')
+      toast.error('Erreur lors de la mise à jour')
     }
   })
 }
@@ -40,10 +39,9 @@ export const useDeleteUser = () => {
     mutationFn: (id: number) => deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('Utilisateur supprimé 🗑️')
     },
     onError: () => {
-      toast.error('Erreur lors de la suppression ❌')
+      toast.error('Erreur lors de la suppression')
     }
   })
 }
@@ -72,11 +70,11 @@ export const useChangePassword = () => {
   return useMutation({
     mutationFn: (data: ChangePasswordPayload) => changeUserPassword(data),
     onSuccess: () => {
-      toast.success('Mot de passe mis à jour. Merci de vous reconnecter 🔐')
+      toast.success('Mot de passe mis à jour. Merci de vous reconnecter.')
       logout()
     },
     onError: () => {
-      toast.error('Erreur lors de la mise à jour du mot de passe ❌')
+      toast.error('Erreur lors de la mise à jour du mot de passe')
     }
   })
 }
