@@ -252,6 +252,24 @@
   background: linear-gradient(135deg, #22d3ee, #c084fc) !important;
 }
 
+/* Scrollbar sombre pour les thèmes dark */
+.dark,
+.dark *,
+.cyberpunk-dark,
+.cyberpunk-dark * {
+  color-scheme: dark;
+  scrollbar-color: #4b5563 transparent;
+}
+
+/* Bulles de messages reçus : meilleur contraste en dark */
+.dark .msg-bubble-received {
+  background-color: #283445 !important;
+}
+.cyberpunk-dark .msg-bubble-received {
+  background-color: #1e1e32 !important;
+  border: 1px solid rgba(6, 182, 212, 0.2) !important;
+}
+
 /* TinyMCE dark mode — s'applique à .dark ET .cyberpunk-dark */
 .dark .tox.tox-tinymce,
 .cyberpunk-dark .tox.tox-tinymce {

@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
+import { Send } from "lucide-react"
+import { sanitizeHtml } from "@/lib/sanitizeHtml"
 
 type Props = {
     messages: Message[]
@@ -64,6 +66,18 @@ export function MessageList({
         }
     }, [messages?.length])
 
+    if (!messages || messages.length === 0) {
+        return (
+            <div className="msg-list-bg relative flex-1 overflow-y-auto px-4 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                    <Send className="h-10 w-10 mx-auto mb-3 stroke-[1.2] text-muted-foreground/40" />
+                    <p className="text-sm font-medium">Aucun message pour le moment</p>
+                    <p className="text-xs mt-1">Envoyez le premier message !</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div
             ref={parentRef}
@@ -119,11 +133,14 @@ export function MessageList({
                                                 ? "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
                                                 : "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                                             : isContinuation
-                                                ? "bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
-                                                : "bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
+                                                ? "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
+                                                : "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
                                             }`}
                                     >
-                                        <p className="text-[15px] leading-relaxed">{m.body}</p>
+                                        <div
+                                            className="text-[15px] leading-relaxed prose-sm prose-p:m-0 prose-p:leading-relaxed [&>p]:m-0"
+                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(m.body) }}
+                                        />
                                         <p className={`text-[10px] mt-1 text-right ${isMe ? "msg-time text-primary-foreground/70" : "text-muted-foreground"}`}>
                                             {formatMessageTime(m.createdAt)}
                                         </p>

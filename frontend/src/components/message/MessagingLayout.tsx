@@ -221,7 +221,8 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                 conv.lastMessage.sender?.id !== user?.id &&
                                 conv.id !== currentConversationId
 
-                            const displayName = conv.title || conv.participants.map((p) => p.username).join(", ")
+                            const otherParticipants = conv.participants.filter((p) => p.id !== user?.id)
+                            const displayName = conv.title || otherParticipants.map((p) => p.username).join(", ") || "Conversation"
                             const initials = displayName.slice(0, 2).toUpperCase()
 
                             return (
