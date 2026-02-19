@@ -1,12 +1,30 @@
 "use client"
 
-import { useConversations } from "@/hooks/useConversations"
+import { useState, useMemo, useEffect } from "react"
+import { useConversations, useCreateConversation } from "@/hooks/useConversations"
+import { useFollowers, useFollowing } from "@/hooks/useFollow"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import clsx from "clsx"
 import { useAuth } from '@/hooks/useAuth'
 import { useParams } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { MessageCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
+
+type Contact = {
+    id: number
+    username: string
+    relation: 'follower' | 'following' | 'mutual'
+}
 
 function formatTime(dateStr: string) {
     const date = new Date(dateStr)
@@ -27,15 +45,154 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
     const { user } = useAuth()
     const params = useParams<{ id?: string }>()
     const currentConversationId = params?.id
+    const router = useRouter()
+
+    const [showNewConversation, setShowNewConversation] = useState(false)
+    const [contactQuery, setContactQuery] = useState('')
+    const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
+
+    const userId = user?.id
+    const { followers, isLoading: isLoadingFollowers } = useFollowers(userId)
+    const { following, isLoading: isLoadingFollowing } = useFollowing(userId)
+    const createConversation = useCreateConversation()
+
+    const contacts = useMemo<Contact[]>(() => {
+        const map = new Map<number, Contact>()
+
+        followers?.forEach((follower) => {
+            map.set(follower.id, {
+                id: follower.id,
+                username: follower.username,
+                relation: 'follower',
+            })
+        })
+
+        following?.forEach((followed) => {
+            const existing = map.get(followed.id)
+            map.set(followed.id, {
+                id: followed.id,
+                username: followed.username,
+                relation: existing ? 'mutual' : 'following',
+            })
+        })
+
+        return Array.from(map.values()).sort((a, b) => a.username.localeCompare(b.username))
+    }, [followers, following])
+
+    const filteredContacts = useMemo(() => {
+        const normalizedQuery = contactQuery.trim().toLowerCase()
+        if (!normalizedQuery) return contacts
+        return contacts.filter((contact) =>
+            contact.username.toLowerCase().includes(normalizedQuery)
+        )
+    }, [contacts, contactQuery])
+
+    const handleStartConversation = (contactId: number) => {
+        createConversation.mutate(
+            { targetUserId: contactId, type: 'direct' },
+            {
+                onSuccess: (conversation) => {
+                    setShowNewConversation(false)
+                    setContactQuery('')
+                    setJustCreatedId(conversation.id)
+                    router.push(`/message/${conversation.id}`)
+                },
+            }
+        )
+    }
+
+    // Nettoyer justCreatedId dès que la conversation a un message
+    useEffect(() => {
+        if (justCreatedId) {
+            const conv = conversations?.find((c) => c.id === justCreatedId)
+            if (conv?.lastMessage) {
+                setJustCreatedId(null)
+            }
+        }
+    }, [conversations, justCreatedId])
+
+    const isLoadingContacts = isLoadingFollowers || isLoadingFollowing
 
     return (
         <div className="flex h-[calc(100vh-64px)]">
             {/* Sidebar conversations */}
             <div className="w-[360px] border-r border-border bg-background flex flex-col">
                 {/* Header sidebar */}
-                <div className="px-5 py-4 border-b border-border">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                     <h2 className="text-xl font-bold text-foreground">Messages</h2>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                            setShowNewConversation(!showNewConversation)
+                            setContactQuery('')
+                        }}
+                        title="Nouvelle conversation"
+                    >
+                        {showNewConversation ? (
+                            <X className="h-5 w-5" />
+                        ) : (
+                            <SquarePen className="h-5 w-5" />
+                        )}
+                    </Button>
                 </div>
+
+                {/* Panneau nouvelle conversation */}
+                {showNewConversation && (
+                    <div className="border-b border-border">
+                        <Command className="bg-background rounded-none" shouldFilter={false}>
+                            <CommandInput
+                                placeholder="Rechercher un contact..."
+                                value={contactQuery}
+                                onValueChange={setContactQuery}
+                            />
+                            <CommandList className="max-h-[300px]">
+                                {isLoadingContacts ? (
+                                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Chargement des contacts...
+                                    </div>
+                                ) : filteredContacts.length === 0 ? (
+                                    <CommandEmpty>Aucun contact trouvé.</CommandEmpty>
+                                ) : (
+                                    <CommandGroup heading="Contacts">
+                                        {filteredContacts.map((contact) => (
+                                            <CommandItem
+                                                key={contact.id}
+                                                value={contact.username}
+                                                onSelect={() => handleStartConversation(contact.id)}
+                                                disabled={createConversation.isPending}
+                                                className="cursor-pointer"
+                                            >
+                                                <Avatar className="h-8 w-8 shrink-0">
+                                                    <AvatarFallback className="text-xs">
+                                                        {contact.username.slice(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-sm font-medium text-foreground truncate">
+                                                        {contact.username}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {contact.relation === 'mutual'
+                                                            ? 'Abonné·e mutuel·le'
+                                                            : contact.relation === 'follower'
+                                                                ? 'Vous suit'
+                                                                : 'Vous le suivez'}
+                                                    </span>
+                                                </div>
+                                                {createConversation.isPending && (
+                                                    <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                                                )}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                            </CommandList>
+                        </Command>
+                    </div>
+                )}
 
                 {/* Liste */}
                 <div className="flex-1 overflow-y-auto">
@@ -46,10 +203,14 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                     )}
 
                     {conversations
-                        ?.slice()
+                        ?.filter((conv) => conv.lastMessage || conv.id === justCreatedId)
                         .sort((a, b) => {
-                            const aDate = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0
-                            const bDate = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0
+                            const aDate = a.lastMessage
+                                ? new Date(a.lastMessage.createdAt).getTime()
+                                : new Date(a.createdAt).getTime()
+                            const bDate = b.lastMessage
+                                ? new Date(b.lastMessage.createdAt).getTime()
+                                : new Date(b.createdAt).getTime()
                             return bDate - aDate
                         })
                         .map((conv) => {

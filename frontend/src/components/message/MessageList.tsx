@@ -48,10 +48,18 @@ export function MessageList({
         paddingEnd: 16,
     })
 
+    const prevLengthRef = useRef(0)
+
     useEffect(() => {
         if (messages?.length) {
+            const isInitialLoad = prevLengthRef.current === 0
+            prevLengthRef.current = messages.length
+
             setTimeout(() => {
-                virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "smooth" })
+                virtualizer.scrollToIndex(messages.length - 1, {
+                    align: "end",
+                    behavior: isInitialLoad ? "auto" : "smooth",
+                })
             }, 50)
         }
     }, [messages?.length])
