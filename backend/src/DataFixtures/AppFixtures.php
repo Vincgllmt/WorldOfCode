@@ -4,17 +4,57 @@ namespace App\DataFixtures;
 
 use App\Factory\UserFactory;
 use App\Entity\User;
+use App\Entity\UserLink;
 use App\Enum\UserRole;
+use App\Enum\Availability;
+use App\Enum\LinkType;
+use App\Repository\SkillRepository;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-class AppFixtures extends Fixture
+class AppFixtures extends Fixture implements DependentFixtureInterface
 {
-    public function __construct(private UserPasswordHasherInterface $hasher) {}
+    public function __construct(
+        private UserPasswordHasherInterface $hasher,
+        private SkillRepository $skillRepo
+    ) {}
+
+    public function getDependencies(): array
+    {
+        return [SkillFixtures::class];
+    }
 
     public function load(ObjectManager $manager): void
     {
+        $allSkills = $this->skillRepo->findAll();
+        $availabilities = Availability::cases();
+        $linkTypes = [LinkType::GITHUB, LinkType::GITLAB, LinkType::LINKEDIN, LinkType::PORTFOLIO];
+
+        $bios = [
+            'Passionnee par le dev web et les nouvelles technos',
+            'Fullstack developer, amateur de clean code et de DDD',
+            'Backend engineer, Go et microservices',
+            'Frontend dev React/Next.js, UI/UX enthusiast',
+            'DevOps engineer, fan de Kubernetes et Terraform',
+            'Data engineer en reconversion depuis le dev web',
+            'Developpeur mobile Flutter/React Native',
+            'Tech lead avec 5 ans d\'experience en startup',
+            'Junior dev motivee, en alternance',
+            'Freelance fullstack, specialise e-commerce',
+        ];
+
+        $locations = [
+            'Paris, France', 'Lyon, France', 'Marseille, France',
+            'Bordeaux, France', 'Toulouse, France', 'Nantes, France',
+            'Lille, France', 'Strasbourg, France', 'Remote, France',
+            'Montreal, Canada',
+        ];
+
+        $companies = ['Acme Corp', 'TechStartup', 'DataFlow', 'CloudNine', 'DevFactory', 'CodeCraft', 'PixelPerfect'];
+        $titles = ['Developpeur fullstack', 'Developpeur frontend', 'Developpeur backend', 'DevOps engineer', 'Tech lead', 'Stagiaire dev', 'CTO', 'Data engineer'];
+
         // --- ADMIN ---
         $admin = new User();
         $admin->setUsername('admin');
@@ -23,6 +63,9 @@ class AppFixtures extends Fixture
         $admin->setEmail('admin@woc.dev');
         $admin->setRole(UserRole::ROLE_ADMIN);
         $admin->setPassword($this->hasher->hashPassword($admin, 'admin123'));
+        $admin->setBio('Administrateur de la plateforme World of Code');
+        $admin->setLocation('Paris, France');
+        $admin->setAvailability(Availability::EMPLOYED);
         $manager->persist($admin);
         $this->addReference('admin', $admin);
 
@@ -48,11 +91,61 @@ class AppFixtures extends Fixture
             $user->setEmail($userData['email']);
             $user->setRole(UserRole::ROLE_USER);
             $user->setPassword($this->hasher->hashPassword($user, 'password123'));
+
+            // Profil CV
+            $user->setBio($bios[$i]);
+            $user->setLocation($locations[$i]);
+            $user->setAvailability($availabilities[array_rand($availabilities)]);
+
+            // Experiences (1 a 3)
+            $nbExp = rand(1, 3);
+            $experiences = [];
+            for ($e = 0; $e < $nbExp; $e++) {
+                $startYear = rand(2019, 2024);
+                $startMonth = str_pad((string) rand(1, 12), 2, '0', STR_PAD_LEFT);
+                $endYear = $startYear + rand(0, 2);
+                $endMonth = str_pad((string) rand(1, 12), 2, '0', STR_PAD_LEFT);
+                $isCurrent = ($e === 0 && rand(0, 1) === 1);
+
+                $experiences[] = [
+                    'title' => $titles[array_rand($titles)],
+                    'company' => $companies[array_rand($companies)],
+                    'startDate' => "{$startYear}-{$startMonth}",
+                    'endDate' => $isCurrent ? null : "{$endYear}-{$endMonth}",
+                    'description' => 'Developpement et maintenance d\'applications web',
+                ];
+            }
+            $user->setExperiences($experiences);
+
+            // Skills (3 a 8 random)
+            $nbSkills = rand(3, 8);
+            $skillKeys = (array) array_rand($allSkills, $nbSkills);
+            foreach ($skillKeys as $key) {
+                $user->addSkill($allSkills[$key]);
+            }
+
+            // Links (1 a 3)
+            $usedTypes = [];
+            $nbLinks = rand(1, 3);
+            for ($l = 0; $l < $nbLinks; $l++) {
+                $type = $linkTypes[array_rand($linkTypes)];
+                if (in_array($type, $usedTypes)) {
+                    continue;
+                }
+                $usedTypes[] = $type;
+
+                $link = new UserLink();
+                $link->setUser($user);
+                $link->setType($type);
+                $link->setUrl('https://' . strtolower($type->value) . '.com/' . $userData['username']);
+                $user->addLink($link);
+            }
+
             $manager->persist($user);
             $this->addReference('user_' . $i, $user);
         }
 
-        // --- AUTRES UTILISATEURS GÉNÉRÉS ---
+        // --- AUTRES UTILISATEURS GENERES ---
         for ($i = 10; $i < 50; $i++) {
             $user = UserFactory::createOne([
                 'password' => $this->hasher->hashPassword(new User(), 'password123'),
