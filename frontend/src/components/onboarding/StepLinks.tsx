@@ -15,17 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import toast from 'react-hot-toast'
-import { ArrowRight, Plus, Trash2, Github, Globe, Link2, Linkedin } from 'lucide-react'
+import { ArrowRight, Plus, Trash2 } from 'lucide-react'
 import type { LinkType } from '@/interfaces/user'
-import type { LucideIcon } from 'lucide-react'
-
-const LINK_CONFIG: Record<LinkType, { label: string; placeholder: string; icon: LucideIcon }> = {
-  github: { label: 'GitHub', placeholder: 'https://github.com/username', icon: Github },
-  gitlab: { label: 'GitLab', placeholder: 'https://gitlab.com/username', icon: Github },
-  linkedin: { label: 'LinkedIn', placeholder: 'https://linkedin.com/in/username', icon: Linkedin },
-  portfolio: { label: 'Portfolio', placeholder: 'https://mon-portfolio.dev', icon: Globe },
-  other: { label: 'Autre', placeholder: 'https://...', icon: Link2 },
-}
+import { LINK_CONFIG } from '@/lib/profile-constants'
 
 type Props = {
   onSuccess: () => void

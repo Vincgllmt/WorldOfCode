@@ -11,14 +11,14 @@ export default function PublicProfilePage({ params }: UserProfileRouteProps) {
 
   if (!Number.isFinite(userId) || userId <= 0) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-destructive">
+      <div className="mx-auto max-w-5xl px-4 py-12 text-center text-sm text-destructive">
         Profil utilisateur introuvable.
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-8">
       <UserProfilePage userId={userId} />
     </div>
   )

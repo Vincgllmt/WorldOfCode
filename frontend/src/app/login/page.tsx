@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import type { LoginCredentials } from '@/interfaces/Authentification'
 import { useAuth } from '@/hooks/useAuth'
 import { Eye, EyeOff } from 'lucide-react'
-import Image from 'next/image'
+import LandingNavbar from '@/components/landing/LandingNavbar'
 
 export default function LoginPage() {
     const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>()
@@ -23,25 +23,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col">
-            {/* Navbar Landing */}
-            <nav className="bg-green-50/80 backdrop-blur-md border-b border-green-200">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                    <Link href="/">
-                        <Image
-                            src="/logo2.png"
-                            alt="World of Code"
-                            width={160}
-                            height={50}
-                            className="h-12 w-auto"
-                        />
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <Link href="/register">
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">S&apos;inscrire</Button>
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+            <LandingNavbar showLogin={false} />
 
             <div className="flex-1 flex justify-center items-center px-4">
             <Card className="w-full max-w-md shadow-md">

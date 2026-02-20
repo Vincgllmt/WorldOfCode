@@ -9,7 +9,7 @@ import { PasswordRules } from '@/components/register/PasswordRules'
 import { useRegister } from '@/hooks/useRegister'
 import type { RegisterCredentials } from '@/interfaces/Authentification'
 import Link from 'next/link'
-import Image from 'next/image'
+import LandingNavbar from '@/components/landing/LandingNavbar'
 
 export default function RegisterPage() {
     const { register, handleSubmit, formState: { errors }, watch } = useForm<RegisterCredentials>()
@@ -29,25 +29,7 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col">
-            {/* Navbar Landing */}
-            <nav className="bg-green-50/80 backdrop-blur-md border-b border-green-200">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                    <Link href="/">
-                        <Image
-                            src="/logo2.png"
-                            alt="World of Code"
-                            width={160}
-                            height={50}
-                            className="h-12 w-auto"
-                        />
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <Link href="/login">
-                            <Button variant="outline" size="sm">Se connecter</Button>
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+            <LandingNavbar showRegister={false} />
 
             <div className="flex-1 flex justify-center items-center px-4 py-6">
             <div className="w-full max-w-md space-y-4">

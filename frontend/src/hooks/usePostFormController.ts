@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -50,10 +50,15 @@ export const usePostFormController = (
   const { groups, isLoading: loadingGroups } = useGroups()
   const isPending = createPost.isPending
 
+  // Counter used as a React key to force-remount the Select on reset
+  const [selectKey, setSelectKey] = useState(0)
+
   const onSubmit = (data: PostFormValues) => {
     createPost.mutate(data, {
       onSuccess: () => {
         reset({ content: '', groupId: presetGroupId })
+        // Force-remount the Select so it shows the placeholder again
+        if (presetGroupId == null) setSelectKey((k) => k + 1)
         onSuccess?.()
       },
     })
@@ -68,6 +73,7 @@ export const usePostFormController = (
     isPending,
     groupIdValue: watch('groupId'),
     setGroupId: (value: number) => setValue('groupId', value, { shouldValidate: true }),
+    selectKey,
     onSubmit,
   }
 }

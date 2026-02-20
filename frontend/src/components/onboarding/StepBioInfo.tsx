@@ -17,13 +17,7 @@ import {
 } from '@/components/ui/select'
 import toast from 'react-hot-toast'
 import { ArrowRight } from 'lucide-react'
-
-const AVAILABILITY_OPTIONS = [
-  { value: 'open_to_work', label: 'En recherche d\'emploi' },
-  { value: 'employed', label: 'En poste' },
-  { value: 'freelance', label: 'Freelance' },
-  { value: 'student', label: 'Étudiant' },
-] as const
+import { AVAILABILITY_OPTIONS } from '@/lib/profile-constants'
 
 type Props = {
   onSuccess: () => void

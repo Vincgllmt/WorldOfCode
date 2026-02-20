@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Code, Users, MessageCircle, Video } from 'lucide-react'
+import LandingNavbar from '@/components/landing/LandingNavbar'
+
+const ROLES = ['développeurs', 'devops', 'designers', 'data scientists', 'freelances', 'étudiants']
 
 const slides = [
     {
@@ -59,7 +61,6 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
         const resize = () => {
             canvas.width = window.innerWidth
             canvas.height = window.innerHeight
-            // Réinitialiser les nodes si pas encore créés ou si resize
             if (nodesRef.current.length === 0) {
                 initNodes(canvas.width, canvas.height)
             }
@@ -91,21 +92,14 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
             const nodes = nodesRef.current
             const mouse = mouseRef.current
 
-            // Update positions
             for (const node of nodes) {
-                // Mouvement naturel lent
                 node.x += node.vx
                 node.y += node.vy
-
-                // Légère force de rappel vers la position de base
                 node.vx += (node.baseX - node.x) * 0.0003
                 node.vy += (node.baseY - node.y) * 0.0003
-
-                // Friction
                 node.vx *= 0.99
                 node.vy *= 0.99
 
-                // Répulsion de la souris
                 const dx = node.x - mouse.x
                 const dy = node.y - mouse.y
                 const dist = Math.sqrt(dx * dx + dy * dy)
@@ -115,30 +109,25 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                     node.vy += (dy / dist) * force
                 }
 
-                // Rebonds sur les bords (doux)
                 if (node.x < 0) { node.x = 0; node.vx *= -0.5 }
                 if (node.x > canvas.width) { node.x = canvas.width; node.vx *= -0.5 }
                 if (node.y < 0) { node.y = 0; node.vy *= -0.5 }
                 if (node.y > canvas.height) { node.y = canvas.height; node.vy *= -0.5 }
             }
 
-            // Fonction couleur selon position Y (vert clair en haut → vert foncé en bas)
             const getColor = (y: number, alpha: number) => {
-                const t = Math.min(1, Math.max(0, y / canvas.height)) // 0 = haut, 1 = bas
-                // Haut: rgb(187, 247, 208) = green-200 → Bas: rgb(21, 128, 61) = green-700
+                const t = Math.min(1, Math.max(0, y / canvas.height))
                 const r = Math.round(187 - t * (187 - 21))
                 const g = Math.round(247 - t * (247 - 128))
                 const b = Math.round(208 - t * (208 - 61))
                 return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(4)})`
             }
 
-            // Dessiner les connexions
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
                     const dx = nodes[i].x - nodes[j].x
                     const dy = nodes[i].y - nodes[j].y
                     const dist = Math.sqrt(dx * dx + dy * dy)
-
                     if (dist < CONNECTION_DIST) {
                         const opacity = (1 - dist / CONNECTION_DIST) * 0.55
                         const midY = (nodes[i].y + nodes[j].y) / 2
@@ -152,13 +141,11 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                 }
             }
 
-            // Connexions vers la souris
             if (mouse.x > 0 && mouse.y > 0) {
                 for (const node of nodes) {
                     const dx = node.x - mouse.x
                     const dy = node.y - mouse.y
                     const dist = Math.sqrt(dx * dx + dy * dy)
-
                     if (dist < MOUSE_RADIUS) {
                         const opacity = (1 - dist / MOUSE_RADIUS) * 0.5
                         const midY = (node.y + mouse.y) / 2
@@ -172,9 +159,7 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                 }
             }
 
-            // Dessiner les nodes
             for (const node of nodes) {
-                // Halo autour du node
                 const gradient = ctx.createRadialGradient(
                     node.x, node.y, 0,
                     node.x, node.y, node.radius * 3
@@ -186,7 +171,6 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
                 ctx.fillStyle = gradient
                 ctx.fill()
 
-                // Point central
                 ctx.beginPath()
                 ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
                 ctx.fillStyle = getColor(node.y, 0.85)
@@ -217,8 +201,21 @@ function useNetworkEffect(canvasRef: React.RefObject<HTMLCanvasElement | null>) 
 
 export default function LandingPage() {
     const [current, setCurrent] = useState(0)
+    const [roleIndex, setRoleIndex] = useState(0)
+    const [fadeIn, setFadeIn] = useState(true)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const { handleMouseMove, handleMouseLeave } = useNetworkEffect(canvasRef)
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setFadeIn(false)
+            setTimeout(() => {
+                setRoleIndex((prev) => (prev + 1) % ROLES.length)
+                setFadeIn(true)
+            }, 300)
+        }, 2500)
+        return () => clearInterval(interval)
+    }, [])
 
     const next = useCallback(() => {
         setCurrent((prev) => (prev + 1) % slides.length)
@@ -228,7 +225,6 @@ export default function LandingPage() {
         setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
     }, [])
 
-    // Auto-scroll toutes les 5 secondes
     useEffect(() => {
         const interval = setInterval(next, 5000)
         return () => clearInterval(interval)
@@ -250,54 +246,45 @@ export default function LandingPage() {
                 className="absolute inset-0 pointer-events-none z-0"
             />
 
-            {/* Navbar Landing */}
-            <nav className="relative z-10 bg-green-50/80 backdrop-blur-md border-b border-green-200">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                    <Link href="/">
-                        <Image
-                            src="/logo2.png"
-                            alt="World of Code"
-                            width={160}
-                            height={50}
-                            className="h-12 w-auto"
-                        />
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <Link href="/login">
-                            <Button variant="outline" size="sm">Se connecter</Button>
-                        </Link>
+            {/* Navbar Landing modernisée */}
+            <div className="relative z-10">
+                <LandingNavbar />
+            </div>
+
+            {/* Contenu principal */}
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 gap-8">
+                {/* Hero */}
+                <div className="text-center max-w-2xl mx-auto">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+                        Rejoignez la communauté des
+                        <br />
+                        <span
+                            className={`inline-block text-green-600 transition-all duration-300 ${
+                                fadeIn ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+                            }`}
+                        >
+                            {ROLES[roleIndex]}
+                        </span>
+                        <br />
+                        qui partagent leur passion
+                    </h1>
+                    <p className="text-gray-600 text-base sm:text-lg max-w-xl mx-auto mb-8">
+                        Apprenez, collaborez et partagez vos connaissances en temps réel.
+                    </p>
+                    <div className="flex items-center justify-center gap-4">
                         <Link href="/register">
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">S&apos;inscrire</Button>
+                            <Button
+                                size="lg"
+                                className="bg-green-600 hover:bg-green-700 text-white text-base px-8 shadow-lg shadow-green-600/25 rounded-full"
+                            >
+                                Rejoindre la communaut&eacute;
+                            </Button>
                         </Link>
                     </div>
                 </div>
-            </nav>
 
-            {/* Contenu principal */}
-            <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 gap-6">
-                {/* Logo + accroche */}
-                <div className="text-center">
-                    <Image
-                        src="/logo-woc.png"
-                        alt="World of Code"
-                        width={130}
-                        height={130}
-                        className="mx-auto mb-4"
-                        priority
-                    />
-                    <p className="text-gray-800 text-lg font-semibold max-w-xl mx-auto mb-6">
-                        Connectez-vous, apprenez, collaborez et partagez vos connaissances
-                        avec une communaut&eacute; de passionn&eacute;s de programmation.
-                    </p>
-                    <Link href="/register">
-                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 shadow-lg">
-                            Rejoindre la communaut&eacute;
-                        </Button>
-                    </Link>
-                </div>
-
-                {/* Carrousel */}
-                <div className="w-full max-w-xl relative">
+                {/* Carrousel features */}
+                <div id="features" className="w-full max-w-xl relative">
                     <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-md border border-green-100 p-6 text-center min-h-[150px] flex flex-col items-center justify-center">
                         <div className="mb-3 bg-green-50 rounded-full p-3 inline-flex">
                             {slides[current].icon}
@@ -343,6 +330,9 @@ export default function LandingPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Community anchor (pour le lien nav) */}
+            <div id="community" />
         </div>
     )
 }

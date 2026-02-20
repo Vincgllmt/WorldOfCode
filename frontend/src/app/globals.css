@@ -55,6 +55,7 @@
 }
 
 :root {
+  --navbar-height: 69px;
   --radius: 0.625rem;
   --background: #ffffff;
   --foreground: #111827;             /* gray-900 */

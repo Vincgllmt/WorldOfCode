@@ -31,6 +31,7 @@ const invalidatePostLists = (queryClient: QueryClient) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: postsKey }),
     queryClient.invalidateQueries({ queryKey: infinitePostsKey, exact: false }),
+    queryClient.invalidateQueries({ queryKey: ['user-posts'] }),
   ])
 
 // -------------------------
