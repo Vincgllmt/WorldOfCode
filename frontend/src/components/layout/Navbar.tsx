@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useEffect, useCallback } from "react"
 import { MessageCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -41,6 +42,23 @@ export default function Navbar() {
             c.id !== currentConversationId // Ne pas compter la conversation actuellement ouverte
     )
 
+    const navRef = useRef<HTMLElement>(null)
+
+    const updateNavbarHeight = useCallback(() => {
+        if (navRef.current) {
+            document.documentElement.style.setProperty(
+                '--navbar-height',
+                `${navRef.current.offsetHeight}px`
+            )
+        }
+    }, [])
+
+    useEffect(() => {
+        updateNavbarHeight()
+        window.addEventListener('resize', updateNavbarHeight)
+        return () => window.removeEventListener('resize', updateNavbarHeight)
+    }, [updateNavbarHeight])
+
     const navLinks = [
         { label: "Accueil", href: "/home" },
         { label: "Groupes", href: "/group" },
@@ -48,7 +66,7 @@ export default function Navbar() {
     ]
 
     return (
-        <nav className="navbar-themed sticky top-0 z-50 w-full border-b px-6 py-4 shadow-sm backdrop-blur">
+        <nav ref={navRef} className="navbar-themed sticky top-0 z-50 w-full border-b px-6 py-4 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
                 <Link href="/home">
                     <Image

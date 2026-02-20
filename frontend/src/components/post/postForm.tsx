@@ -48,6 +48,7 @@ export default function PostForm({
     isPending,
     groupIdValue,
     setGroupId,
+    selectKey,
     onSubmit,
   } = usePostFormController(presetGroupId, handleSuccess)
 
@@ -103,49 +104,51 @@ export default function PostForm({
         )}
       </div>
 
-      {displaySelector ? (
-        <div className="space-y-2">
-          <Label htmlFor="post-group">Groupe</Label>
-          <Select
-            value={groupIdValue ? String(groupIdValue) : undefined}
-            onValueChange={(value) =>
-              setGroupId(Number(value))
-            }
-            disabled={loadingGroups || isPending}
-          >
-            <SelectTrigger id="post-group">
-              <SelectValue placeholder="Choisissez un groupe" />
-            </SelectTrigger>
-            <SelectContent>
-              {loadingGroups ? (
-                <p className="px-4 py-2 text-sm text-muted-foreground">
-                  Chargement...
-                </p>
-              ) : (
-                groups?.map((group) => (
-                  <SelectItem key={group.id} value={String(group.id)}>
-                    {group.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          {errors.groupId && (
-            <p className="text-sm text-red-500" aria-live="polite">
-              {errors.groupId.message}
-            </p>
-          )}
-        </div>
-      ) : null}
+      <div className="flex items-start gap-3">
+        {displaySelector ? (
+          <div className="flex-1 space-y-1">
+            <Select
+              key={selectKey}
+              value={groupIdValue ? String(groupIdValue) : undefined}
+              onValueChange={(value) =>
+                setGroupId(Number(value))
+              }
+              disabled={loadingGroups || isPending}
+            >
+              <SelectTrigger id="post-group">
+                <SelectValue placeholder="Choisissez un groupe" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingGroups ? (
+                  <p className="px-4 py-2 text-sm text-muted-foreground">
+                    Chargement...
+                  </p>
+                ) : (
+                  groups?.map((group) => (
+                    <SelectItem key={group.id} value={String(group.id)}>
+                      {group.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.groupId && (
+              <p className="text-sm text-red-500" aria-live="polite">
+                {errors.groupId.message}
+              </p>
+            )}
+          </div>
+        ) : null}
 
-      <Button
-        type="submit"
-        disabled={isPending}
-        className="w-full sm:w-auto"
-        aria-busy={isPending}
-      >
-        {isPending ? 'Publication...' : submitLabel}
-      </Button>
+        <Button
+          type="submit"
+          disabled={isPending}
+          className={displaySelector ? 'shrink-0' : 'w-full sm:w-auto'}
+          aria-busy={isPending}
+        >
+          {isPending ? 'Publication...' : submitLabel}
+        </Button>
+      </div>
     </form>
   )
 }

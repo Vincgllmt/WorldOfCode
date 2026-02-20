@@ -1,0 +1,188 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { useSkills, useUpdateSkills } from '@/hooks/useOnboarding'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { CATEGORY_LABELS } from '@/lib/profile-constants'
+import toast from 'react-hot-toast'
+import { Check, X, Search } from 'lucide-react'
+import type { Skill, SkillCategory, PublicUser } from '@/interfaces/user'
+
+type EditSkillsDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  user: PublicUser
+}
+
+export default function EditSkillsDialog({ open, onOpenChange, user }: EditSkillsDialogProps) {
+  const { user: authUser } = useAuth()
+  const queryClient = useQueryClient()
+  const { data: allSkills, isLoading } = useSkills()
+  const updateSkills = useUpdateSkills()
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>(
+    () => user.skills?.map((s) => s.id) ?? []
+  )
+
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+
+  // Filter skills by search, then group by category (only categories with results)
+  const filteredByCategory = useMemo(() => {
+    if (!allSkills) return {}
+    const filtered = normalizedSearch.length === 0
+      ? allSkills
+      : allSkills.filter((skill) =>
+          skill.name.toLowerCase().includes(normalizedSearch) ||
+          skill.category.toLowerCase().includes(normalizedSearch) ||
+          (CATEGORY_LABELS[skill.category as SkillCategory] ?? '').toLowerCase().includes(normalizedSearch)
+        )
+    return filtered.reduce<Record<string, Skill[]>>((acc, skill) => {
+      const cat = skill.category
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(skill)
+      return acc
+    }, {})
+  }, [allSkills, normalizedSearch])
+
+  const totalFiltered = Object.values(filteredByCategory).reduce((sum, arr) => sum + arr.length, 0)
+
+  const selectedSkills = useMemo(() => {
+    if (!allSkills) return []
+    return allSkills.filter((s) => selectedSkillIds.includes(s.id))
+  }, [allSkills, selectedSkillIds])
+
+  const toggleSkill = (skillId: number) => {
+    setSelectedSkillIds((prev) =>
+      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId]
+    )
+  }
+
+  const removeSkill = (skillId: number) => {
+    setSelectedSkillIds((prev) => prev.filter((id) => id !== skillId))
+  }
+
+  const onSave = async () => {
+    await updateSkills.mutateAsync(selectedSkillIds)
+    await queryClient.invalidateQueries({ queryKey: ['user', authUser?.id] })
+    toast.success('Compétences mises à jour')
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Modifier les compétences</DialogTitle>
+          <DialogDescription>
+            Recherchez et sélectionnez vos compétences techniques.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Selected skills badges */}
+            {selectedSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedSkills.map((skill) => (
+                  <Badge key={skill.id} variant="secondary" className="gap-1 pr-1">
+                    {skill.name}
+                    <button
+                      type="button"
+                      onClick={() => removeSkill(skill.id)}
+                      className="ml-1 rounded-full hover:bg-muted p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Search input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher une compétence..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Skills list grouped by category */}
+            <div className="max-h-52 overflow-y-auto rounded-md border">
+              {totalFiltered === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Aucune compétence trouvée.
+                </p>
+              ) : (
+                <div className="p-1">
+                  {Object.entries(filteredByCategory).map(([category, categorySkills]) => (
+                    <div key={category} className="mb-1">
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                        {CATEGORY_LABELS[category as SkillCategory] ?? category}
+                      </div>
+                      {categorySkills.map((skill) => {
+                        const isSelected = selectedSkillIds.includes(skill.id)
+                        return (
+                          <button
+                            key={skill.id}
+                            type="button"
+                            onClick={() => toggleSkill(skill.id)}
+                            className="relative flex w-full cursor-default select-none items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none transition hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <div
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                isSelected
+                                  ? 'border-green-600 bg-green-600 text-white'
+                                  : 'border-gray-300'
+                              }`}
+                            >
+                              {isSelected && <Check className="h-3 w-3" />}
+                            </div>
+                            <span>{skill.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              {selectedSkillIds.length} compétence{selectedSkillIds.length !== 1 ? 's' : ''} sélectionnée{selectedSkillIds.length !== 1 ? 's' : ''}
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Annuler
+              </Button>
+              <Button onClick={onSave} disabled={updateSkills.isPending}>
+                {updateSkills.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}

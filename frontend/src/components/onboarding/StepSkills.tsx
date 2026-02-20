@@ -4,34 +4,12 @@ import { useState, useMemo } from 'react'
 import { useSkills, useUpdateSkills } from '@/hooks/useOnboarding'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandGroup,
-  CommandItem,
-  CommandEmpty,
-} from '@/components/ui/command'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Skill, SkillCategory } from '@/interfaces/user'
 import toast from 'react-hot-toast'
-import { ArrowRight, Check, X } from 'lucide-react'
-
-const CATEGORY_LABELS: Record<SkillCategory, string> = {
-  language: 'Langages',
-  frontend: 'Frontend',
-  backend: 'Backend',
-  mobile: 'Mobile',
-  database: 'Bases de données',
-  devops: 'DevOps',
-  cloud: 'Cloud',
-  design: 'Design',
-  tools: 'Outils',
-  testing: 'Tests',
-  security: 'Sécurité',
-  data: 'Data',
-  other: 'Autre',
-}
+import { ArrowRight, Check, X, Search } from 'lucide-react'
+import { CATEGORY_LABELS } from '@/lib/profile-constants'
 
 type Props = {
   onSuccess: () => void
@@ -40,18 +18,30 @@ type Props = {
 
 export default function StepSkills({ onSuccess, setIsSubmitting }: Props) {
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const { data: skills, isLoading } = useSkills()
   const updateSkills = useUpdateSkills()
 
-  const skillsByCategory = useMemo(() => {
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+
+  const filteredByCategory = useMemo(() => {
     if (!skills) return {}
-    return skills.reduce<Record<string, Skill[]>>((acc, skill) => {
+    const filtered = normalizedSearch.length === 0
+      ? skills
+      : skills.filter((skill) =>
+          skill.name.toLowerCase().includes(normalizedSearch) ||
+          skill.category.toLowerCase().includes(normalizedSearch) ||
+          (CATEGORY_LABELS[skill.category as SkillCategory] ?? '').toLowerCase().includes(normalizedSearch)
+        )
+    return filtered.reduce<Record<string, Skill[]>>((acc, skill) => {
       const cat = skill.category
       if (!acc[cat]) acc[cat] = []
       acc[cat].push(skill)
       return acc
     }, {})
-  }, [skills])
+  }, [skills, normalizedSearch])
+
+  const totalFiltered = Object.values(filteredByCategory).reduce((sum, arr) => sum + arr.length, 0)
 
   const selectedSkills = useMemo(() => {
     if (!skills) return []
@@ -112,25 +102,39 @@ export default function StepSkills({ onSuccess, setIsSubmitting }: Props) {
         </div>
       )}
 
-      <Command className="border">
-        <CommandInput placeholder="Rechercher une compétence..." />
-        <CommandList className="max-h-64">
-          <CommandEmpty>Aucune compétence trouvée.</CommandEmpty>
-          {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
-            <CommandGroup
-              key={category}
-              heading={CATEGORY_LABELS[category as SkillCategory] || category}
-            >
-              {categorySkills.map((skill) => {
-                const isSelected = selectedSkillIds.includes(skill.id)
-                return (
-                  <CommandItem
-                    key={skill.id}
-                    value={skill.name}
-                    keywords={[category]}
-                    onSelect={() => toggleSkill(skill.id)}
-                  >
-                    <div className="flex items-center gap-2 w-full">
+      {/* Search input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Rechercher une compétence..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Skills list grouped by category */}
+      <div className="max-h-64 overflow-y-auto rounded-md border">
+        {totalFiltered === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Aucune compétence trouvée.
+          </p>
+        ) : (
+          <div className="p-1">
+            {Object.entries(filteredByCategory).map(([category, categorySkills]) => (
+              <div key={category} className="mb-1">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  {CATEGORY_LABELS[category as SkillCategory] ?? category}
+                </div>
+                {categorySkills.map((skill) => {
+                  const isSelected = selectedSkillIds.includes(skill.id)
+                  return (
+                    <button
+                      key={skill.id}
+                      type="button"
+                      onClick={() => toggleSkill(skill.id)}
+                      className="relative flex w-full cursor-default select-none items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none transition hover:bg-accent hover:text-accent-foreground"
+                    >
                       <div
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                           isSelected
@@ -141,14 +145,14 @@ export default function StepSkills({ onSuccess, setIsSubmitting }: Props) {
                         {isSelected && <Check className="h-3 w-3" />}
                       </div>
                       <span>{skill.name}</span>
-                    </div>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </Command>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <p className="text-xs text-muted-foreground text-center">
         {selectedSkillIds.length} compétence{selectedSkillIds.length !== 1 ? 's' : ''} sélectionnée{selectedSkillIds.length !== 1 ? 's' : ''}

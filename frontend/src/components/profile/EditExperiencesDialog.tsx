@@ -1,0 +1,206 @@
+'use client'
+
+import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { experiencesSchema, type ExperiencesFormValues } from '@/interfaces/user.schemas'
+import { useUpdateProfile } from '@/hooks/useOnboarding'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
+import MonthYearPicker from '@/components/onboarding/MonthYearPicker'
+import toast from 'react-hot-toast'
+import { Plus, Trash2 } from 'lucide-react'
+import type { PublicUser } from '@/interfaces/user'
+
+type EditExperiencesDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  user: PublicUser
+}
+
+export default function EditExperiencesDialog({ open, onOpenChange, user }: EditExperiencesDialogProps) {
+  const { user: authUser } = useAuth()
+  const queryClient = useQueryClient()
+  const updateProfile = useUpdateProfile()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ExperiencesFormValues>({
+    resolver: zodResolver(experiencesSchema),
+    defaultValues: {
+      experiences: user.experiences?.map((exp) => ({
+        title: exp.title,
+        company: exp.company,
+        startDate: exp.startDate,
+        endDate: exp.endDate,
+        description: exp.description,
+      })) ?? [],
+    },
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'experiences',
+  })
+
+  const onSubmit = async (data: ExperiencesFormValues) => {
+    await updateProfile.mutateAsync({ experiences: data.experiences })
+    await queryClient.invalidateQueries({ queryKey: ['user', authUser?.id] })
+    toast.success('Expériences mises à jour')
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Modifier les expériences</DialogTitle>
+          <DialogDescription>
+            Ajoutez, modifiez ou supprimez vos expériences professionnelles.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {fields.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucune expérience. Cliquez ci-dessous pour en ajouter.
+            </p>
+          )}
+
+          {fields.map((field, index) => {
+            const endDateValue = watch(`experiences.${index}.endDate`)
+            const isCurrentJob = endDateValue === null
+
+            return (
+              <Card key={field.id} className="relative">
+                <CardContent className="pt-4 space-y-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => remove(index)}
+                    className="absolute top-2 right-2 text-muted-foreground hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Poste</Label>
+                      <Input
+                        placeholder="Développeur fullstack"
+                        className="mt-1"
+                        {...register(`experiences.${index}.title`)}
+                      />
+                      {errors.experiences?.[index]?.title && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.experiences[index].title?.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Entreprise</Label>
+                      <Input
+                        placeholder="Acme Corp"
+                        className="mt-1"
+                        {...register(`experiences.${index}.company`)}
+                      />
+                      {errors.experiences?.[index]?.company && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.experiences[index].company?.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Date de début</Label>
+                      <MonthYearPicker
+                        value={watch(`experiences.${index}.startDate`)}
+                        onChange={(val) => setValue(`experiences.${index}.startDate`, val)}
+                      />
+                      {errors.experiences?.[index]?.startDate && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.experiences[index].startDate?.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Date de fin</Label>
+                      <MonthYearPicker
+                        value={isCurrentJob ? '' : (endDateValue || '')}
+                        onChange={(val) => setValue(`experiences.${index}.endDate`, val)}
+                        disabled={isCurrentJob}
+                        placeholder={isCurrentJob ? 'Poste actuel' : 'Sélectionner une date'}
+                      />
+                      <label className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isCurrentJob}
+                          onChange={(e) => {
+                            setValue(
+                              `experiences.${index}.endDate`,
+                              e.target.checked ? null : ''
+                            )
+                          }}
+                          className="rounded"
+                        />
+                        Poste actuel
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      placeholder="Décrivez vos missions..."
+                      className="mt-1 resize-none"
+                      rows={2}
+                      {...register(`experiences.${index}.description`)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => append({ title: '', company: '', startDate: '', endDate: null, description: '' })}
+            className="w-full gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter une expérience
+          </Button>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={updateProfile.isPending}>
+              {updateProfile.isPending ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
