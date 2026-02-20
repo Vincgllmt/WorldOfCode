@@ -1,6 +1,6 @@
 
 import { getCookie } from 'cookies-next'
-import { User, UpdateUserPayload, ChangePasswordPayload, PublicUser } from '@/interfaces/user'
+import { User, UpdateUserPayload, ChangePasswordPayload, PublicUser, UpdateProfilePayload, Skill, UserLink, CreateLinkPayload } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
@@ -112,5 +112,47 @@ export const changeUserPassword = async ({id, currentPassword, newPassword,}: Ch
     throw new Error(error?.error || 'Erreur lors du changement de mot de passe')
   }
 
+  return res.json()
+}
+
+export const updateUserProfile = async (userId: number, data: UpdateProfilePayload): Promise<User> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/user/${userId}/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la mise à jour du profil')
+  return res.json()
+}
+
+export const updateUserSkills = async (userId: number, skillIds: number[]): Promise<Skill[]> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/user/${userId}/skills`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ skillIds }),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la mise à jour des compétences')
+  return res.json()
+}
+
+export const createUserLink = async (userId: number, data: CreateLinkPayload): Promise<UserLink> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/user/${userId}/links`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la création du lien')
   return res.json()
 }

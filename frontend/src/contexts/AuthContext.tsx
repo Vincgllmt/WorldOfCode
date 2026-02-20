@@ -40,6 +40,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const loginSilent = async (credentials: LoginCredentials): Promise<AuthenticatedUser> => {
+    const authenticatedUser = await authService.login(credentials)
+    setUser(authenticatedUser)
+    return authenticatedUser
+  }
+
   const logout = () => {
     authService.logout()
     setUser(null)
@@ -59,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginSilent,
         logout,
         setUserTheme,
       }}
