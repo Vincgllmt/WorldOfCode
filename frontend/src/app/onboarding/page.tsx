@@ -5,8 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import OnboardingStepper from '@/components/onboarding/OnboardingStepper'
-import Image from 'next/image'
-import Link from 'next/link'
+import LandingNavbar from '@/components/landing/LandingNavbar'
 
 export default function OnboardingPage() {
   const { user, isLoading } = useAuth()
@@ -30,19 +29,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col">
-      <nav className="bg-green-50/80 backdrop-blur-md border-b border-green-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center">
-          <Link href="/">
-            <Image
-              src="/logo2.png"
-              alt="World of Code"
-              width={160}
-              height={50}
-              className="h-12 w-auto"
-            />
-          </Link>
-        </div>
-      </nav>
+      <LandingNavbar showLogin={false} showRegister={false} />
 
       <div className="flex-1 flex justify-center items-start px-4 py-8">
         <div className="w-full max-w-2xl">
