@@ -5,6 +5,7 @@ export interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
+  loginSilent: (credentials: LoginCredentials) => Promise<AuthenticatedUser>
   logout: () => void
   setUserTheme: (theme: string) => void
 }

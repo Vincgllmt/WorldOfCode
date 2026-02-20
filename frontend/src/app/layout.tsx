@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname()
 
     // Masquer la navbar pour les routes /login et /register
-    const hideNavbar = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === "/reset-password"
+    const hideNavbar = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === "/reset-password" || pathname === '/onboarding'
     const hideMessageFab = hideNavbar || pathname.startsWith('/message')
 
     return (
