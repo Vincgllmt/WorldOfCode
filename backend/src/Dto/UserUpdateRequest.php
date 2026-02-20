@@ -8,33 +8,53 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[OA\Schema(
     title: 'UserUpdateRequest',
-    description: 'Payload de mise à jour complète d’un utilisateur'
+    description: 'Payload de mise a jour des informations de base d\'un utilisateur'
 )]
 class UserUpdateRequest
 {
     #[Assert\NotBlank]
     #[Assert\Length(min: 3, max: 255)]
-    #[OA\Property(example: 'alice')]
+    #[OA\Property(
+        description: "Nom d'utilisateur unique",
+        type: 'string',
+        example: 'alice'
+    )]
     public readonly string $username;
 
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 100)]
-    #[OA\Property(example: 'Alice')]
+    #[OA\Property(
+        description: "Prenom de l'utilisateur",
+        type: 'string',
+        example: 'Alice'
+    )]
     public readonly string $firstname;
 
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 100)]
-    #[OA\Property(example: 'Dupont')]
+    #[OA\Property(
+        description: "Nom de famille de l'utilisateur",
+        type: 'string',
+        example: 'Dupont'
+    )]
     public readonly string $lastname;
 
     #[Assert\NotBlank]
     #[Assert\Email]
-    #[OA\Property(example: 'alice@example.com')]
+    #[OA\Property(
+        description: "Adresse email de l'utilisateur",
+        type: 'string',
+        example: 'alice@example.com'
+    )]
     public readonly string $email;
 
     #[Assert\NotBlank]
     #[Assert\Choice(callback: [UserRole::class, 'values'])]
-    #[OA\Property(example: 'ROLE_USER')]
+    #[OA\Property(
+        description: "Role de l'utilisateur (ROLE_USER ou ROLE_ADMIN, modifiable uniquement par un admin)",
+        type: 'string',
+        example: 'ROLE_USER'
+    )]
     public readonly string $role;
 
     public function __construct(string $username, string $firstname, string $lastname, string $email, string $role)

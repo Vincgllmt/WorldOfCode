@@ -3,7 +3,10 @@
 namespace App\Entity;
 
 use App\Enum\UserRole;
+use App\Enum\Availability;
 use App\Entity\TechGroup;
+use App\Entity\Skill;
+use App\Entity\UserLink;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -61,7 +64,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\ManyToMany(targetEntity: TechGroup::class, mappedBy: 'users')]
     private Collection $joinedGroups;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $resetToken = null;
 
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $theme = null;
+
+    // --- Nouveaux champs profil CV ---
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $bio = null;
+
+    #[ORM\Column(length: 150, nullable: true)]
+    private ?string $location = null;
+
+    #[ORM\Column(type: 'string', nullable: true, enumType: Availability::class)]
+    private ?Availability $availability = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $experiences = null;
+
+    #[ORM\ManyToMany(targetEntity: Skill::class, inversedBy: 'users')]
+    #[ORM\JoinTable(name: 'user_skill')]
+    private Collection $skills;
+
+    #[ORM\OneToMany(targetEntity: UserLink::class, mappedBy: 'user', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    private Collection $links;
 
 
     public function __construct()
@@ -70,6 +98,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->comments = new ArrayCollection();
         $this->groups = new ArrayCollection();
         $this->joinedGroups = new ArrayCollection();
+        $this->skills = new ArrayCollection();
+        $this->links = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -243,9 +273,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $resetToken = null;
-
     public function getResetToken(): ?string
     {
         return $this->resetToken;
@@ -257,9 +284,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    #[ORM\Column(type: 'string', length: 50, nullable: true)]
-    private ?string $theme = null;
-
     public function getTheme(): ?string
     {
         return $this->theme;
@@ -268,6 +292,93 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setTheme(?string $theme): self
     {
         $this->theme = $theme;
+        return $this;
+    }
+
+    // --- Nouveaux getters/setters profil CV ---
+
+    public function getBio(): ?string
+    {
+        return $this->bio;
+    }
+
+    public function setBio(?string $bio): self
+    {
+        $this->bio = $bio;
+        return $this;
+    }
+
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?string $location): self
+    {
+        $this->location = $location;
+        return $this;
+    }
+
+    public function getAvailability(): ?Availability
+    {
+        return $this->availability;
+    }
+
+    public function setAvailability(?Availability $availability): self
+    {
+        $this->availability = $availability;
+        return $this;
+    }
+
+    public function getExperiences(): ?array
+    {
+        return $this->experiences;
+    }
+
+    public function setExperiences(?array $experiences): self
+    {
+        $this->experiences = $experiences;
+        return $this;
+    }
+
+    public function getSkills(): Collection
+    {
+        return $this->skills;
+    }
+
+    public function addSkill(Skill $skill): self
+    {
+        if (!$this->skills->contains($skill)) {
+            $this->skills[] = $skill;
+        }
+        return $this;
+    }
+
+    public function removeSkill(Skill $skill): self
+    {
+        $this->skills->removeElement($skill);
+        return $this;
+    }
+
+    public function getLinks(): Collection
+    {
+        return $this->links;
+    }
+
+    public function addLink(UserLink $link): self
+    {
+        if (!$this->links->contains($link)) {
+            $this->links[] = $link;
+            $link->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeLink(UserLink $link): self
+    {
+        if ($this->links->removeElement($link)) {
+            // orphanRemoval handles deletion
+        }
         return $this;
     }
 }

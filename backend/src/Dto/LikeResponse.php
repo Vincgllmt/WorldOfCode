@@ -6,13 +6,21 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     title: "LikeResponse",
-    description: "Utilisateur ayant liké un post"
+    description: "Utilisateur ayant like un post"
 )]
 class LikeResponse
 {
-    #[OA\Property(type: "integer", example: 1)]
+    #[OA\Property(
+        description: "Identifiant de l'utilisateur",
+        type: "integer",
+        example: 1
+    )]
     public int $userId;
 
-    #[OA\Property(type: "string", example: "alice")]
+    #[OA\Property(
+        description: "Nom d'utilisateur",
+        type: "string",
+        example: "alice"
+    )]
     public string $username;
 }
