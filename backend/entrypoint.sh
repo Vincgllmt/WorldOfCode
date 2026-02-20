@@ -16,7 +16,7 @@ ROW_COUNT=$(php bin/console doctrine:query:sql "SELECT COUNT(*) FROM user;" | gr
 
 if [ "$ROW_COUNT" -eq 0 ]; then
   echo "📦 Base vide — chargement des fixtures..."
-  php bin/console doctrine:fixtures:load --no-interaction
+  php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction
 else
   echo "✅ Base déjà initialisée — pas de fixtures chargées."
 fi

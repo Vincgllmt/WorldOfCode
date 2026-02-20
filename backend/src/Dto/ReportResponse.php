@@ -6,25 +6,50 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     title: "ReportResponse",
-    description: "Représente un signalement de post"
+    description: "Represente un signalement de post"
 )]
 class ReportResponse
 {
-    #[OA\Property(type: "integer", example: 1)]
+    #[OA\Property(
+        description: "Identifiant unique du signalement",
+        type: "integer",
+        example: 1
+    )]
     public int $id;
 
-    #[OA\Property(type: "integer", example: 12)]
+    #[OA\Property(
+        description: "Identifiant du post signale",
+        type: "integer",
+        example: 12
+    )]
     public int $postId;
 
-    #[OA\Property(type: "string", example: "Spam / contenu inapproprié")]
+    #[OA\Property(
+        description: "Raison du signalement",
+        type: "string",
+        example: "Spam / contenu inapproprie",
+        nullable: true
+    )]
     public ?string $reason = null;
 
-    #[OA\Property(type: "integer", example: 5)]
+    #[OA\Property(
+        description: "Identifiant de l'utilisateur ayant signale",
+        type: "integer",
+        example: 5
+    )]
     public int $userId;
 
-    #[OA\Property(type: "string", example: "alice")]
+    #[OA\Property(
+        description: "Nom d'utilisateur de l'auteur du signalement",
+        type: "string",
+        example: "alice"
+    )]
     public string $username;
 
-    #[OA\Property(type: "string", example: "2025-09-18 16:45:00")]
+    #[OA\Property(
+        description: "Date de creation du signalement",
+        type: "string",
+        example: "2025-09-18 16:45:00"
+    )]
     public string $createdAt;
 }

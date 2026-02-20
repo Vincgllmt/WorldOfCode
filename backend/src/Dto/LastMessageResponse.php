@@ -6,29 +6,45 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     title: "LastMessageResponse",
-    description: "Represents the last message in a conversation"
+    description: "Represente le dernier message d'une conversation"
 )]
 class LastMessageResponse
 {
-    #[OA\Property(example: "123")] // string même si c'est un nombre
+    #[OA\Property(
+        description: "Identifiant du message",
+        type: "string",
+        example: "123"
+    )]
     public string $id;
 
-    #[OA\Property(example: "coucou")]
+    #[OA\Property(
+        description: "Contenu du message",
+        type: "string",
+        example: "coucou"
+    )]
     public string $body;
 
-    #[OA\Property(example: "2025-09-27 14:53:00")]
+    #[OA\Property(
+        description: "Date de creation du message",
+        type: "string",
+        example: "2025-09-27 14:53:00"
+    )]
     public string $createdAt;
 
     #[OA\Property(
+        description: "Auteur du message",
         type: "object",
         properties: [
-            new OA\Property(property: "id", type: "integer", example: 92),
-            new OA\Property(property: "username", type: "string", example: "joseph.victor")
+            new OA\Property(property: "id", description: "ID de l'auteur", type: "integer", example: 92),
+            new OA\Property(property: "username", description: "Nom d'utilisateur de l'auteur", type: "string", example: "joseph.victor")
         ]
     )]
     public array $sender;
 
-
-    #[OA\Property(example: false)]
+    #[OA\Property(
+        description: "Indique si le message a ete lu par l'utilisateur courant",
+        type: "boolean",
+        example: false
+    )]
     public bool $read;
 }
