@@ -1,8 +1,6 @@
 import { getCookie } from 'cookies-next'
 import type { UploadImageResponse } from '@/interfaces/post'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
-
 type UploadableImage = File | Blob
 
 export const uploadImage = async (file: UploadableImage): Promise<UploadImageResponse> => {
@@ -14,14 +12,15 @@ export const uploadImage = async (file: UploadableImage): Promise<UploadImageRes
 
   const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
-  const response = await fetch(`${API_URL}/api/upload`, {
+  // URL relative → même origine que woc.woc
+  const response = await fetch('/api/upload', {
     method: 'POST',
     headers,
     body: formData,
   })
 
   if (!response.ok) {
-    throw new Error('Erreur lors de l’upload de l’image')
+    throw new Error("Erreur lors de l'upload de l'image")
   }
 
   const data: UploadImageResponse = await response.json()

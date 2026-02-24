@@ -1,0 +1,8 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for config_nodes_for_registry
+- name: Redémarrer containerd
+  systemd:
+    name: containerd
+    state: restarted
+  become: true

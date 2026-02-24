@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  # CORRECTION : Localhost pour le NodePort
+  repository: registry.woc:32000/messagerie
+  pullPolicy: Always
+
+registry:
+  imagePullSecretName: woc-regcred
+
+service:
+  type: ClusterIP
+  port: 8081        # Port exposé dans Kubernetes (utilisé par le Nginx du Backend)
+  targetPort: 3000
+
+containerPort: 3000
+
+env:
+  PORT: "3000"
+  CORS_ORIGIN: "http://woc.production" # L'URL du Frontend qui appelle
+
+database:
+  secretName: woc-messagerie-db
+  host: "mysql" # Service local
+  port: "3306"
+  user: "application"
+  password: "password"
+  name: "projet_web"
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    # CORRECTION : On utilise le même domaine que l'API Backend
+    - host: api.production.woc
+      paths:
+        - path: /api/messaging
+          pathType: Prefix

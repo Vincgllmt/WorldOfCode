@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woc-messagerie.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "woc-messagerie.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-messagerie.name" . }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.registry.imagePullSecretName }}
+      containers:
+        - name: messagerie
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+          
+          volumeMounts:
+            - name: jwt-keys-vol
+              mountPath: /app/src/config/jwt
+              readOnly: true
+
+          env:
+            - name: PORT
+              value: {{ .Values.env.PORT | quote }}
+            - name: CORS_ORIGIN
+              value: {{ .Values.env.CORS_ORIGIN | quote }}
+
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_PASS
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_NAME
+
+      volumes:
+        - name: jwt-keys-vol
+          secret:
+            secretName: jwt-keys

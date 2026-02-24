@@ -1,0 +1,32 @@
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  repository: bitnamilegacy/mysql
+  tag: 9.4.0-debian-12-r1
+
+fullnameOverride: mysql
+
+architecture: standalone
+
+auth:
+  rootPassword: changeme
+  database: projet_web
+  username: application
+  password: password
+
+primary:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: longhorn-preprod
+
+resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+

@@ -1,0 +1,48 @@
+# Job pour créer les secrets (JWT) en PRÉPROD
+setup:secrets:preprod:
+  stage: deploy-infra 
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  environment:
+    name: preprod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - cluster/**/*
+  script:
+    - echo "--- Configuration du Namespace ---"
+    - kubectl create namespace preprod --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "--- Création du Secret JWT ---"
+    - |
+      kubectl create secret generic jwt-keys \
+        --namespace preprod \
+        --from-file=private.pem="$JWT_PRIVATE_KEY" \
+        --from-file=public.pem="$JWT_PUBLIC_KEY" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "Secret 'jwt-keys' configuré avec succès."
+
+# Job pour créer les secrets (JWT) en PRODUCTION
+setup:secrets:prod:
+  stage: deploy-infra
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  environment:
+    name: production
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+  script:
+    - kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "--- Création du Secret JWT ---"
+    - |
+      kubectl create secret generic jwt-keys \
+        --namespace production \
+        --from-file=private.pem="$JWT_PRIVATE_KEY" \
+        --from-file=public.pem="$JWT_PUBLIC_KEY" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "Secret 'jwt-keys' configuré avec succès."

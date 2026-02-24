@@ -5,12 +5,14 @@ import {
   updatePost,
   deletePost,
   getPostsByGroupId,
+  getPostsPaginated,
   sharePost,
   reportPost,
   unlikePost,
   likePost,
   getLikers,
 } from '@/services/postService'
+
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type {
@@ -49,11 +51,15 @@ export const usePost = (id: number | string) => {
 export const usePosts = (enabled = true) => {
   const { data: posts, isLoading, error } = useQuery<Post[]>({
     queryKey: postsKey,
-    queryFn: getAllPosts,
+    queryFn: async () => {
+      const page1 = await getPostsPaginated({ page: 1, limit: DEFAULT_PAGE_SIZE })
+      return page1.items
+    },
     enabled,
   })
   return { posts, isLoading, error }
 }
+
 
 export const useCreatePost = () => {
   const queryClient = useQueryClient()

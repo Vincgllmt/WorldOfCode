@@ -1,0 +1,31 @@
+replicaCount: 1
+
+image:
+  repository: registry.woc:32000/backend
+  pullPolicy: IfNotPresent
+
+registry:
+  imagePullSecretName: woc-regcred
+
+service:
+  type: ClusterIP
+  port: 8090
+
+containerPort: 8090
+
+database:
+  secretName: woc-db
+  url: "mysql://application:password@mysql:3306/projet_web"
+
+env:
+  # Regex qui autorise http://woc.production et https://woc.production
+  CORS_ALLOW_ORIGIN: "^https?://(woc\\.production|api\\.production\\.woc|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: api.production.woc
+      paths:
+        - path: /api
+          pathType: Prefix

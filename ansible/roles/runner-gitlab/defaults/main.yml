@@ -1,0 +1,35 @@
+---
+# defaults for roles/runner-gitlab
+
+# Where to find kubeconfig on the control-plane
+runner_kubeconfig:  
+
+# Namespace and basic params
+runner_namespace: gitlab-runner
+runner_name: gitlab-runner
+runner_image: gitlab/gitlab-runner:alpine
+runner_kubernetes_image: alpine:3.20
+runner_tags: ["k8s"]
+runner_description: k8s-gitlab-runner
+runner_privileged: true
+runner_run_untagged: true
+runner_locked: false
+
+# GitLab connectivity
+runner_gitlab_url: https://rendu-git.etna-alternance.net
+runner_registration_token: "glrt-5HbAVf7FzamLgck0R8KJ1G86MQpwOmU5bzgKdDozCnU6MjBqFA.01.1e1sg5krr"
+
+# Timeouts / waits
+runner_wait_timeout: 600s
+
+# Helm chart settings
+runner_helm_repo_name: gitlab
+runner_helm_repo_url: https://charts.gitlab.io
+runner_helm_chart_name: gitlab-runner
+runner_helm_release_name: gitlab-runner
+
+# Use default ServiceAccount and external RBAC (ClusterRoleBinding to cluster-admin)
+runner_serviceaccount_create: false
+runner_serviceaccount_name: default
+runner_rbac_create: false
+runner_clusterrolebinding_name: gitlab-runner-admin-binding

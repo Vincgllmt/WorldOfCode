@@ -1,0 +1,26 @@
+---
+
+- name: Set the hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Append cluster hosts entries to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ hostvars[item].ansible_host }} {{ hostvars[item].ansible_hostname }}"
+    insertafter: EOF
+    state: present
+  loop: "{{ kube_cluster }}"
+  when: hostvars[item].ansible_host is defined
+
+- name: Update cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name: "{{ dependencies_packages }}"
+    state: present
+    install_recommends: false
+

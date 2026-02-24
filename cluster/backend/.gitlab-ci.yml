@@ -1,0 +1,64 @@
+build:backend:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - backend/**/*
+        - cluster/backend/**/*
+  script:
+    - echo "Configuration de l'authentification Kaniko..."
+    # Utilisation de | pour éviter les erreurs de guillemets YAML
+    - |
+      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    
+    - echo "Build et Push vers ${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}"
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/backend" \
+        --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.prod" \
+        --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}" \
+        --insecure \
+        --skip-tls-verify \
+        --cache=true
+
+# 2. Déploiement automatique en PRÉPROD
+deploy:backend:preprod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: preprod
+  variables:
+    APP_NAMESPACE: "preprod"
+    RELEASE_NAME: "backend"
+    CHART_PATH: "cluster/backend"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/backend/values-preprod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - backend/**/* 
+        - cluster/backend/**/* 
+
+# 3. Déploiement manuel en PRODUCTION
+deploy:backend:prod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "backend"
+    CHART_PATH: "cluster/backend"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/backend/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      changes:
+        - backend/**/* 
+        - cluster/backend/**/* 
+      when: manual
+      

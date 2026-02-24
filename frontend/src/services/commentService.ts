@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const createComment = async (data: CreateCommentPayload): Promise<Comment> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/comment`, {
+  const res = await fetch(`${API_URL}/comment`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ export const createComment = async (data: CreateCommentPayload): Promise<Comment
 
 export const getAllComments = async (): Promise<Comment[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/comment`, {
+  const res = await fetch(`${API_URL}/comment`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}` }
@@ -34,7 +34,7 @@ export const getAllComments = async (): Promise<Comment[]> => {
 
 export const getCommentsByPostId = async (postId: string): Promise<Comment[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/comment/post/${postId}`, {
+  const res = await fetch(`${API_URL}/comment/post/${postId}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}` }
@@ -47,7 +47,7 @@ export const getCommentsByPostId = async (postId: string): Promise<Comment[]> =>
 
 export const deleteComment = async (id: string): Promise<void> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/comment/${id}`, {
+  const res = await fetch(`${API_URL}/comment/${id}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export const deleteComment = async (id: string): Promise<void> => {
 
 export const updateComment = async (data: UpdateCommentPayload): Promise<Comment> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/comment/${data.id}`, {
+  const res = await fetch(`${API_URL}/comment/${data.id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

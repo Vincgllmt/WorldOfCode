@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woc-backend.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "woc-backend.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-backend.name" . }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.registry.imagePullSecretName }}
+      
+      containers:
+        # --- Conteneur PHP-FPM ---
+        - name: php-fpm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 9000
+          env:
+            - name: APP_ENV
+              value: "prod"
+            - name: CORS_ALLOW_ORIGIN
+              value: {{ .Values.env.CORS_ALLOW_ORIGIN | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: woc-db
+                  key: DATABASE_URL
+            - name: MINIO_ENDPOINT
+              value: "http://minio.{{ .Release.Namespace }}.svc.cluster.local:9000"
+            - name: MINIO_ACCESS_KEY
+              value: "admin"
+            - name: MINIO_SECRET_KEY
+              value: "admin1234"
+            - name: MINIO_BUCKET
+              value: "uploads"
+            - name: MINIO_PUBLIC_URL
+              value: "http://minio-api.{{ if eq .Release.Namespace "production" }}woc{{ else }}preprod.woc{{ end }}/uploads"
+          
+          # Montage des clés pour PHP
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /var/www/backend/config/jwt
+              readOnly: true
+
+        # --- Conteneur Nginx ---
+        - name: nginx
+          image: nginx:stable-alpine
+          ports:
+            - containerPort: 8090
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "woc-backend.fullname" . }}-nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+        
+        - name: jwt-keys
+          secret:
+            secretName: jwt-keys

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woc-backoffice.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "woc-backoffice.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-backoffice.name" . }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.registry.imagePullSecretName }}
+      containers:
+      - name: woc-backoffice
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.containerPort }}
+        {{- if .Values.env }}
+        env:
+        {{- range $key, $value := .Values.env }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}

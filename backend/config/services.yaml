@@ -28,3 +28,5 @@ services:
       $key: "%env(MINIO_ACCESS_KEY)%"
       $secret: "%env(MINIO_SECRET_KEY)%"
       $bucket: "%env(MINIO_BUCKET)%"
+      $publicBaseUrl: "%env(MINIO_PUBLIC_URL)%"
+

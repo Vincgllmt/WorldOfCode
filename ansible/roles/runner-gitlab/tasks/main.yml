@@ -1,0 +1,9 @@
+---
+# tasks file for roles/runner-gitlab
+
+- name: Deploy GitLab Runner to Kubernetes
+  ansible.builtin.import_tasks:
+    file: deploy.yml
+  when: kube_master == ansible_hostname and ansible_hostname in groups[kube_controller_group]
+  tags: [runner, gitlab_runner]
+

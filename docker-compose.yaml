@@ -10,7 +10,6 @@ services:
       MINIO_SECRET_KEY: admin1234
       MINIO_BUCKET: uploads
       MINIO_PUBLIC_URL: http://localhost:9000/uploads
-
     volumes:
       - ./backend:/var/www/backend
       - jwt_keys:/var/www/backend/config/jwt
@@ -22,6 +21,7 @@ services:
     dns: # mail dev
       - 8.8.8.8 # mail dev
       - 1.1.1.1 # mail dev
+    command: ["symfony", "serve", "--no-tls", "--port=8090"]
 
   frontend:
     build: ./frontend

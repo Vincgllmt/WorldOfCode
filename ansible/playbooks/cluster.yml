@@ -1,0 +1,9 @@
+---
+
+- name: Deploy Kubernetes cluster
+  hosts: kubernetes
+  become: true
+  roles:
+    - kubernetes
+    - runner-gitlab
+  tags: [kubernetes]

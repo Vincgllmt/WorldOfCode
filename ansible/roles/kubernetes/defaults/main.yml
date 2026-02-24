@@ -1,0 +1,9 @@
+---
+# defaults file for roles/kubernetes
+
+kube_cluster: "{{ groups['kubernetes'] }}"
+kube_master: "{{ groups['k8s_controllers'][0] }}"
+kube_controller_group: k8s_controllers
+kube_worker_group: k8s_workers
+
+

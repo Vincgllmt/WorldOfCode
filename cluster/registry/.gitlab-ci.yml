@@ -1,0 +1,52 @@
+deploy:registry:
+  stage: deploy-services
+  when: manual
+  variables:
+    REGISTRY_NAMESPACE: "registry"
+    REGISTRY_RELEASE_NAME: "registry"
+    REGISTRY_CHART: "twuni/docker-registry"
+    # Version du chart Helm (pas l'image Docker)
+    REGISTRY_CHART_VERSION: "2.3.0"
+    # Tag de l'image Docker du registry (compatible avec le chart)
+    REGISTRY_IMAGE_TAG: "2.8.3"
+    REGISTRY_PASSWORD: "ijDFDfslk@!ade132"
+    REGISTRY_USER: "admin"
+  script:
+    - kubectl create namespace $REGISTRY_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+    - echo "Génération du mot de passe htpasswd"
+    - apk add --no-cache py3-pip py3-bcrypt
+    - |
+      cat > generate_htpasswd.py <<'PYCODE'
+      import bcrypt, os
+      user = os.environ["REGISTRY_USER"]
+      pwd = os.environ["REGISTRY_PASSWORD"].encode()
+      hashed = bcrypt.hashpw(pwd, bcrypt.gensalt(rounds=10)).decode()
+      with open("htpasswd.txt", "w") as f:
+          f.write(f"{user}:{hashed}\n")
+      PYCODE
+      python3 generate_htpasswd.py
+      export HTPASSWD=$(cat htpasswd.txt | sed 's/[$]/\\$/g')
+    
+    - echo "Ajout du repo Helm"
+    - helm repo add twuni https://twuni.github.io/docker-registry.helm
+    - helm repo update
+
+    - echo "Déploiement de la registry (chart $REGISTRY_CHART_VERSION, image $REGISTRY_IMAGE_TAG)"
+    - |
+      helm upgrade --install $REGISTRY_RELEASE_NAME $REGISTRY_CHART \
+        --namespace $REGISTRY_NAMESPACE \
+        --values cluster/registry/values.yaml \
+        --set image.tag=$REGISTRY_IMAGE_TAG \
+        --set secrets.htpasswd="$HTPASSWD" \
+        --version $REGISTRY_CHART_VERSION
+
+    - echo "Création/Mise à jour d'un secret client pour réutilisation (pull creds)"
+    - |
+      kubectl create secret generic registry-client-credentials \
+        --from-literal=username="$REGISTRY_USER" \
+        --from-literal=password="$REGISTRY_PASSWORD" \
+        -n "$REGISTRY_NAMESPACE" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - echo "Déploiement terminé !"

@@ -1,0 +1,51 @@
+deploy:mysql:preprod:
+  stage: deploy-services
+  environment:
+    name: preprod
+  variables:
+    APP_NAMESPACE: "preprod" 
+    RELEASE_NAME: "mysql"
+    MYSQL_CHART: "bitnami/mysql"
+    MYSQL_CHART_VERSION: "12.2.2"
+    VALUES_FILE: "cluster/mysql/values-preprod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - cluster/mysql/**/*
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo update
+    - echo "Déploiement de MySQL sur la PRÉPROD"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$MYSQL_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$MYSQL_CHART_VERSION" \
+        --values "$VALUES_FILE"
+
+deploy:mysql:prod:
+  stage: deploy-services
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "mysql"
+    MYSQL_CHART: "bitnami/mysql"
+    MYSQL_CHART_VERSION: "12.2.2"
+    VALUES_FILE: "cluster/mysql/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      changes:
+        - cluster/mysql/**/*
+      when: manual
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo update
+    - echo "Déploiement de MySQL sur la PRODUCTION"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$MYSQL_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$MYSQL_CHART_VERSION" \
+        --values "$VALUES_FILE"
+        

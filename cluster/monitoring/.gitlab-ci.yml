@@ -1,0 +1,51 @@
+variables:
+  MONITORING_NAMESPACE: "monitoring"
+  
+  # Configuration VictoriaMetrics
+  VM_CHART_REPO: "https://victoriametrics.github.io/helm-charts/"
+  VM_CHART_NAME: "vm/victoria-metrics-k8s-stack"
+  VM_RELEASE_NAME: "vm-stack"
+  VM_CHART_VERSION: "0.66.1" 
+
+  # Configuration Loki/Promtail
+  LOKI_CHART_REPO: "https://grafana.github.io/helm-charts"
+  LOKI_CHART_NAME: "grafana/loki-stack"
+  LOKI_RELEASE_NAME: "loki"
+  LOKI_CHART_VERSION: "2.10.3"
+
+# --- Job 1 : VictoriaMetrics & Grafana ---
+deploy:vm-stack:
+  stage: deploy-monitoring
+  when: manual
+  script:
+    - helm repo add vm $VM_CHART_REPO
+    - helm repo update vm
+    
+    # 2. Création Namespace
+    - kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    
+    # 3. Déploiement
+    - echo "Déploiement de VictoriaMetrics Stack..."
+    - |
+      helm upgrade --install "$VM_RELEASE_NAME" "$VM_CHART_NAME" \
+        --namespace "$MONITORING_NAMESPACE" \
+        --version "$VM_CHART_VERSION" \
+        --values cluster/monitoring/vm-stack-values.yaml
+    
+
+# --- Job 2 : Loki & Promtail ---
+deploy:loki-stack:
+  stage: deploy-monitoring
+  when: manual
+  script:
+    # 1. Ajout des repos
+    - helm repo add grafana $LOKI_CHART_REPO
+    - helm repo update grafana
+    
+    # 2. Déploiement
+    - echo "Déploiement de Loki Stack..."
+    - |
+      helm upgrade --install "$LOKI_RELEASE_NAME" "$LOKI_CHART_NAME" \
+        --namespace "$MONITORING_NAMESPACE" \
+        --version "$LOKI_CHART_VERSION" \
+        --values cluster/monitoring/loki-stack-values.yaml

@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const followUser = async (userId: number): Promise<FollowResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/follow/${userId}`, {
+  const res = await fetch(`${API_URL}/follow/${userId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ export const followUser = async (userId: number): Promise<FollowResponse> => {
 
 export const unfollowUser = async (userId: number): Promise<FollowResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/follow/${userId}`, {
+  const res = await fetch(`${API_URL}/follow/${userId}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const unfollowUser = async (userId: number): Promise<FollowResponse> => {
 
 export const getFollowers = async (userId: number): Promise<Follower[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/follow/${userId}/followers`, {
+  const res = await fetch(`${API_URL}/follow/${userId}/followers`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -46,7 +46,7 @@ export const getFollowers = async (userId: number): Promise<Follower[]> => {
 
 export const getFollowing = async (userId: number): Promise<Following[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/follow/${userId}/following`, {
+  const res = await fetch(`${API_URL}/follow/${userId}/following`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,

@@ -28,7 +28,7 @@ export const createPost = async (data: CreatePostPayload): Promise<Post> => {
   console.log('Token utilisé pour le POST :', token)
   console.log('Creating post with data:', data)
 
-  const res = await fetch(`${API_URL}/api/post`, {
+  const res = await fetch(`${API_URL}/post`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ type RawPaginatedPostsResponse = {
 
 export const getAllPosts = async (): Promise<Post[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post`, {
+  const res = await fetch(`${API_URL}/post`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}` }
@@ -74,7 +74,7 @@ export const getPostsPaginated = async (
   { page, limit }: FetchPostsPaginatedParams
 ): Promise<PaginatedPostsResponse> => {
   const token = getCookie('token')
-  const url = new URL(`${API_URL}/api/post`)
+  const url = new URL(`${API_URL}/post`)
   url.searchParams.set('page', String(page))
   url.searchParams.set('limit', String(limit))
 
@@ -103,14 +103,40 @@ export const getPostsPaginated = async (
 }
 
 export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
-  const posts = await getAllPosts()
-  // TODO: remplacer par un appel GET `${API_URL}/api/post/user/${userId}` quand disponible
-  return posts.filter((post) => post.authorId === userId)
+  // IMPORTANT: ne pas charger tous les posts (trop coûteux en prod).
+  // En attendant un endpoint dédié côté API, on “parcourt” la pagination globale
+  // et on filtre côté client, avec des bornes pour éviter un scan infini.
+
+  const PAGE_SIZE = 50
+  const MAX_PAGES = 20 // 20 * 50 = 1000 posts max scannés
+
+  const collected: Post[] = []
+  let page = 1
+  let totalPages = Infinity
+
+  while (page <= MAX_PAGES && page <= totalPages) {
+    const res = await getPostsPaginated({ page, limit: PAGE_SIZE })
+    totalPages = res.totalPages
+
+    for (const post of res.items) {
+      if (post.authorId === userId) collected.push(post)
+    }
+
+    // Si l'API ne renvoie pas totalPages (ou renvoie 0), on s'arrête dès que la page est “courte”.
+    if (!Number.isFinite(totalPages) || totalPages <= 0) {
+      if (res.items.length < PAGE_SIZE) break
+    }
+
+    page += 1
+  }
+
+  return collected
 }
+
 
 export const getPostById = async (id  : string): Promise<Post> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${id}`, {
+  const res = await fetch(`${API_URL}/post/${id}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -123,7 +149,7 @@ export const getPostById = async (id  : string): Promise<Post> => {
 }
 export const getPostsByGroupId = async (groupId: number): Promise<Post[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${groupId}/posts`, {
+  const res = await fetch(`${API_URL}/group/${groupId}/posts`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
@@ -137,7 +163,7 @@ export const getPostsByGroupId = async (groupId: number): Promise<Post[]> => {
 export const updatePost = async (  id: number,
   data: UpdatePostPayload): Promise<Post> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${id}`, {
+  const res = await fetch(`${API_URL}/post/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -153,7 +179,7 @@ export const updatePost = async (  id: number,
 
 export async function deletePost(id: number): Promise<void> {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${id}`, {
+  const res = await fetch(`${API_URL}/post/${id}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -166,7 +192,7 @@ export async function deletePost(id: number): Promise<void> {
 
 export const likePost = async (postId: number): Promise<void> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+  const res = await fetch(`${API_URL}/post/${postId}/like`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -178,7 +204,7 @@ export const likePost = async (postId: number): Promise<void> => {
 
 export const unlikePost = async (postId: number): Promise<void> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${postId}/like`, {
+  const res = await fetch(`${API_URL}/post/${postId}/like`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -190,7 +216,7 @@ export const unlikePost = async (postId: number): Promise<void> => {
 
 export const getLikers = async (postId: number): Promise<Liker[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${postId}/likes`, {
+  const res = await fetch(`${API_URL}/post/${postId}/likes`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -216,7 +242,7 @@ export const sharePost = async ({
   readonly payload: SharePostPayload
 }): Promise<Post> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/post/${postId}/share`, {
+  const res = await fetch(`${API_URL}/post/${postId}/share`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -231,7 +257,7 @@ export const sharePost = async ({
 
 export const reportPost = async (postId: number, reason?: string): Promise<void> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/report/post/${postId}`, {
+  const res = await fetch(`${API_URL}/report/post/${postId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

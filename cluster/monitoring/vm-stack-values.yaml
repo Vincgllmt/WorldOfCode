@@ -1,0 +1,83 @@
+# Installe les CRDs (Custom Resource Definitions) nécessaires
+vmServiceScrape:
+  enabled: true
+
+# 1. Configuration de l'instance VictoriaMetrics Single
+vmsingle:
+  enabled: true
+  spec:
+    retentionPeriod: "7d"
+    replicaCount: 1       # On reste simple
+    
+    storage:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 8Gi
+      storageClassName: longhorn # INDISPENSABLE
+
+# 2. Désactivation des composants Cluster (inutiles pour toi)
+vmcluster:
+  enabled: false
+
+# alertmanager:
+#   enabled: false
+
+# vmalert:
+#   enabled: false
+
+prometheus-node-exporter:
+  enabled: true
+  
+  # 1. On met à jour le Service Kubernetes
+  service:
+    port: 9110
+    targetPort: 9110
+  
+  # 2. On configure le conteneur
+  containerPort: 9110
+  hostPort: 9110
+  
+  # 3. On force l'argument de démarrage
+  extraArgs:
+    - --web.listen-address=:9110
+
+  # 4. On met à jour les sondes de vie (TRES IMPORTANT)
+  livenessProbe:
+    httpGet:
+      port: 9110
+      path: /
+  
+  readinessProbe:
+    httpGet:
+      port: 9110
+      path: /
+
+grafana:
+  enabled: true
+  
+  persistence:
+    enabled: true
+    storageClassName: "longhorn"
+    size: 5Gi
+
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki-datasource
+      # L'URL est : http://<nom-service-loki>.<namespace>.svc:3100
+      # Comme on a appelé la release "loki" dans la CI, le service s'appelle généralement "loki"
+      url: http://loki.monitoring.svc:3100 
+      access: proxy
+      isDefault: false
+      jsonData:
+        derivedFields:
+          # (Optionnel) Super puissant : permet de cliquer sur une traceID dans les logs 
+          # pour aller vers Tempo (si tu ajoutes du tracing plus tard)
+          - datasourceUid: tempo
+            matcherRegex: "traceID=(\\w+)"
+            name: TraceID
+            url: "$${__value.raw}"
+
+  defaultDashboardsEnabled: true

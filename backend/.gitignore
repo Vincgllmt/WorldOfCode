@@ -26,3 +26,8 @@ coverage.xml
 coverage-output.txt
 ###< phpunit/phpunit ###
 
+/node_modules
+
+/config/jwt/private.pem
+/config/jwt/public.pem
+

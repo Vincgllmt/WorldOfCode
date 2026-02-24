@@ -1,10 +1,14 @@
 nelmio_cors:
     defaults:
-        allow_origin: ['http://localhost:3000', 'http://localhost:2999', 'http://localhost:3001']
+        # 1. Autoriser l'interprétation des regex dans allow_origin
+        origin_regex: true
+        # 2. Utiliser la variable d'environnement définie dans Kubernetes
+        allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
         allow_methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
         allow_headers: ['Content-Type', 'Authorization']
         allow_credentials: true
         max_age: 3600
 
     paths:
-        '^/': null
+        # 3. Appliquer la règle à toutes les routes API
+        '^/api/': ~

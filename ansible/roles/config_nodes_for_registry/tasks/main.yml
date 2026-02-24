@@ -1,0 +1,5 @@
+---
+- name: Config node for registry
+  ansible.builtin.import_tasks:
+    file: deploy.yml
+  tags: [registry]

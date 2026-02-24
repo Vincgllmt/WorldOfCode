@@ -1,0 +1,34 @@
+replicaCount: 1
+
+image:
+  repository: registry.woc:32000/frontend
+  pullPolicy: IfNotPresent
+
+registry:
+  imagePullSecretName: woc-regcred
+
+service:
+  type: ClusterIP
+  port: 3000
+
+containerPort: 3000
+
+env:
+  # CORRECTION : Pointe vers l'Ingress du Backend
+  NEXT_PUBLIC_API_URL: "http://api.production.woc/api"
+  
+  # Pointe vers l'Ingress du Frontend (soi-même)
+  NEXT_PUBLIC_WOC_URL: "http://woc.production"
+  
+  # CORRECTION : Le socket passe par le Nginx du Backend
+  NEXT_PUBLIC_SOCKET_URL: "http://api.production.woc"
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: woc.production
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

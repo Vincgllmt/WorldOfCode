@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: runner_gitlab
+  author: woc
+  description: Deploy GitLab Runner on Kubernetes using the Kubernetes executor
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: Ubuntu
+      versions: ["focal", "jammy"]
+dependencies: []
+

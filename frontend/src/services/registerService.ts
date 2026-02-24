@@ -3,7 +3,7 @@ import { AuthenticatedUser, RegisterCredentials } from "@/interfaces/Authentific
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const register = async (credentials: RegisterCredentials): Promise<AuthenticatedUser> => {
-    const res = await fetch(`${API_URL}/api/register`, {
+    const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),

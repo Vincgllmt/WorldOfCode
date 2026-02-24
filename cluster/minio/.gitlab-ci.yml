@@ -1,0 +1,50 @@
+deploy:minio:preprod:
+  stage: deploy-services
+  environment:
+    name: preprod
+  variables:
+    APP_NAMESPACE: "preprod"
+    RELEASE_NAME: "minio"
+    MINIO_CHART: "bitnami/minio"
+    MINIO_CHART_VERSION: "17.0.21"
+    VALUES_FILE: "cluster/minio/values-preprod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - cluster/minio/**/*
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo update
+    - echo "Déploiement de MinIO sur la PRÉPROD"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$MINIO_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$MINIO_CHART_VERSION" \
+        --values "$VALUES_FILE"
+
+deploy:minio:prod:
+  stage: deploy-services
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "minio"
+    MINIO_CHART: "bitnami/minio"
+    MINIO_CHART_VERSION: "17.0.21"
+    VALUES_FILE: "cluster/minio/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      changes:
+        - cluster/minio/**/*
+      when: manual
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo update
+    - echo "Déploiement de MinIO sur la PRODUCTION"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$MINIO_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$MINIO_CHART_VERSION" \
+        --values "$VALUES_FILE"

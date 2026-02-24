@@ -1,0 +1,16 @@
+deploy:longhorn:
+  stage: deploy-infra
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production" || $CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - woc/cluster/longhorn/**/*
+      when: manual
+  script:
+    - helm repo add longhorn https://charts.longhorn.io
+    - helm repo update
+    - >
+      helm upgrade --install longhorn longhorn/longhorn 
+      -n longhorn-system --create-namespace --version 1.10.0 
+      -f cluster/longhorn/values.yaml
+    - kubectl apply -f cluster/longhorn/templates/longhorn-ui-ingress.yml -n longhorn-system
+    - kubectl apply -f cluster/longhorn/templates/sc-preprod.yml

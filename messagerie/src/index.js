@@ -16,6 +16,7 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 const server = http.createServer();
 
 const io = new Server(server, {
+    path: "/socket.io", // Chemin par défaut, pas besoin de le spécifier
     cors: { origin: CORS_ORIGIN }
 });
 

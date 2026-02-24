@@ -1,0 +1,63 @@
+# 1. Build avec Kaniko
+build:messagerie:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - messagerie/**/*
+        - cluster/messagerie/**/*
+  script:
+    - echo "Configuration de l'authentification Kaniko..."
+    - |
+      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    
+    - echo "Build et Push vers ${REGISTRY_HOST}/messagerie:${CI_COMMIT_SHORT_SHA}"
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/messagerie" \
+        --dockerfile "${CI_PROJECT_DIR}/messagerie/Dockerfile.prod" \
+        --destination "${REGISTRY_HOST}/messagerie:${CI_COMMIT_SHORT_SHA}" \
+        --insecure \
+        --skip-tls-verify \
+        --cache=true
+
+# 2. Déploiement en PRÉPROD
+deploy:messagerie:preprod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: preprod
+  variables:
+    APP_NAMESPACE: "preprod"
+    RELEASE_NAME: "messagerie"
+    CHART_PATH: "cluster/messagerie"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/messagerie/values-preprod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+      changes:
+        - messagerie/**/*
+        - cluster/messagerie/**/*
+
+# 3. Déploiement en PRODUCTION
+deploy:messagerie:prod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "messagerie"
+    CHART_PATH: "cluster/messagerie"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/messagerie/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      changes:
+        - messagerie/**/*
+        - cluster/messagerie/**/*
+      when: manual

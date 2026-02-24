@@ -6,7 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const getGroups = async (): Promise<Group[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group`, {
+  const res = await fetch(`${API_URL}/group`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
@@ -19,7 +19,7 @@ export const getGroups = async (): Promise<Group[]> => {
 
 export const getGroupById = async (id: number): Promise<Group>  => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${id}`, {
+  const res = await fetch(`${API_URL}/group/${id}`, {
     headers: {
       'Content-Type': 'application/json',
        Authorization: `Bearer ${token}`
@@ -32,7 +32,7 @@ export const getGroupById = async (id: number): Promise<Group>  => {
 
 export const createGroup = async (data: CreateGroupPayload): Promise<Group> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group`, {
+  const res = await fetch(`${API_URL}/group`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ export const createGroup = async (data: CreateGroupPayload): Promise<Group> => {
 
 export const updateGroup = async (data: UpdateGroupPayload): Promise<Group> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${data.id}`, {
+  const res = await fetch(`${API_URL}/group/${data.id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ export const updateGroup = async (data: UpdateGroupPayload): Promise<Group> => {
 
 export const deleteGroup = async (id: number): Promise<void> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${id}`, {
+  const res = await fetch(`${API_URL}/group/${id}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export const deleteGroup = async (id: number): Promise<void> => {
 
 export async function joinGroup(id:number): Promise<void> {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${id}/join`, {
+  const res = await fetch(`${API_URL}/group/${id}/join`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export async function joinGroup(id:number): Promise<void> {
 
 export async function leaveGroup(id: number): Promise<void> {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/group/${id}/join`, {
+  const res = await fetch(`${API_URL}/group/${id}/join`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

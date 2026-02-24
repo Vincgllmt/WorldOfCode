@@ -1,0 +1,35 @@
+FROM php:8.3-fpm
+
+WORKDIR /var/www/backend
+
+RUN apt-get update && apt-get install -y \
+    git unzip libicu-dev libzip-dev libonig-dev \
+ && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copier d'abord composer.* pour le cache
+COPY composer.json composer.lock ./
+
+# Copier le reste du code AVANT composer install
+COPY . .
+
+ENV APP_ENV=prod APP_DEBUG=0
+
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-scripts
+
+COPY entrypoint-prod.sh /usr/local/bin/entrypoint-prod.sh
+RUN chmod +x /usr/local/bin/entrypoint-prod.sh
+
+RUN mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.orig
+
+COPY www.conf /usr/local/etc/php-fpm.d/www.conf
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
+CMD ["php-fpm"]
+
+EXPOSE 9000

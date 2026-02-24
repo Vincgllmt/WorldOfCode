@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090"
 
 export async function getConversations(): Promise<Conversation[]> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/messaging/conversations`, {
+    const res = await fetch(`${API_URL}/messaging/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -15,7 +15,7 @@ export async function getConversations(): Promise<Conversation[]> {
 
 export async function getConversationById(id: string): Promise<Conversation> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/messaging/conversations/${id}`, {
+    const res = await fetch(`${API_URL}/messaging/conversations/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -27,7 +27,7 @@ export async function createConversation(
     payload: CreateConversationPayload
 ): Promise<Conversation> {
     const token = getCookie("token")
-    const res = await fetch(`${API_URL}/api/messaging/conversations`, {
+    const res = await fetch(`${API_URL}/messaging/conversations`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -43,7 +43,7 @@ export async function createConversation(
 
 export async function markConversationAsRead(conversationId: string): Promise<void> {
     const token = getCookie("token")
-    await fetch(`${API_URL}/api/messaging/conversations/${conversationId}/read`, {
+    await fetch(`${API_URL}/messaging/conversations/${conversationId}/read`, {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${token}`,

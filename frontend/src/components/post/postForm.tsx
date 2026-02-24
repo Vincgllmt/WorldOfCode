@@ -11,10 +11,19 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import RichTextEditor from './RichTextEditor'
+// 1. Importez dynamic de Next.js
+import dynamic from 'next/dynamic' 
 import { Controller, usePostFormController } from '@/hooks/usePostFormController'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check } from 'lucide-react'
+
+// 2. Supprimez l'import statique : import RichTextEditor from './RichTextEditor'
+
+// 3. Créez l'import dynamique avec ssr: false
+const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
+  ssr: false, // Ceci empêche le serveur de toucher à ce composant
+  loading: () => <div className="h-64 border rounded-md bg-muted animate-pulse" /> // Optionnel: un placeholder pendant le chargement
+})
 
 type PostFormProps = {
   readonly presetGroupId?: number

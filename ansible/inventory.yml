@@ -1,0 +1,15 @@
+all:
+  children:
+    kubernetes:
+      children:
+        k8s_controllers:
+          hosts:
+            kube-controller-01:
+              ansible_host: 51.178.136.131
+        k8s_workers:
+          hosts:
+            kube-worker-01:
+              ansible_host: 51.178.143.54
+            kube-worker-02:
+              ansible_host: 51.178.141.115
+

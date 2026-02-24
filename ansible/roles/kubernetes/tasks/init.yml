@@ -1,0 +1,54 @@
+---
+# MASTEER
+- name: Install K3s server
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | \
+    INSTALL_K3S_EXEC="--tls-san {{ ansible_host }}" sh -
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for server ready
+  ansible.builtin.wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: 60
+
+- name: Read server join token
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: token_file
+
+- name: Set join token fact
+  ansible.builtin.set_fact:
+    k3s_token: "{{ token_file['content'] | b64decode | trim }}"
+    cacheable: yes # accès var pour les workers
+
+- name: S'assurer que le dossier .kube existe
+  file:
+    path: /root/.kube
+    state: directory
+    mode: '0700'
+
+- name: Copier le fichier de configuration K3s
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /root/.kube/config
+    owner: root
+    group: root
+    mode: '0600'
+    remote_src: true
+
+- name: Remplacer l’adresse du serveur API par l’adresse publique du master
+  replace:
+    path: /root/.kube/config
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: 'https://{{ ansible_host }}:6443'
+  when: ansible_host is defined
+
+- name: Vérifier l’accès au cluster
+  command: kubectl get nodes
+  register: kubectl_check
+  ignore_errors: true
+
+- name: Afficher le résultat
+  debug:
+    var: kubectl_check.stdout

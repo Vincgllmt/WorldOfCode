@@ -1,0 +1,46 @@
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  repository: bitnamilegacy/minio
+clientImage:
+  repository: bitnamilegacy/minio-client
+
+mode: standalone
+
+auth:
+  rootUser: admin
+  rootPassword: admin1234
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 10Gi
+
+ingress:
+  enabled: true
+  ingressClassName: "traefik"
+  hostname: minio-api.woc
+  path: /
+  pathType: Prefix
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+  tls: false
+
+
+console:  
+  image:
+    repository: bitnamilegacy/minio-object-browser
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: "traefik"
+    hostname: minio.woc.production
+    path: /
+    pathType: Prefix
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: web
+    tls: false
+
+

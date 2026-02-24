@@ -7,7 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
  * Authentifie un utilisateur et enregistre le token dans un cookie
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthenticatedUser> => {
-    const res = await fetch(`${API_URL}/api/authenticate`, {
+    const res = await fetch(`${API_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
@@ -22,7 +22,7 @@ export const login = async (credentials: LoginCredentials): Promise<Authenticate
     setCookie('token', token, { path: '/' })
 
     // ✅ on récupère maintenant les infos utilisateur
-    const meRes = await fetch(`${API_URL}/api/me`, {
+    const meRes = await fetch(`${API_URL}/me`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -44,7 +44,7 @@ export const getMe = async (): Promise<AuthenticatedUser> => {
     const token = getCookie('token')
     if (!token) throw new Error('Aucun token trouvé')
 
-    const res = await fetch(`${API_URL}/api/me`, {
+    const res = await fetch(`${API_URL}/me`, {
         headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -66,7 +66,7 @@ export const logout = () => {
 
 
 export const requestPasswordReset = async (email: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/reset-password/request`, {
+    const res = await fetch(`${API_URL}/reset-password/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -79,7 +79,7 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
 
 
 export const resetPassword = async (token: string, password: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/reset-password/confirm`, {
+    const res = await fetch(`${API_URL}/reset-password/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),

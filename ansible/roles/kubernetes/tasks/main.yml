@@ -1,0 +1,25 @@
+---
+# tasks file for roles/kubernetes
+
+- name: Cluster prep
+  ansible.builtin.import_tasks:
+    file: prereq.yml
+  tags: [prereq]
+
+- name: Init cluster
+  ansible.builtin.import_tasks:
+    file: init.yml
+  when: kube_master == ansible_hostname and ansible_hostname in groups[kube_controller_group]
+  tags: [init]
+
+- name: Gather facts from all hosts
+  ansible.builtin.setup:
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ ansible_play_hosts_all }}"
+
+- name: Join workers
+  ansible.builtin.import_tasks:
+    file: join.yml
+  when: ansible_hostname in groups[kube_worker_group]
+  tags: [join]

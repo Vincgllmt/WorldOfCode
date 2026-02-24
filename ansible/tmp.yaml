@@ -1,0 +1,22 @@
+apiVersion: v1
+items:
+- apiVersion: longhorn.io/v1beta2
+  kind: BackupTarget
+  metadata:
+    creationTimestamp: "2025-11-04T10:18:49Z"
+    deletionGracePeriodSeconds: 0
+    deletionTimestamp: "2025-11-04T10:38:27Z"
+    finalizers: []
+    generation: 2
+    name: default
+    namespace: longhorn
+    resourceVersion: "4206"
+    uid: a2634729-af8f-40ce-beeb-2ee47a827c50
+  spec:
+    backupTargetURL: ""
+    credentialSecret: ""
+    pollInterval: 5m0s
+    syncRequestedAt: null
+kind: List
+metadata:
+  resourceVersion: ""

@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "woc-backend.fullname" . }}-nginx-config
+data:
+  nginx.conf: |
+    server {
+        listen 8090;
+        server_name _;
+
+        client_max_body_size 10M;
+
+        root /var/www/backend/public;
+        index index.php;
+
+        # 1) Proxy vers la Messagerie (Socket.IO)
+        location /api/messaging/socket.io/ {
+            # CORRECTION : On pointe vers le service "messagerie" dans le namespace courant
+            proxy_pass http://messagerie.{{ .Release.Namespace }}.svc.cluster.local:8081/socket.io/;
+            proxy_http_version 1.1;
+
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+        }
+
+        # 2) Le reste vers Symfony (PHP-FPM)
+        location / {
+            try_files $uri /index.php$is_args$args;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $document_root;
+        }
+    }

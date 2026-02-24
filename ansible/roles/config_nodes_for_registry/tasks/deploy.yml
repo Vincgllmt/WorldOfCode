@@ -1,0 +1,80 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for config_nodes_for_registry
+- name: Appliquer la configuration de CoreDNS pour ajouter registry.woc
+  k8s:
+    state: patched
+    api_version: v1
+    kind: ConfigMap
+    name: coredns
+    namespace: kube-system
+    patch: |
+      apiVersion: v1
+      data:
+        Corefile: |
+          .:53 {
+              errors
+              health {
+                 lameduck 5s
+              }
+              ready
+              kubernetes cluster.local in-addr.arpa ip6.arpa {
+                 pods insecure
+                 fallthrough in-addr.arpa ip6.arpa
+                 ttl 30
+              }
+              prometheus :9153
+              hosts {
+                  192.168.121.110 registry.woc.svc.cluster.local
+                  fallthrough
+              }
+              forward . 8.8.8.8 1.1.1.1 {
+                 max_concurrent 1000
+              }
+              cache 30 {
+                 disable success cluster.local
+                 disable denial cluster.local
+              }
+              loop
+              reload
+              loadbalance
+          }
+      kind: ConfigMap
+      metadata:
+        name: coredns
+        namespace: kube-system
+
+
+- name: Copier le fichier config.toml sur chaque nœud
+  copy:
+    src: config.toml
+    dest: /etc/containerd/config.toml
+    mode: '0644'
+  become: true
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['all'] }}"
+
+- name: Configurer containerd pour accepter registry.woc en HTTP
+  blockinfile:
+    path: /etc/containerd/config.toml
+    marker: "# Ansible Block: Configuration pour registry.woc"
+    block: |
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.woc"]
+        endpoint = ["http://registry.woc"]
+        insecure_skip_verify = true
+  become: true
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['all'] }}"
+
+- name: Créer un secret Docker pour registry.woc dans le namespace backend
+  k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: registry-woc-secret
+    namespace: backend
+    data:
+      .dockerconfigjson: "{{ lookup('file', docker_config_path) | b64encode }}"
+    type: kubernetes.io/dockerconfigjson
+  become: true
+  delegate_to: localhost

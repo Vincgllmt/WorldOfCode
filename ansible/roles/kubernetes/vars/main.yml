@@ -1,0 +1,14 @@
+---
+# vars file for roles/kubernetes
+
+dependencies_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg2
+  - libseccomp2
+  - python3-yaml
+  - python3-pip
+  - python3-kubernetes
+  - open-iscsi
+
