@@ -1,142 +1,48 @@
+variables:
+  REGISTRY_HOST: "registry-docker-registry.registry.svc.cluster.local:5000"
+  # Désactive le TLS (car on est en interne)
+  DOCKER_TLS_CERTDIR: ""
+  
+  # Indique au client Docker de contacter le service dind via le réseau sur le port 2375
+  DOCKER_HOST: "tcp://docker:2375"
+  
 stages:
-  - lint
-  - test
+  - test             # Pour le futur (tests unitaires, linting)
+  - build            # Tous les builds Docker en parallèle
+  - deploy-infra     # Longhorn en premier
+  - deploy-services  # MySQL, MinIO, Registry en parallèle
+  - deploy-apps      # Backend, Frontend, Messagerie, Backoffice en parallèle
+  - deploy-monitoring
+  - deploy-n8n-ollama
 
-# ===================================
-# JOB 1: LINTER (Frontend & Backoffice)
-# ===================================
-lint:frontend-backoffice:
-  stage: lint
-  image: node:20-alpine # Écrase l'image K8s globale
-  cache:
-    key:
-      files:
-        - frontend/package-lock.json
-        - backoffice/package-lock.json
-    paths:
-      - .npm
-  before_script: # Écrase le before_script K8s global
-    - npm config set cache .npm --global
+image: alpine/k8s:1.31.13
+
+before_script:
+  - set -e
+  - echo "Configuration de l'accès à Kubernetes..."
+  - cat $KUBECONFIG | base64 -d > /tmp/decoded_kubeconfig
+  - export KUBECONFIG=/tmp/decoded_kubeconfig
+
+.deploy_helm_template:
   script:
-    # Lint Frontend
-    - echo "🔍 Linting Frontend..."
-    - cd frontend
-    - npm ci
-    - |
-      set +e
-      npm run lint 2>&1 | tee lint-output.txt
-      LINT_EXIT_CODE=$?
-      set -e
-      
-      # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
-      if [ $LINT_EXIT_CODE -eq 2 ]; then
-        echo "❌ Erreur de configuration du linter Frontend"
-        exit 1
-      elif [ $LINT_EXIT_CODE -eq 1 ]; then
-        # Vérifier si ce sont des erreurs ou juste des warnings
-        if grep -E "^.*error\s+" lint-output.txt > /dev/null; then
-          echo "❌ Linter Frontend a détecté des ERREURS"
-          cat lint-output.txt
-          exit 1
-        else
-          echo "⚠️  Linter Frontend a des warnings (acceptés)"
-        fi
-      else
-        echo "✅ Linter Frontend OK"
-      fi
-    - cd ..
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - USER_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.username}')
+    - PASS_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.password}')
+    - REGISTRY_USER=$(echo -n "$USER_B64" | base64 -d)
+    - REGISTRY_PASSWORD=$(echo -n "$PASS_B64" | base64 -d)
+    - kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-server="$REGISTRY_HOST" --docker-username="$REGISTRY_USER" --docker-password="$REGISTRY_PASSWORD" -n "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec les valeurs $VALUES_FILE"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$CI_COMMIT_SHORT_SHA
 
-    # Lint Backoffice
-    - echo "🔍 Linting Backoffice..."
-    - cd backoffice
-    - npm ci
-    - |
-      set +e
-      npm run lint 2>&1 | tee lint-output.txt
-      LINT_EXIT_CODE=$?
-      set -e
-      
-      # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
-      if [ $LINT_EXIT_CODE -eq 2 ]; then
-        echo "❌ Erreur de configuration du linter Backoffice"
-        exit 1
-      elif [ $LINT_EXIT_CODE -eq 1 ]; then
-        # Vérifier si ce sont des erreurs ou juste des warnings
-        if grep -E "^.*error\s+" lint-output.txt > /dev/null; then
-          echo "❌ Linter Backoffice a détecté des ERREURS"
-          cat lint-output.txt
-          exit 1
-        else
-          echo "⚠️  Linter Backoffice a des warnings (acceptés)"
-        fi
-      else
-        echo "✅ Linter Backoffice OK"
-      fi
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
-  allow_failure: false
-
-# ===================================
-# JOB 2: COVERAGE (Backend Symfony)
-# ===================================
-coverage:backend:
-  stage: test
-  image: php:8.2-cli # Écrase l'image K8s globale
-  cache:
-    key:
-      files:
-        - backend/composer.lock
-    paths:
-      - backend/vendor/
-  before_script: # Écrase le before_script K8s global
-    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev
-    - docker-php-ext-install zip pdo pdo_mysql pdo_sqlite
-    # Installer Xdebug pour le coverage
-    - pecl install xdebug
-    - docker-php-ext-enable xdebug
-    # Installer Composer
-    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-    - cd backend
-    - composer install --no-interaction --prefer-dist --optimize-autoloader
-  script:
-    - echo "🗄️ Setting up test database..."
-    # Créer la base de données de test
-    - php bin/console doctrine:database:drop --force --env=test || true
-    - php bin/console doctrine:database:create --env=test
-    - php bin/console doctrine:schema:create --env=test
-
-    - echo "🧪 Running PHPUnit with Coverage..."
-    # Exécuter PHPUnit avec coverage et capturer la sortie
-    - |
-      XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-text --colors=never 2>&1 | tee coverage-output.txt
-      EXIT_CODE=${PIPESTATUS[0]}
-
-    # Afficher le résumé du coverage
-    - cat coverage-output.txt
-
-    # Vérifier s'il y a des ERREURS (tests échoués)
-    - |
-      if [ $EXIT_CODE -ne 0 ]; then
-        if grep -iE "(FAILURES|ERRORS|Exception|Fatal error)" coverage-output.txt; then
-          echo "❌ Tests PHPUnit ont échoué avec des ERREURS"
-          exit 1
-        fi
-      fi
-
-    # Si c'est juste des warnings ou des notices, on accepte
-    - echo "✅ Coverage Backend OK (warnings/notices acceptés)"
-  coverage: '/^\s*Lines:\s*\d+\.\d+\%/'
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: backend/coverage.xml
-    paths:
-      - backend/coverage-output.txt
-    expire_in: 1 week
-  rules:
-    - when: never # refacto des TU avant
-    #- if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    #- if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
-  allow_failure: false
+include:
+  - local: cluster/longhorn/.gitlab-ci.yml
+  - local: cluster/jwt/.gitlab-ci.yml
+  - local: cluster/mysql/.gitlab-ci.yml
+  - local: cluster/registry/.gitlab-ci.yml
+  - local: cluster/minio/.gitlab-ci.yml
+  - local: cluster/monitoring/.gitlab-ci.yml
+  - local: cluster/backend/.gitlab-ci.yml
+  - local: cluster/frontend/.gitlab-ci.yml
+  - local: cluster/messagerie/.gitlab-ci.yml
+  - local: cluster/backoffice/.gitlab-ci.yml
+  - local: cluster/n8n/.gitlab-ci.yml
