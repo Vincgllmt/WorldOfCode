@@ -41,7 +41,12 @@ deploy:backend:preprod:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
       changes:
         - backend/**/* 
-        - cluster/backend/**/* 
+        - cluster/backend/**/*
+      when: on_success
+    
+    - if: '$CI_COMMIT_BRANCH == "preprod"'
+      when: manual
+      allow_failure: true
 
 # 3. Déploiement manuel en PRODUCTION
 deploy:backend:prod:

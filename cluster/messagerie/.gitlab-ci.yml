@@ -38,10 +38,14 @@ deploy:messagerie:preprod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/messagerie/values-preprod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "preprod"'
       changes:
-        - messagerie/**/*
-        - cluster/messagerie/**/*
+        - backend/**/* - cluster/backend/**/*
+      when: on_success
+    
+    - if: '$CI_COMMIT_BRANCH == "preprod"'
+      when: manual
+      allow_failure: true
 
 # 3. Déploiement en PRODUCTION
 deploy:messagerie:prod:
