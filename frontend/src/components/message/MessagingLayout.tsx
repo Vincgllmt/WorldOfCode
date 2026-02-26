@@ -19,9 +19,16 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
+import { useOnlineUsers } from "@/hooks/useOnlineUsers"
 
-function getMessagePreview(body: string, isMine: boolean): string {
-    if (body.startsWith('Appel vidéo')) {
+function getMessagePreview(body: string, isMine: boolean, type?: string): string {
+    if (type === 'missed_call') {
+        if (body === 'rejected') return isMine ? '📞 Appel refusé' : '📞 Appel refusé'
+        if (body === 'timeout') return isMine ? '📞 Appel sans réponse' : '📞 Appel manqué'
+        if (body === 'cancelled') return isMine ? '📞 Appel annulé' : '📞 Appel manqué'
+        return '📞 Appel manqué'
+    }
+    if (type === 'call' || body.startsWith('Appel vidéo')) {
         return `📞 ${body}`
     }
     if (body.includes('shared-post-card')) {
@@ -57,6 +64,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
 
     const { contacts, isLoading: isLoadingContacts } = useContacts()
     const createConversation = useCreateConversation()
+    const { isOnline } = useOnlineUsers()
 
     // IDs des contacts avec qui une conversation directe existe déjà
     const existingDirectContactIds = useMemo(() => {
@@ -226,15 +234,20 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                             : "hover:bg-muted/50 border-l-3 border-l-transparent"
                                     )}
                                 >
-                                    {/* Avatar */}
-                                    <Avatar className="h-12 w-12 shrink-0">
-                                        <AvatarFallback className={clsx(
-                                            "text-sm font-semibold",
-                                            isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                                        )}>
-                                            {initials}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    {/* Avatar + pastille en ligne */}
+                                    <div className="relative shrink-0">
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarFallback className={clsx(
+                                                "text-sm font-semibold",
+                                                isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                                            )}>
+                                                {initials}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        {conv.type === 'direct' && otherParticipants.length > 0 && isOnline(otherParticipants[0].id) && (
+                                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                                        )}
+                                    </div>
 
                                     {/* Contenu */}
                                     <div className="flex-1 min-w-0">
@@ -259,7 +272,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                                 "text-sm truncate",
                                                 isUnread ? "font-semibold text-foreground" : "text-muted-foreground"
                                             )}>
-                                                {conv.lastMessage ? getMessagePreview(conv.lastMessage.body, conv.lastMessage.sender?.id === user?.id) : "Aucun message"}
+                                                {conv.lastMessage ? getMessagePreview(conv.lastMessage.body, conv.lastMessage.sender?.id === user?.id, conv.lastMessage.type) : "Aucun message"}
                                             </span>
                                             {isUnread && (
                                                 <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">

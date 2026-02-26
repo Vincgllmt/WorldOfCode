@@ -63,6 +63,43 @@ async function saveCallEndMessage(conversationId) {
 }
 
 /**
+ * Sauvegarde un message "Appel manqué" quand un appel n'aboutit pas (refusé, timeout, annulé)
+ * body = la raison brute ("rejected" | "timeout" | "cancelled"), le frontend gère l'affichage
+ */
+async function saveMissedCallMessage(conversationId, callerId, reason) {
+    const id = crypto.randomUUID();
+    const created = new Date();
+
+    try {
+        await pool.execute(
+            `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [id, conversationId, callerId, reason, "missed_call", created]
+        );
+
+        await pool.execute(
+            `UPDATE msg_conversations SET last_message_at = ? WHERE id = ?`,
+            [created, conversationId]
+        );
+
+        const payload = {
+            id,
+            conversation_id: conversationId,
+            sender_id: callerId,
+            body: reason,
+            type: "missed_call",
+            created_at: created.toISOString(),
+        };
+
+        if (_io) {
+            _io.to(conversationId).emit("message_created", payload);
+        }
+    } catch (err) {
+        console.error("❌ saveMissedCallMessage error:", err);
+    }
+}
+
+/**
  * Gestion des handlers vidéo (MediaSoup)
  */
 export function registerVideoHandlers(socket, io) {
@@ -74,6 +111,34 @@ export function registerVideoHandlers(socket, io) {
     }
 
     // ─── Signalisation d'appel ───
+
+    // À la connexion, vérifier si un appel entrant est en attente pour cet utilisateur
+    const connectedUserId = Number(socket.data.userId);
+    (async () => {
+        for (const [convId, pending] of pendingCalls.entries()) {
+            // Chercher si cet utilisateur est le destinataire d'un appel en attente
+            // (l'appelant est pending.callerId, donc si connectedUserId !== callerId, c'est le destinataire)
+            if (pending.callerId !== connectedUserId) {
+                // Vérifier que cet utilisateur est bien participant de cette conversation
+                try {
+                    const [parts] = await pool.execute(
+                        "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ? AND user_id = ?",
+                        [convId, connectedUserId]
+                    );
+                    if (parts.length > 0) {
+                        console.log(`📞 Re-sending incoming_call to reconnected user ${connectedUserId} for conv ${convId}`);
+                        socket.emit("incoming_call", {
+                            conversation_id: convId,
+                            callerId: pending.callerId,
+                            callerUsername: pending.callerUsername,
+                        });
+                    }
+                } catch (err) {
+                    console.error("❌ Error checking pending calls on reconnect:", err);
+                }
+            }
+        }
+    })();
 
     // L'appelant initie un appel → notifier le destinataire
     socket.on("call_initiate", async ({ conversation_id }, cb) => {
@@ -110,6 +175,7 @@ export function registerVideoHandlers(socket, io) {
                     const socks = await io.fetchSockets();
                     socks.filter(s => Number(s.data.userId) === targetUserId)
                         .forEach(s => s.emit("call_cancelled", { conversation_id }));
+                    await saveMissedCallMessage(conversation_id, callerId, "timeout");
                 }
             }, 30000);
 
@@ -159,7 +225,7 @@ export function registerVideoHandlers(socket, io) {
     });
 
     // Le destinataire refuse
-    socket.on("call_reject", ({ conversation_id }) => {
+    socket.on("call_reject", async ({ conversation_id }) => {
         const pending = pendingCalls.get(conversation_id);
         if (!pending) return;
 
@@ -170,6 +236,8 @@ export function registerVideoHandlers(socket, io) {
         if (callerSocket) {
             callerSocket.emit("call_rejected", { conversation_id });
         }
+
+        await saveMissedCallMessage(conversation_id, pending.callerId, "rejected");
     });
 
     // L'appelant annule avant que le destinataire réponde
@@ -195,6 +263,8 @@ export function registerVideoHandlers(socket, io) {
                 allSockets.filter(s => Number(s.data.userId) === targetUserId)
                     .forEach(s => s.emit("call_cancelled", { conversation_id }));
             }
+
+            await saveMissedCallMessage(conversation_id, callerId, "cancelled");
         } catch (err) {
             console.error("❌ call_cancel error:", err);
         }
