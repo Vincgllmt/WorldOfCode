@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone } from "lucide-react"
+import { Send, Phone, PhoneMissed } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 
 type Props = {
@@ -32,6 +32,25 @@ function isSameDay(a: string, b: string) {
     const d1 = new Date(a)
     const d2 = new Date(b)
     return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
+}
+
+/**
+ * Affiche le texte d'un appel manqué selon le contexte :
+ * - sender = celui qui a lancé l'appel (callerId)
+ * - isMe = est-ce que JE suis l'appelant ?
+ * - reason = "rejected" | "timeout" | "cancelled"
+ */
+function formatMissedCallText(reason: string, isMe: boolean, senderUsername: string): string {
+    switch (reason) {
+        case "rejected":
+            return isMe ? "Appel refusé" : `Appel de ${senderUsername} refusé`
+        case "timeout":
+            return isMe ? "Appel sans réponse" : `Appel manqué de ${senderUsername}`
+        case "cancelled":
+            return isMe ? "Appel annulé" : `Appel manqué de ${senderUsername}`
+        default:
+            return isMe ? "Appel manqué" : `Appel manqué de ${senderUsername}`
+    }
 }
 
 export function MessageList({
@@ -115,7 +134,8 @@ export function MessageList({
                     const showDateSep = !prevMsg || !isSameDay(prevMsg.createdAt, m.createdAt)
                     const isContinuation = prevMsg && prevMsg.sender.id === m.sender.id && !showDateSep
                     const hasSharedPost = m.body.includes('shared-post-card')
-                    const isCallMessage = m.type === 'call'
+                    const isCallMessage = m.type === 'call' || m.type === 'missed_call'
+                    const isMissedCall = m.type === 'missed_call'
 
                     return (
                         <div
@@ -140,10 +160,23 @@ export function MessageList({
 
                             {isCallMessage ? (
                                 <div className="flex justify-center pt-2 pb-1">
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-card/60 rounded-full border border-border/50">
-                                        <Phone className="w-3.5 h-3.5 text-primary" />
-                                        <span className="text-xs font-medium text-muted-foreground">
-                                            {m.body}
+                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${
+                                        isMissedCall
+                                            ? "bg-destructive/10 border-destructive/30"
+                                            : "bg-card/60 border-border/50"
+                                    }`}>
+                                        {isMissedCall ? (
+                                            <PhoneMissed className="w-3.5 h-3.5 text-destructive" />
+                                        ) : (
+                                            <Phone className="w-3.5 h-3.5 text-primary" />
+                                        )}
+                                        <span className={`text-xs font-medium ${
+                                            isMissedCall ? "text-destructive" : "text-muted-foreground"
+                                        }`}>
+                                            {isMissedCall
+                                                ? formatMissedCallText(m.body, isMe, m.sender.username)
+                                                : m.body
+                                            }
                                         </span>
                                         <span className="text-[10px] text-muted-foreground/60">
                                             {formatMessageTime(m.createdAt)}
