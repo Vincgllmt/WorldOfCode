@@ -1,6 +1,10 @@
 "use client"
 
+<<<<<<< HEAD
 import { useRef, useState, useEffect, useCallback, useMemo } from "react"
+=======
+import { useRef, useEffect, useCallback, useMemo } from "react"
+>>>>>>> 20849d5c (ajout logo white pour darkmode)
 import { MessageCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
