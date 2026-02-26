@@ -134,8 +134,6 @@ export function MessageList({
                     const showDateSep = !prevMsg || !isSameDay(prevMsg.createdAt, m.createdAt)
                     const isContinuation = prevMsg && prevMsg.sender.id === m.sender.id && !showDateSep
                     const hasSharedPost = m.body.includes('shared-post-card')
-                    const isCallMessage = m.type === 'call' || m.type === 'missed_call'
-                    const isMissedCall = m.type === 'missed_call'
 
                     return (
                         <div

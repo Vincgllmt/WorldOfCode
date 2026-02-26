@@ -51,7 +51,6 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
   const [contactQuery, setContactQuery] = useState('')
 
   const createConversation = useCreateConversation()
-  const { isOnline } = useOnlineUsers()
 
   const selectedContact = useMemo(
     () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
@@ -166,29 +165,12 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
               .map((participant) => participant.username)
               .join(', ')
 
-          const otherParticipants = conversation.participants.filter((p) => p.id !== userId)
-
           const rawPreview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
-          const lastMsgType = conversation.lastMessage?.type
           const isSharedPost = rawPreview.includes('shared-post-card')
-          const isCallMessage = lastMsgType === 'call' || rawPreview.startsWith('Appel vidéo')
-          const isMissedCall = lastMsgType === 'missed_call'
           const isMine = conversation.lastMessage?.sender?.id === userId
-
-          let preview: string
-          if (isMissedCall) {
-            const reason = rawPreview
-            if (reason === 'rejected') preview = isMine ? '📞 Appel refusé' : '📞 Appel refusé'
-            else if (reason === 'timeout') preview = isMine ? '📞 Appel sans réponse' : '📞 Appel manqué'
-            else if (reason === 'cancelled') preview = isMine ? '📞 Appel annulé' : '📞 Appel manqué'
-            else preview = '📞 Appel manqué'
-          } else if (isCallMessage) {
-            preview = `📞 ${rawPreview}`
-          } else if (isSharedPost) {
-            preview = isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
-          } else {
-            preview = rawPreview.replace(/<[^>]*>/g, '').trim()
-          }
+          const preview = isSharedPost
+            ? (isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication')
+            : rawPreview.replace(/<[^>]*>/g, '').trim()
 
           return (
             <li key={conversation.id} role="listitem">
