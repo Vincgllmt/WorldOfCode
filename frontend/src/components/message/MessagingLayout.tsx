@@ -22,6 +22,9 @@ import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
 import { useOnlineUsers } from "@/hooks/useOnlineUsers"
 
 function getMessagePreview(body: string, isMine: boolean): string {
+    if (body.startsWith('Appel vidéo')) {
+        return `📞 ${body}`
+    }
     if (body.includes('shared-post-card')) {
         return isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
     }
