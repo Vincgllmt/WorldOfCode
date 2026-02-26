@@ -22,6 +22,7 @@ export interface CreateMessagePayload {
 export interface LastMessage {
     id: string
     body: string
+    type?: 'text' | 'image' | 'file' | 'call' | 'missed_call'
     createdAt: string
     sender: {
         id: number

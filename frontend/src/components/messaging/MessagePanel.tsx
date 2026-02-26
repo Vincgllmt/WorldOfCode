@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCreateConversation, useConversations } from '@/hooks/useConversations'
 import { useContacts } from '@/hooks/useContacts'
 import { useAuth } from '@/hooks/useAuth'
+import { useOnlineUsers } from '@/hooks/useOnlineUsers'
 
 type MessagePanelProps = {
   open: boolean
@@ -50,6 +51,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
   const [contactQuery, setContactQuery] = useState('')
 
   const createConversation = useCreateConversation()
+  const { isOnline } = useOnlineUsers()
 
   const selectedContact = useMemo(
     () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
@@ -164,15 +166,29 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
               .map((participant) => participant.username)
               .join(', ')
 
+          const otherParticipants = conversation.participants.filter((p) => p.id !== userId)
+
           const rawPreview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
+          const lastMsgType = conversation.lastMessage?.type
           const isSharedPost = rawPreview.includes('shared-post-card')
-          const isCallMessage = rawPreview.startsWith('Appel vidéo')
+          const isCallMessage = lastMsgType === 'call' || rawPreview.startsWith('Appel vidéo')
+          const isMissedCall = lastMsgType === 'missed_call'
           const isMine = conversation.lastMessage?.sender?.id === userId
-          const preview = isCallMessage
-            ? `📞 ${rawPreview}`
-            : isSharedPost
-              ? (isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication')
-              : rawPreview.replace(/<[^>]*>/g, '').trim()
+
+          let preview: string
+          if (isMissedCall) {
+            const reason = rawPreview
+            if (reason === 'rejected') preview = isMine ? '📞 Appel refusé' : '📞 Appel refusé'
+            else if (reason === 'timeout') preview = isMine ? '📞 Appel sans réponse' : '📞 Appel manqué'
+            else if (reason === 'cancelled') preview = isMine ? '📞 Appel annulé' : '📞 Appel manqué'
+            else preview = '📞 Appel manqué'
+          } else if (isCallMessage) {
+            preview = `📞 ${rawPreview}`
+          } else if (isSharedPost) {
+            preview = isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
+          } else {
+            preview = rawPreview.replace(/<[^>]*>/g, '').trim()
+          }
 
           return (
             <li key={conversation.id} role="listitem">
@@ -181,9 +197,14 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
                 onClick={() => handleSelectConversation(conversation.id)}
                 className="flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition hover:border-accent hover:bg-accent/40 focus-visible:border-ring focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Avatar className="size-10">
-                  <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <div className="relative shrink-0">
+                  <Avatar className="size-10">
+                    <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  {conversation.type === 'direct' && otherParticipants.length > 0 && isOnline(otherParticipants[0].id) && (
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
+                  )}
+                </div>
                 <div className="flex flex-1 flex-col gap-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold leading-tight text-foreground">

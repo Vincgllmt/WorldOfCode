@@ -22,6 +22,9 @@ const io = new Server(server, {
 // État partagé pour les conversations texte
 const conversations = new Map();
 
+// Tracking global des utilisateurs en ligne : userId → Set<socketId>
+const onlineUsers = new Map();
+
 const publicKey = fs.readFileSync("/app/src/config/jwt/public.pem", "utf8");
 
 // Middleware d'authentification JWT
@@ -62,6 +65,22 @@ io.on("connection", (socket) => {
     console.log(socket.data);
     console.log(`🔌 connected: ${socket.id} (user: ${userId})`);
 
+    // Tracking présence globale
+    if (userId) {
+        if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+        }
+        onlineUsers.get(userId).add(socket.id);
+        // Broadcast à tous que cet utilisateur est en ligne
+        io.emit("user_online", { userId });
+    }
+
+    // Quand un client demande la liste des utilisateurs en ligne
+    socket.on("get_online_users", (cb) => {
+        const ids = Array.from(onlineUsers.keys());
+        if (typeof cb === "function") cb(ids);
+    });
+
     // Enregistrer les handlers de messagerie
     registerMessageHandlers(socket, io, conversations);
 
@@ -70,6 +89,16 @@ io.on("connection", (socket) => {
 
     // Gestion de la déconnexion
     socket.on("disconnect", () => {
+        // Tracking présence globale
+        if (userId && onlineUsers.has(userId)) {
+            onlineUsers.get(userId).delete(socket.id);
+            if (onlineUsers.get(userId).size === 0) {
+                onlineUsers.delete(userId);
+                // Broadcast à tous que cet utilisateur est hors ligne
+                io.emit("user_offline", { userId });
+            }
+        }
+
         handleMessageDisconnect(socket, io, conversations);
         handleVideoDisconnect(socket, io);
         console.log(`❌ disconnected: ${socket.id} (user: ${userId})`);

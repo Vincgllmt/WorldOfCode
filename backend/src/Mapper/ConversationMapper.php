@@ -55,6 +55,7 @@ class ConversationMapper
             $msgDto = new LastMessageResponse();
             $msgDto->id = $lastMsg->getId();
             $msgDto->body = $lastMsg->getBody();
+            $msgDto->type = $lastMsg->getType();
             $msgDto->createdAt = $lastMsg->getCreatedAt()->format('Y-m-d H:i:s');
             $msgDto->sender = [
                 'id' => $lastMsg->getSender()->getId(),

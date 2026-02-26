@@ -25,6 +25,13 @@ class LastMessageResponse
     public string $body;
 
     #[OA\Property(
+        description: "Type du message",
+        type: "string",
+        example: "text"
+    )]
+    public string $type = 'text';
+
+    #[OA\Property(
         description: "Date de creation du message",
         type: "string",
         example: "2025-09-27 14:53:00"
