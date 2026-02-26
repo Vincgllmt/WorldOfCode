@@ -75,6 +75,34 @@ export function registerVideoHandlers(socket, io) {
 
     // ─── Signalisation d'appel ───
 
+    // À la connexion, vérifier si un appel entrant est en attente pour cet utilisateur
+    const connectedUserId = Number(socket.data.userId);
+    (async () => {
+        for (const [convId, pending] of pendingCalls.entries()) {
+            // Chercher si cet utilisateur est le destinataire d'un appel en attente
+            // (l'appelant est pending.callerId, donc si connectedUserId !== callerId, c'est le destinataire)
+            if (pending.callerId !== connectedUserId) {
+                // Vérifier que cet utilisateur est bien participant de cette conversation
+                try {
+                    const [parts] = await pool.execute(
+                        "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ? AND user_id = ?",
+                        [convId, connectedUserId]
+                    );
+                    if (parts.length > 0) {
+                        console.log(`📞 Re-sending incoming_call to reconnected user ${connectedUserId} for conv ${convId}`);
+                        socket.emit("incoming_call", {
+                            conversation_id: convId,
+                            callerId: pending.callerId,
+                            callerUsername: pending.callerUsername,
+                        });
+                    }
+                } catch (err) {
+                    console.error("❌ Error checking pending calls on reconnect:", err);
+                }
+            }
+        }
+    })();
+
     // L'appelant initie un appel → notifier le destinataire
     socket.on("call_initiate", async ({ conversation_id }, cb) => {
         const callerId = Number(socket.data.userId);
