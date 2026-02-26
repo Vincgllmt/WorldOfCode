@@ -26,19 +26,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCreateConversation, useConversations } from '@/hooks/useConversations'
-import { useFollowers, useFollowing } from '@/hooks/useFollow'
+import { useContacts } from '@/hooks/useContacts'
 import { useAuth } from '@/hooks/useAuth'
 
 type MessagePanelProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelectConversation?: (conversationId: string) => void
-}
-
-type Contact = {
-  id: number
-  username: string
-  relation: 'follower' | 'following' | 'mutual'
 }
 
 export function MessagePanel({ open, onOpenChange, onSelectConversation }: MessagePanelProps) {
@@ -49,8 +43,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
   const { data: conversations, isLoading: isLoadingConversations, isError: conversationsError } =
     useConversations()
 
-  const { followers, isLoading: isLoadingFollowers } = useFollowers(userId)
-  const { following, isLoading: isLoadingFollowing } = useFollowing(userId)
+  const { contacts, isLoading: isLoadingContacts } = useContacts()
 
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'conversations' | 'new'>('conversations')
@@ -58,43 +51,35 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
 
   const createConversation = useCreateConversation()
 
-  const contacts = useMemo<Contact[]>(() => {
-    const map = new Map<number, Contact>()
-
-    followers?.forEach((follower) => {
-      map.set(follower.id, {
-        id: follower.id,
-        username: follower.username,
-        relation: 'follower',
-      })
-    })
-
-    following?.forEach((followed) => {
-      const existing = map.get(followed.id)
-      map.set(followed.id, {
-        id: followed.id,
-        username: followed.username,
-        relation: existing ? 'mutual' : 'following',
-      })
-    })
-
-    return Array.from(map.values()).sort((a, b) => a.username.localeCompare(b.username))
-  }, [followers, following])
-
   const selectedContact = useMemo(
     () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
     [contacts, selectedContactId]
   )
 
+  // IDs des contacts avec qui une conversation directe existe déjà
+  const existingDirectContactIds = useMemo(() => {
+    if (!conversations || !userId) return new Set<number>()
+    const ids = new Set<number>()
+    for (const conv of conversations) {
+      if (conv.type === 'direct') {
+        for (const p of conv.participants) {
+          if (p.id !== userId) ids.add(p.id)
+        }
+      }
+    }
+    return ids
+  }, [conversations, userId])
+
   const filteredContacts = useMemo(() => {
+    const available = contacts.filter((c) => !existingDirectContactIds.has(c.id))
     const normalizedQuery = contactQuery.trim().toLowerCase()
     if (!normalizedQuery) {
-      return contacts
+      return available
     }
-    return contacts.filter((contact) =>
+    return available.filter((contact) =>
       contact.username.toLowerCase().includes(normalizedQuery)
     )
-  }, [contacts, contactQuery])
+  }, [contacts, contactQuery, existingDirectContactIds])
 
   useEffect(() => {
     if (!open) {
@@ -109,7 +94,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
     if (onSelectConversation) {
       onSelectConversation(conversationId)
     } else {
-      router.push(`/message?c=${conversationId}`)
+      router.push(`/message/${conversationId}`)
     }
   }
 
@@ -154,13 +139,15 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
       )
     }
 
-    if (!conversations?.length) {
+    const activeConversations = conversations?.filter((c) => c.lastMessage) ?? []
+
+    if (!activeConversations.length) {
       return (
         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
           <MessageCircle className="size-6" aria-hidden="true" />
           <div>
             <p className="font-medium text-foreground">Aucune conversation pour le moment</p>
-            <p>Démarrez un échange via l’onglet “Nouveau message”.</p>
+            <p>Démarrez un échange via l'onglet "Nouveau message".</p>
           </div>
         </div>
       )
@@ -168,7 +155,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
 
     return (
       <ul className="space-y-2" role="list">
-        {conversations.map((conversation) => {
+        {activeConversations.map((conversation) => {
           const hasUnread = conversation.lastMessage ? !conversation.lastMessage.read : false
           const title =
             conversation.title ??
@@ -177,7 +164,12 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
               .map((participant) => participant.username)
               .join(', ')
 
-          const preview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
+          const rawPreview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
+          const isSharedPost = rawPreview.includes('shared-post-card')
+          const isMine = conversation.lastMessage?.sender?.id === userId
+          const preview = isSharedPost
+            ? (isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication')
+            : rawPreview.replace(/<[^>]*>/g, '').trim()
 
           return (
             <li key={conversation.id} role="listitem">
@@ -220,7 +212,6 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
     }
 
     const isBusy = createConversation.isPending
-    const isLoadingContacts = isLoadingFollowers || isLoadingFollowing
 
     return (
       <div className="space-y-4">
@@ -260,13 +251,11 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
                           <span className="text-sm font-medium text-foreground">
                             {contact.username}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {contact.relation === 'mutual'
-                              ? 'Abonné·e mutuel·le'
-                              : contact.relation === 'follower'
-                                ? 'Vous suit'
-                                : 'Vous le suivez'}
-                          </span>
+                          {contact.relation === 'mutual' && (
+                            <span className="text-xs text-muted-foreground">
+                              Abonné·e mutuel·le
+                            </span>
+                          )}
                         </div>
                       </CommandItem>
                     ))
@@ -283,13 +272,11 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
             </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">{selectedContact.username}</span>
-              <span className="text-xs text-muted-foreground">
-                {selectedContact.relation === 'mutual'
-                  ? 'Abonné·e mutuel·le'
-                  : selectedContact.relation === 'follower'
-                    ? 'Vous suit'
-                    : 'Vous le suivez'}
-              </span>
+              {selectedContact.relation === 'mutual' && (
+                <span className="text-xs text-muted-foreground">
+                  Abonné·e mutuel·le
+                </span>
+              )}
             </div>
           </div>
         )}

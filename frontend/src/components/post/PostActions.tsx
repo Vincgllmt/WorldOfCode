@@ -5,7 +5,7 @@ import * as React from 'react'
 import type { Post } from '@/interfaces/post'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Heart, MessageCircle, Send } from 'lucide-react'
+import { Heart, MessageCircle, Send, Forward, MessageSquare } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSharePost, usePostLikeState } from '@/hooks/usePosts'
 import toast from 'react-hot-toast'
@@ -21,6 +21,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import ShareToMessageDialog from './ShareToMessageDialog'
 
 type PostActionsProps = {
   post: Post
@@ -47,6 +54,7 @@ export default function PostActions({
   const share = useSharePost()
   const [confirmShareOpen, setConfirmShareOpen] = React.useState(false)
   const [shareComment, setShareComment] = React.useState('')
+  const [shareToMessageOpen, setShareToMessageOpen] = React.useState(false)
 
   const handleConfirmShare = async () => {
     share.mutate(
@@ -115,7 +123,32 @@ export default function PostActions({
           <MessageCircle className="h-6 w-6" />
         </Button>
 
-        {/* Partager (avec confirmation) */}
+        {/* Partager (dropdown avec 2 options) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Partager le post"
+              disabled={share.isPending}
+            >
+              <Send className="h-6 w-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setConfirmShareOpen(true)}>
+              <Forward className="h-4 w-4 mr-2" />
+              Partager dans le flux
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShareToMessageOpen(true)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Envoyer en message
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Dialog repost dans le flux */}
         <AlertDialog
           open={confirmShareOpen}
           onOpenChange={(open) => {
@@ -123,17 +156,6 @@ export default function PostActions({
             if (!open) setShareComment('')
           }}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setConfirmShareOpen(true)}
-            aria-label="Partager le post"
-            disabled={share.isPending}
-          >
-            <Send className="h-6 w-6" />
-          </Button>
-
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Partager ce post ?</AlertDialogTitle>
@@ -165,6 +187,13 @@ export default function PostActions({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Dialog envoi en message */}
+        <ShareToMessageDialog
+          post={post}
+          open={shareToMessageOpen}
+          onOpenChange={setShareToMessageOpen}
+        />
       </div>
 
       {/* Ligne “J’aime” */}

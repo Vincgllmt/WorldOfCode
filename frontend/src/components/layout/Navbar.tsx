@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, useCallback } from "react"
+import { useRef, useEffect, useCallback, useMemo } from "react"
 import { MessageCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -19,6 +19,7 @@ import { isActive } from "@/lib/navigation"
 import { useConversations, useConversationRealtime } from "@/hooks/useConversations"
 import NavbarSearch from "@/components/layout/NavbarSearch"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
+import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 
 
@@ -26,6 +27,10 @@ export default function Navbar() {
     const { user, logout } = useAuth()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const { resolvedTheme } = useTheme()
+
+    const isDark = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
+    const logoSrc = useMemo(() => isDark ? "/logo_white.png" : "/logo2.png", [isDark])
     useConversationRealtime(user?.id)
     const { data: conversations } = useConversations()
 
@@ -70,7 +75,7 @@ export default function Navbar() {
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
                 <Link href="/home">
                     <Image
-                        src="/logo2.png"
+                        src={logoSrc}
                         alt="World of Code"
                         width={140}
                         height={44}
