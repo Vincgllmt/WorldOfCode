@@ -21,16 +21,7 @@ import {
 import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
 import { useOnlineUsers } from "@/hooks/useOnlineUsers"
 
-function getMessagePreview(body: string, isMine: boolean, type?: string): string {
-    if (type === 'missed_call') {
-        if (body === 'rejected') return isMine ? '📞 Appel refusé' : '📞 Appel refusé'
-        if (body === 'timeout') return isMine ? '📞 Appel sans réponse' : '📞 Appel manqué'
-        if (body === 'cancelled') return isMine ? '📞 Appel annulé' : '📞 Appel manqué'
-        return '📞 Appel manqué'
-    }
-    if (type === 'call' || body.startsWith('Appel vidéo')) {
-        return `📞 ${body}`
-    }
+function getMessagePreview(body: string, isMine: boolean): string {
     if (body.includes('shared-post-card')) {
         return isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
     }
@@ -272,7 +263,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                                 "text-sm truncate",
                                                 isUnread ? "font-semibold text-foreground" : "text-muted-foreground"
                                             )}>
-                                                {conv.lastMessage ? getMessagePreview(conv.lastMessage.body, conv.lastMessage.sender?.id === user?.id, conv.lastMessage.type) : "Aucun message"}
+                                                {conv.lastMessage ? getMessagePreview(conv.lastMessage.body, conv.lastMessage.sender?.id === user?.id) : "Aucun message"}
                                             </span>
                                             {isUnread && (
                                                 <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
