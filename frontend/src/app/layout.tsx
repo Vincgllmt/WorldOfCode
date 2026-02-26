@@ -38,7 +38,33 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                                 {!hideNavbar && <Navbar />}
                                 {children}
                                 {!hideMessageFab && <MessageFab />}
-                                <Toaster position="top-right" />
+                                <Toaster
+                                    position="top-right"
+                                    containerStyle={{ top: 80 }}
+                                    toastOptions={{
+                                        style: {
+                                            borderRadius: '10px',
+                                            fontSize: '14px',
+                                            fontWeight: 500,
+                                        },
+                                        success: {
+                                            iconTheme: { primary: 'transparent', secondary: 'transparent' },
+                                            style: {
+                                                background: 'rgba(34, 197, 94, 0.45)',
+                                                color: '#ffffff',
+                                                border: '1px solid rgba(34, 197, 94, 0.5)',
+                                            },
+                                        },
+                                        error: {
+                                            iconTheme: { primary: 'transparent', secondary: 'transparent' },
+                                            style: {
+                                                background: 'rgba(239, 68, 68, 0.45)',
+                                                color: '#ffffff',
+                                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                            },
+                                        },
+                                    }}
+                                />
                                 {/* Composant d'appel vidéo global */}
                                 <VideoCallGlobal />
                             </VideoCallProvider>

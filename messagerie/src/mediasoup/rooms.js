@@ -22,6 +22,17 @@ export async function getOrCreateVideoRoom(conversationId) {
     return videoRooms.get(conversationId);
 }
 
+// Callback appelé quand une room vidéo se vide
+let _onRoomEmptyCallback = null;
+
+/**
+ * Enregistre un callback appelé quand une room vidéo se vide complètement.
+ * @param {(conversationId: string) => void} cb
+ */
+export function onRoomEmpty(cb) {
+    _onRoomEmptyCallback = cb;
+}
+
 /**
  * 🔥 CLEANUP GLOBAL PAR SOCKET
  * Supprime TOUTES les ressources MediaSoup associées à un socket
@@ -61,7 +72,11 @@ export function removePeerFromAllRooms(socketId, io, specificConversationId = nu
 
         if (room.peers.size === 0) {
             console.log(`   🗑️ Room ${conversationId} is empty, deleting`);
+            console.log(`   📞 _onRoomEmptyCallback is: ${_onRoomEmptyCallback ? 'SET' : 'NULL'}`);
             videoRooms.delete(conversationId);
+            if (_onRoomEmptyCallback) {
+                _onRoomEmptyCallback(conversationId);
+            }
         }
     }
 }

@@ -166,10 +166,13 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
 
           const rawPreview = conversation.lastMessage?.body ?? 'Nouvelle conversation'
           const isSharedPost = rawPreview.includes('shared-post-card')
+          const isCallMessage = rawPreview.startsWith('Appel vidéo')
           const isMine = conversation.lastMessage?.sender?.id === userId
-          const preview = isSharedPost
-            ? (isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication')
-            : rawPreview.replace(/<[^>]*>/g, '').trim()
+          const preview = isCallMessage
+            ? `📞 ${rawPreview}`
+            : isSharedPost
+              ? (isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication')
+              : rawPreview.replace(/<[^>]*>/g, '').trim()
 
           return (
             <li key={conversation.id} role="listitem">
