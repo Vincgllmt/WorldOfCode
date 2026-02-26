@@ -583,13 +583,8 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
                 setIsCallActive(false)
                 setCurrentConversationId(null)
             }
-            // Ne PAS effacer incomingCall ici :
-            // Socket.IO peut se reconnecter automatiquement (raison "transport close" ou "ping timeout")
-            // et l'appel entrant est toujours valide côté backend pendant 30s.
-            // On efface seulement si la déconnexion est volontaire (logout).
-            if (reason === "io client disconnect") {
-                setIncomingCall(null)
-            }
+            // Fermer aussi un éventuel appel entrant
+            setIncomingCall(null)
         }
 
         const onConnect = () => {
