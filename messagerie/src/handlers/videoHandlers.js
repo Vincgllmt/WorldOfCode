@@ -1,10 +1,156 @@
 import { getOrCreateVideoRoom, removePeerFromAllRooms } from "../mediasoup/rooms.js";
 import { createWebRtcTransport } from "../mediasoup/transports.js";
+import { pool } from "../db.js";
+
+// Map pour suivre les appels en attente : conversationId → { callerId, callerSocketId, callerUsername, timeout }
+const pendingCalls = new Map();
 
 /**
  * Gestion des handlers vidéo (MediaSoup)
  */
 export function registerVideoHandlers(socket, io) {
+
+    // ─── Signalisation d'appel ───
+
+    // L'appelant initie un appel → notifier le destinataire
+    socket.on("call_initiate", async ({ conversation_id }, cb) => {
+        const callerId = Number(socket.data.userId);
+        const callerUsername = socket.data.user?.username || "Utilisateur";
+
+        console.log(`📞 call_initiate: callerId=${callerId}, conv=${conversation_id}, socketUserId=${socket.data.userId} (type: ${typeof socket.data.userId})`);
+
+        try {
+            // Récupérer les participants de la conversation
+            const [participants] = await pool.execute(
+                "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ?",
+                [conversation_id]
+            );
+
+            console.log(`📞 Participants DB:`, participants.map(p => ({ user_id: p.user_id, type: typeof p.user_id })));
+
+            const targetUserId = participants
+                .map(p => Number(p.user_id))
+                .find(id => id !== callerId);
+
+            console.log(`📞 targetUserId=${targetUserId}, callerId=${callerId}`);
+
+            if (!targetUserId) {
+                console.log(`📞 No target user found! callerId=${callerId}, participants=`, participants.map(p => Number(p.user_id)));
+                return cb?.({ error: "no_target_user" });
+            }
+
+            // Trouver les sockets du destinataire
+            const allSockets = await io.fetchSockets();
+            console.log(`📞 All connected sockets:`, allSockets.map(s => ({ id: s.id, userId: s.data.userId, type: typeof s.data.userId })));
+
+            const targetSockets = allSockets.filter(
+                s => Number(s.data.userId) === targetUserId
+            );
+
+            console.log(`📞 Target sockets for userId ${targetUserId}: ${targetSockets.length}`);
+
+            if (targetSockets.length === 0) {
+                return cb?.({ error: "user_offline" });
+            }
+
+            // Timeout auto : si pas de réponse en 30s on annule
+            const timeoutId = setTimeout(async () => {
+                if (pendingCalls.has(conversation_id)) {
+                    pendingCalls.delete(conversation_id);
+                    socket.emit("call_timeout", { conversation_id });
+                    const socks = await io.fetchSockets();
+                    socks.filter(s => Number(s.data.userId) === targetUserId)
+                        .forEach(s => s.emit("call_cancelled", { conversation_id }));
+                    console.log(`📞 Call timeout for conv ${conversation_id}`);
+                }
+            }, 30000);
+
+            pendingCalls.set(conversation_id, {
+                callerId,
+                callerSocketId: socket.id,
+                callerUsername,
+                timeoutId,
+            });
+
+            // Envoyer incoming_call au destinataire
+            for (const s of targetSockets) {
+                s.emit("incoming_call", {
+                    conversation_id,
+                    callerId,
+                    callerUsername,
+                });
+            }
+
+            console.log(`📞 ${callerUsername} (${callerId}) calling user ${targetUserId} in conv ${conversation_id}`);
+            cb?.({ success: true });
+        } catch (err) {
+            console.error("❌ call_initiate error:", err);
+            cb?.({ error: "server_error" });
+        }
+    });
+
+    // Le destinataire accepte
+    socket.on("call_accept", ({ conversation_id }) => {
+        const pending = pendingCalls.get(conversation_id);
+        if (!pending) return;
+
+        clearTimeout(pending.timeoutId);
+        pendingCalls.delete(conversation_id);
+
+        // Notifier l'appelant
+        const callerSocket = io.sockets.sockets.get(pending.callerSocketId);
+        if (callerSocket) {
+            callerSocket.emit("call_accepted", { conversation_id });
+        }
+        console.log(`📞 Call accepted for conv ${conversation_id}`);
+    });
+
+    // Le destinataire refuse
+    socket.on("call_reject", ({ conversation_id }) => {
+        const pending = pendingCalls.get(conversation_id);
+        if (!pending) return;
+
+        clearTimeout(pending.timeoutId);
+        pendingCalls.delete(conversation_id);
+
+        const callerSocket = io.sockets.sockets.get(pending.callerSocketId);
+        if (callerSocket) {
+            callerSocket.emit("call_rejected", { conversation_id });
+        }
+        console.log(`📞 Call rejected for conv ${conversation_id}`);
+    });
+
+    // L'appelant annule avant que le destinataire réponde
+    socket.on("call_cancel", async ({ conversation_id }) => {
+        const pending = pendingCalls.get(conversation_id);
+        if (!pending) return;
+
+        clearTimeout(pending.timeoutId);
+        pendingCalls.delete(conversation_id);
+
+        const callerId = Number(socket.data.userId);
+        try {
+            const [participants] = await pool.execute(
+                "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ?",
+                [conversation_id]
+            );
+            const targetUserId = participants
+                .map(p => Number(p.user_id))
+                .find(id => id !== callerId);
+
+            if (targetUserId) {
+                const allSockets = await io.fetchSockets();
+                allSockets.filter(s => Number(s.data.userId) === targetUserId)
+                    .forEach(s => s.emit("call_cancelled", { conversation_id }));
+            }
+        } catch (err) {
+            console.error("❌ call_cancel error:", err);
+        }
+        console.log(`📞 Call cancelled by caller for conv ${conversation_id}`);
+    });
+
+    // ─── Handlers MediaSoup existants ───
+
     // Rejoindre un appel vidéo
     socket.on("join_video", async ({ conversation_id }, cb) => {
         const room = await getOrCreateVideoRoom(conversation_id);
@@ -43,6 +189,11 @@ export function registerVideoHandlers(socket, io) {
         const room = await getOrCreateVideoRoom(conversation_id);
         const peer = room.peers.get(socket.id);
 
+        if (!peer) {
+            console.error(`❌ Peer ${socket.id} not found in room ${conversation_id}`);
+            return cb({ error: "peer_not_found" });
+        }
+
         const transport = peer.transports.find(t => t.id === transportId);
         if (!transport) {
             console.error(`❌ Transport ${transportId} not found`);
@@ -58,6 +209,11 @@ export function registerVideoHandlers(socket, io) {
     socket.on("produce", async ({ conversation_id, transportId, kind, rtpParameters }, cb) => {
         const room = await getOrCreateVideoRoom(conversation_id);
         const peer = room.peers.get(socket.id);
+
+        if (!peer) {
+            console.error(`❌ Peer ${socket.id} not found in room ${conversation_id}`);
+            return cb({ error: "peer_not_found" });
+        }
 
         const transport = peer.transports.find(t => t.id === transportId);
         const producer = await transport.produce({ kind, rtpParameters });
@@ -80,7 +236,16 @@ export function registerVideoHandlers(socket, io) {
     // Créer un transport WebRTC
     socket.on("create_transport", async ({ conversation_id, direction }, cb) => {
         const room = await getOrCreateVideoRoom(conversation_id);
-        const peer = room.peers.get(socket.id);
+        let peer = room.peers.get(socket.id);
+
+        // Si le peer n'existe pas encore (race condition), le créer
+        if (!peer) {
+            peer = { transports: [], producers: [], consumers: [] };
+            room.peers.set(socket.id, peer);
+            const videoRoomId = `video:${conversation_id}`;
+            socket.join(videoRoomId);
+            console.log(`🎥 Auto-joined ${socket.id} to video room ${videoRoomId} (from create_transport)`);
+        }
 
         const transport = await createWebRtcTransport(room.router);
 

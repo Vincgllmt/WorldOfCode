@@ -29,6 +29,14 @@ import type {
     NewProducerEvent,
     ProducerClosedEvent,
 } from "@/interfaces/video"
+import toast from "react-hot-toast"
+
+// ─── Types d'appel entrant ───
+interface IncomingCall {
+    conversationId: string
+    callerId: number
+    callerUsername: string
+}
 
 interface VideoCallContextType {
     // État
@@ -42,6 +50,11 @@ interface VideoCallContextType {
     screenStream: MediaStream | null
     remoteStreams: Map<string, MediaStream>
     currentConversationId: string | null
+
+    // Appel entrant
+    incomingCall: IncomingCall | null
+    acceptIncomingCall: () => void
+    rejectIncomingCall: () => void
 
     // Actions
     startCall: (conversationId: string) => Promise<void>
@@ -69,6 +82,9 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
     const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map())
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
 
+    // Appel entrant
+    const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null)
+
     // Refs MediaSoup
     const deviceRef = useRef<Device | null>(null)
     const sendTransportRef = useRef<MediasoupTypes.Transport | null>(null)
@@ -78,6 +94,33 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
     const screenProducerRef = useRef<MediasoupTypes.Producer | null>(null)
     const consumersRef = useRef<Map<string, MediasoupTypes.Consumer>>(new Map())
     const localStreamRef = useRef<MediaStream | null>(null)
+
+    // Refs stables pour les callbacks utilisés dans les listeners socket
+    const isCallActiveRef = useRef(isCallActive)
+    const incomingCallRef = useRef(incomingCall)
+    const userRef = useRef(user)
+
+    // Garder les refs synchronisées avec l'état
+    useEffect(() => { isCallActiveRef.current = isCallActive }, [isCallActive])
+    useEffect(() => { incomingCallRef.current = incomingCall }, [incomingCall])
+    useEffect(() => { userRef.current = user }, [user])
+
+    // ─── Connexion socket globale ───
+    // Connecte le socket dès qu'un user est authentifié,
+    // pour pouvoir recevoir les appels entrants depuis n'importe quelle page
+    useEffect(() => {
+        if (!user?.token || !user?.id) return
+
+        console.log("🔌 VideoCallProvider: user detected", user.id, "socket.connected=", socket.connected)
+
+        // Toujours mettre à jour les credentials
+        socket.auth = { token: user.token, userId: user.id }
+
+        if (!socket.connected) {
+            socket.connect()
+            console.log("🔌 VideoCallProvider: socket.connect() called for user", user.id)
+        }
+    }, [user])
 
     // Consommer un producer distant
     const handleConsumeProducer = useCallback(
@@ -154,35 +197,22 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         setIsScreenSharing(false)
     }, [])
 
-    // Démarrer l'appel
-    const startCall = useCallback(
+    // Connexion MediaSoup réelle (utilisée après acceptation de l'appel)
+    const connectToVideoRoom = useCallback(
         async (conversationId: string) => {
-            if (!user) return
-
-            // Si un appel est déjà en cours sur la même conversation, ne rien faire
-            if (isCallActive && currentConversationId === conversationId) {
-                console.log("Call already active on this conversation")
-                return
-            }
+            const currentUser = userRef.current
+            if (!currentUser) return
 
             try {
-                // Cleanup des ressources précédentes si existantes
-                if (currentConversationId && currentConversationId !== conversationId) {
-                    leaveVideoRoom(currentConversationId)
-                    cleanupResources()
-                }
-
-                // Reset mute/camera state pour un appel frais
                 setIsMuted(false)
                 setIsCameraOff(false)
-
                 setCurrentConversationId(conversationId)
                 setIsCallActive(true)
                 setCallState("calling")
 
                 // S'assurer que le socket est connecté
                 if (!socket.connected) {
-                    socket.auth = { token: user.token, userId: user.id }
+                    socket.auth = { token: currentUser.token, userId: currentUser.id }
                     socket.connect()
                 }
 
@@ -221,17 +251,94 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
 
                 setCallState("connected")
             } catch (error) {
-                console.error("Failed to start call:", error)
+                console.error("Failed to connect to video room:", error)
+                toast.error("Erreur de connexion à l'appel")
                 setCallState("idle")
                 setIsCallActive(false)
                 setCurrentConversationId(null)
             }
         },
-        [user, handleConsumeProducer, currentConversationId, cleanupResources, isCallActive]
+        [handleConsumeProducer]
     )
+
+    // Ref stable pour connectToVideoRoom (utilisée dans les listeners socket)
+    const connectToVideoRoomRef = useRef(connectToVideoRoom)
+    useEffect(() => { connectToVideoRoomRef.current = connectToVideoRoom }, [connectToVideoRoom])
+
+    // Démarrer un appel (appelant) — émet call_initiate puis attend la réponse
+    const startCall = useCallback(
+        async (conversationId: string) => {
+            if (!user) return
+
+            // Si un appel est déjà en cours sur la même conversation, ne rien faire
+            if (isCallActive && currentConversationId === conversationId) {
+                console.log("Call already active on this conversation")
+                return
+            }
+
+            // Cleanup des ressources précédentes si existantes
+            if (currentConversationId && currentConversationId !== conversationId) {
+                leaveVideoRoom(currentConversationId)
+                cleanupResources()
+            }
+
+            // S'assurer que le socket est connecté
+            if (!socket.connected) {
+                socket.auth = { token: user.token, userId: user.id }
+                socket.connect()
+            }
+
+            setCurrentConversationId(conversationId)
+            setIsCallActive(true)
+            setCallState("calling")
+
+            // Émettre l'appel au serveur
+            socket.emit("call_initiate", { conversation_id: conversationId }, (response: { success?: boolean; error?: string }) => {
+                if (response?.error) {
+                    console.error("Call initiate failed:", response.error)
+                    if (response.error === "user_offline") {
+                        toast.error("L'utilisateur est hors ligne")
+                    } else {
+                        toast.error("Impossible de lancer l'appel")
+                    }
+                    setCallState("idle")
+                    setIsCallActive(false)
+                    setCurrentConversationId(null)
+                }
+            })
+        },
+        [user, currentConversationId, cleanupResources, isCallActive]
+    )
+
+    // Accepter un appel entrant
+    const acceptIncomingCall = useCallback(() => {
+        if (!incomingCall) return
+
+        const { conversationId } = incomingCall
+        setIncomingCall(null)
+
+        // Notifier le serveur
+        socket.emit("call_accept", { conversation_id: conversationId })
+
+        // Se connecter à la room vidéo (le destinataire se connecte immédiatement)
+        connectToVideoRoomRef.current(conversationId)
+    }, [incomingCall])
+
+    // Refuser un appel entrant
+    const rejectIncomingCall = useCallback(() => {
+        if (!incomingCall) return
+
+        socket.emit("call_reject", { conversation_id: incomingCall.conversationId })
+        setIncomingCall(null)
+    }, [incomingCall])
 
     // Terminer l'appel
     const endCall = useCallback(() => {
+        // Si on est en train d'appeler (pas encore connecté), annuler l'appel
+        if (callState === "calling" && currentConversationId) {
+            socket.emit("call_cancel", { conversation_id: currentConversationId })
+        }
+
         // Quitter la room vidéo
         if (currentConversationId) {
             leaveVideoRoom(currentConversationId)
@@ -248,7 +355,7 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         setIsCallActive(false)
         setIsMinimized(false)
         setCurrentConversationId(null)
-    }, [currentConversationId, cleanupResources])
+    }, [currentConversationId, cleanupResources, callState])
 
     // Toggle mute
     const toggleMute = useCallback(() => {
@@ -279,7 +386,6 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         if (!sendTransportRef.current) return
 
         if (isScreenSharing) {
-            // Arrêter le partage : stopper les tracks, notifier le serveur, fermer le producer
             if (screenStream) {
                 screenStream.getTracks().forEach((track) => track.stop())
             }
@@ -294,7 +400,6 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
                 const stream = await getScreenShareStream()
                 const screenTrack = stream.getVideoTracks()[0]
 
-                // Écouter l'arrêt natif du navigateur (bouton "Arrêter le partage")
                 screenTrack.onended = () => {
                     if (screenProducerRef.current && currentConversationId) {
                         closeProducer(currentConversationId, screenProducerRef.current)
@@ -318,14 +423,127 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
         setIsMinimized(minimized)
     }, [])
 
-    // Écouter les événements socket pour la vidéo
+    // ─── Écouter les événements de signalisation d'appel ───
+    // Les listeners utilisent des refs pour éviter de se réinscrire à chaque changement d'état
     useEffect(() => {
-        if (callState !== "connected" || !currentConversationId) return
+        if (!user) return
+
+        // Appel entrant
+        const onIncomingCall = ({ conversation_id, callerId, callerUsername }: {
+            conversation_id: string
+            callerId: number
+            callerUsername: string
+        }) => {
+            console.log("📞 Incoming call from", callerUsername)
+            // Ne pas afficher si on est déjà en appel
+            if (isCallActiveRef.current) {
+                socket.emit("call_reject", { conversation_id })
+                return
+            }
+            setIncomingCall({
+                conversationId: conversation_id,
+                callerId,
+                callerUsername,
+            })
+        }
+
+        // L'appel a été accepté par le destinataire → l'appelant se connecte
+        const onCallAccepted = ({ conversation_id }: { conversation_id: string }) => {
+            console.log("📞 Call accepted, connecting to room:", conversation_id)
+            connectToVideoRoomRef.current(conversation_id)
+        }
+
+        // L'appel a été refusé
+        const onCallRejected = () => {
+            console.log("📞 Call rejected")
+            toast.error("L'appel a été refusé")
+            setCallState("idle")
+            setIsCallActive(false)
+            setCurrentConversationId(null)
+        }
+
+        // L'appel a expiré (timeout 30s)
+        const onCallTimeout = () => {
+            console.log("📞 Call timeout")
+            toast.error("Pas de réponse")
+            setCallState("idle")
+            setIsCallActive(false)
+            setCurrentConversationId(null)
+        }
+
+        // L'appelant a annulé
+        const onCallCancelled = ({ conversation_id }: { conversation_id: string }) => {
+            console.log("📞 Call cancelled for:", conversation_id)
+            if (incomingCallRef.current?.conversationId === conversation_id) {
+                setIncomingCall(null)
+            }
+        }
+
+        socket.on("incoming_call", onIncomingCall)
+        socket.on("call_accepted", onCallAccepted)
+        socket.on("call_rejected", onCallRejected)
+        socket.on("call_timeout", onCallTimeout)
+        socket.on("call_cancelled", onCallCancelled)
+
+        return () => {
+            socket.off("incoming_call", onIncomingCall)
+            socket.off("call_accepted", onCallAccepted)
+            socket.off("call_rejected", onCallRejected)
+            socket.off("call_timeout", onCallTimeout)
+            socket.off("call_cancelled", onCallCancelled)
+        }
+    }, [user]) // ← Dépendance unique : user. Les refs gèrent le reste.
+
+    // Écouter les événements socket pour la vidéo (producers)
+    // On écoute dès que currentConversationId est défini (pas seulement quand "connected")
+    // car les new_producer events peuvent arriver pendant la phase de connexion
+    useEffect(() => {
+        if (!currentConversationId) return
+
+        // File d'attente pour les producers reçus avant que les transports soient prêts
+        const pendingProducers: string[] = []
+        let isProcessing = false
+
+        const processPendingProducers = async () => {
+            if (isProcessing) return
+            isProcessing = true
+
+            while (pendingProducers.length > 0) {
+                const producerId = pendingProducers[0]
+                // Attendre que le recv transport soit prêt
+                if (!recvTransportRef.current || !deviceRef.current) {
+                    // Réessayer dans 500ms
+                    setTimeout(processPendingProducers, 500)
+                    isProcessing = false
+                    return
+                }
+                pendingProducers.shift()
+                try {
+                    await handleConsumeProducer(producerId, currentConversationId)
+                } catch (err) {
+                    console.error("Failed to consume producer:", producerId, err)
+                }
+            }
+            isProcessing = false
+        }
 
         const onNewProducer = async ({ producerId, peerId }: NewProducerEvent) => {
             console.log("📹 New producer event:", { producerId, peerId, myId: socket.id })
             if (peerId === socket.id) return
-            await handleConsumeProducer(producerId, currentConversationId)
+
+            // Si les transports sont prêts, consommer immédiatement
+            if (recvTransportRef.current && deviceRef.current) {
+                try {
+                    await handleConsumeProducer(producerId, currentConversationId)
+                } catch (err) {
+                    console.error("Failed to consume producer:", producerId, err)
+                }
+            } else {
+                // Sinon, mettre en file d'attente
+                console.log("📹 Transport not ready, queuing producer:", producerId)
+                pendingProducers.push(producerId)
+                processPendingProducers()
+            }
         }
 
         const onProducerClosed = ({ producerId }: ProducerClosedEvent) => {
@@ -352,20 +570,21 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
             socket.off("new_producer", onNewProducer)
             socket.off("producer_closed", onProducerClosed)
         }
-    }, [callState, currentConversationId, handleConsumeProducer])
+    }, [currentConversationId, handleConsumeProducer])
 
-    // Écouter la déconnexion du socket (séparé pour ne pas être affecté par les dépendances)
+    // Écouter la déconnexion du socket
     useEffect(() => {
         const onDisconnect = (reason: string) => {
             console.log("🔴 Socket disconnected:", reason)
-            // Si on était en appel, on termine proprement
-            if (isCallActive) {
+            if (isCallActiveRef.current) {
                 console.log("🔴 Call was active, cleaning up...")
                 cleanupResources()
                 setCallState("idle")
                 setIsCallActive(false)
                 setCurrentConversationId(null)
             }
+            // Fermer aussi un éventuel appel entrant
+            setIncomingCall(null)
         }
 
         const onConnect = () => {
@@ -379,7 +598,7 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
             socket.off("disconnect", onDisconnect)
             socket.off("connect", onConnect)
         }
-    }, [isCallActive, cleanupResources])
+    }, [cleanupResources])
 
     return (
         <VideoCallContext.Provider
@@ -394,6 +613,9 @@ export function VideoCallProvider({ children }: { children: ReactNode }) {
                 screenStream,
                 remoteStreams,
                 currentConversationId,
+                incomingCall,
+                acceptIncomingCall,
+                rejectIncomingCall,
                 startCall,
                 endCall,
                 toggleMute,

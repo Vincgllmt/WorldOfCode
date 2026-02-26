@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useVideoCallContext } from "@/contexts/VideoCallContext"
 import { LocalVideo } from "./LocalVideo"
 import { RemoteVideo } from "./RemoteVideo"
 import { VideoControls } from "./VideoControls"
+import { IncomingCallDialog } from "./IncomingCallDialog"
 
 export function VideoCallGlobal() {
     const {
@@ -22,10 +23,39 @@ export function VideoCallGlobal() {
         toggleCamera,
         toggleScreenShare,
         setMinimized,
+        incomingCall,
+        acceptIncomingCall,
+        rejectIncomingCall,
     } = useVideoCallContext()
 
     // ID du flux sélectionné pour la vue principale (null = premier flux)
     const [mainStreamId, setMainStreamId] = useState<string | null>(null)
+
+    // Notification masquée par l'utilisateur (croix) sans refuser l'appel
+    const [isDismissed, setIsDismissed] = useState(false)
+
+    // Remettre isDismissed à false quand un nouvel appel entrant arrive
+    useEffect(() => {
+        if (incomingCall) {
+            setIsDismissed(false)
+        }
+    }, [incomingCall])
+
+    // Si pas d'appel actif et pas d'appel entrant, ne rien afficher
+    if (!isCallActive && !incomingCall) return null
+
+    // Si seulement un appel entrant (pas d'appel actif), afficher la notification (sauf si dismiss)
+    if (!isCallActive && incomingCall && !isDismissed) {
+        return (
+            <IncomingCallDialog
+                callerUsername={incomingCall.callerUsername}
+                conversationId={incomingCall.conversationId}
+                onAccept={acceptIncomingCall}
+                onReject={rejectIncomingCall}
+                onDismiss={() => setIsDismissed(true)}
+            />
+        )
+    }
 
     if (!isCallActive) return null
 
@@ -112,31 +142,34 @@ export function VideoCallGlobal() {
 
     // === MODE PLEIN ÉCRAN ===
     return (
-        <div className="fixed inset-0 z-50 bg-background">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-primary/30 to-transparent z-10">
+        <div className="fixed inset-0 z-50 bg-black/95">
+            {/* Header — barre semi-transparente */}
+            <div className="absolute top-0 left-0 right-0 p-3 px-5 bg-black/40 backdrop-blur-sm z-10">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-foreground text-lg font-semibold">
-                        {callState === "calling" && "Connexion..."}
-                        {callState === "connected" && "Appel en cours"}
-                        {callState === "ended" && "Appel terminé"}
-                    </h2>
-                    <div className="flex gap-2">
-                        {/* Bouton minimiser */}
+                    <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${callState === "connected" ? "bg-green-500" : "bg-yellow-500 animate-pulse"}`} />
+                        <span className="text-white/90 text-sm font-medium">
+                            {callState === "calling" && "Connexion en cours..."}
+                            {callState === "connected" && "Appel en cours"}
+                            {callState === "ended" && "Appel terminé"}
+                        </span>
+                    </div>
+                    <div className="flex gap-1">
                         {callState === "connected" && (
                             <button
                                 onClick={() => setMinimized(true)}
-                                className="p-2 rounded-full hover:bg-accent transition-colors"
+                                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                                 title="Minimiser"
                             >
-                                <MinimizeIcon className="w-6 h-6 text-foreground" />
+                                <MinimizeIcon className="w-5 h-5 text-white/80" />
                             </button>
                         )}
                         <button
                             onClick={endCall}
-                            className="p-2 rounded-full hover:bg-accent transition-colors"
+                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            title="Fermer"
                         >
-                            <CloseIcon className="w-6 h-6 text-foreground" />
+                            <CloseIcon className="w-5 h-5 text-white/80" />
                         </button>
                     </div>
                 </div>
@@ -145,13 +178,27 @@ export function VideoCallGlobal() {
             {/* Zone vidéo principale */}
             <div className="w-full h-full flex items-center justify-center">
                 {callState === "calling" && (
-                    <div className="text-center">
-                        <div className="animate-pulse">
-                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary flex items-center justify-center">
-                                <PhoneIcon className="w-10 h-10 text-primary-foreground" />
+                    <div className="text-center space-y-6">
+                        {/* Cercles pulsants */}
+                        <div className="relative w-24 h-24 mx-auto">
+                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "2s" }} />
+                            <div className="absolute inset-2 rounded-full bg-primary/15 animate-pulse" />
+                            <div className="relative w-24 h-24 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                                <PhoneIcon className="w-10 h-10 text-primary" />
                             </div>
                         </div>
-                        <p className="text-foreground text-lg">Connexion en cours...</p>
+                        <div>
+                            <p className="text-white text-lg font-medium">Connexion en cours...</p>
+                            <p className="text-white/50 text-sm mt-1">En attente de réponse</p>
+                        </div>
+                        {/* Bouton raccrocher pendant la sonnerie */}
+                        <button
+                            onClick={endCall}
+                            className="mx-auto flex items-center gap-2 px-6 py-3 rounded-full bg-destructive hover:bg-destructive/80 transition-colors text-white text-sm font-medium"
+                        >
+                            <PhoneOffIcon className="w-5 h-5" />
+                            Annuler
+                        </button>
                     </div>
                 )}
 
@@ -162,7 +209,6 @@ export function VideoCallGlobal() {
                     const mainRemoteEntry = validMainId
                         ? [validMainId, remoteStreams.get(validMainId)!] as [string, MediaStream]
                         : remoteEntries[0] || null
-                    // Flux distants non affichés en plein écran
                     const secondaryEntries = showLocalScreen
                         ? remoteEntries
                         : mainRemoteEntry
@@ -190,22 +236,22 @@ export function VideoCallGlobal() {
                                     <RemoteVideo stream={mainRemoteEntry[1]} producerId={mainRemoteEntry[0]} contain={hasScreenContent} />
                                 </div>
                             ) : (
-                                <div className="text-center">
-                                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
-                                        <UserIcon className="w-10 h-10 text-muted-foreground" />
+                                <div className="text-center space-y-4">
+                                    <div className="w-20 h-20 mx-auto rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
+                                        <UserIcon className="w-10 h-10 text-white/40" />
                                     </div>
-                                    <p className="text-muted-foreground">En attente des autres participants...</p>
+                                    <p className="text-white/50 text-sm">En attente des autres participants...</p>
                                 </div>
                             )}
 
-                            {/* Flux secondaires en PiP cliquables (en haut à gauche) */}
+                            {/* Flux secondaires en PiP cliquables */}
                             {secondaryEntries.length > 0 && (
                                 <div className="absolute top-16 left-4 flex flex-col gap-2 z-10">
                                     {secondaryEntries.map(([producerId, stream]) => (
                                         <button
                                             key={producerId}
                                             onClick={() => setMainStreamId(producerId)}
-                                            className="w-40 h-24 rounded-lg overflow-hidden shadow-lg border-2 border-white/50 hover:border-blue-400 transition-colors cursor-pointer"
+                                            className="w-40 h-24 rounded-lg overflow-hidden shadow-lg border-2 border-white/20 hover:border-primary transition-colors cursor-pointer"
                                             title="Cliquer pour agrandir"
                                         >
                                             <RemoteVideo stream={stream} producerId={producerId} />
@@ -214,11 +260,11 @@ export function VideoCallGlobal() {
                                 </div>
                             )}
 
-                            {/* Preview écran partagé (PiP cliquable en bas à gauche) */}
+                            {/* Preview écran partagé */}
                             {screenStream && !showLocalScreen && (
                                 <button
                                     onClick={() => setMainStreamId("__local_screen__")}
-                                    className="absolute bottom-24 left-4 w-48 h-28 bg-card rounded-lg overflow-hidden shadow-lg border-2 border-blue-500 hover:border-blue-400 transition-colors cursor-pointer z-10"
+                                    className="absolute bottom-24 left-4 w-48 h-28 bg-black rounded-lg overflow-hidden shadow-lg border-2 border-primary/50 hover:border-primary transition-colors cursor-pointer z-10"
                                     title="Cliquer pour agrandir"
                                 >
                                     <video
@@ -230,7 +276,7 @@ export function VideoCallGlobal() {
                                             if (el && screenStream) el.srcObject = screenStream
                                         }}
                                     />
-                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/70 rounded text-xs text-white">
+                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-primary/70 rounded text-xs text-white">
                                         Votre écran
                                     </div>
                                 </button>
