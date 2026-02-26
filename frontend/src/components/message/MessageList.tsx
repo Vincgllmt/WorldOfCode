@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send } from "lucide-react"
+import { Send, Phone } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 
 type Props = {
@@ -115,6 +115,7 @@ export function MessageList({
                     const showDateSep = !prevMsg || !isSameDay(prevMsg.createdAt, m.createdAt)
                     const isContinuation = prevMsg && prevMsg.sender.id === m.sender.id && !showDateSep
                     const hasSharedPost = m.body.includes('shared-post-card')
+                    const isCallMessage = m.type === 'call'
 
                     return (
                         <div
@@ -137,6 +138,19 @@ export function MessageList({
                                 </div>
                             )}
 
+                            {isCallMessage ? (
+                                <div className="flex justify-center pt-2 pb-1">
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-card/60 rounded-full border border-border/50">
+                                        <Phone className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            {m.body}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground/60">
+                                            {formatMessageTime(m.createdAt)}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
                             <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
                                 <div className={hasSharedPost ? "max-w-[85%] min-w-[260px]" : "max-w-[70%]"}>
                                     {convType === "group" && !isMe && !isContinuation && (
@@ -167,6 +181,7 @@ export function MessageList({
                                     </div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )
                 })}

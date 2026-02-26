@@ -2,7 +2,7 @@ export interface Message {
     id: string
     conversationId: string
     body: string
-    type: 'text' | 'image' | 'file'
+    type: 'text' | 'image' | 'file' | 'call'
     read: boolean
     sender: {
         id: number
@@ -16,7 +16,7 @@ export interface Message {
 export interface CreateMessagePayload {
     conversationId: string
     body: string
-    type?: 'text' | 'image' | 'file'
+    type?: 'text' | 'image' | 'file' | 'call'
 }
 
 export interface LastMessage {

@@ -1,14 +1,77 @@
-import { getOrCreateVideoRoom, removePeerFromAllRooms } from "../mediasoup/rooms.js";
+import { getOrCreateVideoRoom, removePeerFromAllRooms, onRoomEmpty } from "../mediasoup/rooms.js";
 import { createWebRtcTransport } from "../mediasoup/transports.js";
 import { pool } from "../db.js";
+import crypto from "crypto";
 
 // Map pour suivre les appels en attente : conversationId → { callerId, callerSocketId, callerUsername, timeout }
 const pendingCalls = new Map();
+
+// Map pour suivre les appels actifs (connectés) : conversationId → { startedAt, callerId }
+const activeCalls = new Map();
+
+// Référence io pour le callback onRoomEmpty
+let _io = null;
+let _roomEmptyRegistered = false;
+
+/**
+ * Sauvegarde un message "Appel vidéo" quand la room se vide (1 seul message par appel)
+ */
+async function saveCallEndMessage(conversationId) {
+    const callData = activeCalls.get(conversationId);
+    if (!callData) return;
+
+    activeCalls.delete(conversationId);
+
+    const duration = Math.round((Date.now() - callData.startedAt) / 1000);
+    const mins = Math.floor(duration / 60);
+    const secs = duration % 60;
+    const durationStr = mins > 0
+        ? `${mins}min ${secs.toString().padStart(2, "0")}s`
+        : `${secs}s`;
+
+    const body = `Appel vidéo — ${durationStr}`;
+    const id = crypto.randomUUID();
+    const created = new Date();
+
+    try {
+        await pool.execute(
+            `INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [id, conversationId, callData.callerId, body, "call", created]
+        );
+
+        await pool.execute(
+            `UPDATE msg_conversations SET last_message_at = ? WHERE id = ?`,
+            [created, conversationId]
+        );
+
+        const payload = {
+            id,
+            conversation_id: conversationId,
+            sender_id: callData.callerId,
+            body,
+            type: "call",
+            created_at: created.toISOString(),
+        };
+
+        if (_io) {
+            _io.to(conversationId).emit("message_created", payload);
+        }
+    } catch (err) {
+        console.error("❌ saveCallEndMessage error:", err);
+    }
+}
 
 /**
  * Gestion des handlers vidéo (MediaSoup)
  */
 export function registerVideoHandlers(socket, io) {
+    _io = io;
+
+    if (!_roomEmptyRegistered) {
+        _roomEmptyRegistered = true;
+        onRoomEmpty((conversationId) => saveCallEndMessage(conversationId));
+    }
 
     // ─── Signalisation d'appel ───
 
@@ -17,43 +80,29 @@ export function registerVideoHandlers(socket, io) {
         const callerId = Number(socket.data.userId);
         const callerUsername = socket.data.user?.username || "Utilisateur";
 
-        console.log(`📞 call_initiate: callerId=${callerId}, conv=${conversation_id}, socketUserId=${socket.data.userId} (type: ${typeof socket.data.userId})`);
-
         try {
-            // Récupérer les participants de la conversation
             const [participants] = await pool.execute(
                 "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ?",
                 [conversation_id]
             );
 
-            console.log(`📞 Participants DB:`, participants.map(p => ({ user_id: p.user_id, type: typeof p.user_id })));
-
             const targetUserId = participants
                 .map(p => Number(p.user_id))
                 .find(id => id !== callerId);
 
-            console.log(`📞 targetUserId=${targetUserId}, callerId=${callerId}`);
-
             if (!targetUserId) {
-                console.log(`📞 No target user found! callerId=${callerId}, participants=`, participants.map(p => Number(p.user_id)));
                 return cb?.({ error: "no_target_user" });
             }
 
-            // Trouver les sockets du destinataire
             const allSockets = await io.fetchSockets();
-            console.log(`📞 All connected sockets:`, allSockets.map(s => ({ id: s.id, userId: s.data.userId, type: typeof s.data.userId })));
-
             const targetSockets = allSockets.filter(
                 s => Number(s.data.userId) === targetUserId
             );
-
-            console.log(`📞 Target sockets for userId ${targetUserId}: ${targetSockets.length}`);
 
             if (targetSockets.length === 0) {
                 return cb?.({ error: "user_offline" });
             }
 
-            // Timeout auto : si pas de réponse en 30s on annule
             const timeoutId = setTimeout(async () => {
                 if (pendingCalls.has(conversation_id)) {
                     pendingCalls.delete(conversation_id);
@@ -61,7 +110,6 @@ export function registerVideoHandlers(socket, io) {
                     const socks = await io.fetchSockets();
                     socks.filter(s => Number(s.data.userId) === targetUserId)
                         .forEach(s => s.emit("call_cancelled", { conversation_id }));
-                    console.log(`📞 Call timeout for conv ${conversation_id}`);
                 }
             }, 30000);
 
@@ -81,7 +129,6 @@ export function registerVideoHandlers(socket, io) {
                 });
             }
 
-            console.log(`📞 ${callerUsername} (${callerId}) calling user ${targetUserId} in conv ${conversation_id}`);
             cb?.({ success: true });
         } catch (err) {
             console.error("❌ call_initiate error:", err);
@@ -95,6 +142,13 @@ export function registerVideoHandlers(socket, io) {
         if (!pending) return;
 
         clearTimeout(pending.timeoutId);
+
+        // Tracker le début de l'appel pour calculer la durée quand la room se videra
+        activeCalls.set(conversation_id, {
+            startedAt: Date.now(),
+            callerId: pending.callerId,
+        });
+
         pendingCalls.delete(conversation_id);
 
         // Notifier l'appelant
@@ -102,7 +156,6 @@ export function registerVideoHandlers(socket, io) {
         if (callerSocket) {
             callerSocket.emit("call_accepted", { conversation_id });
         }
-        console.log(`📞 Call accepted for conv ${conversation_id}`);
     });
 
     // Le destinataire refuse
@@ -117,7 +170,6 @@ export function registerVideoHandlers(socket, io) {
         if (callerSocket) {
             callerSocket.emit("call_rejected", { conversation_id });
         }
-        console.log(`📞 Call rejected for conv ${conversation_id}`);
     });
 
     // L'appelant annule avant que le destinataire réponde
@@ -146,7 +198,6 @@ export function registerVideoHandlers(socket, io) {
         } catch (err) {
             console.error("❌ call_cancel error:", err);
         }
-        console.log(`📞 Call cancelled by caller for conv ${conversation_id}`);
     });
 
     // ─── Handlers MediaSoup existants ───
@@ -158,7 +209,6 @@ export function registerVideoHandlers(socket, io) {
         // Utiliser une room séparée pour la vidéo (préfixée avec "video:")
         const videoRoomId = `video:${conversation_id}`;
         socket.join(videoRoomId);
-        console.log(`🎥 ${socket.id} joined video room ${videoRoomId}`);
 
         room.peers.set(socket.id, {
             transports: [],
@@ -176,8 +226,6 @@ export function registerVideoHandlers(socket, io) {
             }
         }
 
-        console.log(`🎥 ${socket.id} joined video room ${conversation_id} (${existingProducers.length} existing producers)`);
-
         cb({
             rtpCapabilities: room.router.rtpCapabilities,
             existingProducers,
@@ -190,18 +238,15 @@ export function registerVideoHandlers(socket, io) {
         const peer = room.peers.get(socket.id);
 
         if (!peer) {
-            console.error(`❌ Peer ${socket.id} not found in room ${conversation_id}`);
             return cb({ error: "peer_not_found" });
         }
 
         const transport = peer.transports.find(t => t.id === transportId);
         if (!transport) {
-            console.error(`❌ Transport ${transportId} not found`);
             return cb({ error: "transport_not_found" });
         }
 
         await transport.connect({ dtlsParameters });
-        console.log(`✅ Transport ${transportId} connected`);
         cb({ success: true });
     });
 
@@ -211,7 +256,6 @@ export function registerVideoHandlers(socket, io) {
         const peer = room.peers.get(socket.id);
 
         if (!peer) {
-            console.error(`❌ Peer ${socket.id} not found in room ${conversation_id}`);
             return cb({ error: "peer_not_found" });
         }
 
@@ -220,9 +264,7 @@ export function registerVideoHandlers(socket, io) {
 
         peer.producers.push(producer);
 
-        // Room Socket.IO pour la vidéo (préfixée)
         const videoRoomId = `video:${conversation_id}`;
-        console.log(`🎥 Producer created: ${producer.id} (${kind}) by ${socket.id} in room ${videoRoomId}`);
 
         // Broadcast à tous SAUF l'émetteur (vers la room vidéo)
         socket.to(videoRoomId).emit("new_producer", {
@@ -244,7 +286,6 @@ export function registerVideoHandlers(socket, io) {
             room.peers.set(socket.id, peer);
             const videoRoomId = `video:${conversation_id}`;
             socket.join(videoRoomId);
-            console.log(`🎥 Auto-joined ${socket.id} to video room ${videoRoomId} (from create_transport)`);
         }
 
         const transport = await createWebRtcTransport(room.router);
@@ -273,7 +314,6 @@ export function registerVideoHandlers(socket, io) {
 
         // Vérifier que le router peut consommer
         if (!room.router.canConsume({ producerId, rtpCapabilities })) {
-            console.error("❌ Cannot consume producer", producerId);
             return cb({ error: "cannot_consume" });
         }
 
@@ -315,10 +355,9 @@ export function registerVideoHandlers(socket, io) {
             peer.producers.splice(producerIndex, 1);
 
             const videoRoomId = `video:${conversation_id}`;
-            console.log(`🎥 Producer closed: ${producerId} by ${socket.id}`);
             socket.to(videoRoomId).emit("producer_closed", { producerId });
-        } catch (error) {
-            console.error("❌ Error closing producer:", error);
+        } catch {
+            // silently ignore
         }
     });
 
@@ -327,7 +366,6 @@ export function registerVideoHandlers(socket, io) {
         if (!conversation_id) return;
 
         const videoRoomId = `video:${conversation_id}`;
-        console.log(`🎥 ${socket.id} leaving video room ${videoRoomId}`);
         removePeerFromAllRooms(socket.id, io, conversation_id);
         socket.leave(videoRoomId);
     });
