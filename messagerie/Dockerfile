@@ -11,7 +11,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY src ./src
-COPY config ./config
+COPY src/config ./config
 
 ENV NODE_ENV=development
 EXPOSE 8081
