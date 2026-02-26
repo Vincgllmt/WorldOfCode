@@ -1,5 +1,6 @@
 import {
   getAllPosts,
+  getPostById,
   createPost,
   updatePost,
   deletePost,
@@ -37,6 +38,14 @@ const invalidatePostLists = (queryClient: QueryClient) =>
 // -------------------------
 // LISTES / CRUD DE BASE
 // -------------------------
+export const usePost = (id: number | string) => {
+  return useQuery<Post>({
+    queryKey: postKey(id),
+    queryFn: () => getPostById(String(id)),
+    enabled: !!id,
+  })
+}
+
 export const usePosts = (enabled = true) => {
   const { data: posts, isLoading, error } = useQuery<Post[]>({
     queryKey: postsKey,

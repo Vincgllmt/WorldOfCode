@@ -1,4 +1,5 @@
-import { useEffect, useRef, useMemo } from "react"
+import { useEffect, useRef, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
 import { Send } from "lucide-react"
@@ -40,7 +41,22 @@ export function MessageList({
     typingUsers = [],
     otherUsername,
 }: Props) {
+    const router = useRouter()
     const parentRef = useRef<HTMLDivElement | null>(null)
+
+    // Intercepte les clics sur les liens internes (ex: /post/123) pour utiliser
+    // la navigation client-side Next.js au lieu d'un rechargement complet,
+    // ce qui évite le flash de thème (logo blanc → noir).
+    const handleMessageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        const anchor = (e.target as HTMLElement).closest('a')
+        if (!anchor) return
+
+        const href = anchor.getAttribute('href')
+        if (href && href.startsWith('/')) {
+            e.preventDefault()
+            router.push(href)
+        }
+    }, [router])
 
     const virtualizer = useVirtualizer({
         count: messages?.length ?? 0,
@@ -82,6 +98,7 @@ export function MessageList({
         <div
             ref={parentRef}
             className="msg-list-bg relative flex-1 overflow-y-auto px-4"
+            onClick={handleMessageClick}
         >
             <div
                 style={{
@@ -97,6 +114,7 @@ export function MessageList({
 
                     const showDateSep = !prevMsg || !isSameDay(prevMsg.createdAt, m.createdAt)
                     const isContinuation = prevMsg && prevMsg.sender.id === m.sender.id && !showDateSep
+                    const hasSharedPost = m.body.includes('shared-post-card')
 
                     return (
                         <div
@@ -120,7 +138,7 @@ export function MessageList({
                             )}
 
                             <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
-                                <div className="max-w-[70%]">
+                                <div className={hasSharedPost ? "max-w-[85%] min-w-[260px]" : "max-w-[70%]"}>
                                     {convType === "group" && !isMe && !isContinuation && (
                                         <div className="text-xs font-semibold text-primary mb-0.5 ml-1">
                                             {m.sender.username}
@@ -128,20 +146,22 @@ export function MessageList({
                                     )}
 
                                     <div
-                                        className={`px-3 py-2 break-words ${isMe
-                                            ? isContinuation
-                                                ? "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
-                                                : "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                                            : isContinuation
-                                                ? "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
-                                                : "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
+                                        className={`px-3 py-2 break-words ${hasSharedPost
+                                            ? "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl"
+                                            : isMe
+                                                ? isContinuation
+                                                    ? "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-tr-md"
+                                                    : "msg-bubble-own bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                                                : isContinuation
+                                                    ? "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-tl-md"
+                                                    : "msg-bubble-received bg-card text-card-foreground shadow-sm rounded-2xl rounded-bl-md"
                                             }`}
                                     >
                                         <div
                                             className="text-[15px] leading-relaxed prose-sm prose-p:m-0 prose-p:leading-relaxed [&>p]:m-0"
                                             dangerouslySetInnerHTML={{ __html: sanitizeHtml(m.body) }}
                                         />
-                                        <p className={`text-[10px] mt-1 text-right ${isMe ? "msg-time text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                        <p className={`text-[10px] mt-1 text-right ${isMe && !hasSharedPost ? "msg-time text-primary-foreground/70" : "text-muted-foreground"}`}>
                                             {formatMessageTime(m.createdAt)}
                                         </p>
                                     </div>

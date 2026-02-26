@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { useConversations, useCreateConversation } from "@/hooks/useConversations"
-import { useFollowers, useFollowing } from "@/hooks/useFollow"
+import { useContacts } from "@/hooks/useContacts"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import clsx from "clsx"
@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/command"
 import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
 
-type Contact = {
-    id: number
-    username: string
-    relation: 'follower' | 'following' | 'mutual'
+function getMessagePreview(body: string, isMine: boolean): string {
+    if (body.includes('shared-post-card')) {
+        return isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
+    }
+    return body.replace(/<[^>]*>/g, '').trim()
 }
 
 function formatTime(dateStr: string) {
@@ -51,41 +52,31 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
     const [contactQuery, setContactQuery] = useState('')
     const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
 
-    const userId = user?.id
-    const { followers, isLoading: isLoadingFollowers } = useFollowers(userId)
-    const { following, isLoading: isLoadingFollowing } = useFollowing(userId)
+    const { contacts, isLoading: isLoadingContacts } = useContacts()
     const createConversation = useCreateConversation()
 
-    const contacts = useMemo<Contact[]>(() => {
-        const map = new Map<number, Contact>()
-
-        followers?.forEach((follower) => {
-            map.set(follower.id, {
-                id: follower.id,
-                username: follower.username,
-                relation: 'follower',
-            })
-        })
-
-        following?.forEach((followed) => {
-            const existing = map.get(followed.id)
-            map.set(followed.id, {
-                id: followed.id,
-                username: followed.username,
-                relation: existing ? 'mutual' : 'following',
-            })
-        })
-
-        return Array.from(map.values()).sort((a, b) => a.username.localeCompare(b.username))
-    }, [followers, following])
+    // IDs des contacts avec qui une conversation directe existe déjà
+    const existingDirectContactIds = useMemo(() => {
+        if (!conversations || !user?.id) return new Set<number>()
+        const ids = new Set<number>()
+        for (const conv of conversations) {
+            if (conv.type === 'direct') {
+                for (const p of conv.participants) {
+                    if (p.id !== user.id) ids.add(p.id)
+                }
+            }
+        }
+        return ids
+    }, [conversations, user?.id])
 
     const filteredContacts = useMemo(() => {
+        const available = contacts.filter((c) => !existingDirectContactIds.has(c.id))
         const normalizedQuery = contactQuery.trim().toLowerCase()
-        if (!normalizedQuery) return contacts
-        return contacts.filter((contact) =>
+        if (!normalizedQuery) return available
+        return available.filter((contact) =>
             contact.username.toLowerCase().includes(normalizedQuery)
         )
-    }, [contacts, contactQuery])
+    }, [contacts, contactQuery, existingDirectContactIds])
 
     const handleStartConversation = (contactId: number) => {
         createConversation.mutate(
@@ -110,8 +101,6 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
             }
         }
     }, [conversations, justCreatedId])
-
-    const isLoadingContacts = isLoadingFollowers || isLoadingFollowing
 
     return (
         <div className="flex h-[calc(100vh-64px)]">
@@ -174,13 +163,11 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                                     <span className="text-sm font-medium text-foreground truncate">
                                                         {contact.username}
                                                     </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {contact.relation === 'mutual'
-                                                            ? 'Abonné·e mutuel·le'
-                                                            : contact.relation === 'follower'
-                                                                ? 'Vous suit'
-                                                                : 'Vous le suivez'}
-                                                    </span>
+                                                    {contact.relation === 'mutual' && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Abonné·e mutuel·le
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {createConversation.isPending && (
                                                     <Loader2 className="h-4 w-4 animate-spin ml-auto" />
@@ -203,7 +190,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                     )}
 
                     {conversations
-                        ?.filter((conv) => conv.lastMessage || conv.id === justCreatedId)
+                        ?.filter((conv) => conv.lastMessage || conv.id === justCreatedId || conv.id === currentConversationId)
                         .sort((a, b) => {
                             const aDate = a.lastMessage
                                 ? new Date(a.lastMessage.createdAt).getTime()
@@ -269,7 +256,7 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                                                 "text-sm truncate",
                                                 isUnread ? "font-semibold text-foreground" : "text-muted-foreground"
                                             )}>
-                                                {conv.lastMessage ? conv.lastMessage.body : "Aucun message"}
+                                                {conv.lastMessage ? getMessagePreview(conv.lastMessage.body, conv.lastMessage.sender?.id === user?.id) : "Aucun message"}
                                             </span>
                                             {isUnread && (
                                                 <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">

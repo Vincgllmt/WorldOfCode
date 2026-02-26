@@ -43,7 +43,7 @@ export default function ConversationPage() {
 
     return (
         <div className="flex flex-col h-full">
-            <ConversationHeader title={title} onStartCall={handleStartCall} />
+            <ConversationHeader title={title} userId={otherUser?.id} onStartCall={handleStartCall} />
             <MessageList
                 messages={messages || []}
                 userId={userId}
