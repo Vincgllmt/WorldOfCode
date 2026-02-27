@@ -1,5 +1,5 @@
 deploy:registry:
-  stage: deploy-services
+  stage: deploy-infra
   when: manual
   variables:
     REGISTRY_NAMESPACE: "registry"
