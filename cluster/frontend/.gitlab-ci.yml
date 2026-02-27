@@ -19,7 +19,7 @@ build:frontend:
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/frontend" \
-        --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile" \
+        --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile.prod" \
         --destination "${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}" \
         --build-arg NEXT_PUBLIC_API_URL="https://api.${APP_NAMESPACE}.woc/api" \
         --build-arg NEXT_PUBLIC_SOCKET_URL="https://api.${APP_NAMESPACE}.woc" \
