@@ -8,8 +8,6 @@ setup:secrets:preprod:
     name: preprod
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
-      changes:
-        - cluster/**/*
   script:
     - echo "--- Configuration du Namespace ---"
     - kubectl create namespace preprod --dry-run=client -o yaml | kubectl apply -f -
