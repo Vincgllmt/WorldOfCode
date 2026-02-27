@@ -13,7 +13,7 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { isActive } from "@/lib/navigation"
 import { useConversations, useConversationRealtime } from "@/hooks/useConversations"
@@ -136,6 +136,7 @@ export default function Navbar() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Avatar className="cursor-pointer">
+                                    <AvatarImage src={user.avatarUrl ?? undefined} alt={`Avatar de ${user.username}`} />
                                     <AvatarFallback>
                                         {user.username.slice(0, 2).toUpperCase()}
                                     </AvatarFallback>
