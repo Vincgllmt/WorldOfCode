@@ -1,4 +1,4 @@
-FROM php:8.3-cli
+FROM php:8.4-cli
 
 # Installer dépendances système + extensions PHP
 RUN apt-get update && \
@@ -11,14 +11,19 @@ RUN apt-get update && \
     iputils-ping \
     ca-certificates \
     curl \
+    wget \
     sqlite3 \
     libsqlite3-dev \
     && docker-php-ext-install intl pdo pdo_mysql pdo_sqlite zip \
     && rm -rf /var/lib/apt/lists/*
 
+# Vérifier la version de PHP installée
+RUN php -v
+
 # Installer Symfony CLI
-RUN curl -sS https://get.symfony.com/cli/installer | bash && \
-    mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
+COPY --link \
+    --from=ghcr.io/symfony-cli/symfony-cli:latest \
+    /usr/local/bin/symfony /usr/local/bin/symfony
 
 # Installer Composer depuis l'image officielle
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
