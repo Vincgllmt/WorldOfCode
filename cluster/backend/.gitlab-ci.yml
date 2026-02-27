@@ -23,7 +23,7 @@ build:backend:
         --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}" \
         --insecure \
         --skip-tls-verify \
-        --cache=true 
+        --cache=true
 
 # 2. Déploiement automatique en PRÉPROD
 deploy:backend:preprod:
