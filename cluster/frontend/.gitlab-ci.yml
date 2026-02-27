@@ -11,16 +11,15 @@ build:frontend:
         - frontend/**/*
         - cluster/frontend/**/*
   script:
-    - echo "Configuration de l'authentification Kaniko..."
-    - |
-      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    
     - echo "Build et Push vers ${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}"
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/frontend" \
         --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile" \
         --destination "${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}" \
+        --build-arg NEXT_PUBLIC_API_URL="https://api.${APP_NAMESPACE}.woc/api" \
+        --build-arg NEXT_PUBLIC_SOCKET_URL="https://api.${APP_NAMESPACE}.woc" \
+        --build-arg NEXT_PUBLIC_WOC_URL="https://woc.${APP_NAMESPACE}" \
         --insecure \
         --skip-tls-verify \
         --cache=true

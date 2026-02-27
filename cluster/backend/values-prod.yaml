@@ -18,8 +18,13 @@ database:
   url: "mysql://application:password@mysql:3306/projet_web"
 
 env:
-  # Regex qui autorise http://woc.production et https://woc.production
+  APP_ENV: "prod"
   CORS_ALLOW_ORIGIN: "^https?://(woc\\.production|api\\.production\\.woc|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  MINIO_ENDPOINT: "http://minio.production.svc.cluster.local:9000"
+  MINIO_ACCESS_KEY: "admin" 
+  MINIO_SECRET_KEY: "admin1234"
+  MINIO_BUCKET: "uploads"
+  MINIO_PUBLIC_URL: "https://api.production.woc/uploads"
 
 ingress:
   enabled: true

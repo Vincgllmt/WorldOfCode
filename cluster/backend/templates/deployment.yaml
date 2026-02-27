@@ -24,7 +24,7 @@ spec:
             - containerPort: 9000
           env:
             - name: APP_ENV
-              value: "prod"
+              value: {{ .Values.env.APP_ENV | quote }}
             - name: CORS_ALLOW_ORIGIN
               value: {{ .Values.env.CORS_ALLOW_ORIGIN | quote }}
             - name: DATABASE_URL
@@ -33,16 +33,16 @@ spec:
                   name: woc-db
                   key: DATABASE_URL
             - name: MINIO_ENDPOINT
-              value: "http://minio.{{ .Release.Namespace }}.svc.cluster.local:9000"
+              value: {{ .Values.env.MINIO_ENDPOINT | quote }}
             - name: MINIO_ACCESS_KEY
-              value: "admin"
+              value: {{ .Values.env.MINIO_ACCESS_KEY | quote }}
             - name: MINIO_SECRET_KEY
-              value: "admin1234"
+              value: {{ .Values.env.MINIO_SECRET_KEY | quote }}
             - name: MINIO_BUCKET
-              value: "uploads"
+              value: {{ .Values.env.MINIO_BUCKET | quote }}
             - name: MINIO_PUBLIC_URL
-              value: "http://minio-api.{{ if eq .Release.Namespace "production" }}woc{{ else }}preprod.woc{{ end }}/uploads"
-          
+              value: {{ .Values.env.MINIO_PUBLIC_URL | quote }}
+
           # Montage des clés pour PHP
           volumeMounts:
             - name: jwt-keys
