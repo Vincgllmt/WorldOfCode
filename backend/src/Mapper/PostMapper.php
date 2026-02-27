@@ -18,6 +18,7 @@ class PostMapper
         $dto->updatedAt = $post->getUpdatedAt()?->format('Y-m-d H:i:s');
         $dto->authorId = $post->getAuthor()->getId();
         $dto->authorUsername = $post->getAuthor()->getUsername();
+        $dto->authorAvatarUrl = $post->getAuthor()->getAvatarUrl();
         $dto->techGroupId = $post->getTechGroup()->getId();
         $dto->techGroupName = $post->getTechGroup()->getName();
         $dto->likesCount = $post->getLikes()->count();
@@ -41,6 +42,7 @@ class PostMapper
         $dto->updatedAt = $sharedPost->getUpdatedAt()?->format('Y-m-d H:i:s');
         $dto->authorId = $sharedPost->getAuthor()->getId();
         $dto->authorUsername = $sharedPost->getAuthor()->getUsername();
+        $dto->authorAvatarUrl = $sharedPost->getAuthor()->getAvatarUrl();
         $dto->techGroupId = $sharedPost->getTechGroup()->getId();
         $dto->techGroupName = $sharedPost->getTechGroup()->getName();
         $dto->likesCount = $sharedPost->getLikes()->count();

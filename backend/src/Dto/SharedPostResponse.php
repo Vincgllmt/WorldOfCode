@@ -55,6 +55,13 @@ class SharedPostResponse
     public string $authorUsername;
 
     #[OA\Property(
+        description: "URL de la photo de profil de l’auteur du post partagé",
+        type: "string",
+        nullable: true
+    )]
+    public ?string $authorAvatarUrl = null;
+
+    #[OA\Property(
         description: "Identifiant du groupe tech du post partagé",
         type: "integer",
         example: 2

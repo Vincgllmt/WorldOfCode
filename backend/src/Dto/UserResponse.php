@@ -77,6 +77,14 @@ class UserResponse
     )]
     public ?string $theme = null;
 
+    #[OA\Property(
+        description: "URL de la photo de profil de l'utilisateur",
+        type: "string",
+        example: "http://localhost:9000/bucket/avatar.jpg",
+        nullable: true
+    )]
+    public ?string $avatarUrl = null;
+
     // --- Nouveaux champs profil CV ---
 
     #[OA\Property(

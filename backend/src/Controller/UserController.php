@@ -429,6 +429,10 @@ final class UserController extends AbstractController
             $user->setExperiences($dto->experiences);
         }
 
+        if (array_key_exists('avatarUrl', $payload)) {
+            $user->setAvatarUrl($dto->avatarUrl);
+        }
+
         // Skills (replace all)
         if (array_key_exists('skillIds', $payload) && is_array($dto->skillIds)) {
             // Clear existing skills

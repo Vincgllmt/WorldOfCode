@@ -70,6 +70,7 @@ class AuthenticationController extends AbstractController
         $firstname = $data['firstname'] ?? null;
         $lastname = $data['lastname'] ?? null;
         $email = $data['email'] ?? null;
+        $avatarUrl = $data['avatarUrl'] ?? null;
 
         if (!$username || !$plainPassword || !$firstname || !$lastname || !$email) {
             return $this->json(['error' => 'Il manque un/des champs obligatoire. '], 400);
@@ -98,7 +99,8 @@ class AuthenticationController extends AbstractController
             ->setFirstname($firstname)
             ->setLastname($lastname)
             ->setEmail($email)
-            ->setRole(UserRole::ROLE_USER);
+            ->setRole(UserRole::ROLE_USER)
+            ->setAvatarUrl($avatarUrl);
 
         if (count($userRepository->findAll()) === 0) {
             $user->setRole(UserRole::ROLE_ADMIN);
