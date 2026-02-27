@@ -22,7 +22,7 @@ build:frontend:
         --build-arg NEXT_PUBLIC_WOC_URL="https://woc.${APP_NAMESPACE}" \
         --insecure \
         --skip-tls-verify \
-        --cache=true 
+        --cache=true
 
 # 2. Déploiement en PRÉPROD
 deploy:frontend:preprod:

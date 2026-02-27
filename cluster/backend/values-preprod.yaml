@@ -3,7 +3,6 @@ replicaCount: 1
 image:
   repository: registry.woc:32000/backend
   pullPolicy: IfNotPresent
-  tag: "a95d45e1"
 
 registry:
   imagePullSecretName: woc-regcred
