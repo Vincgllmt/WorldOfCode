@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
-import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById, changeUserPassword } from '@/services/userService'
+import { getAllUsers, updateUser, deleteUser, getUserGroups, getUserById, changeUserPassword, updateUserProfile } from '@/services/userService'
 import { ChangePasswordPayload, UpdateUserPayload, PublicUser } from '@/interfaces/user'
 import toast from 'react-hot-toast'
 import { Group } from '@/interfaces/group'
@@ -61,6 +61,21 @@ export const useUser = (userId: number | undefined, options?: { enabled?: boolea
     queryFn: () => getUserById(userId!),
     enabled: typeof userId === 'number' && (options?.enabled ?? true),
     ...options,
+  })
+}
+
+export const useUpdateAvatar = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, avatarUrl }: { userId: number; avatarUrl: string | null }) =>
+      updateUserProfile(userId, { avatarUrl }),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+    },
+    onError: () => {
+      toast.error("Erreur lors de la mise à jour de l'avatar")
+    },
   })
 }
 

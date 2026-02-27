@@ -61,6 +61,7 @@ export interface UpdateProfilePayload {
   availability?: string | null
   experiences?: Experience[] | null
   skillIds?: number[] | null
+  avatarUrl?: string | null
 }
 
 export interface CreateLinkPayload {

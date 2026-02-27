@@ -5,6 +5,7 @@ export interface Post {
   readonly updatedAt: string | null
   readonly authorId: number
   readonly authorUsername: string
+  readonly authorAvatarUrl?: string | null
   readonly techGroupId: number
   readonly techGroupName: string
   readonly likesCount: number
