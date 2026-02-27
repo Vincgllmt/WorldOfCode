@@ -15,12 +15,12 @@ class ConversationControllerTest extends WebTestCase
 
     private $userData1 = [
         'username' => 'LinkHyrule',
-        'password' => 'MasterSword',
+        'password' => 'MasterSword!@2024',
     ];
 
     private $userData2 = [
         'username' => 'ZeldaPrincess',
-        'password' => 'TriforceWisdom',
+        'password' => 'TriforceWisdom!@2024',
     ];
 
     protected function setUp(): void
@@ -39,9 +39,13 @@ class ConversationControllerTest extends WebTestCase
     protected function tearDown(): void
     {
         $this->removeExistingUsers();
-        parent::tearDown();
+
         $this->entityManager->close();
         $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
 
     private function removeExistingUsers(): void
@@ -80,6 +84,8 @@ class ConversationControllerTest extends WebTestCase
             json_encode($userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 

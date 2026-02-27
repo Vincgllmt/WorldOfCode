@@ -17,16 +17,17 @@ class ReportControllerTest extends WebTestCase
 
     private $userData = [
         'username' => 'Kratos',
-        'password' => 'GhostOfSparta',
+        'password' => 'GhostOfSparta!@2024',
     ];
 
     private $adminData = [
         'username' => 'Atreus',
-        'password' => 'BoyOfWar',
+        'password' => 'BoyOfWar!@2024',
     ];
 
     protected function setUp(): void
     {
+        self::ensureKernelShutdown();
         $this->client = static::createClient();
         $this->entityManager = $this->client->getContainer()->get(EntityManagerInterface::class);
 
@@ -48,9 +49,13 @@ class ReportControllerTest extends WebTestCase
 
         // Then clean up users
         $this->removeExistingUsers();
-        parent::tearDown();
+
         $this->entityManager->close();
         $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
 
     private function removeExistingUsers(): void
@@ -89,6 +94,8 @@ class ReportControllerTest extends WebTestCase
             json_encode($userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 
@@ -266,6 +273,7 @@ class ReportControllerTest extends WebTestCase
 
         // Get the admin user and set ROLE_ADMIN
         $adminUser = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $this->adminData['username']]);
+        $this->assertNotNull($adminUser, 'Admin user should exist after registration');
         $adminUser->setRole(\App\Enum\UserRole::ROLE_ADMIN);
         $this->entityManager->flush();
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\tests\Controller;
+namespace App\Tests\Controller;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,11 +14,12 @@ class AuthenticationControllerTest extends WebTestCase
     private $username = 'KiryuKazuma';
     private $userData = [
         'username' => 'KiryuKazuma',
-        'password' => 'DragonOfDojima',
+        'password' => 'DragonOfDojima!@2024',
     ];
 
     protected function setUp(): void
     {
+        self::ensureKernelShutdown();
         $this->client = static::createClient();
         $this->entityManager = $this->client->getContainer()->get(EntityManagerInterface::class);
 
@@ -119,6 +120,8 @@ class AuthenticationControllerTest extends WebTestCase
         $this->registerUser();
         $authData = $this->authenticateUser();
 
+        $this->assertArrayHasKey('token', $authData, 'Token should be present after authentication');
+
         $this->client->request(
             'GET',
             '/api/me',
@@ -151,7 +154,7 @@ class AuthenticationControllerTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['password' => 'password123'])
+            json_encode(['password' => 'ValidPassword!@2024'])
         );
 
         $this->assertEquals(Response::HTTP_BAD_REQUEST, $this->client->getResponse()->getStatusCode());
@@ -197,7 +200,7 @@ class AuthenticationControllerTest extends WebTestCase
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'username' => $this->username,
-                'password' => 'wrongPassword'
+                'password' => 'WrongPassword!@2024'
             ])
         );
 
@@ -234,9 +237,13 @@ class AuthenticationControllerTest extends WebTestCase
     protected function tearDown(): void
     {
         $this->removeExistingUser();
-        parent::tearDown();
+
         $this->entityManager->close();
         $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
 
 }

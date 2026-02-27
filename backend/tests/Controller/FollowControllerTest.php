@@ -15,12 +15,12 @@ class FollowControllerTest extends WebTestCase
 
     private $userData1 = [
         'username' => 'JokerAkira',
-        'password' => 'PhantomThief',
+        'password' => 'PhantomThief!@2024',
     ];
 
     private $userData2 = [
         'username' => 'RyujiSakamoto',
-        'password' => 'SkullForReal',
+        'password' => 'SkullForReal!@2024',
     ];
 
     protected function setUp(): void
@@ -39,9 +39,13 @@ class FollowControllerTest extends WebTestCase
     protected function tearDown(): void
     {
         $this->removeExistingUsers();
-        parent::tearDown();
+
         $this->entityManager->close();
         $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
 
     private function removeExistingUsers(): void
@@ -80,6 +84,8 @@ class FollowControllerTest extends WebTestCase
             json_encode($userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 
@@ -94,6 +100,7 @@ class FollowControllerTest extends WebTestCase
     public function testFollowWithoutAuth(): void
     {
         $user2 = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $this->userData2['username']]);
+        $this->assertNotNull($user2, 'User2 should exist for testFollowWithoutAuth');
 
         $this->client->request('POST', '/api/follow/' . $user2->getId());
         $this->assertEquals(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());
@@ -184,6 +191,7 @@ class FollowControllerTest extends WebTestCase
     public function testUnfollowWithoutAuth(): void
     {
         $user2 = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $this->userData2['username']]);
+        $this->assertNotNull($user2, 'User2 should exist for testUnfollowWithoutAuth');
 
         $this->client->request('DELETE', '/api/follow/' . $user2->getId());
         $this->assertEquals(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());

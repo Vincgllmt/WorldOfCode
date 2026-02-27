@@ -31,17 +31,17 @@ Ce document définit les règles et bonnes pratiques à respecter pour écrire e
 
 ### Tableau de Références Actuelles
 
-| Fichier de Test                  | 🎮 Jeu Vidéo                | Utilisateur(s)              | Mot(s) de Passe                  |
-|----------------------------------|-----------------------------|-----------------------------|----------------------------------|
-| **AuthenticationControllerTest** | 🐉 **Yakuza**               | KiryuKazuma                 | DragonOfDojima                   |
-| **PostControllerTest**           | ⚔️ **The Witcher**          | GeraltOfRivia               | WhiteWolf1234                    |
-| **CommentControllerTest**        | ☀️ **Dark Souls**           | SolairOfAstora              | PraiseTheSun                     |
-| **TechGroupControllerTest**      | 🎮 **Metal Gear Solid**     | SolidSnake                  | FoxhoundUnit                     |
-| **UserControllerTest**           | 🗡️ **Final Fantasy VII**   | CloudStrife                 | Buster5word                      |
-| **FollowControllerTest**         | 🎭 **Persona 5**            | JokerAkira<br>RyujiSakamoto | PhantomThief<br>SkullForReal     |
-| **ConversationControllerTest**   | 🗡️ **The Legend of Zelda** | LinkHyrule<br>ZeldaPrincess | MasterSword<br>TriforceWisdom    |
-| **MessageControllerTest**        | ⚡ **Hades**                 | Zagreus<br>Thanatos         | EscapeFromHell<br>DeathIncarnate |
-| **ReportControllerTest**         | 🪓 **God of War**           | Kratos<br>Atreus            | GhostOfSparta<br>BoyOfWar        |
+| Fichier de Test                  | 🎮 Jeu Vidéo                | Utilisateur(s)              | Mot(s) de Passe                              |
+|----------------------------------|-----------------------------|-----------------------------|----------------------------------------------|
+| **AuthenticationControllerTest** | 🐉 **Yakuza**               | KiryuKazuma                 | DragonOfDojima!@2024                         |
+| **PostControllerTest**           | ⚔️ **The Witcher**          | GeraltOfRivia               | WhiteWolf1234!@2024                          |
+| **CommentControllerTest**        | ☀️ **Dark Souls**           | SolairOfAstora              | PraiseTheSun!@2024                           |
+| **TechGroupControllerTest**      | 🎮 **Metal Gear Solid**     | SolidSnake                  | FoxhoundUnit!@2024                           |
+| **UserControllerTest**           | 🗡️ **Final Fantasy VII**   | CloudStrife                 | Buster5word!@2024                            |
+| **FollowControllerTest**         | 🎭 **Persona 5**            | JokerAkira<br>RyujiSakamoto | PhantomThief!@2024<br>SkullForReal!@2024     |
+| **ConversationControllerTest**   | 🗡️ **The Legend of Zelda** | LinkHyrule<br>ZeldaPrincess | MasterSword!@2024<br>TriforceWisdom!@2024    |
+| **MessageControllerTest**        | ⚡ **Hades**                 | Zagreus<br>Thanatos         | EscapeFromHell!@2024<br>DeathIncarnate!@2024 |
+| **ReportControllerTest**         | 🪓 **God of War**           | Kratos<br>Atreus            | GhostOfSparta!@2024<br>BoyOfWar!@2024        |
 
 ### Comment Choisir une Référence ?
 
@@ -93,6 +93,6 @@ Voici quelques idées de jeux vidéo à utiliser pour de nouveaux tests :
 
 ---
 
-*Dernière mise à jour : 7 novembre 2025*
+*Dernière mise à jour : 27 février 2026*
 
 *"Un bon test est un test qui raconte une histoire" - The Tester's Creed*
