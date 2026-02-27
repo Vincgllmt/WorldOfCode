@@ -10,6 +10,8 @@ services:
       MINIO_SECRET_KEY: admin1234
       MINIO_BUCKET: uploads
       MINIO_PUBLIC_URL: http://localhost:9000/uploads
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+
     volumes:
       - ./backend:/var/www/backend
       - jwt_keys:/var/www/backend/config/jwt
