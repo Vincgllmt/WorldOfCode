@@ -13,13 +13,24 @@ class UserControllerTest extends WebTestCase
 
     private $userData = [
         'username' => 'CloudStrife',
-        'password' => 'Buster5word',
+        'password' => 'Buster5word!@2024',
+        'firstname' => 'Cloud',
+        'lastname' => 'Strife',
+        'email' => 'cloud.strife@midgar.test',
     ];
 
     protected function setUp(): void
     {
         $this->client = static::createClient();
         $this->entityManager = $this->client->getContainer()->get(EntityManagerInterface::class);
+
+        // Nettoyer un éventuel utilisateur résiduel avant l'inscription
+        $existing = $this->entityManager->getRepository(User::class)->findOneBy(['username' => 'CloudStrife']);
+        if ($existing) {
+            $this->entityManager->remove($existing);
+            $this->entityManager->flush();
+        }
+
         $this->client->request(
             'POST',
             '/api/register',
@@ -36,9 +47,13 @@ class UserControllerTest extends WebTestCase
             $this->entityManager->remove($user);
             $this->entityManager->flush();
         }
-        parent::tearDown();
+
         $this->entityManager->close();
-        $this->entityManager = null; // avoid memory leaks
+        $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
 
     protected function auth() {
@@ -51,6 +66,8 @@ class UserControllerTest extends WebTestCase
             json_encode($this->userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 
@@ -97,6 +114,8 @@ class UserControllerTest extends WebTestCase
             json_encode($this->userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Auth response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         $token = $responseData['token'];
         //get id of current user
 

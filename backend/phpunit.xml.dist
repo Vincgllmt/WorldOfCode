@@ -28,6 +28,10 @@
         <include>
             <directory suffix=".php">src</directory>
         </include>
+        <report>
+            <clover outputFile="coverage.xml"/>
+            <text outputFile="php://stdout"/>
+        </report>
     </coverage>
 
     <listeners>

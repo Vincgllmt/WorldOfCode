@@ -28,6 +28,7 @@ out/
 # --- Tests ---
 coverage/
 *.lcov
+lint-output.txt
 
 # --- OS / IDE ---
 .DS_Store

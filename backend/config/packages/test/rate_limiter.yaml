@@ -1,0 +1,4 @@
+framework:
+  rate_limiter:
+    login_attempts:
+      policy: "no_limit"

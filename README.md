@@ -64,6 +64,30 @@ docker compose restart
 composer run test
 ```
 
+## 🔄 CI/CD
+
+Ce projet utilise GitLab CI/CD pour garantir la qualité du code.
+
+### Pipelines automatiques
+
+La CI s'exécute automatiquement sur :
+- 🔀 Les **Merge Requests**
+- 🌿 Les pushs sur **main** et **dev**
+
+### Jobs de la CI
+
+1. **🔍 Linter** (Frontend + Backoffice)
+   - Vérifie la qualité du code avec ESLint
+   - ❌ Bloque le merge si erreurs détectées
+   - ✅ Accepte les warnings
+
+2. **🧪 Coverage** (Backend Symfony)
+   - Exécute les tests PHPUnit avec couverture de code
+   - ❌ Bloque le merge si tests échoués
+   - ✅ Accepte les warnings/notices
+
+📚 **Documentation complète** : [CI-CD-README.md](.gitlab/CI-CD-README.md)
+
 ## 🎨 Fixtures - Données de démonstration
 
 Pour avoir un **bel aperçu du site** avec des données réalistes, nous avons préparé des fixtures complètes !

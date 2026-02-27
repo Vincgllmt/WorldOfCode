@@ -14,7 +14,7 @@ class PostControllerTest extends WebTestCase
 
     private $userData = [
         'username' => 'GeraltOfRivia',
-        'password' => 'WhiteWolf1234',
+        'password' => 'WhiteWolf!@2024',
     ];
 
     protected function setUp(): void
@@ -38,9 +38,13 @@ class PostControllerTest extends WebTestCase
             $this->entityManager->remove($user);
             $this->entityManager->flush();
         }
-        parent::tearDown();
+
         $this->entityManager->close();
-        $this->entityManager = null; // avoid memory leaks
+        $this->entityManager = null;
+        $this->client = null;
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
     }
     protected function auth() {
         $this->client->request(
@@ -52,6 +56,8 @@ class PostControllerTest extends WebTestCase
             json_encode($this->userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
     public function testGetPostListWithoutAuth(): void

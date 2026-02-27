@@ -14,11 +14,12 @@ class TechGroupControllerTest extends WebTestCase
 
 	private $userData = [
 		'username' => 'SolidSnake',
-		'password' => 'FoxhoundUnit',
+		'password' => 'FoxhoundUnit!@2024',
 	];
 
 	protected function setUp(): void
 	{
+		self::ensureKernelShutdown();
 		$this->client = static::createClient();
 		$this->entityManager = $this->client->getContainer()->get(EntityManagerInterface::class);
 		$this->client->request(
@@ -43,6 +44,8 @@ class TechGroupControllerTest extends WebTestCase
 			json_encode($this->userData)
 		);
 		$responseData = json_decode($this->client->getResponse()->getContent(), true);
+		$this->assertNotNull($responseData, 'Authentication response should not be null in setUp');
+		$this->assertArrayHasKey('token', $responseData, 'Token should be present in response in setUp');
 		$token = $responseData['token'];
 
 		$this->client->request(
@@ -69,9 +72,13 @@ class TechGroupControllerTest extends WebTestCase
             $this->entityManager->remove($techGroup);
             $this->entityManager->flush();
         }
-		parent::tearDown();
+
 		$this->entityManager->close();
-		$this->entityManager = null; // avoid memory leaks
+		$this->entityManager = null;
+		$this->client = null;
+
+		parent::tearDown();
+		self::ensureKernelShutdown();
 	}
     protected function auth() {
         $this->client->request(
@@ -83,6 +90,8 @@ class TechGroupControllerTest extends WebTestCase
             json_encode($this->userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 

@@ -13,11 +13,12 @@ class CommentControllerTest extends WebTestCase
 
 	private $userData = [
 		'username' => 'SolairOfAstora',
-		'password' => 'PraiseTheSun',
+		'password' => 'PraiseTheSun!@2024',
 	];
 
 	protected function setUp(): void
 	{
+		self::ensureKernelShutdown();
 		$this->client = static::createClient();
 		$this->entityManager = $this->client->getContainer()->get(EntityManagerInterface::class);
 		$this->client->request(
@@ -47,9 +48,13 @@ class CommentControllerTest extends WebTestCase
 			$this->entityManager->remove($user);
 			$this->entityManager->flush();
 		}
-		parent::tearDown();
+
 		$this->entityManager->close();
-		$this->entityManager = null; // avoid memory leaks
+		$this->entityManager = null;
+		$this->client = null;
+
+		parent::tearDown();
+		self::ensureKernelShutdown();
 	}
     protected function auth() {
         $this->client->request(
@@ -61,6 +66,8 @@ class CommentControllerTest extends WebTestCase
             json_encode($this->userData)
         );
         $responseData = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($responseData, 'Authentication response should not be null');
+        $this->assertArrayHasKey('token', $responseData, 'Token should be present in response');
         return $responseData['token'];
     }
 	public function testListCommentsWithoutAuth(): void
