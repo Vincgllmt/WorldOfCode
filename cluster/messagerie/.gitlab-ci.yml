@@ -23,7 +23,7 @@ build:messagerie:
         --destination "${REGISTRY_HOST}/messagerie:${CI_COMMIT_SHORT_SHA}" \
         --insecure \
         --skip-tls-verify \
-        --cache=true
+        --cache=true 
 
 # 2. Déploiement en PRÉPROD
 deploy:messagerie:preprod:
