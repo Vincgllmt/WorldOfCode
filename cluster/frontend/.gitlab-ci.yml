@@ -41,9 +41,10 @@ deploy:frontend:preprod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/frontend/values-preprod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
       changes:
-        - backend/**/* - cluster/backend/**/*
+        - frontend/**/* 
+        - cluster/frontend/**/*
       when: on_success
 
     - if: '$CI_COMMIT_BRANCH == "preprod"'
