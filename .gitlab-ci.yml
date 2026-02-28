@@ -2,12 +2,12 @@ variables:
   REGISTRY_HOST: "registry-docker-registry.registry.svc.cluster.local:5000"
   # Désactive le TLS (car on est en interne)
   DOCKER_TLS_CERTDIR: ""
-  
   # Indique au client Docker de contacter le service dind via le réseau sur le port 2375
   DOCKER_HOST: "tcp://docker:2375"
   
 stages:
-  - test             # Pour le futur (tests unitaires, linting)
+  - lint
+  - test             
   - build            # Tous les builds Docker en parallèle
   - deploy-infra     # Longhorn en premier
   - deploy-services  # MySQL, MinIO, Registry en parallèle
@@ -15,6 +15,7 @@ stages:
   - deploy-monitoring
   - deploy-n8n-ollama
 
+# --- CONFIGURATION GLOBALE PAR DÉFAUT (Déploiements K8s) ---
 image: alpine/k8s:1.31.13
 
 before_script:
