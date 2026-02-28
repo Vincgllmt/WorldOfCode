@@ -47,3 +47,143 @@ include:
   - local: cluster/messagerie/.gitlab-ci.yml
   - local: cluster/backoffice/.gitlab-ci.yml
   - local: cluster/n8n/.gitlab-ci.yml
+
+
+# ===================================
+# JOB 1: LINTER (Frontend & Backoffice)
+# ===================================
+lint:frontend-backoffice:
+  stage: lint
+  image: node:20-alpine # Écrase l'image K8s globale
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+        - backoffice/package-lock.json
+    paths:
+      - .npm
+  before_script: # Écrase le before_script K8s global
+    - npm config set cache .npm --global
+  script:
+    # Lint Frontend
+    - echo "🔍 Linting Frontend..."
+    - cd frontend
+    - npm ci
+    - |
+      set +e
+      npm run lint 2>&1 | tee lint-output.txt
+      LINT_EXIT_CODE=$?
+      set -e
+      
+      # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
+      if [ $LINT_EXIT_CODE -eq 2 ]; then
+        echo "❌ Erreur de configuration du linter Frontend"
+        exit 1
+      elif [ $LINT_EXIT_CODE -eq 1 ]; then
+        # Vérifier si ce sont des erreurs ou juste des warnings
+        if grep -E "^.*error\s+" lint-output.txt > /dev/null; then
+          echo "❌ Linter Frontend a détecté des ERREURS"
+          cat lint-output.txt
+          exit 1
+        else
+          echo "⚠️  Linter Frontend a des warnings (acceptés)"
+        fi
+      else
+        echo "✅ Linter Frontend OK"
+      fi
+    - cd ..
+
+    # Lint Backoffice
+    - echo "🔍 Linting Backoffice..."
+    - cd backoffice
+    - npm ci
+    - |
+      set +e
+      npm run lint 2>&1 | tee lint-output.txt
+      LINT_EXIT_CODE=$?
+      set -e
+      
+      # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
+      if [ $LINT_EXIT_CODE -eq 2 ]; then
+        echo "❌ Erreur de configuration du linter Backoffice"
+        exit 1
+      elif [ $LINT_EXIT_CODE -eq 1 ]; then
+        # Vérifier si ce sont des erreurs ou juste des warnings
+        if grep -E "^.*error\s+" lint-output.txt > /dev/null; then
+          echo "❌ Linter Backoffice a détecté des ERREURS"
+          cat lint-output.txt
+          exit 1
+        else
+          echo "⚠️  Linter Backoffice a des warnings (acceptés)"
+        fi
+      else
+        echo "✅ Linter Backoffice OK"
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  allow_failure: false
+
+# ===================================
+# JOB 2: COVERAGE (Backend Symfony)
+# ===================================
+coverage:backend:
+  stage: test
+  image: php:8.2-cli # Écrase l'image K8s globale
+  cache:
+    key:
+      files:
+        - backend/composer.lock
+    paths:
+      - backend/vendor/
+  before_script: # Écrase le before_script K8s global
+    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev
+    - docker-php-ext-install zip pdo pdo_mysql pdo_sqlite
+    # Installer Xdebug pour le coverage
+    - pecl install xdebug
+    - docker-php-ext-enable xdebug
+    # Installer Composer
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - cd backend
+    - composer install --no-interaction --prefer-dist --optimize-autoloader
+  script:
+    - echo "🗄️ Setting up test database..."
+    # Créer la base de données de test
+    - php bin/console doctrine:database:drop --force --env=test || true
+    - php bin/console doctrine:database:create --env=test
+    - php bin/console doctrine:schema:create --env=test
+
+    - echo "🧪 Running PHPUnit with Coverage..."
+    # Exécuter PHPUnit avec coverage et capturer la sortie
+    - |
+      XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-text --colors=never 2>&1 | tee coverage-output.txt
+      EXIT_CODE=${PIPESTATUS[0]}
+
+    # Afficher le résumé du coverage
+    - cat coverage-output.txt
+
+    # Vérifier s'il y a des ERREURS (tests échoués)
+    - |
+      if [ $EXIT_CODE -ne 0 ]; then
+        if grep -iE "(FAILURES|ERRORS|Exception|Fatal error)" coverage-output.txt; then
+          echo "❌ Tests PHPUnit ont échoué avec des ERREURS"
+          exit 1
+        fi
+      fi
+
+    # Si c'est juste des warnings ou des notices, on accepte
+    - echo "✅ Coverage Backend OK (warnings/notices acceptés)"
+  coverage: '/^\s*Lines:\s*\d+\.\d+\%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: backend/coverage.xml
+    paths:
+      - backend/coverage-output.txt
+    expire_in: 1 week
+  rules:
+    - when: never # refacto des TU avant
+    #- if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    #- if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+  allow_failure: false
