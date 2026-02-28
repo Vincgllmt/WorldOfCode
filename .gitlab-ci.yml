@@ -7,7 +7,7 @@ stages:
 # ===================================
 lint:frontend-backoffice:
   stage: lint
-  image: node:20-alpine
+  image: node:20-alpine # Écrase l'image K8s globale
   cache:
     key:
       files:
@@ -15,7 +15,7 @@ lint:frontend-backoffice:
         - backoffice/package-lock.json
     paths:
       - .npm
-  before_script:
+  before_script: # Écrase le before_script K8s global
     - npm config set cache .npm --global
   script:
     # Lint Frontend
@@ -82,14 +82,14 @@ lint:frontend-backoffice:
 # ===================================
 coverage:backend:
   stage: test
-  image: php:8.2-cli
+  image: php:8.2-cli # Écrase l'image K8s globale
   cache:
     key:
       files:
         - backend/composer.lock
     paths:
       - backend/vendor/
-  before_script:
+  before_script: # Écrase le before_script K8s global
     - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev
     - docker-php-ext-install zip pdo pdo_mysql pdo_sqlite
     # Installer Xdebug pour le coverage
