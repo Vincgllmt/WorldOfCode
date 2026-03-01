@@ -9,6 +9,9 @@ build:messagerie:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - messagerie/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
   script:
     - echo "Configuration de l'authentification Kaniko..."
     - |

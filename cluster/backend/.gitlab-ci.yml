@@ -8,6 +8,9 @@ build:backend:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - backend/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
   script:
     - echo "Configuration de l'authentification Kaniko..."
     # Utilisation de | pour éviter les erreurs de guillemets YAML
