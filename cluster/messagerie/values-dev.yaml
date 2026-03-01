@@ -17,7 +17,7 @@ containerPort: 3000
 
 env:
   PORT: "3000"
-  CORS_ORIGIN: "http://woc.preprod" # L'URL du Frontend qui appelle
+  CORS_ORIGIN: "http://woc.dev" # L'URL du Frontend qui appelle
 
 database:
   secretName: woc-messagerie-db
@@ -32,7 +32,7 @@ ingress:
   className: "traefik"
   hosts:
     # CORRECTION : On utilise le même domaine que l'API Backend
-    - host: api.preprod.woc
+    - host: api.dev.woc
       paths:
         - path: /api/messaging
           pathType: Prefix

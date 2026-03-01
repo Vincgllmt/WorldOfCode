@@ -6,10 +6,9 @@ build:frontend:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - frontend/**/*
-        - cluster/frontend/**/*
   script:
     - echo "Configuration de l'authentification Kaniko..."
     # Utilisation de | pour éviter les erreurs de guillemets YAML
@@ -28,26 +27,25 @@ build:frontend:
         --skip-tls-verify \
         --cache=true
 
-# 2. Déploiement en PRÉPROD
-deploy:frontend:preprod:
+# 2. Déploiement en DEV
+deploy:frontend:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
   environment:
-    name: preprod
+    name: dev
   variables:
-    APP_NAMESPACE: "preprod"
+    APP_NAMESPACE: "dev"
     RELEASE_NAME: "frontend"
     CHART_PATH: "cluster/frontend"
     IMAGE_PULL_SECRET: "woc-regcred"
-    VALUES_FILE: "cluster/frontend/values-preprod.yaml"
+    VALUES_FILE: "cluster/frontend/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
       changes:
         - frontend/**/* 
-        - cluster/frontend/**/*
       when: on_success
 
-    - if: '$CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
@@ -67,5 +65,8 @@ deploy:frontend:prod:
     - if: '$CI_COMMIT_BRANCH == "production"'
       changes:
         - frontend/**/*
-        - cluster/frontend/**/*
       when: manual
+
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true

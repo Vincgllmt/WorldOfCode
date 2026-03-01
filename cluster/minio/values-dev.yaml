@@ -15,13 +15,13 @@ auth:
 
 persistence:
   enabled: true
-  storageClass: longhorn-preprod
+  storageClass: longhorn-dev
   size: 2Gi
 
 ingress:
   enabled: true
   ingressClassName: "traefik"
-  hostname: minio-api-preprod.woc
+  hostname: minio-api-dev.woc
   path: /
   pathType: Prefix
   annotations:
@@ -36,7 +36,7 @@ console:
   ingress:
     enabled: true
     ingressClassName: "traefik"
-    hostname: minio.preprod
+    hostname: minio.dev
     path: /
     pathType: Prefix
     annotations:

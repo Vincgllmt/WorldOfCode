@@ -19,18 +19,18 @@ database:
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(woc.preprod|api.preprod.woc|localhost|127.0.0.1)(:[0-9]+)?$"
-  MINIO_ENDPOINT: "http://minio.preprod.svc.cluster.local:9000"
+  CORS_ALLOW_ORIGIN: "^https?://(woc.dev|api.dev.woc|localhost|127.0.0.1)(:[0-9]+)?$"
+  MINIO_ENDPOINT: "http://minio.dev.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"
   MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
-  MINIO_PUBLIC_URL: "https://api.preprod.woc/uploads"
+  MINIO_PUBLIC_URL: "https://api.dev.woc/uploads"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: api.preprod.woc
+    - host: api.dev.woc
       paths:
         - path: /api
           pathType: Prefix

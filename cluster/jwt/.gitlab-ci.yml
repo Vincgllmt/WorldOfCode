@@ -1,27 +1,27 @@
-# Job pour créer les secrets (JWT) en PRÉPROD
-setup:secrets:preprod:
+# Job pour créer les secrets (JWT) en DEV
+setup:secrets:dev:
   stage: deploy-infra 
   image:
     name: bitnami/kubectl:latest
     entrypoint: [""]
   environment:
-    name: preprod
+    name: dev
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
   script:
     - echo "--- Configuration du Namespace ---"
-    - kubectl create namespace preprod --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
     
     - echo "--- Création du Secret JWT ---"
     - |
       kubectl create secret generic jwt-keys \
-        --namespace preprod \
+        --namespace dev \
         --from-file=private.pem="$JWT_PRIVATE_KEY" \
         --from-file=public.pem="$JWT_PUBLIC_KEY" \
         --dry-run=client -o yaml | kubectl apply -f -
-    - echo "Secret 'jwt-keys' configuré avec succès en PRÉPROD."
+    - echo "Secret 'jwt-keys' configuré avec succès en DEV."
 
 # Job pour créer les secrets (JWT) en PRODUCTION
 setup:secrets:prod:

@@ -20,7 +20,7 @@ primary:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: longhorn-preprod
+    storageClass: longhorn-dev
 
 resources:
     requests:

@@ -5,10 +5,9 @@ build:backend:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - backend/**/*
-        - cluster/backend/**/*
   script:
     - echo "Configuration de l'authentification Kaniko..."
     # Utilisation de | pour éviter les erreurs de guillemets YAML
@@ -25,26 +24,25 @@ build:backend:
         --skip-tls-verify \
         --cache=true 
 
-# 2. Déploiement automatique en PRÉPROD
-deploy:backend:preprod:
+# 2. Déploiement automatique en DEV
+deploy:backend:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
   environment:
-    name: preprod
+    name: dev
   variables:
-    APP_NAMESPACE: "preprod"
+    APP_NAMESPACE: "dev"
     RELEASE_NAME: "backend"
     CHART_PATH: "cluster/backend"
     IMAGE_PULL_SECRET: "woc-regcred"
-    VALUES_FILE: "cluster/backend/values-preprod.yaml"
+    VALUES_FILE: "cluster/backend/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
       changes:
         - backend/**/* 
-        - cluster/backend/**/*
       when: on_success
     
-    - if: '$CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
@@ -64,6 +62,9 @@ deploy:backend:prod:
     - if: '$CI_COMMIT_BRANCH == "production"'
       changes:
         - backend/**/* 
-        - cluster/backend/**/* 
       when: manual
+
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true
       

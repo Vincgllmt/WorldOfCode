@@ -15,19 +15,19 @@ containerPort: 3000
 
 env:
   # CORRECTION : Pointe vers l'Ingress du Backend
-  NEXT_PUBLIC_API_URL: "http://api.preprod.woc/api"
+  NEXT_PUBLIC_API_URL: "http://api.dev.woc/api"
   
   # Pointe vers l'Ingress du Frontend (soi-même)
-  NEXT_PUBLIC_WOC_URL: "http://woc.preprod"
+  NEXT_PUBLIC_WOC_URL: "http://woc.dev"
   
   # CORRECTION : Le socket passe par le Nginx du Backend
-  NEXT_PUBLIC_SOCKET_URL: "http://api.preprod.woc"
+  NEXT_PUBLIC_SOCKET_URL: "http://api.dev.woc"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: woc.preprod
+    - host: woc.dev
       paths:
         - path: /
           pathType: Prefix

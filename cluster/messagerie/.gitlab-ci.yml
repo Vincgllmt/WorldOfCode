@@ -6,10 +6,9 @@ build:messagerie:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - messagerie/**/*
-        - cluster/messagerie/**/*
   script:
     - echo "Configuration de l'authentification Kaniko..."
     - |
@@ -25,26 +24,25 @@ build:messagerie:
         --skip-tls-verify \
         --cache=true
 
-# 2. Déploiement en PRÉPROD
-deploy:messagerie:preprod:
+# 2. Déploiement en DEV
+deploy:messagerie:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
   environment:
-    name: preprod
+    name: dev
   variables:
-    APP_NAMESPACE: "preprod"
+    APP_NAMESPACE: "dev"
     RELEASE_NAME: "messagerie"
     CHART_PATH: "cluster/messagerie"
     IMAGE_PULL_SECRET: "woc-regcred"
-    VALUES_FILE: "cluster/messagerie/values-preprod.yaml"
+    VALUES_FILE: "cluster/messagerie/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
       changes:
         - messagerie/**/* 
-        - cluster/messagerie/**/*
       when: on_success
     
-    - if: '$CI_COMMIT_BRANCH == "preprod"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
@@ -64,5 +62,8 @@ deploy:messagerie:prod:
     - if: '$CI_COMMIT_BRANCH == "production"'
       changes:
         - messagerie/**/*
-        - cluster/messagerie/**/*
       when: manual
+
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true

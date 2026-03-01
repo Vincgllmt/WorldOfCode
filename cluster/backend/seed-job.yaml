@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: seed-backend
-  namespace: preprod
+  namespace: dev
 spec:
   backoffLimit: 0
   template:
