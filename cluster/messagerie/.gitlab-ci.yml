@@ -6,7 +6,7 @@ build:messagerie:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - messagerie/**/*
   script:
@@ -37,7 +37,7 @@ deploy:messagerie:dev:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/messagerie/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - messagerie/**/* 
       when: on_success

@@ -6,7 +6,7 @@ build:frontend:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - frontend/**/*
   script:
@@ -40,7 +40,7 @@ deploy:frontend:dev:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/frontend/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - frontend/**/* 
       when: on_success

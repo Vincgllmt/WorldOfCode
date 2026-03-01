@@ -37,7 +37,7 @@ deploy:backend:dev:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/backend/values-dev.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - backend/**/* 
       when: on_success
