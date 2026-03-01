@@ -9,7 +9,7 @@ deploy:mysql:dev:
     MYSQL_CHART_VERSION: "12.2.2"
     VALUES_FILE: "cluster/mysql/values-dev.yaml"
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
   script:

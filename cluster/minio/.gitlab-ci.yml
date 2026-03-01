@@ -9,7 +9,7 @@ deploy:minio:dev:
     MINIO_CHART_VERSION: "17.0.21"
     VALUES_FILE: "cluster/minio/values-dev.yaml"
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
   script:
