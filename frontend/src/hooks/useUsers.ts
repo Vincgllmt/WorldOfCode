@@ -72,6 +72,7 @@ export const useUpdateAvatar = () => {
       updateUserProfile(userId, { avatarUrl }),
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['user', userId] })
+      queryClient.invalidateQueries({ queryKey: ['user-posts', userId] })
     },
     onError: () => {
       toast.error("Erreur lors de la mise à jour de l'avatar")
