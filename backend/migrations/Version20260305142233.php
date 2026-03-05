@@ -32,9 +32,6 @@ final class Version20260305142233 extends AbstractMigration
         $this->addSql('CREATE TABLE tech_group (id INT AUTO_INCREMENT NOT NULL, creator_id INT DEFAULT NULL, name VARCHAR(255) NOT NULL, description LONGTEXT DEFAULT NULL, created_at DATETIME NOT NULL, INDEX IDX_BADB255F61220EA6 (creator_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE techgroup_user (tech_group_id INT NOT NULL, user_id INT NOT NULL, INDEX IDX_C33C001EF85377BC (tech_group_id), INDEX IDX_C33C001EA76ED395 (user_id), PRIMARY KEY(tech_group_id, user_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE user (id INT AUTO_INCREMENT NOT NULL, username VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, firstname VARCHAR(100) NOT NULL, lastname VARCHAR(100) NOT NULL, email VARCHAR(255) NOT NULL, role VARCHAR(255) NOT NULL, creation_date DATETIME NOT NULL, updated_date DATETIME NOT NULL, reset_token VARCHAR(255) DEFAULT NULL, theme VARCHAR(50) DEFAULT NULL, bio LONGTEXT DEFAULT NULL, location VARCHAR(150) DEFAULT NULL, availability VARCHAR(255) DEFAULT NULL, experiences JSON DEFAULT NULL, UNIQUE INDEX UNIQ_8D93D649F85E0677 (username), UNIQUE INDEX UNIQ_8D93D649E7927C74 (email), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE skill (id INT AUTO_INCREMENT NOT NULL, name VARCHAR(100) NOT NULL, category VARCHAR(255) NOT NULL, UNIQUE INDEX UNIQ_5E3DE4775E237E06 (name), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE user_skill (user_id INT NOT NULL, skill_id INT NOT NULL, INDEX IDX_BCFF1F2FA76ED395 (user_id), INDEX IDX_BCFF1F2F5585C142 (skill_id), PRIMARY KEY(user_id, skill_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE user_link (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, type VARCHAR(255) NOT NULL, url VARCHAR(500) NOT NULL, INDEX IDX_4C2DD538A76ED395 (user_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('ALTER TABLE comment ADD CONSTRAINT FK_9474526CF675F31B FOREIGN KEY (author_id) REFERENCES user (id)');
         $this->addSql('ALTER TABLE comment ADD CONSTRAINT FK_9474526C4B89032C FOREIGN KEY (post_id) REFERENCES post (id)');
         $this->addSql('ALTER TABLE follows ADD CONSTRAINT FK_4B638A73AC24F853 FOREIGN KEY (follower_id) REFERENCES user (id) ON DELETE CASCADE');
@@ -55,9 +52,13 @@ final class Version20260305142233 extends AbstractMigration
         $this->addSql('ALTER TABLE tech_group ADD CONSTRAINT FK_BADB255F61220EA6 FOREIGN KEY (creator_id) REFERENCES user (id)');
         $this->addSql('ALTER TABLE techgroup_user ADD CONSTRAINT FK_C33C001EF85377BC FOREIGN KEY (tech_group_id) REFERENCES tech_group (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE techgroup_user ADD CONSTRAINT FK_C33C001EA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE skill RENAME INDEX uniq_name TO UNIQ_5E3DE4775E237E06');
         $this->addSql('ALTER TABLE user_skill ADD CONSTRAINT FK_BCFF1F2FA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE user_skill ADD CONSTRAINT FK_BCFF1F2F5585C142 FOREIGN KEY (skill_id) REFERENCES skill (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE user_skill RENAME INDEX idx_user TO IDX_BCFF1F2FA76ED395');
+        $this->addSql('ALTER TABLE user_skill RENAME INDEX idx_skill TO IDX_BCFF1F2F5585C142');
         $this->addSql('ALTER TABLE user_link ADD CONSTRAINT FK_4C2DD538A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE user_link RENAME INDEX idx_user TO IDX_4C2DD538A76ED395');
         $this->addSql('CREATE INDEX idx_user_username_lower ON user ((LOWER(username)))');
         $this->addSql('CREATE INDEX idx_user_email_lower ON user ((LOWER(email)))');
     }
@@ -101,10 +102,11 @@ final class Version20260305142233 extends AbstractMigration
         $this->addSql('DROP TABLE tech_group');
         $this->addSql('DROP TABLE techgroup_user');
         $this->addSql('DROP TABLE user');
+        $this->addSql('ALTER TABLE skill RENAME INDEX uniq_5e3de4775e237e06 TO UNIQ_name');
+        $this->addSql('ALTER TABLE user_link RENAME INDEX idx_4c2dd538a76ed395 TO IDX_user');
         $this->addSql('ALTER TABLE user_skill DROP FOREIGN KEY FK_BCFF1F2F5585C142');
-        $this->addSql('DROP TABLE user_skill');
-        $this->addSql('DROP TABLE user_link');
-        $this->addSql('DROP TABLE skill');
+        $this->addSql('ALTER TABLE user_skill RENAME INDEX idx_bcff1f2fa76ed395 TO IDX_user');
+        $this->addSql('ALTER TABLE user_skill RENAME INDEX idx_bcff1f2f5585c142 TO IDX_skill');
 
     }
 }

@@ -119,35 +119,6 @@ class PostRepository extends ServiceEntityRepository
         return ['items' => $posts, 'totalItems' => $totalItems];
     }
 
-    /**
-     * Feed filtré : posts de l'utilisateur lui-même, des personnes suivies, et des groupes rejoints.
-     *
-     * @return array{items: Post[], totalItems: int}
-     */
-    public function findFeedPaginatedForUser(User $user, int $page, int $limit): array
-    {
-        $page = max($page, 1);
-        $limit = max($limit, 1);
-
-        $qb = $this->createBaseQueryBuilder()
-            ->andWhere(
-                'a = :user
-                 OR a IN (SELECT ff_u FROM App\Entity\Follow ff JOIN ff.followed ff_u WHERE ff.follower = :user)
-                 OR g IN (SELECT jg FROM App\Entity\TechGroup jg JOIN jg.users jgu WHERE jgu = :user)'
-            )
-            ->setParameter('user', $user)
-            ->setFirstResult(($page - 1) * $limit)
-            ->setMaxResults($limit);
-
-        $paginator = new Paginator($qb->getQuery());
-        $items = iterator_to_array($paginator, false);
-
-        return [
-            'items' => $items,
-            'totalItems' => count($paginator),
-        ];
-    }
-
     private function createBaseQueryBuilder(): QueryBuilder
     {
         return $this->createQueryBuilder('p')
