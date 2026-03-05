@@ -22,6 +22,7 @@ env:
   
   # CORRECTION : Le socket passe par le Nginx du Backend
   NEXT_PUBLIC_SOCKET_URL: "http://api.dev.woc"
+  NEXT_PUBLIC_SOCKET_PATH: "/api/messaging/socket.io"
 
 ingress:
   enabled: true
