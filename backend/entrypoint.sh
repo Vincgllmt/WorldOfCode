@@ -6,10 +6,8 @@ if [ ! -d "vendor/aws" ]; then
   composer require aws/aws-sdk-php --no-interaction --prefer-dist
 fi
 
-# 1) Installer vendor si absent
-if [ ! -d "vendor" ]; then
-  composer install --no-interaction --prefer-dist
-fi
+# 1) Installer / mettre à jour les dépendances
+composer install --no-interaction --prefer-dist
 
 # 2) Attendre la base de données
 echo "Attente de la base de données..."

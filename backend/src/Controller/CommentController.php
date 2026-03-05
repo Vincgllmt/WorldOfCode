@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
+use App\Service\NotificationService;
+use App\Enum\NotificationType;
 
 #[Route('/api/comment')]
 #[OA\Tag(name: 'Comment')]
@@ -21,7 +23,8 @@ class CommentController extends AbstractController
     public function __construct(
         private CommentRepository $repo,
         private PostRepository $postRepo,
-        private CommentMapper $mapper
+        private CommentMapper $mapper,
+        private NotificationService $notificationService
     ) {}
 
     #[Route('', name: 'comment_list', methods: ['GET'])]
@@ -109,6 +112,15 @@ class CommentController extends AbstractController
         $comment->setAuthor($this->getUser());
 
         $this->repo->save($comment, true);
+
+        // Notifier l'auteur du post
+        $this->notificationService->createAndPush(
+            $post->getAuthor(),
+            $this->getUser(),
+            NotificationType::COMMENT,
+            $this->getUser()->getUsername() . ' a commenté votre post',
+            $post->getId()
+        );
 
         return $this->json($this->mapper->toDto($comment), 201);
     }

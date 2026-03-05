@@ -19,6 +19,8 @@ use App\Mapper\CommentMapper;
 use App\Dto\CommentResponse;
 use App\Dto\LikeResponse;
 use App\Mapper\LikeMapper;
+use App\Service\NotificationService;
+use App\Enum\NotificationType;
 
 
 
@@ -29,7 +31,8 @@ class PostController extends AbstractController
     public function __construct(
         private PostRepository $repo,
         private TechGroupRepository $groupRepo,
-        private PostMapper $mapper
+        private PostMapper $mapper,
+        private NotificationService $notificationService
     ) {}
 
     #[Route('', name: 'post_list', methods: ['GET'])]
@@ -402,6 +405,15 @@ class PostController extends AbstractController
         $like->setUser($user);
         $like->setPost($post);
         $likeRepo->save($like);
+
+        // Notifier l'auteur du post
+        $this->notificationService->createAndPush(
+            $post->getAuthor(),
+            $user,
+            NotificationType::LIKE,
+            $user->getUsername() . ' a aimé votre post',
+            $post->getId()
+        );
 
         $post = $this->repo->findWithLikes($id);
 

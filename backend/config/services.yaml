@@ -22,6 +22,10 @@ services:
 
   # add more service definitions when explicit configuration is needed
   # please note that last definitions always *replace* previous ones
+  App\Service\NotificationService:
+    arguments:
+      $messagerieUrl: '%env(MESSAGERIE_URL)%'
+
   App\Service\Storage\S3Storage:
     arguments:
       $endpoint: "%env(MINIO_ENDPOINT)%"
