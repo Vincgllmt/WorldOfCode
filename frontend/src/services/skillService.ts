@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const getAllSkills = async (): Promise<Skill[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/skills`, {
+  const res = await fetch(`${API_URL}/skills`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,

@@ -83,7 +83,7 @@ export async function getUserById(userId: number): Promise<PublicUser> {
 
 export const updateUserTheme = async (userId: number, theme: string): Promise<User> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user/${userId}/theme`, {
+  const res = await fetch(`${API_URL}/user/${userId}/theme`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ export const changeUserPassword = async ({id, currentPassword, newPassword,}: Ch
 
 export const updateUserProfile = async (userId: number, data: UpdateProfilePayload): Promise<User> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user/${userId}/profile`, {
+  const res = await fetch(`${API_URL}/user/${userId}/profile`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export const updateUserProfile = async (userId: number, data: UpdateProfilePaylo
 
 export const updateUserSkills = async (userId: number, skillIds: number[]): Promise<Skill[]> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user/${userId}/skills`, {
+  const res = await fetch(`${API_URL}/user/${userId}/skills`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export const updateUserSkills = async (userId: number, skillIds: number[]): Prom
 
 export const createUserLink = async (userId: number, data: CreateLinkPayload): Promise<UserLink> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user/${userId}/links`, {
+  const res = await fetch(`${API_URL}/user/${userId}/links`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
