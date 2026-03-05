@@ -7,7 +7,9 @@ if (!SOCKET_URL) {
   console.error("❌ NEXT_PUBLIC_SOCKET_URL is missing !");
 }
 
+const SOCKET_PATH = process.env.NEXT_PUBLIC_SOCKET_PATH || "/socket.io"
+
 export const socket = io(SOCKET_URL!, {
     autoConnect: false,
-    path: "/api/messaging/socket.io",   // ⬅️ METS LE PATH COMPLET !
+    path: SOCKET_PATH,
 })
