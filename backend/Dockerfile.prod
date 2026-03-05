@@ -1,32 +1,35 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 WORKDIR /var/www/backend
 
+# 1. Installation des dépendances système
 RUN apt-get update && apt-get install -y \
     git unzip libicu-dev libzip-dev libonig-dev \
  && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copier d'abord composer.* pour le cache
-COPY composer.json composer.lock ./
-
-# Copier le reste du code AVANT composer install
-COPY . .
-
 ENV APP_ENV=prod APP_DEBUG=0
 
+COPY composer.json composer.lock ./
+
+# 3. Installation des dépendances PHP (sans l'autoloader ni les scripts)
 RUN composer install \
     --no-dev \
-    --optimize-autoloader \
     --no-interaction \
-    --no-scripts
+    --no-scripts \
+    --no-autoloader
 
+COPY . .
+
+# 5. Génération de l'autoloader optimisé maintenant que le code est présent
+RUN composer dump-autoload --optimize --classmap-authoritative
+
+# 6. Configuration de l'entrypoint et de PHP-FPM
 COPY entrypoint-prod.sh /usr/local/bin/entrypoint-prod.sh
 RUN chmod +x /usr/local/bin/entrypoint-prod.sh
 
 RUN mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.orig
-
 COPY www.conf /usr/local/etc/php-fpm.d/www.conf
 
 ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
