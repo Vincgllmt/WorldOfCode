@@ -22,16 +22,7 @@ echo "Base de données disponible."
 echo "Nettoyage du cache..."
 php bin/console cache:clear --env=prod
 
-
-ROW_COUNT=$(php bin/console doctrine:query:sql "SELECT COUNT(*) FROM user;" | grep -Eo '[0-9]+')
-
-if [ "$ROW_COUNT" -eq 0 ]; then
-  echo "📦 Base vide — chargement des fixtures..."
-  php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction
-else
-  echo "✅ Base déjà initialisée — pas de fixtures chargées."
-fi
-
+# 4) Migrations
 MIG_COUNT=$(ls -1 migrations | wc -l)
 
 if [ "$MIG_COUNT" -eq 0 ]; then
@@ -48,7 +39,7 @@ else
   echo "Aucune migration disponible."
 fi
 
-# 5) Fixtures si la table user existe
+# 5) Fixtures si la base est vide
 TABLE_EXISTS=$(php -r "
 try {
     \$pdo = new PDO('mysql:host=' . getenv('DB_HOST') . ';dbname=' . getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
@@ -60,8 +51,6 @@ try {
 ")
 
 echo "TABLE_EXISTS = $TABLE_EXISTS"
-
-ROW_COUNT=0
 
 if [ "$TABLE_EXISTS" -eq 1 ]; then
   ROW_COUNT=$(php -r "
@@ -76,23 +65,12 @@ if [ "$TABLE_EXISTS" -eq 1 ]; then
 
   if [ "$ROW_COUNT" -eq 0 ]; then
     echo "Base vide, chargement des fixtures..."
-    php bin/console doctrine:fixtures:load --no-interaction
+    php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction
   else
     echo "Base déjà initialisée, aucune fixture chargée."
   fi
 else
   echo "Table 'user' absente, fixtures ignorées."
-fi
-
-# 5 bis) Lancement automatique du faker si jamais exécuté
-echo "Vérification du faker..."
-
-if [ "$ROW_COUNT" -eq 0 ]; then
-    echo "Faker non exécuté, lancement..."
-    php bin/console doctrine:fixtures:load --no-interaction
-    echo "Faker exécuté."
-else
-    echo "Faker déjà exécuté, aucun chargement."
 fi
 
 # 6) Génération automatique des clés JWT
