@@ -36,7 +36,7 @@ console:
   ingress:
     enabled: true
     ingressClassName: "traefik"
-    hostname: minio.dev
+    hostname: minio.dev.woc
     path: /
     pathType: Prefix
     annotations:

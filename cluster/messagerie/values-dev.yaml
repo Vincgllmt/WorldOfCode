@@ -17,7 +17,7 @@ containerPort: 3000
 
 env:
   PORT: "3000"
-  CORS_ORIGIN: "http://woc.dev" # L'URL du Frontend qui appelle
+  CORS_ORIGIN: "http://dev.woc" # L'URL du Frontend qui appelle
 
 database:
   secretName: woc-messagerie-db

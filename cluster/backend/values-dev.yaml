@@ -19,7 +19,7 @@ database:
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(woc.dev|api.dev.woc|localhost|127.0.0.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(dev\\.woc|api\\.dev\\.woc|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.dev.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"
   MINIO_SECRET_KEY: "admin1234"

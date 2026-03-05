@@ -18,7 +18,7 @@ env:
   NEXT_PUBLIC_API_URL: "http://api.dev.woc/api"
   
   # Pointe vers l'Ingress du Frontend (soi-même)
-  NEXT_PUBLIC_WOC_URL: "http://woc.dev"
+  NEXT_PUBLIC_WOC_URL: "http://dev.woc"
   
   # CORRECTION : Le socket passe par le Nginx du Backend
   NEXT_PUBLIC_SOCKET_URL: "http://api.dev.woc"
@@ -28,7 +28,7 @@ ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: woc.dev
+    - host: dev.woc
       paths:
         - path: /
           pathType: Prefix

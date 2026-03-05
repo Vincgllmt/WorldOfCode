@@ -25,7 +25,7 @@ build:frontend:
         --destination "${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}" \
         --build-arg NEXT_PUBLIC_API_URL="https://api.${APP_NAMESPACE}.woc/api" \
         --build-arg NEXT_PUBLIC_SOCKET_URL="https://api.${APP_NAMESPACE}.woc" \
-        --build-arg NEXT_PUBLIC_WOC_URL="https://woc.${APP_NAMESPACE}" \
+        --build-arg NEXT_PUBLIC_WOC_URL="https://${APP_NAMESPACE}.woc" \
         --insecure \
         --skip-tls-verify \
         --cache=true
