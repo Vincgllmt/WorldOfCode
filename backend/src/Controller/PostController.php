@@ -19,6 +19,7 @@ use App\Mapper\CommentMapper;
 use App\Dto\CommentResponse;
 use App\Dto\LikeResponse;
 use App\Mapper\LikeMapper;
+use Doctrine\ORM\EntityManagerInterface;
 
 
 
@@ -29,7 +30,8 @@ class PostController extends AbstractController
     public function __construct(
         private PostRepository $repo,
         private TechGroupRepository $groupRepo,
-        private PostMapper $mapper
+        private PostMapper $mapper,
+        private EntityManagerInterface $em
     ) {}
 
     #[Route('', name: 'post_list', methods: ['GET'])]
@@ -401,9 +403,10 @@ class PostController extends AbstractController
         $like = new Like();
         $like->setUser($user);
         $like->setPost($post);
-        $likeRepo->save($like);
+        $likeRepo->save($like, flush: false);
 
-        $post = $this->repo->findWithLikes($id);
+        $this->em->flush();
+        $this->em->refresh($post);
 
         $dto = $this->mapper->toDto($post, $user);
 
@@ -429,7 +432,7 @@ class PostController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $post = $this->repo->find($id);
+        $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
@@ -441,7 +444,7 @@ class PostController extends AbstractController
             return $this->json(['error' => 'Not liked yet'], 400);
         }
 
-        $likeRepo->remove($like);
+        $likeRepo->remove($like, flush: true);
 
         return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
     }
