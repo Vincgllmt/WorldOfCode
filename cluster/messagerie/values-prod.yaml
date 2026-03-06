@@ -35,3 +35,5 @@ ingress:
       paths:
         - path: /api/messaging
           pathType: Prefix
+        - path: /socket.io
+          pathType: Prefix
