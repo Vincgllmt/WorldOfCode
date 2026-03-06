@@ -26,4 +26,4 @@ deploy:cert-manager:
     - kubectl rollout status deployment/cert-manager-webhook -n "$CERT_MANAGER_NAMESPACE" --timeout=120s
     
     - echo "--- Déploiement des ClusterIssuers ---"
-    - kubectl apply -f templates/cluster-issuer.yaml
+    - kubectl apply -f cluster/cert-manager/templates/cluster-issuer.yaml
