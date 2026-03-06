@@ -18,7 +18,9 @@ import { cn } from "@/lib/utils"
 import { isActive } from "@/lib/navigation"
 import { useConversations, useConversationRealtime } from "@/hooks/useConversations"
 import NavbarSearch from "@/components/layout/NavbarSearch"
+import NotificationBell from "@/components/layout/NotificationBell"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
+import { useNotificationRealtime } from "@/hooks/useNotifications"
 import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 
@@ -37,6 +39,7 @@ export default function Navbar() {
     const isDark = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
     const logoSrc = mounted ? (isDark ? "/logo_white.png" : "/logo2.png") : "/logo_white.png"
     useConversationRealtime(user?.id)
+    useNotificationRealtime()
     const { data: conversations } = useConversations()
 
     // Récupérer l'ID de la conversation actuellement ouverte
@@ -124,6 +127,8 @@ export default function Navbar() {
                             )}
                         </Link>
                     ))}
+
+                    {user && <NotificationBell />}
 
                     <ThemeToggle />
 

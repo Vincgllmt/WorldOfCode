@@ -46,7 +46,7 @@ Cloner le projet et installer les dépendances :
 ```bash
 git clone git@rendu-git.etna-alternance.net:module-9999/activity-53534/group-1056533.git world-of-code
 cd world-of-code
-docker compose up -d
+docker compose build --no-cache
 ```
 
 Il faut ensuite générer les clés JWT pour le backend :
@@ -56,7 +56,12 @@ docker compose exec backend composer install
 docker compose exec backend php bin/console lexik:jwt:generate-keypair
 docker compose restart
 ```
+Puis détuire la base de données pour être sûr d'être à jour :
 
+```bash
+docker compose exec backend composer run reset-db
+docker compose exec backend composer run fixtures
+```
 ## 🧪 Tests
 
 ``` Bash

@@ -5,12 +5,18 @@ services:
     ports:
       - "8090:8090"
     environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: application
+      DB_PASS: password
+      DB_NAME: projet_web
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: admin1234
       MINIO_BUCKET: uploads
       MINIO_PUBLIC_URL: http://localhost:9000/uploads
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+      MESSAGERIE_URL: http://messagerie:8081
 
     volumes:
       - ./backend:/var/www/backend

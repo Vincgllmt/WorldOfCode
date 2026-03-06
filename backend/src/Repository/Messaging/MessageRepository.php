@@ -34,14 +34,24 @@ class MessageRepository extends ServiceEntityRepository
     }
 
 
-    public function findByConversationOrdered(string $conversationId): array
-    {
-        return $this->createQueryBuilder('m')
+    public function findByConversationOrdered(
+        string $conversationId,
+        int $limit = 50,
+        ?string $beforeMessageId = null
+    ): array {
+        $qb = $this->createQueryBuilder('m')
             ->andWhere('m.conversation = :convId')
             ->setParameter('convId', $conversationId)
-            ->orderBy('m.createdAt', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('m.createdAt', 'DESC')
+            ->setMaxResults($limit);
+
+        // Pagination curseur (plus efficace que offset)
+        if ($beforeMessageId) {
+            $qb->andWhere('m.id < :beforeId')
+                ->setParameter('beforeId', $beforeMessageId);
+        }
+
+        return array_reverse($qb->getQuery()->getResult());
     }
 
 

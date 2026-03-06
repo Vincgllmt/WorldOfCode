@@ -13,7 +13,47 @@ await initMediaSoupWorker();
 const PORT = process.env.PORT || 8081;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
-const server = http.createServer();
+const server = http.createServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+
+    if (req.method === 'POST' && req.url === '/api/notify') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const { recipientId, notification } = JSON.parse(body);
+
+                if (!recipientId || !notification) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: 'Missing recipientId or notification' }));
+                    return;
+                }
+
+                const recipientIdStr = String(recipientId);
+                if (onlineUsers.has(recipientIdStr)) {
+                    const socketIds = onlineUsers.get(recipientIdStr);
+                    for (const sid of socketIds) {
+                        io.to(sid).emit('new_notification', notification);
+                    }
+                    console.log(`🔔 Notification pushed to user ${recipientId} (${socketIds.size} socket(s))`);
+                } else {
+                    console.log(`🔔 User ${recipientId} offline, notification saved in DB only`);
+                }
+
+                res.writeHead(200);
+                res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+                console.error('❌ Notify endpoint error:', err);
+                res.writeHead(500);
+                res.end(JSON.stringify({ error: 'Internal error' }));
+            }
+        });
+        return;
+    }
+
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: 'Not found' }));
+});
 
 const io = new Server(server, {
     path: "/socket.io", // Chemin par défaut, pas besoin de le spécifier

@@ -77,21 +77,45 @@ class PostRepository extends ServiceEntityRepository
      */
     public function findPaginatedWithLikes(int $page, int $limit): array
     {
-        $page = max($page, 1);
-        $limit = max($limit, 1);
-
-        $query = $this->createBaseQueryBuilder()
+        // 1. Récupérer les IDs des posts
+        $qb = $this->createQueryBuilder('p')
+            ->select('p.id')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit)
-            ->getQuery();
+            ->orderBy('p.createdAt', 'DESC');
 
-        $paginator = new Paginator($query);
-        $items = iterator_to_array($paginator, false);
+        $ids = array_column($qb->getQuery()->getResult(), 'id');
 
-        return [
-            'items' => $items,
-            'totalItems' => count($paginator),
-        ];
+        if (empty($ids)) {
+            return ['items' => [], 'totalItems' => 0];
+        }
+
+        // 2. Charger les posts complets avec leurs relations
+        $posts = $this->createQueryBuilder('p')
+            ->leftJoin('p.author', 'a')->addSelect('a')
+            ->leftJoin('p.techGroup', 'g')->addSelect('g')
+            ->leftJoin('p.sharedFrom', 'sf')->addSelect('sf')
+            ->leftJoin('sf.techGroup', 'sfg')->addSelect('sfg')
+            ->leftJoin('sf.author', 'sfa')->addSelect('sfa')
+            ->where('p.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        // 3. Charger les likes séparément
+        $this->createQueryBuilder('p2')
+            ->select('PARTIAL p2.{id}')
+            ->leftJoin('p2.likes', 'l')->addSelect('l')
+            ->leftJoin('l.user', 'u')->addSelect('u')
+            ->where('p2.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        // 4. Compter le total
+        $totalItems = $this->count([]);
+
+        return ['items' => $posts, 'totalItems' => $totalItems];
     }
 
     private function createBaseQueryBuilder(): QueryBuilder

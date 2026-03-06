@@ -29,6 +29,7 @@
         "symfony/twig-bundle": "7.4.*",
         "symfony/uid": "7.4.*",
         "symfony/validator": "7.4.*",
+        "symfony/http-client": "7.4.*",
         "symfony/yaml": "7.4.*"
     },
     "require-dev": {
@@ -85,6 +86,11 @@
         ],
         "fixtures": [
             "php bin/console doctrine:fixtures:load --no-interaction"
+        ],
+        "reset-db": [
+            "php bin/console doctrine:database:drop --force",
+            "php bin/console doctrine:database:create",
+            "php bin/console doctrine:schema:create"
         ],
         "post-install-cmd": [
             "@auto-scripts"

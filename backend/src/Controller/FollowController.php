@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
 use App\Entity\User;
+use App\Service\NotificationService;
+use App\Enum\NotificationType;
 
 #[Route('/api/follow')]
 #[OA\Tag(name: 'Follow')]
@@ -18,7 +20,8 @@ class FollowController extends AbstractController
 {
     public function __construct(
         private UserRepository $userRepo,
-        private FollowRepository $followRepo
+        private FollowRepository $followRepo,
+        private NotificationService $notificationService
     ) {}
 
     ####
@@ -67,6 +70,15 @@ class FollowController extends AbstractController
         $follow->setFollower($follower);
         $follow->setFollowed($followed);
         $this->followRepo->save($follow);
+
+        // Notifier l'utilisateur suivi
+        $this->notificationService->createAndPush(
+            $followed,
+            $follower,
+            NotificationType::FOLLOW,
+            $follower->getUsername() . ' a commencé à vous suivre',
+            null
+        );
 
         return $this->json(['success' => true, 'message' => 'User followed'], 201);
     }
