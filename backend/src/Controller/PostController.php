@@ -24,7 +24,10 @@ use App\Service\NotificationService;
 use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
 
-
+#[Route('/api/posts', name: 'post_')]
+class PostController extends AbstractController
+{
+    public function __construct(
         private PostRepository $repo,
         private TechGroupRepository $groupRepo,
         private PostMapper $mapper,
