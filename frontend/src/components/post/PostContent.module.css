@@ -8,7 +8,7 @@
 .postHtml code[class*="language-"],
 .postHtml pre[class*="language-"],
 .postHtml pre code {
-  color: #f8f8f2;
+  color: #f8f8f2 !important;
   background: none;
   text-align: left;
   white-space: pre;
@@ -25,7 +25,7 @@
   margin: 0;
   overflow: auto;
   border-radius: 0.9rem;
-  background: #1e1f29;
+  background: #1e1f29 !important;
   border: 1px solid #111827;
   box-shadow: inset 0 1px 0 #111827;
 }
@@ -34,72 +34,76 @@
 .postHtml :not(pre) > code {
   padding: 0.25em 0.45em;
   border-radius: 0.45em;
-  background: #1e1f29;
-  color: #f8f8f2;
+  background: #1e1f29 !important;
+  color: #f8f8f2 !important;
 }
 
-.postHtml .token.comment,
-.postHtml .token.prolog,
-.postHtml .token.doctype,
-.postHtml .token.cdata {
-  color: #6272a4;
+.postHtml :global(.token) {
+  background: none !important;
 }
 
-.postHtml .token.punctuation {
-  color: #f8f8f2;
+.postHtml :global(.token.comment),
+.postHtml :global(.token.prolog),
+.postHtml :global(.token.doctype),
+.postHtml :global(.token.cdata) {
+  color: #6272a4 !important;
 }
 
-.postHtml .token.property,
-.postHtml .token.tag,
-.postHtml .token.constant,
-.postHtml .token.symbol,
-.postHtml .token.deleted {
-  color: #ff79c6;
+.postHtml :global(.token.punctuation) {
+  color: #f8f8f2 !important;
 }
 
-.postHtml .token.boolean,
-.postHtml .token.number {
-  color: #bd93f9;
+.postHtml :global(.token.property),
+.postHtml :global(.token.tag),
+.postHtml :global(.token.constant),
+.postHtml :global(.token.symbol),
+.postHtml :global(.token.deleted) {
+  color: #ff79c6 !important;
 }
 
-.postHtml .token.selector,
-.postHtml .token.attr-name,
-.postHtml .token.string,
-.postHtml .token.char,
-.postHtml .token.builtin,
-.postHtml .token.inserted {
-  color: #50fa7b;
+.postHtml :global(.token.boolean),
+.postHtml :global(.token.number) {
+  color: #bd93f9 !important;
 }
 
-.postHtml .token.operator,
-.postHtml .token.entity,
-.postHtml .token.url,
-.postHtml .language-css .token.string,
-.postHtml .style .token.string {
-  color: #8be9fd;
+.postHtml :global(.token.selector),
+.postHtml :global(.token.attr-name),
+.postHtml :global(.token.string),
+.postHtml :global(.token.char),
+.postHtml :global(.token.builtin),
+.postHtml :global(.token.inserted) {
+  color: #50fa7b !important;
 }
 
-.postHtml .token.atrule,
-.postHtml .token.attr-value,
-.postHtml .token.keyword {
-  color: #ffb86c;
+.postHtml :global(.token.operator),
+.postHtml :global(.token.entity),
+.postHtml :global(.token.url),
+.postHtml :global(.language-css .token.string),
+.postHtml :global(.style .token.string) {
+  color: #8be9fd !important;
 }
 
-.postHtml .token.function,
-.postHtml .token.class-name {
-  color: #f1fa8c;
+.postHtml :global(.token.atrule),
+.postHtml :global(.token.attr-value),
+.postHtml :global(.token.keyword) {
+  color: #ffb86c !important;
 }
 
-.postHtml .token.regex,
-.postHtml .token.important,
-.postHtml .token.variable {
-  color: #f1fa8c;
+.postHtml :global(.token.function),
+.postHtml :global(.token.class-name) {
+  color: #f1fa8c !important;
 }
 
-.postHtml .token.bold {
+.postHtml :global(.token.regex),
+.postHtml :global(.token.important),
+.postHtml :global(.token.variable) {
+  color: #f1fa8c !important;
+}
+
+.postHtml :global(.token.bold) {
   font-weight: 700;
 }
 
-.postHtml .token.italic {
+.postHtml :global(.token.italic) {
   font-style: italic;
 }

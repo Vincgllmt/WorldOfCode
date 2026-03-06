@@ -1,10 +1,41 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useSanitizedContent } from '@/hooks/useSanitizedContent'
 import styles from './PostContent.module.css'
-import 'prismjs/themes/prism-tomorrow.css'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-markup'
+import 'prismjs/components/prism-markup-templating'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/components/prism-typescript'
+import 'prismjs/components/prism-jsx'
+import 'prismjs/components/prism-tsx'
+import 'prismjs/components/prism-css'
+import 'prismjs/components/prism-python'
+import 'prismjs/components/prism-bash'
+import 'prismjs/components/prism-json'
+import 'prismjs/components/prism-sql'
+import 'prismjs/components/prism-java'
+import 'prismjs/components/prism-c'
+import 'prismjs/components/prism-cpp'
+import 'prismjs/components/prism-php'
+import 'prismjs/components/prism-yaml'
+
+function highlightCodeBlocks(html: string): string {
+  if (typeof document === 'undefined') return html
+  const div = document.createElement('div')
+  div.innerHTML = html
+  div.querySelectorAll('pre[class*="language-"]').forEach((pre) => {
+    const lang = pre.className.match(/language-(\w+)/)?.[1] ?? ''
+    const grammar = Prism.languages[lang]
+    if (grammar) {
+      const code = pre.querySelector('code') ?? pre
+      code.innerHTML = Prism.highlight(code.textContent ?? '', grammar, lang)
+    }
+  })
+  return div.innerHTML
+}
 
 export interface PostContentProps {
   readonly content: string | null
@@ -13,51 +44,10 @@ export interface PostContentProps {
 
 export default function PostContent({ content, className }: PostContentProps) {
   const sanitized = useSanitizedContent(content ?? '')
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!ref.current) return
-    // require() is safe here — useEffect never runs server-side
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Prism = require('prismjs')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-markup')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-markup-templating')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-javascript')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-typescript')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-jsx')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-tsx')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-css')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-python')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-bash')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-json')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-sql')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-java')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-c')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-cpp')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-php')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('prismjs/components/prism-yaml')
-    Prism.highlightAllUnder(ref.current)
-  }, [sanitized])
+  const highlighted = useMemo(() => highlightCodeBlocks(sanitized), [sanitized])
 
   return (
     <div
-      ref={ref}
       className={cn(
         'space-y-3 text-base leading-relaxed text-foreground',
         '[&_p]:whitespace-pre-line',
@@ -69,7 +59,7 @@ export default function PostContent({ content, className }: PostContentProps) {
         styles.postHtml,
         className
       )}
-      dangerouslySetInnerHTML={{ __html: sanitized }}
+      dangerouslySetInnerHTML={{ __html: highlighted }}
     />
   )
 }
