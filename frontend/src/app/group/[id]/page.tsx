@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useGroup } from '@/hooks/useGroups'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
@@ -10,10 +10,13 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import PostFormByGroup from '@/components/post/PostFormByGroup'
 import PostListByGroup from '@/components/post/PostListByGroup'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import TechWatchList from '@/components/techwatch/TechWatchList'
 
 export default function GroupPage() {
     const { id } = useParams()
     const groupId = Number(id)
+    const [activeTab, setActiveTab] = useState('publications')
 
     const { user } = useAuth()
     const { data: group, isLoading: groupLoading } = useGroup(groupId)
@@ -66,10 +69,23 @@ export default function GroupPage() {
                     <p className="mb-2">Vous devez rejoindre ce groupe pour accéder aux publications.</p>
                 </div>
             ) : (
-                <>
-                    <PostFormByGroup groupId={groupId} />
-                    <PostListByGroup groupId={groupId} />
-                </>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList>
+                        <TabsTrigger value="publications">Publications</TabsTrigger>
+                        <TabsTrigger value="actualite">Actualité</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="publications">
+                        <div className="space-y-6">
+                            <PostFormByGroup groupId={groupId} />
+                            <PostListByGroup groupId={groupId} />
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="actualite">
+                        <TechWatchList groupId={groupId} />
+                    </TabsContent>
+                </Tabs>
             )}
         </div>
     )

@@ -20,6 +20,7 @@ use App\Dto\PostResponse;
 use App\Entity\User;
 use App\Service\TechGroupMembershipService;
 use Doctrine\ORM\EntityNotFoundException;
+use App\Service\TechWatchAutoDetector;
 
 #[Route('/api/group')]
 #[OA\Tag(name: 'TechGroup')]
@@ -30,7 +31,8 @@ class TechGroupController extends AbstractController
         private TechGroupMapper $mapper,
         private UserMapper $userMapper,
         private PostMapper $postMapper,
-        private TechGroupMembershipService $membershipService
+        private TechGroupMembershipService $membershipService,
+        private TechWatchAutoDetector $autoDetector,
     ) {}
 
     #[Route('', name: 'group_list', methods: ['GET'])]
@@ -125,6 +127,7 @@ class TechGroupController extends AbstractController
         $group->setCreator($this->getUser());
 
         $this->repo->save($group, true);
+        $this->autoDetector->detectAndCreateSources($group);
 
         return $this->json($this->mapper->toDto($group), 201);
     }

@@ -1,0 +1,1 @@
+0 */3 * * * cd /var/www/backend && php bin/console app:fetch-tech-news >> /var/log/cron.log 2>&1
