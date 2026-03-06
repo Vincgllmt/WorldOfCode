@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
     creationDate: string
     updatedDate: string
     theme?: string | null
+    avatarUrl?: string | null
 }
 
 export interface RegisterResponse {
@@ -32,4 +33,5 @@ export interface RegisterCredentials {
     email: string
     username: string
     password: string
+    avatarUrl?: string | null
 }

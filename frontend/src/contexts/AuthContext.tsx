@@ -58,6 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const setUserAvatar = (url: string | null) => {
+    if (user) {
+      setUser({ ...user, avatarUrl: url })
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -68,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginSilent,
         logout,
         setUserTheme,
+        setUserAvatar,
       }}
     >
       {children}

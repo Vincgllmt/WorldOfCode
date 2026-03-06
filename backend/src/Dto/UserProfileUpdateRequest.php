@@ -64,18 +64,28 @@ class UserProfileUpdateRequest
     )]
     public readonly ?array $skillIds;
 
+    #[Assert\Length(max: 500)]
+    #[OA\Property(
+        description: "URL de l'avatar de l'utilisateur",
+        type: 'string',
+        nullable: true
+    )]
+    public readonly ?string $avatarUrl;
+
     public function __construct(
         ?string $bio,
         ?string $location,
         ?string $availability,
         ?array $experiences,
-        ?array $skillIds
+        ?array $skillIds,
+        ?string $avatarUrl
     ) {
         $this->bio = $bio;
         $this->location = $location;
         $this->availability = $availability;
         $this->experiences = $experiences;
         $this->skillIds = $skillIds;
+        $this->avatarUrl = $avatarUrl;
     }
 
     public static function fromArray(array $payload): self
@@ -85,7 +95,8 @@ class UserProfileUpdateRequest
             $payload['location'] ?? null,
             $payload['availability'] ?? null,
             $payload['experiences'] ?? null,
-            $payload['skillIds'] ?? null
+            $payload['skillIds'] ?? null,
+            $payload['avatarUrl'] ?? null
         );
     }
 }

@@ -1,11 +1,13 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { PasswordRules } from '@/components/register/PasswordRules'
+import AvatarPicker from '@/components/register/AvatarPicker'
 import { useRegister } from '@/hooks/useRegister'
 import type { RegisterCredentials } from '@/interfaces/Authentification'
 import Link from 'next/link'
@@ -15,9 +17,12 @@ export default function RegisterPage() {
     const { register, handleSubmit, formState: { errors }, watch } = useForm<RegisterCredentials>()
     const { mutate, isPending } = useRegister()
     const passwordValue = watch('password', '')
+    const usernameValue = watch('username', '')
+
+    const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null)
 
     const onSubmit = (data: RegisterCredentials) => {
-        mutate(data)
+        mutate({ ...data, avatarUrl: selectedAvatar })
     }
 
     const isPasswordValid =
@@ -41,6 +46,15 @@ export default function RegisterPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+                            {/* Photo de profil */}
+                            <AvatarPicker
+                                value={selectedAvatar}
+                                onChange={setSelectedAvatar}
+                                username={usernameValue}
+                            />
+
+                            <hr className="border-border" />
 
                             {/* Nom */}
                             <div>

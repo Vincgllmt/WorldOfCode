@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mime\Email;
@@ -14,9 +15,13 @@ class PasswordResetService
 {
     private Mailer $mailer;
     private UserRepository $userRepository;
+    private string $frontendUrl;
 
-    public function __construct(UserRepository $userRepository)
-    {
+    public function __construct(
+        UserRepository $userRepository,
+        #[Autowire(env: 'RESET_PASSWORD_URL')] string $frontendUrl
+    ) {
+        $this->frontendUrl = rtrim($frontendUrl, '/');
         $dsn = 'smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587';
         $transport = Transport::fromDsn($dsn);
         $this->mailer = new Mailer($transport);
@@ -50,7 +55,7 @@ class PasswordResetService
         $user->setResetToken($token);
         $this->userRepository->save($user);
 
-        $resetLink = sprintf('http://localhost:3000/reset-password?token=%s', $token);
+        $resetLink = sprintf('%s/reset-password?token=%s', $this->frontendUrl, $token);
 
         $htmlContent = sprintf('
         <div style="font-family: Arial, sans-serif; background-color: #f5f7fa; padding: 30px; text-align: center;">

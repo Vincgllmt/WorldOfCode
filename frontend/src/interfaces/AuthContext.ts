@@ -8,4 +8,5 @@ export interface AuthContextType {
   loginSilent: (credentials: LoginCredentials) => Promise<AuthenticatedUser>
   logout: () => void
   setUserTheme: (theme: string) => void
+  setUserAvatar: (url: string | null) => void
 }

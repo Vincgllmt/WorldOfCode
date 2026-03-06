@@ -123,7 +123,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
             currentUserId={currentUserId}
             authorId={post.authorId}
             authorUsername={author.username}
-            // authorAvatarUrl={author.avatarUrl ?? null /}
+            authorAvatarUrl={post.authorAvatarUrl ?? null}
             isAuthorFollowedByMe={post.isAuthorFollowedByMe}
             className="mb-1"
           />

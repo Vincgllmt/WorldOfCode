@@ -2,17 +2,21 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Settings, MapPin, Pencil } from 'lucide-react'
+import { Settings, MapPin, Pencil, Camera } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import FollowToggleButton from '@/components/follow/FollowToggleButton'
 import UserSettingsModal from '@/components/profile/UserSettingsModal'
 import UserFollowCounts from '@/components/account/UserFollowCounts'
 import AvailabilityBadge from '@/components/profile/AvailabilityBadge'
 import ProfileLinksSection from '@/components/profile/ProfileLinksSection'
 import EditLinksDialog from '@/components/profile/EditLinksDialog'
+import AvatarPicker from '@/components/register/AvatarPicker'
+import { useUpdateAvatar } from '@/hooks/useUsers'
+import { useAuth } from '@/hooks/useAuth'
 import type { PublicUser } from '@/interfaces/user'
 import type { Group } from '@/interfaces/group'
 
@@ -45,6 +49,11 @@ export default function ProfileSidebar({
 }: ProfileSidebarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [editLinksOpen, setEditLinksOpen] = useState(false)
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false)
+  const [pickerAvatar, setPickerAvatar] = useState<string | null>(null)
+  const [displayedAvatarUrl, setDisplayedAvatarUrl] = useState<string | null | undefined>(user.avatarUrl)
+  const updateAvatar = useUpdateAvatar()
+  const { setUserAvatar } = useAuth()
 
   const hasLocation = Boolean(user.location)
   const hasAvailability = Boolean(user.availability)
@@ -56,14 +65,27 @@ export default function ProfileSidebar({
       <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
         {/* Avatar + Name */}
         <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20 border-2 border-border">
-            {user.avatarUrl ? (
-              <AvatarImage src={user.avatarUrl} alt={`Avatar de ${user.username}`} />
-            ) : null}
-            <AvatarFallback className="bg-primary/10 text-xl font-semibold text-primary">
-              {getInitials(user.username)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative inline-block">
+            <Avatar className="h-20 w-20 border-2 border-border">
+              <AvatarImage src={displayedAvatarUrl ?? undefined} alt={`Avatar de ${user.username}`} />
+              <AvatarFallback className="bg-primary/10 text-xl font-semibold text-primary">
+                {getInitials(user.username)}
+              </AvatarFallback>
+            </Avatar>
+            {isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPickerAvatar(displayedAvatarUrl ?? null)
+                  setIsAvatarPickerOpen(true)
+                }}
+                className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition shadow"
+                aria-label="Modifier la photo de profil"
+              >
+                <Camera className="h-3.5 w-3.5 text-primary-foreground" />
+              </button>
+            )}
+          </div>
 
           <h1 className="mt-3 text-xl font-bold leading-tight text-foreground">
             {user.username}
@@ -202,6 +224,34 @@ export default function ProfileSidebar({
             onOpenChange={setEditLinksOpen}
             user={user}
           />
+          <Dialog open={isAvatarPickerOpen} onOpenChange={setIsAvatarPickerOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Modifier la photo de profil</DialogTitle>
+              </DialogHeader>
+              <AvatarPicker
+                value={pickerAvatar}
+                onChange={setPickerAvatar}
+                username={user.username}
+              />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsAvatarPickerOpen(false)}>
+                  Annuler
+                </Button>
+                <Button
+                  onClick={async () => {
+                    await updateAvatar.mutateAsync({ userId: user.id, avatarUrl: pickerAvatar })
+                    setDisplayedAvatarUrl(pickerAvatar)
+                    setUserAvatar(pickerAvatar)
+                    setIsAvatarPickerOpen(false)
+                  }}
+                  disabled={updateAvatar.isPending}
+                >
+                  {updateAvatar.isPending ? 'Enregistrement…' : 'Enregistrer'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

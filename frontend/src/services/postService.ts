@@ -25,14 +25,12 @@ type RawLiker = {
 
 export const createPost = async (data: CreatePostPayload): Promise<Post> => {
   const token = getCookie('token')
-  console.log('Token utilisé pour le POST :', token)
-  console.log('Creating post with data:', data)
 
   const res = await fetch(`${API_URL}/post`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-       Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`
     },
     body: JSON.stringify(data)
   })
@@ -57,7 +55,8 @@ export const getAllPosts = async (): Promise<Post[]> => {
   const res = await fetch(`${API_URL}/post`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
+      Authorization: `Bearer ${token}`
+    }
   })
 
   if (!res.ok) throw new Error('Impossible de récupérer les posts')
@@ -134,13 +133,14 @@ export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
 }
 
 
-export const getPostById = async (id  : string): Promise<Post> => {
+export const getPostById = async (id: string): Promise<Post> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/post/${id}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
+      Authorization: `Bearer ${token}`
+    }
   })
 
   if (!res.ok) throw new Error('Impossible de récupérer le post')
@@ -160,7 +160,7 @@ export const getPostsByGroupId = async (groupId: number): Promise<Post[]> => {
   return res.json()
 }
 
-export const updatePost = async (  id: number,
+export const updatePost = async (id: number,
   data: UpdatePostPayload): Promise<Post> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/post/${id}`, {

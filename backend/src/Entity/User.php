@@ -84,6 +84,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $experiences = null;
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $avatarUrl = null;
+
     #[ORM\ManyToMany(targetEntity: Skill::class, inversedBy: 'users')]
     #[ORM\JoinTable(name: 'user_skill')]
     private Collection $skills;
@@ -379,6 +382,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->links->removeElement($link)) {
             // orphanRemoval handles deletion
         }
+        return $this;
+    }
+
+    public function getAvatarUrl(): ?string
+    {
+        return $this->avatarUrl;
+    }
+
+    public function setAvatarUrl(?string $avatarUrl): self
+    {
+        $this->avatarUrl = $avatarUrl;
         return $this;
     }
 }
