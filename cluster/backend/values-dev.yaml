@@ -25,6 +25,7 @@ env:
   MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
   MINIO_PUBLIC_URL: "https://api-woc-dev.duckdns.org/uploads"
+  APP_FRONTEND_URL: "https://woc-dev.duckdns.org"
 
 ingress:
   enabled: true
