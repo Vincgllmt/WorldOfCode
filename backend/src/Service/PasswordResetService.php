@@ -19,7 +19,7 @@ class PasswordResetService
 
     public function __construct(
         UserRepository $userRepository,
-        #[Autowire(env: 'APP_FRONTEND_URL')] string $frontendUrl
+        #[Autowire(env: 'RESET_PASSWORD_URL')] string $frontendUrl
     ) {
         $this->frontendUrl = rtrim($frontendUrl, '/');
         $dsn = 'smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587';
