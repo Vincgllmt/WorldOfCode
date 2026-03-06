@@ -1,3 +1,4 @@
+/* ── Base (shared) ── */
 .postHtml pre,
 .postHtml code {
   font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
@@ -8,7 +9,6 @@
 .postHtml code[class*="language-"],
 .postHtml pre[class*="language-"],
 .postHtml pre code {
-  color: #f8f8f2 !important;
   background: none;
   text-align: left;
   white-space: pre;
@@ -25,79 +25,10 @@
   margin: 0;
   overflow: auto;
   border-radius: 0.9rem;
-  background: #1e1f29 !important;
-  border: 1px solid #111827;
-  box-shadow: inset 0 1px 0 #111827;
-}
-
-.postHtml :not(pre) > code[class*="language-"],
-.postHtml :not(pre) > code {
-  padding: 0.25em 0.45em;
-  border-radius: 0.45em;
-  background: #1e1f29 !important;
-  color: #f8f8f2 !important;
 }
 
 .postHtml :global(.token) {
   background: none !important;
-}
-
-.postHtml :global(.token.comment),
-.postHtml :global(.token.prolog),
-.postHtml :global(.token.doctype),
-.postHtml :global(.token.cdata) {
-  color: #6272a4 !important;
-}
-
-.postHtml :global(.token.punctuation) {
-  color: #f8f8f2 !important;
-}
-
-.postHtml :global(.token.property),
-.postHtml :global(.token.tag),
-.postHtml :global(.token.constant),
-.postHtml :global(.token.symbol),
-.postHtml :global(.token.deleted) {
-  color: #ff79c6 !important;
-}
-
-.postHtml :global(.token.boolean),
-.postHtml :global(.token.number) {
-  color: #bd93f9 !important;
-}
-
-.postHtml :global(.token.selector),
-.postHtml :global(.token.attr-name),
-.postHtml :global(.token.string),
-.postHtml :global(.token.char),
-.postHtml :global(.token.builtin),
-.postHtml :global(.token.inserted) {
-  color: #50fa7b !important;
-}
-
-.postHtml :global(.token.operator),
-.postHtml :global(.token.entity),
-.postHtml :global(.token.url),
-.postHtml :global(.language-css .token.string),
-.postHtml :global(.style .token.string) {
-  color: #8be9fd !important;
-}
-
-.postHtml :global(.token.atrule),
-.postHtml :global(.token.attr-value),
-.postHtml :global(.token.keyword) {
-  color: #ffb86c !important;
-}
-
-.postHtml :global(.token.function),
-.postHtml :global(.token.class-name) {
-  color: #f1fa8c !important;
-}
-
-.postHtml :global(.token.regex),
-.postHtml :global(.token.important),
-.postHtml :global(.token.variable) {
-  color: #f1fa8c !important;
 }
 
 .postHtml :global(.token.bold) {
@@ -106,4 +37,205 @@
 
 .postHtml :global(.token.italic) {
   font-style: italic;
+}
+
+/* ══════════════════════════════════════════
+   LIGHT THEME (default + cyberpunk-light)
+   ══════════════════════════════════════════ */
+.postHtml code[class*="language-"],
+.postHtml pre[class*="language-"],
+.postHtml pre code {
+  color: #383a42 !important;
+}
+
+.postHtml pre[class*="language-"],
+.postHtml pre {
+  background: #f6f8fa !important;
+  border: 1px solid #d0d7de;
+  box-shadow: inset 0 1px 0 #e6e8eb;
+}
+
+.postHtml :not(pre) > code[class*="language-"],
+.postHtml :not(pre) > code {
+  padding: 0.25em 0.45em;
+  border-radius: 0.45em;
+  background: #f6f8fa !important;
+  color: #383a42 !important;
+}
+
+.postHtml :global(.token.comment),
+.postHtml :global(.token.prolog),
+.postHtml :global(.token.doctype),
+.postHtml :global(.token.cdata) {
+  color: #a0a1a7 !important;
+}
+
+.postHtml :global(.token.punctuation) {
+  color: #383a42 !important;
+}
+
+.postHtml :global(.token.property),
+.postHtml :global(.token.tag),
+.postHtml :global(.token.constant),
+.postHtml :global(.token.symbol),
+.postHtml :global(.token.deleted) {
+  color: #e45649 !important;
+}
+
+.postHtml :global(.token.boolean),
+.postHtml :global(.token.number) {
+  color: #986801 !important;
+}
+
+.postHtml :global(.token.selector),
+.postHtml :global(.token.attr-name),
+.postHtml :global(.token.string),
+.postHtml :global(.token.char),
+.postHtml :global(.token.builtin),
+.postHtml :global(.token.inserted) {
+  color: #50a14f !important;
+}
+
+.postHtml :global(.token.operator),
+.postHtml :global(.token.entity),
+.postHtml :global(.token.url),
+.postHtml :global(.language-css .token.string),
+.postHtml :global(.style .token.string) {
+  color: #4078f2 !important;
+}
+
+.postHtml :global(.token.atrule),
+.postHtml :global(.token.attr-value),
+.postHtml :global(.token.keyword) {
+  color: #a626a4 !important;
+}
+
+.postHtml :global(.token.function),
+.postHtml :global(.token.class-name) {
+  color: #4078f2 !important;
+}
+
+.postHtml :global(.token.regex),
+.postHtml :global(.token.important),
+.postHtml :global(.token.variable) {
+  color: #e45649 !important;
+}
+
+/* ══════════════════════════════════════════
+   DARK THEME (dark + cyberpunk-dark)
+   Dracula-inspired
+   ══════════════════════════════════════════ */
+:global(.dark) .postHtml code[class*="language-"],
+:global(.dark) .postHtml pre[class*="language-"],
+:global(.dark) .postHtml pre code,
+:global(.cyberpunk-dark) .postHtml code[class*="language-"],
+:global(.cyberpunk-dark) .postHtml pre[class*="language-"],
+:global(.cyberpunk-dark) .postHtml pre code {
+  color: #f8f8f2 !important;
+}
+
+:global(.dark) .postHtml pre[class*="language-"],
+:global(.dark) .postHtml pre,
+:global(.cyberpunk-dark) .postHtml pre[class*="language-"],
+:global(.cyberpunk-dark) .postHtml pre {
+  background: #1e1f29 !important;
+  border: 1px solid #111827;
+  box-shadow: inset 0 1px 0 #111827;
+}
+
+:global(.dark) .postHtml :not(pre) > code[class*="language-"],
+:global(.dark) .postHtml :not(pre) > code,
+:global(.cyberpunk-dark) .postHtml :not(pre) > code[class*="language-"],
+:global(.cyberpunk-dark) .postHtml :not(pre) > code {
+  background: #1e1f29 !important;
+  color: #f8f8f2 !important;
+}
+
+:global(.dark) .postHtml :global(.token.comment),
+:global(.dark) .postHtml :global(.token.prolog),
+:global(.dark) .postHtml :global(.token.doctype),
+:global(.dark) .postHtml :global(.token.cdata),
+:global(.cyberpunk-dark) .postHtml :global(.token.comment),
+:global(.cyberpunk-dark) .postHtml :global(.token.prolog),
+:global(.cyberpunk-dark) .postHtml :global(.token.doctype),
+:global(.cyberpunk-dark) .postHtml :global(.token.cdata) {
+  color: #6272a4 !important;
+}
+
+:global(.dark) .postHtml :global(.token.punctuation),
+:global(.cyberpunk-dark) .postHtml :global(.token.punctuation) {
+  color: #f8f8f2 !important;
+}
+
+:global(.dark) .postHtml :global(.token.property),
+:global(.dark) .postHtml :global(.token.tag),
+:global(.dark) .postHtml :global(.token.constant),
+:global(.dark) .postHtml :global(.token.symbol),
+:global(.dark) .postHtml :global(.token.deleted),
+:global(.cyberpunk-dark) .postHtml :global(.token.property),
+:global(.cyberpunk-dark) .postHtml :global(.token.tag),
+:global(.cyberpunk-dark) .postHtml :global(.token.constant),
+:global(.cyberpunk-dark) .postHtml :global(.token.symbol),
+:global(.cyberpunk-dark) .postHtml :global(.token.deleted) {
+  color: #ff79c6 !important;
+}
+
+:global(.dark) .postHtml :global(.token.boolean),
+:global(.dark) .postHtml :global(.token.number),
+:global(.cyberpunk-dark) .postHtml :global(.token.boolean),
+:global(.cyberpunk-dark) .postHtml :global(.token.number) {
+  color: #bd93f9 !important;
+}
+
+:global(.dark) .postHtml :global(.token.selector),
+:global(.dark) .postHtml :global(.token.attr-name),
+:global(.dark) .postHtml :global(.token.string),
+:global(.dark) .postHtml :global(.token.char),
+:global(.dark) .postHtml :global(.token.builtin),
+:global(.dark) .postHtml :global(.token.inserted),
+:global(.cyberpunk-dark) .postHtml :global(.token.selector),
+:global(.cyberpunk-dark) .postHtml :global(.token.attr-name),
+:global(.cyberpunk-dark) .postHtml :global(.token.string),
+:global(.cyberpunk-dark) .postHtml :global(.token.char),
+:global(.cyberpunk-dark) .postHtml :global(.token.builtin),
+:global(.cyberpunk-dark) .postHtml :global(.token.inserted) {
+  color: #50fa7b !important;
+}
+
+:global(.dark) .postHtml :global(.token.operator),
+:global(.dark) .postHtml :global(.token.entity),
+:global(.dark) .postHtml :global(.token.url),
+:global(.dark) .postHtml :global(.language-css .token.string),
+:global(.dark) .postHtml :global(.style .token.string),
+:global(.cyberpunk-dark) .postHtml :global(.token.operator),
+:global(.cyberpunk-dark) .postHtml :global(.token.entity),
+:global(.cyberpunk-dark) .postHtml :global(.token.url),
+:global(.cyberpunk-dark) .postHtml :global(.language-css .token.string),
+:global(.cyberpunk-dark) .postHtml :global(.style .token.string) {
+  color: #8be9fd !important;
+}
+
+:global(.dark) .postHtml :global(.token.atrule),
+:global(.dark) .postHtml :global(.token.attr-value),
+:global(.dark) .postHtml :global(.token.keyword),
+:global(.cyberpunk-dark) .postHtml :global(.token.atrule),
+:global(.cyberpunk-dark) .postHtml :global(.token.attr-value),
+:global(.cyberpunk-dark) .postHtml :global(.token.keyword) {
+  color: #ffb86c !important;
+}
+
+:global(.dark) .postHtml :global(.token.function),
+:global(.dark) .postHtml :global(.token.class-name),
+:global(.cyberpunk-dark) .postHtml :global(.token.function),
+:global(.cyberpunk-dark) .postHtml :global(.token.class-name) {
+  color: #f1fa8c !important;
+}
+
+:global(.dark) .postHtml :global(.token.regex),
+:global(.dark) .postHtml :global(.token.important),
+:global(.dark) .postHtml :global(.token.variable),
+:global(.cyberpunk-dark) .postHtml :global(.token.regex),
+:global(.cyberpunk-dark) .postHtml :global(.token.important),
+:global(.cyberpunk-dark) .postHtml :global(.token.variable) {
+  color: #f1fa8c !important;
 }
