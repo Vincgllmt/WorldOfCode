@@ -24,7 +24,7 @@ env:
   MINIO_ACCESS_KEY: "admin"
   MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
-  MINIO_PUBLIC_URL: "https://api.production.woc/uploads"
+  MINIO_PUBLIC_URL: "https://api-woc-prod.duckdns.org/uploads"
 
 ingress:
   enabled: true
@@ -33,4 +33,6 @@ ingress:
     - host: api-woc-prod.duckdns.org
       paths:
         - path: /api
+          pathType: Prefix
+        - path: /uploads
           pathType: Prefix
