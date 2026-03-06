@@ -32,6 +32,26 @@ services:
       - 1.1.1.1 # mail dev
     command: ["symfony", "serve", "--no-tls", "--port=8090"]
 
+  backend-cron:
+    build: ./backend
+    container_name: projet_backend_cron
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: application
+      DB_PASS: password
+      DB_NAME: projet_web
+    volumes:
+      - ./backend:/var/www/backend
+      - jwt_keys:/var/www/backend/config/jwt
+    depends_on:
+      - db
+      - backend
+    networks:
+      - projet_network
+    working_dir: /var/www/backend
+    entrypoint: ["bash", "-c", "crontab /var/www/backend/crontab && cron -f"]
+
   frontend:
     build: ./frontend
     container_name: projet_frontend

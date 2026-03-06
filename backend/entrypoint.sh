@@ -83,6 +83,10 @@ else
   echo "Clés JWT déjà présentes."
 fi
 
-# 7) Lancement du serveur Symfony
+# 7) Premier fetch des actualités tech
+echo "Fetch initial des actualités tech..."
+php bin/console app:fetch-tech-news || true
+
+# 8) Lancement du serveur Symfony
 echo "Lancement du serveur Symfony sur le port 8090..."
 php -S 0.0.0.0:8090 -t public
