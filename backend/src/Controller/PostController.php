@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Post;
 use App\Entity\Like;
+use App\Entity\User;
 use App\Repository\PostRepository;
 use App\Repository\TechGroupRepository;
 use App\Repository\LikeRepository;
@@ -58,6 +59,7 @@ class PostController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $user */
         $user = $this->getUser();
 
         $page = (int) $request->query->get('page', 0);
@@ -68,7 +70,7 @@ class PostController extends AbstractController
             $page = max($page, 1);
             $limit = $limit > 0 ? min($limit, 100) : 10;
 
-            $paginated = $this->repo->findPaginatedWithLikes($page, $limit);
+            $paginated = $this->repo->findFeedPaginatedForUser($user, $page, $limit);
             $items = array_map(fn($post) => $this->mapper->toDto($post, $user), $paginated['items']);
             $totalItems = $paginated['totalItems'];
             $totalPages = (int) ceil($totalItems / $limit);
