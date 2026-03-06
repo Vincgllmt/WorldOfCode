@@ -20,18 +20,15 @@ use App\Mapper\CommentMapper;
 use App\Dto\CommentResponse;
 use App\Dto\LikeResponse;
 use App\Mapper\LikeMapper;
+use App\Service\NotificationService;
+use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
 
 
-
-#[Route('/api/post')]
-#[OA\Tag(name: 'Post')]
-class PostController extends AbstractController
-{
-    public function __construct(
         private PostRepository $repo,
         private TechGroupRepository $groupRepo,
         private PostMapper $mapper,
+        private NotificationService $notificationService,
         private EntityManagerInterface $em
     ) {}
 
@@ -408,6 +405,16 @@ class PostController extends AbstractController
         $likeRepo->save($like, flush: false);
 
         $this->em->flush();
+
+        // Notifier l'auteur du post
+        $this->notificationService->createAndPush(
+            $post->getAuthor(),
+            $user,
+            NotificationType::LIKE,
+            $user->getUsername() . ' a aimé votre post',
+            $post->getId()
+        );
+
         $this->em->refresh($post);
 
         $dto = $this->mapper->toDto($post, $user);
