@@ -24,7 +24,8 @@ use App\Service\NotificationService;
 use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
 
-#[Route('/api/posts', name: 'post_')]
+#[Route('/api/post')]
+#[OA\Tag(name: 'Post')]
 class PostController extends AbstractController
 {
     public function __construct(
