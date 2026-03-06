@@ -4,10 +4,18 @@ kind: Ingress
 metadata:
   name: {{ include "woc-backend.fullname" . }}
   annotations:
-    # Priorité plus basse pour agir comme un "catch-all" pour /api/
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+      {{- range .Values.ingress.hosts }}
+        - {{ .host }}
+      {{- end }}
+      secretName: {{ include "woc-backend.fullname" . }}-tls
   rules:
     {{- range .Values.ingress.hosts }}
     - host: {{ .host }}

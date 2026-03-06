@@ -15,24 +15,23 @@ service:
 
 containerPort: 3000
 
-env:
-  PORT: "3000"
-  CORS_ORIGIN: "http://woc.production" # L'URL du Frontend qui appelle
-
 database:
   secretName: woc-messagerie-db
-  host: "mysql" # Service local
+  host: "mysql"
   port: "3306"
   user: "application"
   password: "password"
   name: "projet_web"
 
+env:
+  PORT: "3000"
+  CORS_ORIGIN: "https://woc-prod.duckdns.org" 
+
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    # CORRECTION : On utilise le même domaine que l'API Backend
-    - host: api.production.woc
+    - host: api-woc-prod.duckdns.org
       paths:
         - path: /api/messaging
           pathType: Prefix

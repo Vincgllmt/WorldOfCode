@@ -1,0 +1,29 @@
+deploy:cert-manager:
+  stage: deploy-infra
+  when: manual
+  variables:
+    CERT_MANAGER_NAMESPACE: "cert-manager"
+    CERT_MANAGER_RELEASE_NAME: "cert-manager"
+    CERT_MANAGER_CHART: "jetstack/cert-manager"
+    CERT_MANAGER_VERSION: "v1.19.4" 
+  script:
+    - echo "--- Configuration du Namespace ---"
+    - kubectl create namespace "$CERT_MANAGER_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    
+    - echo "--- Ajout du repo Helm Jetstack ---"
+    - helm repo add jetstack https://charts.jetstack.io
+    - helm repo update
+    
+    - echo "--- Déploiement de Cert-Manager ---"
+    - |
+      helm upgrade --install "$CERT_MANAGER_RELEASE_NAME" "$CERT_MANAGER_CHART" \
+        --namespace "$CERT_MANAGER_NAMESPACE" \
+        --version "$CERT_MANAGER_VERSION" \
+        --set installCRDs=true
+
+    - echo "--- Attente du démarrage de cert-manager ---"
+    # Étape CRUCIALE : on attend que le webhook soit prêt, sinon Kubernetes rejettera les ClusterIssuers
+    - kubectl rollout status deployment/cert-manager-webhook -n "$CERT_MANAGER_NAMESPACE" --timeout=120s
+    
+    - echo "--- Déploiement des ClusterIssuers ---"
+    - kubectl apply -f templates/cluster-issuer.yaml

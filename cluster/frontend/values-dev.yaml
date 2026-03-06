@@ -14,25 +14,18 @@ service:
 containerPort: 3000
 
 env:
-  # CORRECTION : Pointe vers l'Ingress du Backend
-  NEXT_PUBLIC_API_URL: "http://api.dev.woc/api"
-  
-  # Pointe vers l'Ingress du Frontend (soi-même)
-  NEXT_PUBLIC_WOC_URL: "http://dev.woc"
-  
-  # CORRECTION : Le socket passe par le Nginx du Backend
-  NEXT_PUBLIC_SOCKET_URL: "http://api.dev.woc"
-  NEXT_PUBLIC_SOCKET_PATH: "/api/messaging/socket.io"
+  NEXT_PUBLIC_API_URL: "https://api-woc-dev.duckdns.org/api"
+  NEXT_PUBLIC_WOC_URL: "https://woc-dev.duckdns.org"
+  NEXT_PUBLIC_SOCKET_URL: "https://api-woc-dev.duckdns.org"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: dev.woc
+    - host: woc-dev.duckdns.org
       paths:
         - path: /
           pathType: Prefix
-  tls: []
 
 resources:
   requests:

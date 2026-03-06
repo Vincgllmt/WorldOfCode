@@ -14,21 +14,15 @@ service:
 containerPort: 3000
 
 env:
-  # CORRECTION : Pointe vers l'Ingress du Backend
-  NEXT_PUBLIC_API_URL: "http://api.production.woc/api"
-  
-  # Pointe vers l'Ingress du Frontend (soi-même)
-  NEXT_PUBLIC_WOC_URL: "http://woc.production"
-  
-  # CORRECTION : Le socket passe par le Nginx du Backend
-  NEXT_PUBLIC_SOCKET_URL: "http://api.production.woc"
+  NEXT_PUBLIC_API_URL: "https://api-woc-prod.duckdns.org/api"
+  NEXT_PUBLIC_WOC_URL: "https://woc-prod.duckdns.org"
+  NEXT_PUBLIC_SOCKET_URL: "https://api-woc-prod.duckdns.org"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: woc.production
+    - host: woc-prod.duckdns.org
       paths:
         - path: /
           pathType: Prefix
-  tls: []

@@ -19,9 +19,9 @@ database:
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(woc\\.production|api\\.production\\.woc|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(woc-prod\\.duckdns\\.org|api-woc-prod\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.production.svc.cluster.local:9000"
-  MINIO_ACCESS_KEY: "admin" 
+  MINIO_ACCESS_KEY: "admin"
   MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
   MINIO_PUBLIC_URL: "https://api.production.woc/uploads"
@@ -30,7 +30,7 @@ ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: api.production.woc
+    - host: api-woc-prod.duckdns.org
       paths:
         - path: /api
           pathType: Prefix
