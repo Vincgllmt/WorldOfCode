@@ -33,7 +33,5 @@ ingress:
   hosts:
     - host: api-woc-prod.duckdns.org
       paths:
-        - path: /api/messaging
-          pathType: Prefix
         - path: /socket.io
           pathType: Prefix
