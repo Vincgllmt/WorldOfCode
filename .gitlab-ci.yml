@@ -46,7 +46,8 @@ include:
   - local: cluster/frontend/.gitlab-ci.yml
   - local: cluster/messagerie/.gitlab-ci.yml
   - local: cluster/backoffice/.gitlab-ci.yml
-  - local: cluster/n8n/.gitlab-ci.yml
+  #- local: cluster/n8n/.gitlab-ci.yml
+  - local: cluster/cert-manager/.gitlab-ci.yml
 
 
 # ===================================
