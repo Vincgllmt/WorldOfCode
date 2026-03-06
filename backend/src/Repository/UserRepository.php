@@ -29,6 +29,8 @@ class UserRepository extends ServiceEntityRepository
     ####
     public function findByUsernameInsensitive(string $username): ?User
     {
+        $username = mb_strtolower(trim($username));
+
         return $this->createQueryBuilder('u')
             ->where('LOWER(u.username) = LOWER(:username)')
             ->setParameter('username', $username)

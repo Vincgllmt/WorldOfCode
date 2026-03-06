@@ -21,6 +21,7 @@ use App\Dto\LikeResponse;
 use App\Mapper\LikeMapper;
 use App\Service\NotificationService;
 use App\Enum\NotificationType;
+use Doctrine\ORM\EntityManagerInterface;
 
 
 
@@ -32,7 +33,8 @@ class PostController extends AbstractController
         private PostRepository $repo,
         private TechGroupRepository $groupRepo,
         private PostMapper $mapper,
-        private NotificationService $notificationService
+        private NotificationService $notificationService,
+        private EntityManagerInterface $em
     ) {}
 
     #[Route('', name: 'post_list', methods: ['GET'])]
@@ -404,7 +406,9 @@ class PostController extends AbstractController
         $like = new Like();
         $like->setUser($user);
         $like->setPost($post);
-        $likeRepo->save($like);
+        $likeRepo->save($like, flush: false);
+
+        $this->em->flush();
 
         // Notifier l'auteur du post
         $this->notificationService->createAndPush(
@@ -415,7 +419,7 @@ class PostController extends AbstractController
             $post->getId()
         );
 
-        $post = $this->repo->findWithLikes($id);
+        $this->em->refresh($post);
 
         $dto = $this->mapper->toDto($post, $user);
 
@@ -441,7 +445,7 @@ class PostController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        $post = $this->repo->find($id);
+        $post = $this->repo->findWithLikes($id);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
         }
@@ -453,7 +457,7 @@ class PostController extends AbstractController
             return $this->json(['error' => 'Not liked yet'], 400);
         }
 
-        $likeRepo->remove($like);
+        $likeRepo->remove($like, flush: true);
 
         return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
     }
