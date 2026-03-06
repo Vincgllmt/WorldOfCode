@@ -10,10 +10,20 @@ registry:
 
 service:
   type: ClusterIP
-  port: 8081        # Port exposé dans Kubernetes (utilisé par le Nginx du Backend)
+  port: 8081
   targetPort: 3000
 
 containerPort: 3000
+
+# Configuration réseau pour MediaSoup (WebRTC)
+hostNetwork: true
+
+# Fixer le pod sur le nœud kube-worker-01
+nodeSelector:
+  kubernetes.io/hostname: "kube-worker-01"
+
+mediasoup:
+  announcedIp: "51.178.143.54"
 
 database:
   secretName: woc-messagerie-db
@@ -33,8 +43,6 @@ ingress:
   hosts:
     - host: api-woc-dev.duckdns.org
       paths:
-        - path: /api/messaging
-          pathType: Prefix
         - path: /socket.io
           pathType: Prefix
 

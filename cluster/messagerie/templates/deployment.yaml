@@ -12,6 +12,17 @@ spec:
       labels:
         app: {{ include "woc-messagerie.name" . }}
     spec:
+      # 1. Activation optionnelle du hostNetwork
+      {{- if .Values.hostNetwork }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      {{- end }}
+      
+      # 2. Ajout du nodeSelector pour forcer le pod sur un nœud précis
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+
       imagePullSecrets:
         - name: {{ .Values.registry.imagePullSecretName }}
       containers:
@@ -31,6 +42,14 @@ spec:
               value: {{ .Values.env.PORT | quote }}
             - name: CORS_ORIGIN
               value: {{ .Values.env.CORS_ORIGIN | quote }}
+            
+            # 3. Injection de l'IP publique pour MediaSoup
+            {{- if .Values.mediasoup }}
+            {{- if .Values.mediasoup.announcedIp }}
+            - name: MEDIASOUP_ANNOUNCED_IP
+              value: {{ .Values.mediasoup.announcedIp | quote }}
+            {{- end }}
+            {{- end }}
 
             - name: DB_HOST
               valueFrom:
