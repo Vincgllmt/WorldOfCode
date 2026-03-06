@@ -132,7 +132,7 @@ class PostRepository extends ServiceEntityRepository
         $qb = $this->createBaseQueryBuilder()
             ->andWhere(
                 'a = :user
-                 OR a IN (SELECT ff.followed FROM App\Entity\Follow ff WHERE ff.follower = :user)
+                 OR a IN (SELECT ff_u FROM App\Entity\Follow ff JOIN ff.followed ff_u WHERE ff.follower = :user)
                  OR g IN (SELECT jg FROM App\Entity\TechGroup jg JOIN jg.users jgu WHERE jgu = :user)'
             )
             ->setParameter('user', $user)
