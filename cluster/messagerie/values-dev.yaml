@@ -16,14 +16,14 @@ service:
 containerPort: 3000
 
 # Configuration réseau pour MediaSoup (WebRTC)
-# hostNetwork: true
+hostNetwork: true
 
 # # Fixer le pod sur le nœud kube-worker-01
-# nodeSelector:
-#   kubernetes.io/hostname: "kube-worker-01"
+nodeSelector:
+  kubernetes.io/hostname: "kube-worker-01"
 
-# mediasoup:
-#   announcedIp: "51.178.143.54"
+mediasoup:
+  announcedIp: "51.178.143.54"
 
 database:
   secretName: woc-messagerie-db
