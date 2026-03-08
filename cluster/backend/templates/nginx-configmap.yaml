@@ -8,6 +8,9 @@ data:
         listen 8090;
         server_name _;
 
+        access_log /dev/stdout;
+        error_log /dev/stderr warn;
+
         client_max_body_size 10M;
 
         root /var/www/backend/public;
