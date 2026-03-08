@@ -16,7 +16,7 @@ build:backend:
     # Utilisation de | pour éviter les erreurs de guillemets YAML
     - |
       echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    
+
     - echo "Build et Push vers ${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}"
     - |
       /kaniko/executor \
@@ -25,7 +25,7 @@ build:backend:
         --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}" \
         --insecure \
         --skip-tls-verify \
-        --cache=true 
+        --cache=true
 
 # 2. Déploiement automatique en DEV
 deploy:backend:dev:
@@ -42,9 +42,9 @@ deploy:backend:dev:
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
-        - backend/**/* 
+        - backend/**/*
       when: on_success
-    
+
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
@@ -64,10 +64,32 @@ deploy:backend:prod:
   rules:
     - if: '$CI_COMMIT_BRANCH == "production"'
       changes:
-        - backend/**/* 
+        - backend/**/*
       when: manual
 
     - if: '$CI_COMMIT_BRANCH == "production"'
       when: manual
       allow_failure: true
-      
+
+# 4. Job de Seed de la BDD
+seed:backend:dev:
+  stage: deploy-apps
+  image: alpine/k8s:1.31.13
+  environment:
+    name: dev
+  script:
+    - echo "Attente que le pod backend soit prêt..."
+    - kubectl rollout status deployment/backend -n dev --timeout=120s || true
+    - echo "Exécution des commandes Doctrine dans le pod backend..."
+    - POD_NAME=$(kubectl get pods -n dev -l app.kubernetes.io/name=backend -o jsonpath='{.items[0].metadata.name}')
+    - if [ -z "$POD_NAME" ]; then echo "Pod backend introuvable." && exit 1; fi
+    - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:drop --force || true
+    - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:create
+    - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:migrations:migrate -n
+    - echo "Lancement du job de seed: cluster/backend/seed-job.yaml"
+    - kubectl delete -f cluster/backend/seed-job.yaml -n dev --ignore-not-found || true
+    - kubectl apply -f cluster/backend/seed-job.yaml -n dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
