@@ -20,8 +20,7 @@ primary:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: longhorn-dev
-
+    storageClass: longhorn
 resources:
     requests:
       memory: "256Mi"
