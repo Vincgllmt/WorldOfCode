@@ -15,7 +15,7 @@ services:
       MINIO_SECRET_KEY: admin1234
       MINIO_BUCKET: uploads
       MINIO_PUBLIC_URL: http://localhost:9000/uploads
-      APP_FRONTEND_URL: http://localhost:3000
+      RESET_PASSWORD_URL: http://localhost:3000
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
       MESSAGERIE_URL: http://messagerie:8081
 
