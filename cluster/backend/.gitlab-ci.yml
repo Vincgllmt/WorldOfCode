@@ -86,7 +86,7 @@ seed:backend:dev:
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:drop --force || true
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:create
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:migrations:migrate -n
-    - echo "Lancement du job de seed: cluster/backend/seed-job.yaml"
+    - 'echo "Lancement du job de seed: cluster/backend/seed-job.yaml"'
     - kubectl delete -f cluster/backend/seed-job.yaml -n dev --ignore-not-found || true
     - kubectl apply -f cluster/backend/seed-job.yaml -n dev
   rules:
