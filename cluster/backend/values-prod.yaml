@@ -25,6 +25,8 @@ env:
   MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
   MINIO_PUBLIC_URL: "https://api-woc-prod.duckdns.org/uploads"
+  RESET_PASSWORD_URL: "https://woc-prod.duckdns.org"
+  MESSAGERIE_URL: "http://messagerie.production.svc.cluster.local:8081"
 
 ingress:
   enabled: true
