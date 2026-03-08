@@ -1,4 +1,4 @@
-FROM php:8.3-cli
+FROM php:8.4-cli
 
 # 1. Installer les libs nécessaires + extensions PHP
 RUN apt-get update && apt-get install -y \
@@ -16,5 +16,4 @@ COPY . .
 # 3. Installer toutes les dépendances (y compris dev)
 RUN composer install --no-interaction --prefer-dist
 
-# 4. Commande par défaut (fixtures)
-CMD ["php", "bin/console", "doctrine:fixtures:load", "--no-interaction", "--env=prod"]
+CMD ["php", "bin/console", "doctrine:fixtures:load", "--no-interaction", "--env=dev"]

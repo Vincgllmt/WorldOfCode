@@ -13,7 +13,17 @@ spec:
       containers:
         - name: seed
           image: registry.woc:32000/woc-backend:faker
-          command: ["php", "bin/console", "doctrine:fixtures:load", "--no-interaction", "--env=dev"]
+          imagePullPolicy: Always
+          command:
+            [
+              "php",
+              "-d",
+              "memory_limit=512M",
+              "bin/console",
+              "doctrine:fixtures:load",
+              "--no-interaction",
+              "--env=dev",
+            ]
           env:
             - name: APP_ENV
               value: "dev"
