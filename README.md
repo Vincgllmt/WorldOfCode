@@ -49,12 +49,10 @@ cd world-of-code
 docker compose build --no-cache
 ```
 
-Il faut ensuite générer les clés JWT pour le backend :
+Il faut ensuite mettre à jour les librairies du backend :
 
 ```bash
 docker compose exec backend composer install
-docker compose exec backend php bin/console lexik:jwt:generate-keypair
-docker compose restart
 ```
 Puis détuire la base de données pour être sûr d'être à jour :
 
