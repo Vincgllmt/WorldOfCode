@@ -5,6 +5,7 @@ stages:
   - lint
   - test             
   - build            # Tous les builds Docker en parallèle
+  - scan             # Scan de sécurité Trivy 
   - deploy-infra     # Longhorn en premier
   - deploy-services  # MySQL, MinIO, Registry en parallèle
   - deploy-apps      # Backend, Frontend, Messagerie, Backoffice en parallèle
@@ -30,6 +31,24 @@ before_script:
     - kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-server="$REGISTRY_HOST" --docker-username="$REGISTRY_USER" --docker-password="$REGISTRY_PASSWORD" -n "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec les valeurs $VALUES_FILE"
     - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$CI_COMMIT_SHORT_SHA
+
+.trivy_scan_template:
+  stage: scan
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: "$REGISTRY_USER"
+    TRIVY_PASSWORD: "$REGISTRY_PASSWORD"
+  script:
+    - echo "🛡️ Démarrage du scan Trivy pour ${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}..."
+    
+    # 1. On génère un rapport complet (High, Critical) pour information, sans faire planter le job
+    - trivy image --no-progress --scanners vuln --severity HIGH,CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
+    
+    # 2. On relance le scan MAIS on fait planter le job (exit-code 1) UNIQUEMENT s'il y a des failles CRITIQUES
+    - trivy image --no-progress --scanners vuln --exit-code 1 --severity CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
+
 
 include:
   - local: cluster/longhorn/.gitlab-ci.yml

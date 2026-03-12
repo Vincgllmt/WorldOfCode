@@ -13,7 +13,6 @@ build:backend:
       allow_failure: true
   script:
     - echo "Configuration de l'authentification Kaniko..."
-    # Utilisation de | pour éviter les erreurs de guillemets YAML
     - |
       echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
 
@@ -26,6 +25,17 @@ build:backend:
         --insecure \
         --skip-tls-verify \
         --cache=true
+
+
+scan:backend:
+  extends: .trivy_scan_template
+  variables:
+    APP_NAME: "backend"
+  rules:
+    # On scanne l'image uniquement si on vient de la build !
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - backend/**/*
 
 # 2. Déploiement automatique en DEV
 deploy:backend:dev:
