@@ -47,6 +47,37 @@ class TechWatchItemRepository extends ServiceEntityRepository
         return ['items' => $items, 'totalItems' => $total];
     }
 
+    /**
+     * @param int[] $groupIds
+     * @return array{items: TechWatchItem[], totalItems: int}
+     */
+    public function findByMultipleGroupsPaginated(array $groupIds, int $page = 1, int $limit = 20): array
+    {
+        if (empty($groupIds)) {
+            return ['items' => [], 'totalItems' => 0];
+        }
+
+        $qb = $this->createQueryBuilder('i')
+            ->join('i.source', 's')
+            ->where('s.techGroup IN (:groupIds)')
+            ->setParameter('groupIds', $groupIds)
+            ->orderBy('i.publishedAt', 'DESC')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        $items = $qb->getQuery()->getResult();
+
+        $total = (int) $this->createQueryBuilder('i2')
+            ->select('COUNT(i2.id)')
+            ->join('i2.source', 's2')
+            ->where('s2.techGroup IN (:groupIds)')
+            ->setParameter('groupIds', $groupIds)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return ['items' => $items, 'totalItems' => $total];
+    }
+
     public function existsByUrl(string $url): bool
     {
         return (bool) $this->findOneBy(['url' => $url]);
