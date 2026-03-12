@@ -43,7 +43,7 @@ class TechGroupRepository extends ServiceEntityRepository
     /** @return TechGroup[] */
     public function searchByQuery(string $q, int $limit = 5): array
     {
-        $term = '%' . mb_strtolower(trim($q)) . '%';
+        $term = mb_strtolower(trim($q)) . '%';
 
         return $this->createQueryBuilder('g')
             ->where('LOWER(g.name) LIKE :q')

@@ -16,7 +16,6 @@ export default function PostListByGroup({ groupId }: Props) {
       isLoading={isLoading}
       isError={isError}
       emptyMessage="Aucun post pour ce groupe."
-      defaultShowComments
     />
   )
 }

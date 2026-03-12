@@ -69,9 +69,10 @@ class UserRepository extends ServiceEntityRepository
     ##
     ####
     /** @return User[] */
+    /** @return User[] */
     public function searchByQuery(string $q, int $limit = 5): array
     {
-        $term = '%' . mb_strtolower(trim($q)) . '%';
+        $term = mb_strtolower(trim($q)) . '%';
 
         return $this->createQueryBuilder('u')
             ->where('LOWER(u.username) LIKE :q')
