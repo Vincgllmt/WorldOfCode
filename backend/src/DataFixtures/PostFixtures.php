@@ -27,7 +27,10 @@ class PostFixtures extends Fixture implements DependentFixtureInterface
             'React', 'Vue.js', 'Angular', 'Node.js', 'Python', 'Django', 'Symfony', 'Laravel',
             'Docker', 'Kubernetes', 'AWS', 'DevOps', 'Machine Learning', 'Cybersécurité',
             'Blockchain', 'Mobile Dev', 'UI/UX Design', 'PostgreSQL', 'MongoDB', 'GraphQL',
-            'TypeScript', 'Rust', 'Go', 'Next.js', 'Tailwind CSS'
+            'TypeScript', 'Rust', 'Go', 'Next.js', 'Tailwind CSS',
+            'Java', 'C# / .NET', 'PHP', 'Swift', 'Kotlin', 'Svelte', 'HTMX',
+            'Redis', 'Nginx', 'Terraform', 'Linux', 'Data Engineering', 'LLM / GenAI',
+            'Clean Code', 'Open Source', 'Freelance Dev', 'Git', 'VS Code', 'Figma', 'Flutter',
         ];
 
         $groups = [];

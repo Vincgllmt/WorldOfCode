@@ -20,6 +20,8 @@ class TechWatchFixtures extends Fixture implements DependentFixtureInterface
             'Machine Learning', 'Cybersécurité', 'Blockchain', 'Mobile Dev',
             'UI/UX Design', 'PostgreSQL', 'MongoDB', 'GraphQL', 'TypeScript',
             'Rust', 'Go', 'Next.js', 'Tailwind CSS',
+            'Java', 'C# / .NET', 'PHP', 'Swift', 'Kotlin', 'Svelte',
+            'Redis', 'Nginx', 'Terraform', 'VS Code', 'Figma', 'Flutter',
         ];
 
         foreach ($groupNames as $name) {

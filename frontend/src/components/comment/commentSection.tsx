@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -129,10 +129,10 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(comment.id, comment.content)}>
-                          ✏️ Modifier
+                          <Pencil className="mr-2 h-4 w-4" /> Modifier
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => deleteComment.mutate(String(comment.id))}>
-                          🗑️ Supprimer
+                          <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -159,7 +159,7 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
 
                 {isEditing && (
                   <Button variant="ghost" size="sm" className="mt-2" onClick={() => handleSaveEdit(comment.id)}>
-                    💾 Enregistrer
+                    <Save className="mr-2 h-4 w-4" /> Enregistrer
                   </Button>
                 )}
               </motion.div>
