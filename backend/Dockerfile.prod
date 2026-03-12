@@ -35,4 +35,4 @@ COPY www.conf /usr/local/etc/php-fpm.d/www.conf
 ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
 CMD ["php-fpm"]
 
-EXPOSE 9000
+EXPOSE 9000 
