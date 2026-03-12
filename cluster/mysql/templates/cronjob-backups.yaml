@@ -5,19 +5,23 @@ metadata:
   namespace: dev
 spec:
   schedule: "0 2 * * *"
-  successfulJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       template:
         spec:
+
           nodeSelector:
-            kubernetes.io/hostname: "kube-worker-01" 
-          
+            kubernetes.io/hostname: "kube-worker-01"
+
           containers:
             - name: mysqldump
-              image: bitnami/mysql:9.4.0-debian-12-r1
+              image: bitnamilegacy/mysql:9.4.0-debian-12-r1
               
+              securityContext:
+                runAsUser: 0 
+                
               env:
                 - name: DB_HOST
                   valueFrom:
@@ -51,17 +55,22 @@ spec:
                 - |
                   echo "Démarrage de la sauvegarde MySQL..."
                   DATE=$(date +\%Y-\%m-\%d_\%H-\%M-\%S)
-                  FILE="/backups/${DB_NAME}_${DATE}.sql"
+                  FILE="/backups/woc_mysql_backup_${DATE}.sql"
                   
-                  # Lancement du dump en utilisant les variables injectées
-                  mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$FILE"
+                  # Ajout d'un timeout de 10s pour ne pas bloquer dans le vide si le réseau bug
+                  mysqldump --no-tablespaces -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$FILE"
                   
-                  # Compression
-                  gzip "$FILE"
+                  # On vérifie si le dump a réussi avant de compresser
+                  if [ $? -eq 0 ]; then
+                    echo "Dump terminé, compression en cours..."
+                    gzip "$FILE"
+                    echo "Sauvegarde réussie : $FILE.gz"
+                  else
+                    echo "Échec de la sauvegarde (Vérifiez les identifiants ou la connexion) !"
+                    rm -f "$FILE"
+                    exit 1
+                  fi
                   
-                  echo "Sauvegarde terminée : $FILE.gz"
-                  
-                  # Nettoyage automatique (garde 7 jours)
                   find /backups -type f -name "${DB_NAME}_*.sql.gz" -mtime +7 -exec rm {} \;
               
               volumeMounts:
@@ -73,6 +82,5 @@ spec:
           volumes:
             - name: host-backup-dir
               hostPath:
-                # Dossier sur serveur OVH physique
                 path: /var/opt/mysql-backups
                 type: DirectoryOrCreate
