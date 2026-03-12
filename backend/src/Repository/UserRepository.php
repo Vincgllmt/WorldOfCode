@@ -68,6 +68,24 @@ class UserRepository extends ServiceEntityRepository
     ####
     ##
     ####
+    /** @return User[] */
+    public function searchByQuery(string $q, int $limit = 5): array
+    {
+        $term = '%' . mb_strtolower(trim($q)) . '%';
+
+        return $this->createQueryBuilder('u')
+            ->where('LOWER(u.username) LIKE :q')
+            ->orWhere('LOWER(u.firstname) LIKE :q')
+            ->orWhere('LOWER(u.lastname) LIKE :q')
+            ->setParameter('q', $term)
+            ->orderBy('u.username', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+    ####
+    ##
+    ####
     public function remove(User $user, bool $flush = false): void
     {
         $this->getEntityManager()->remove($user);

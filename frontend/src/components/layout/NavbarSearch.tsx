@@ -3,9 +3,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Loader2, User, Hash } from 'lucide-react'
+import { Search, Loader2, Users } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useNavbarSearch } from '@/hooks/useNavbarSearch'
 import { cn } from '@/lib/utils'
 
@@ -15,8 +16,26 @@ type NavbarSearchProps = {
 }
 
 type SearchItem =
-  | { type: 'user'; id: number; label: string; href: string }
-  | { type: 'group'; id: number; label: string; href: string }
+  | { type: 'user'; id: number; label: string; sub: string; avatarUrl: string | null; href: string }
+  | { type: 'group'; id: number; label: string; sub: string; href: string }
+
+function UserAvatar({ name, avatarUrl, size = 28 }: { name: string; avatarUrl: string | null; size?: number }) {
+  const initials = name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+  return (
+    <Avatar className="shrink-0" style={{ width: size, height: size }}>
+      {avatarUrl ? <AvatarImage src={avatarUrl} alt={name} /> : null}
+      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
 
 export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps) {
   const [query, setQuery] = useState<string>('')
@@ -37,16 +56,22 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
   const groupResults = groups ?? []
 
   const items = useMemo<SearchItem[]>(() => {
-    const userItems = userResults.map((user) => ({
-      type: 'user' as const,
-      id: user.id,
-      label: user.username,
-      href: `/user/${user.id}`,
-    }))
-    const groupItems = groupResults.map((group) => ({
-      type: 'group' as const,
+    const userItems: SearchItem[] = userResults.map((user) => {
+      const fullName = [user.firstname, user.lastname].filter(Boolean).join(' ')
+      return {
+        type: 'user',
+        id: user.id,
+        label: fullName || user.username,
+        sub: `@${user.username}`,
+        avatarUrl: user.avatarUrl ?? null,
+        href: `/user/${user.id}`,
+      }
+    })
+    const groupItems: SearchItem[] = groupResults.map((group) => ({
+      type: 'group',
       id: group.id,
       label: group.name,
+      sub: 'Groupe',
       href: `/group/${group.id}`,
     }))
     return [...userItems, ...groupItems]
@@ -102,6 +127,17 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     inputRef.current?.blur()
   }
 
+  const goToSearchPage = () => {
+    const q = query.trim()
+    if (!q) return
+    router.push(`/search?q=${encodeURIComponent(q)}`)
+    setQuery('')
+    setOpen(false)
+    setActiveIndex(-1)
+    setIsExpanded(false)
+    inputRef.current?.blur()
+  }
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -125,9 +161,11 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     }
 
     if (event.key === 'Enter') {
+      event.preventDefault()
       if (activeIndex >= 0 && activeIndex < items.length) {
-        event.preventDefault()
         handleSelect(items[activeIndex])
+      } else {
+        goToSearchPage()
       }
       return
     }
@@ -148,7 +186,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
 
   const containerClasses = cn(
     'relative transition-all duration-200 ease-out basis-full sm:basis-auto',
-    isExpanded ? 'w-full sm:w-64 lg:w-[22rem]' : 'w-full sm:w-36 lg:w-48',
+    isExpanded ? 'w-full sm:w-72 lg:w-96' : 'w-full sm:w-56 lg:w-72',
     className
   )
 
@@ -156,14 +194,13 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     title: string,
     entries: SearchItem[],
     offset: number,
-    icon: React.ReactNode
   ) => {
     if (entries.length === 0) return null
 
     return (
       <div className="py-2">
         <p className="px-3 text-xs font-semibold uppercase text-muted-foreground">{title}</p>
-        <ul role="presentation" className="mt-1 space-y-1">
+        <ul role="presentation" className="mt-1 space-y-0.5">
           {entries.map((item, index) => {
             const flatIndex = offset + index
             const isActive = flatIndex === activeIndex
@@ -183,14 +220,23 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
               >
                 <Link
                   href={item.href}
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-inherit no-underline"
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-inherit no-underline"
                   onClick={(event) => {
                     event.preventDefault()
                     handleSelect(item)
                   }}
                 >
-                  {icon}
-                  <span>{item.label}</span>
+                  {item.type === 'user' ? (
+                    <UserAvatar name={item.label} avatarUrl={item.avatarUrl} />
+                  ) : (
+                    <div className="rounded-full bg-muted flex items-center justify-center shrink-0" style={{ width: 28, height: 28 }}>
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-sm leading-tight">{item.label}</p>
+                    <p className="truncate text-xs text-muted-foreground">{item.sub}</p>
+                  </div>
                 </Link>
               </li>
             )
@@ -238,7 +284,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
             aria-controls={shouldDisplayPopover ? listboxId : undefined}
             aria-activedescendant={highlightedItemId}
             aria-autocomplete="list"
-            placeholder="Rechercher un utilisateur ou un groupe…"
+            placeholder="Rechercher un utilisateur ou un groupe..."
             className="h-10 pl-9 pr-8"
           />
           <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -248,7 +294,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[min(20rem,90vw)] p-0"
+        className="w-[min(24rem,90vw)] p-0"
         sideOffset={8}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
@@ -260,18 +306,8 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
           aria-label="Suggestions de recherche"
           className="max-h-80 overflow-y-auto"
         >
-          {renderSection(
-            'Utilisateurs',
-            userItems,
-            0,
-            <User className="h-4 w-4" aria-hidden />
-          )}
-          {renderSection(
-            'Groupes',
-            groupItems,
-            userItems.length,
-            <Hash className="h-4 w-4" aria-hidden />
-          )}
+          {renderSection('Utilisateurs', userItems, 0)}
+          {renderSection('Groupes', groupItems, userItems.length)}
 
           {!hasResults && !isLoading && !isFetching ? (
             <p className="px-3 py-4 text-sm text-muted-foreground">Aucun résultat</p>
@@ -280,6 +316,17 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
           {error ? (
             <p className="px-3 py-2 text-sm text-destructive">Erreur de recherche</p>
           ) : null}
+
+          {hasResults && (
+            <button
+              type="button"
+              className="w-full border-t border-border px-3 py-2.5 text-xs font-medium text-primary hover:bg-muted transition-colors text-center"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={goToSearchPage}
+            >
+              Voir tous les résultats
+            </button>
+          )}
         </div>
       </PopoverContent>
     </Popover>

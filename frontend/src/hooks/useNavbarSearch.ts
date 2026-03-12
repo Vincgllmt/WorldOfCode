@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { searchGroups, searchUsers } from '@/services/searchService'
-import type { GroupPreview, SearchGroupsParams, SearchUsersParams, UserPreview } from '@/interfaces/search'
+import { search } from '@/services/searchService'
+import type { SearchResponse } from '@/interfaces/search'
 
 type UseNavbarSearchArgs = {
   query: string
@@ -9,8 +9,8 @@ type UseNavbarSearchArgs = {
 }
 
 type UseNavbarSearchResult = {
-  users: UserPreview[] | undefined
-  groups: GroupPreview[] | undefined
+  users: SearchResponse['users'] | undefined
+  groups: SearchResponse['groups'] | undefined
   isLoading: boolean
   isFetching: boolean
   error?: Error
@@ -35,30 +35,19 @@ export function useNavbarSearch({ query, limit = DEFAULT_LIMIT }: UseNavbarSearc
 
   const enabled = debouncedQuery.length >= 1
 
-  const usersQuery = useQuery<UserPreview[], Error>({
-    queryKey: ['search-users', debouncedQuery, limit],
-    queryFn: () => searchUsers({ q: debouncedQuery, limit } satisfies SearchUsersParams),
+  const searchQuery = useQuery<SearchResponse, Error>({
+    queryKey: ['search', debouncedQuery, limit],
+    queryFn: () => search({ q: debouncedQuery, limit }),
     enabled,
     staleTime: 30_000,
   })
-
-  const groupsQuery = useQuery<GroupPreview[], Error>({
-    queryKey: ['search-groups', debouncedQuery, limit],
-    queryFn: () => searchGroups({ q: debouncedQuery, limit } satisfies SearchGroupsParams),
-    enabled,
-    staleTime: 30_000,
-  })
-
-  const error = useMemo<Error | undefined>(() => {
-    return usersQuery.error ?? groupsQuery.error ?? undefined
-  }, [usersQuery.error, groupsQuery.error])
 
   return {
-    users: usersQuery.data,
-    groups: groupsQuery.data,
-    isLoading: usersQuery.isLoading || groupsQuery.isLoading,
-    isFetching: usersQuery.isFetching || groupsQuery.isFetching,
-    error,
+    users: searchQuery.data?.users,
+    groups: searchQuery.data?.groups,
+    isLoading: searchQuery.isLoading,
+    isFetching: searchQuery.isFetching,
+    error: searchQuery.error ?? undefined,
     debouncedQuery,
   }
 }
