@@ -1,9 +1,5 @@
 variables:
   REGISTRY_HOST: "registry-docker-registry.registry.svc.cluster.local:5000"
-  # Désactive le TLS (car on est en interne)
-  DOCKER_TLS_CERTDIR: ""
-  # Indique au client Docker de contacter le service dind via le réseau sur le port 2375
-  DOCKER_HOST: "tcp://docker:2375"
   
 stages:
   - lint
