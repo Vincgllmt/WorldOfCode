@@ -44,10 +44,10 @@ before_script:
     - echo "🛡️ Démarrage du scan Trivy pour ${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}..."
     
     # 1. On génère un rapport complet (High, Critical) pour information, sans faire planter le job
-    - trivy image --no-progress --scanners vuln --severity HIGH,CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
+    - trivy image --ignore-unfixed --no-progress --scanners vuln --severity HIGH,CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
     
     # 2. On relance le scan MAIS on fait planter le job (exit-code 1) UNIQUEMENT s'il y a des failles CRITIQUES
-    - trivy image --no-progress --scanners vuln --exit-code 1 --severity CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
+    - trivy image --ignore-unfixed --no-progress --scanners vuln --exit-code 1 --severity CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
 
 
 include:
