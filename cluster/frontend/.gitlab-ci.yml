@@ -30,6 +30,22 @@ build:frontend:
         --skip-tls-verify \
         --cache=true
 
+
+scan:frontend:
+  extends: .trivy_scan_template
+  variables:
+    APP_NAME: "frontend"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - frontend/**/*
+
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true
+    
+
+
 # 2. Déploiement en DEV
 deploy:frontend:dev:
   stage: deploy-apps

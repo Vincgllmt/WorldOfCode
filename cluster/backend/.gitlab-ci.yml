@@ -32,10 +32,13 @@ scan:backend:
   variables:
     APP_NAME: "backend"
   rules:
-    # On scanne l'image uniquement si on vient de la build !
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
       changes:
         - backend/**/*
+
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true
 
 # 2. Déploiement automatique en DEV
 deploy:backend:dev:

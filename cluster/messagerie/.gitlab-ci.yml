@@ -27,6 +27,20 @@ build:messagerie:
         --skip-tls-verify \
         --cache=true
 
+
+scan:messagerie:
+  extends: .trivy_scan_template
+  variables:
+    APP_NAME: "messagerie"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - messagerie/**/*
+
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true
+
 # 2. Déploiement en DEV
 deploy:messagerie:dev:
   stage: deploy-apps
