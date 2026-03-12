@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { updateUserProfile, updateUserSkills, createUserLink } from '@/services/userService'
 import { getAllSkills } from '@/services/skillService'
@@ -15,9 +15,13 @@ export const useSkills = () => {
 
 export const useUpdateProfile = () => {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (data: UpdateProfilePayload) => updateUserProfile(user!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user!.id, 'profile-onboarding'] })
+    },
     onError: () => {
       toast.error('Erreur lors de la sauvegarde du profil')
     },
@@ -26,9 +30,13 @@ export const useUpdateProfile = () => {
 
 export const useUpdateSkills = () => {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (skillIds: number[]) => updateUserSkills(user!.id, skillIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user!.id, 'profile-onboarding'] })
+    },
     onError: () => {
       toast.error('Erreur lors de la sauvegarde des compétences')
     },
@@ -37,9 +45,13 @@ export const useUpdateSkills = () => {
 
 export const useCreateLink = () => {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (data: CreateLinkPayload) => createUserLink(user!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user!.id, 'profile-onboarding'] })
+    },
     onError: () => {
       toast.error('Erreur lors de la sauvegarde du lien')
     },

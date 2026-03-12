@@ -10,14 +10,17 @@ import type { Skill, SkillCategory } from '@/interfaces/user'
 import toast from 'react-hot-toast'
 import { ArrowRight, Check, X, Search } from 'lucide-react'
 import { CATEGORY_LABELS } from '@/lib/profile-constants'
+import type { PublicUser } from '@/interfaces/user'
 
 type Props = {
   onSuccess: () => void
   setIsSubmitting: (v: boolean) => void
+  profile?: PublicUser
 }
 
-export default function StepSkills({ onSuccess, setIsSubmitting }: Props) {
-  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([])
+export default function StepSkills({ onSuccess, setIsSubmitting, profile }: Props) {
+  const existingSkillIds = (profile?.skills ?? []).map((s) => s.id)
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>(existingSkillIds)
   const [searchQuery, setSearchQuery] = useState('')
   const { data: skills, isLoading } = useSkills()
   const updateSkills = useUpdateSkills()

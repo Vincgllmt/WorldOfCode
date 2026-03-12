@@ -16,15 +16,21 @@ import {
 } from '@/components/ui/select'
 import toast from 'react-hot-toast'
 import { ArrowRight, Plus, Trash2 } from 'lucide-react'
-import type { LinkType } from '@/interfaces/user'
+import type { LinkType, PublicUser } from '@/interfaces/user'
 import { LINK_CONFIG } from '@/lib/profile-constants'
 
 type Props = {
   onSuccess: () => void
   setIsSubmitting: (v: boolean) => void
+  profile?: PublicUser
 }
 
-export default function StepLinks({ onSuccess, setIsSubmitting }: Props) {
+export default function StepLinks({ onSuccess, setIsSubmitting, profile }: Props) {
+  const existingLinks = (profile?.links ?? []).map((link) => ({
+    type: link.type as LinkType,
+    url: link.url,
+  }))
+
   const {
     register,
     handleSubmit,
@@ -34,7 +40,7 @@ export default function StepLinks({ onSuccess, setIsSubmitting }: Props) {
     formState: { errors },
   } = useForm<LinksFormValues>({
     resolver: zodResolver(linksSchema),
-    defaultValues: { links: [] },
+    defaultValues: { links: existingLinks },
   })
 
   const { fields, append, remove } = useFieldArray({

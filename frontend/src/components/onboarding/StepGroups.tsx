@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useGroups } from '@/hooks/useGroups'
 import { useToggleGroupMembership } from '@/hooks/useGroups'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,19 @@ export default function StepGroups({ onSuccess, setIsSubmitting }: Props) {
   const toggleMembership = useToggleGroupMembership()
   const [joinedIds, setJoinedIds] = useState<Set<number>>(new Set())
   const [search, setSearch] = useState('')
+  const initializedRef = useRef(false)
+
+  useEffect(() => {
+    if (groups && !initializedRef.current) {
+      const alreadyJoined = groups
+        .filter((g) => g.joinedByUser === true)
+        .map((g) => g.id)
+      if (alreadyJoined.length > 0) {
+        setJoinedIds(new Set(alreadyJoined))
+      }
+      initializedRef.current = true
+    }
+  }, [groups])
 
   const filteredGroups = useMemo(() => {
     if (!groups) return []
