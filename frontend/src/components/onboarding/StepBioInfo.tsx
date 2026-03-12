@@ -18,13 +18,15 @@ import {
 import toast from 'react-hot-toast'
 import { ArrowRight } from 'lucide-react'
 import { AVAILABILITY_OPTIONS } from '@/lib/profile-constants'
+import type { PublicUser } from '@/interfaces/user'
 
 type Props = {
   onSuccess: () => void
   setIsSubmitting: (v: boolean) => void
+  profile?: PublicUser
 }
 
-export default function StepBioInfo({ onSuccess, setIsSubmitting }: Props) {
+export default function StepBioInfo({ onSuccess, setIsSubmitting, profile }: Props) {
   const {
     register,
     handleSubmit,
@@ -33,7 +35,11 @@ export default function StepBioInfo({ onSuccess, setIsSubmitting }: Props) {
     formState: { errors },
   } = useForm<BioInfoFormValues>({
     resolver: zodResolver(bioInfoSchema),
-    defaultValues: { bio: '', location: '', availability: '' },
+    defaultValues: {
+      bio: profile?.bio ?? '',
+      location: profile?.location ?? '',
+      availability: profile?.availability ?? '',
+    },
   })
 
   const updateProfile = useUpdateProfile()

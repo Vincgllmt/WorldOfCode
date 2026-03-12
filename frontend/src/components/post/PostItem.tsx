@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from '@/components/ui/alert-dialog'
-import { MoreHorizontal, Flag } from 'lucide-react'
+import { MoreHorizontal, Flag, Pencil, Trash2, Save } from 'lucide-react'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
@@ -71,13 +71,13 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                ✏️ Modifier
+                <Pencil className="mr-2 h-4 w-4" /> Modifier
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setShowDialog(true)}
                 className="text-red-600"
               >
-                🗑️ Supprimer
+                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toast('Signalement envoyé')}
@@ -167,7 +167,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
       {isAuthor && isEditing && (
         <div className="flex justify-end">
           <Button size="sm" variant="ghost" onClick={handleSave}>
-            💾 Enregistrer
+            <Save className="mr-2 h-4 w-4" /> Enregistrer
           </Button>
         </div>
       )}

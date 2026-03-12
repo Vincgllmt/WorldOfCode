@@ -12,13 +12,23 @@ import { Card, CardContent } from '@/components/ui/card'
 import MonthYearPicker from './MonthYearPicker'
 import toast from 'react-hot-toast'
 import { ArrowRight, Plus, Trash2 } from 'lucide-react'
+import type { PublicUser } from '@/interfaces/user'
 
 type Props = {
   onSuccess: () => void
   setIsSubmitting: (v: boolean) => void
+  profile?: PublicUser
 }
 
-export default function StepExperiences({ onSuccess, setIsSubmitting }: Props) {
+export default function StepExperiences({ onSuccess, setIsSubmitting, profile }: Props) {
+  const existingExperiences = (profile?.experiences ?? []).map((exp) => ({
+    title: exp.title ?? '',
+    company: exp.company ?? '',
+    startDate: exp.startDate ?? '',
+    endDate: exp.endDate ?? null,
+    description: exp.description ?? '',
+  }))
+
   const {
     register,
     handleSubmit,
@@ -28,7 +38,7 @@ export default function StepExperiences({ onSuccess, setIsSubmitting }: Props) {
     formState: { errors },
   } = useForm<ExperiencesFormValues>({
     resolver: zodResolver(experiencesSchema),
-    defaultValues: { experiences: [] },
+    defaultValues: { experiences: existingExperiences },
   })
 
   const { fields, append, remove } = useFieldArray({

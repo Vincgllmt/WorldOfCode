@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Dto\TechWatchItemResponse;
+use App\Dto\TechWatchSourceResponse;
 use App\Entity\TechWatchSource;
 use App\Repository\TechGroupRepository;
 use App\Repository\TechWatchSourceRepository;
@@ -15,7 +17,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
 
-#[Route('/api/group/{groupId}/tech-watch')]
 #[OA\Tag(name: 'TechWatch')]
 class TechWatchController extends AbstractController
 {
@@ -28,8 +29,76 @@ class TechWatchController extends AbstractController
         private TechWatchAutoDetector $autoDetector,
     ) {}
 
-    #[Route('', name: 'tech_watch_items', methods: ['GET'])]
-    #[OA\Get(summary: 'Liste les articles de veille tech d\'un groupe')]
+    #[Route('/api/tech-watch/feed', name: 'tech_watch_feed', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Fil d\'actualités de l\'utilisateur',
+        description: 'Retourne les articles de veille tech agrégés de tous les groupes rejoints par l\'utilisateur connecté, triés par date de publication décroissante.',
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, description: 'Numéro de page (défaut: 1)', schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'limit', in: 'query', required: false, description: 'Nombre d\'articles par page (défaut: 20, max: 50)', schema: new OA\Schema(type: 'integer', default: 20)),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste paginée des articles de veille tech',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: TechWatchItemResponse::class)),
+                        new OA\Property(property: 'totalItems', type: 'integer', example: 42),
+                        new OA\Property(property: 'page', type: 'integer', example: 1),
+                        new OA\Property(property: 'limit', type: 'integer', example: 20),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Non authentifié'),
+        ]
+    )]
+    public function getFeed(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $user = $this->getUser();
+        $groupIds = $user->getJoinedGroups()->map(fn($g) => $g->getId())->toArray();
+
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = min(50, max(1, $request->query->getInt('limit', 20)));
+
+        $result = $this->itemRepo->findByMultipleGroupsPaginated($groupIds, $page, $limit);
+        $data = array_map([$this->itemMapper, 'toDto'], $result['items']);
+
+        return $this->json([
+            'items' => $data,
+            'totalItems' => $result['totalItems'],
+            'page' => $page,
+            'limit' => $limit,
+        ]);
+    }
+
+    #[Route('/api/group/{groupId}/tech-watch', name: 'tech_watch_items', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Liste les articles de veille tech d\'un groupe',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, description: 'Numéro de page (défaut: 1)', schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'limit', in: 'query', required: false, description: 'Nombre d\'articles par page (défaut: 20, max: 50)', schema: new OA\Schema(type: 'integer', default: 20)),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste paginée des articles de veille tech du groupe',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: TechWatchItemResponse::class)),
+                        new OA\Property(property: 'totalItems', type: 'integer', example: 42),
+                        new OA\Property(property: 'page', type: 'integer', example: 1),
+                        new OA\Property(property: 'limit', type: 'integer', example: 20),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Non authentifié'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
     public function getItems(int $groupId, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -53,8 +122,22 @@ class TechWatchController extends AbstractController
         ]);
     }
 
-    #[Route('/sources', name: 'tech_watch_sources', methods: ['GET'])]
-    #[OA\Get(summary: 'Liste les sources RSS d\'un groupe')]
+    #[Route('/api/group/{groupId}/tech-watch/sources', name: 'tech_watch_sources', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Liste les sources RSS d\'un groupe',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Liste des sources RSS du groupe',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: TechWatchSourceResponse::class))
+            ),
+            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
     public function getSources(int $groupId): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -70,8 +153,29 @@ class TechWatchController extends AbstractController
         return $this->json($data);
     }
 
-    #[Route('/sources', name: 'tech_watch_source_create', methods: ['POST'])]
-    #[OA\Post(summary: 'Ajouter une source RSS à un groupe')]
+    #[Route('/api/group/{groupId}/tech-watch/sources', name: 'tech_watch_source_create', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Ajouter une source RSS à un groupe',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['feedUrl', 'name'],
+                properties: [
+                    new OA\Property(property: 'feedUrl', type: 'string', example: 'https://example.com/rss.xml'),
+                    new OA\Property(property: 'name', type: 'string', example: 'Blog Tech Example'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Source RSS créée', content: new OA\JsonContent(ref: TechWatchSourceResponse::class)),
+            new OA\Response(response: 400, description: 'Champs manquants (feedUrl ou name)'),
+            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
     public function createSource(int $groupId, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -97,8 +201,19 @@ class TechWatchController extends AbstractController
         return $this->json($this->sourceMapper->toDto($source), 201);
     }
 
-    #[Route('/sources/{sourceId}', name: 'tech_watch_source_delete', methods: ['DELETE'])]
-    #[OA\Delete(summary: 'Supprimer une source RSS')]
+    #[Route('/api/group/{groupId}/tech-watch/sources/{sourceId}', name: 'tech_watch_source_delete', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Supprimer une source RSS',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'sourceId', in: 'path', required: true, description: 'ID de la source RSS', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Source RSS supprimée'),
+            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
+            new OA\Response(response: 404, description: 'Source non trouvée'),
+        ]
+    )]
     public function deleteSource(int $groupId, int $sourceId): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -113,8 +228,28 @@ class TechWatchController extends AbstractController
         return $this->json(['success' => true]);
     }
 
-    #[Route('/auto-detect', name: 'tech_watch_auto_detect', methods: ['POST'])]
-    #[OA\Post(summary: 'Lancer l\'auto-détection des sources RSS')]
+    #[Route('/api/group/{groupId}/tech-watch/auto-detect', name: 'tech_watch_auto_detect', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Lancer l\'auto-détection des sources RSS',
+        description: 'Détecte automatiquement les flux RSS associés au nom du groupe et crée les sources correspondantes.',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Sources auto-détectées',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'message', type: 'string', example: '3 source(s) auto-detected'),
+                        new OA\Property(property: 'sources', type: 'array', items: new OA\Items(ref: TechWatchSourceResponse::class)),
+                    ]
+                )
+            ),
+            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
     public function autoDetect(int $groupId): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');

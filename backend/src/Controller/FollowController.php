@@ -125,22 +125,35 @@ class FollowController extends AbstractController
     ####
     ##
     ####
-    #[Route('/{id}/followers', name: 'user_followers', methods: ['GET'])]
+    #[Route("/{id}/followers", name: "user_followers", methods: ["GET"])]
     #[OA\Get(
-        summary: 'Liste les followers d’un utilisateur',
-        responses: [new OA\Response(response: 200, description: 'Liste des followers')]
+        summary: "Liste les followers d’un utilisateur",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID de l’utilisateur", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des followers",
+                content: new OA\JsonContent(
+                    type: "array",
+                    items: new OA\Items(type: "object")
+                )
+            ),
+            new OA\Response(response: 404, description: "Utilisateur non trouvé"),
+        ]
     )]
     public function followers(int $id): JsonResponse
     {
         $user = $this->userRepo->find($id);
         if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
+            return $this->json(["error" => "User not found"], 404);
         }
 
-        $followers = $this->followRepo->findBy(['followed' => $user]);
+        $followers = $this->followRepo->findBy(["followed" => $user]);
         $data = array_map(fn($f) => [
-            'id' => $f->getFollower()->getId(),
-            'username' => $f->getFollower()->getUsername()
+            "id" => $f->getFollower()->getId(),
+            "username" => $f->getFollower()->getUsername()
         ], $followers);
 
         return $this->json($data);
@@ -149,22 +162,35 @@ class FollowController extends AbstractController
     ####
     ##
     ####
-    #[Route('/{id}/following', name: 'user_following', methods: ['GET'])]
+    #[Route("/{id}/following", name: "user_following", methods: ["GET"])]
     #[OA\Get(
-        summary: 'Liste les utilisateurs suivis par un utilisateur',
-        responses: [new OA\Response(response: 200, description: 'Liste des suivis')]
+        summary: "Liste les utilisateurs suivis par un utilisateur",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID de l’utilisateur", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des utilisateurs suivis",
+                content: new OA\JsonContent(
+                    type: "array",
+                    items: new OA\Items(type: "object")
+                )
+            ),
+            new OA\Response(response: 404, description: "Utilisateur non trouvé"),
+        ]
     )]
     public function following(int $id): JsonResponse
     {
         $user = $this->userRepo->find($id);
         if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
+            return $this->json(["error" => "User not found"], 404);
         }
 
-        $following = $this->followRepo->findBy(['follower' => $user]);
+        $following = $this->followRepo->findBy(["follower" => $user]);
         $data = array_map(fn($f) => [
-            'id' => $f->getFollowed()->getId(),
-            'username' => $f->getFollowed()->getUsername()
+            "id" => $f->getFollowed()->getId(),
+            "username" => $f->getFollowed()->getUsername()
         ], $following);
 
         return $this->json($data);

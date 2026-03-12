@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
+import { getUserById } from '@/services/userService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import StepperProgress, { type StepDefinition } from './StepperProgress'
 import StepBioInfo from './StepBioInfo'
 import StepExperiences from './StepExperiences'
@@ -10,6 +14,7 @@ import StepSkills from './StepSkills'
 import StepLinks from './StepLinks'
 import StepGroups from './StepGroups'
 import StepNavigation from './StepNavigation'
+import type { PublicUser } from '@/interfaces/user'
 
 const STEPS: StepDefinition[] = [
   { label: 'Bio & Infos', description: 'Présentez-vous en quelques mots' },
@@ -23,6 +28,14 @@ export default function OnboardingStepper() {
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const { user: authUser } = useAuth()
+
+  const { data: profile, isLoading: profileLoading, dataUpdatedAt } = useQuery<PublicUser>({
+    queryKey: ['user', authUser?.id, 'profile-onboarding'],
+    queryFn: () => getUserById(authUser!.id),
+    enabled: !!authUser?.id,
+    staleTime: 0,
+  })
 
   const isLastStep = currentStep === STEPS.length - 1
 
@@ -42,18 +55,33 @@ export default function OnboardingStepper() {
     handleNext()
   }
 
+  const handleSkipAll = () => {
+    router.push('/home')
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    )
+  }
+
+  const profileKey = `${currentStep}-${dataUpdatedAt}`
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <StepBioInfo onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
+        return <StepBioInfo key={profileKey} onSuccess={handleNext} setIsSubmitting={setIsSubmitting} profile={profile} />
       case 1:
-        return <StepExperiences onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
+        return <StepExperiences key={profileKey} onSuccess={handleNext} setIsSubmitting={setIsSubmitting} profile={profile} />
       case 2:
-        return <StepSkills onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
+        return <StepSkills key={profileKey} onSuccess={handleNext} setIsSubmitting={setIsSubmitting} profile={profile} />
       case 3:
-        return <StepLinks onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
+        return <StepLinks key={profileKey} onSuccess={handleNext} setIsSubmitting={setIsSubmitting} profile={profile} />
       case 4:
-        return <StepGroups onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
+        return <StepGroups key={profileKey} onSuccess={handleNext} setIsSubmitting={setIsSubmitting} />
       default:
         return null
     }
@@ -80,6 +108,7 @@ export default function OnboardingStepper() {
         totalSteps={STEPS.length}
         onBack={handleBack}
         onSkip={handleSkip}
+        onSkipAll={handleSkipAll}
         isSubmitting={isSubmitting}
       />
     </div>

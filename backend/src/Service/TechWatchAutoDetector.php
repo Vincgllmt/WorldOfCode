@@ -28,6 +28,18 @@ class TechWatchAutoDetector
         'go'         => ['name' => 'Go Blog',            'url' => 'https://go.dev/blog/feed.atom'],
         'next'       => ['name' => 'Next.js Blog',       'url' => 'https://nextjs.org/feed.xml'],
         'tailwind'   => ['name' => 'Tailwind CSS Blog',  'url' => 'https://tailwindcss.com/feeds/feed.xml'],
+        'java'       => ['name' => 'Inside Java',        'url' => 'https://inside.java/feed.xml'],
+        '.net'       => ['name' => '.NET Blog',          'url' => 'https://devblogs.microsoft.com/dotnet/feed/'],
+        'php'        => ['name' => 'PHP.net News',       'url' => 'https://www.php.net/feed.atom'],
+        'swift'      => ['name' => 'Swift.org Blog',     'url' => 'https://www.swift.org/atom.xml'],
+        'kotlin'     => ['name' => 'Kotlin Blog',        'url' => 'https://blog.jetbrains.com/kotlin/feed/'],
+        'svelte'     => ['name' => 'Svelte Blog',        'url' => 'https://svelte.dev/blog/rss.xml'],
+        'redis'      => ['name' => 'Redis Blog',         'url' => 'https://redis.io/blog/feed/'],
+        'nginx'      => ['name' => 'Nginx Blog',         'url' => 'https://www.nginx.com/blog/feed/'],
+        'terraform'  => ['name' => 'HashiCorp Blog',     'url' => 'https://www.hashicorp.com/blog/feed.xml'],
+        'vs code'    => ['name' => 'VS Code Blog',       'url' => 'https://code.visualstudio.com/feed.xml'],
+        'figma'      => ['name' => 'Figma Blog',         'url' => 'https://www.figma.com/blog/feed/'],
+        'flutter'    => ['name' => 'Flutter Blog',       'url' => 'https://medium.com/feed/flutter'],
     ];
 
     public function __construct(private TechWatchSourceRepository $sourceRepo) {}
@@ -39,7 +51,7 @@ class TechWatchAutoDetector
         $created = [];
 
         foreach (self::KNOWN_FEEDS as $keyword => $feedInfo) {
-            if (str_contains($groupNameLower, $keyword)) {
+            if (preg_match('/\b' . preg_quote($keyword, '/') . '\b/i', $groupNameLower)) {
                 $existing = $this->sourceRepo->findOneBy([
                     'techGroup' => $group,
                     'feedUrl' => $feedInfo['url'],
