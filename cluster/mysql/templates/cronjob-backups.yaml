@@ -1,0 +1,78 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-local-backup
+  namespace: dev
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: "kube-worker-01" 
+          
+          containers:
+            - name: mysqldump
+              image: bitnami/mysql:9.4.0-debian-12-r1
+              
+              env:
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: woc-messagerie-db
+                      key: DB_HOST
+                - name: DB_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: woc-messagerie-db
+                      key: DB_PORT
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: woc-messagerie-db
+                      key: DB_USER
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: woc-messagerie-db
+                      key: DB_PASS
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: woc-messagerie-db
+                      key: DB_NAME
+
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Démarrage de la sauvegarde MySQL..."
+                  DATE=$(date +\%Y-\%m-\%d_\%H-\%M-\%S)
+                  FILE="/backups/${DB_NAME}_${DATE}.sql"
+                  
+                  # Lancement du dump en utilisant les variables injectées
+                  mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$FILE"
+                  
+                  # Compression
+                  gzip "$FILE"
+                  
+                  echo "Sauvegarde terminée : $FILE.gz"
+                  
+                  # Nettoyage automatique (garde 7 jours)
+                  find /backups -type f -name "${DB_NAME}_*.sql.gz" -mtime +7 -exec rm {} \;
+              
+              volumeMounts:
+                - name: host-backup-dir
+                  mountPath: /backups
+          
+          restartPolicy: OnFailure
+          
+          volumes:
+            - name: host-backup-dir
+              hostPath:
+                # Dossier sur serveur OVH physique
+                path: /var/opt/mysql-backups
+                type: DirectoryOrCreate
