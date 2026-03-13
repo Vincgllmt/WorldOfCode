@@ -147,7 +147,7 @@ export default function ProfileSidebar({
 
         {/* Stats */}
         <div className="mt-4 border-t border-border/60 pt-4">
-          <UserFollowCounts userId={user.id} />
+          <UserFollowCounts userId={user.id} isOwnProfile={isOwnProfile} />
         </div>
       </div>
 

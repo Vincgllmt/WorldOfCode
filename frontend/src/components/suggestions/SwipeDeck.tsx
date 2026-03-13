@@ -13,7 +13,8 @@ import SwipeCard from './SwipeCard'
 import { useFollowUser } from '@/hooks/useFollow'
 import type { SuggestedUser } from '@/interfaces/suggestion'
 
-const SWIPE_THRESHOLD = 100
+const SWIPE_THRESHOLD = 80
+const SWIPE_EXIT_X = 300
 
 interface SwipeDeckProps {
   cards: SuggestedUser[]
@@ -29,7 +30,7 @@ function DraggableCard({
   onSwipeComplete: (direction: 'left' | 'right') => void
 }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-200, 200], [-12, 12])
+  const rotate = useTransform(x, [-200, 200], [-8, 8])
   const rightOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1])
   const leftOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0])
 
@@ -46,10 +47,12 @@ function DraggableCard({
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.8}
+      dragElastic={0.4}
       style={{ x, rotate }}
       onDragEnd={handleDragEnd}
-      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+      initial={{ scale: 0.95, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
     >
       {/* Overlay vert (follow) */}
       <motion.div
@@ -78,31 +81,29 @@ function DraggableCard({
 
 export default function SwipeDeck({ cards, currentUserId, onSwipe }: SwipeDeckProps) {
   const { mutate: followUser, isPending: isFollowing } = useFollowUser()
-  const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null)
+  const [swiping, setSwiping] = useState(false)
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
-      if (cards.length === 0) return
+      if (cards.length === 0 || swiping) return
+      setSwiping(true)
 
       const topCard = cards[0]
-      setExitDirection(direction)
-
       if (direction === 'right' && topCard) {
         followUser(topCard.id)
       }
 
-      // Petit delai pour laisser l'animation de sortie jouer
       setTimeout(() => {
-        setExitDirection(null)
         onSwipe()
-      }, 200)
+        setSwiping(false)
+      }, 150)
     },
-    [cards, followUser, onSwipe]
+    [cards, followUser, onSwipe, swiping]
   )
 
   if (cards.length === 0) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
+      <div className="flex min-h-[280px] items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-muted-foreground" />
           <p className="text-xs text-muted-foreground">Chargement...</p>
@@ -112,10 +113,10 @@ export default function SwipeDeck({ cards, currentUserId, onSwipe }: SwipeDeckPr
   }
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="relative z-10 flex flex-col items-center gap-3">
       {/* Stack de cartes */}
-      <div className="relative min-h-[200px] w-full">
-        <AnimatePresence>
+      <div className="relative min-h-[280px] w-full overflow-hidden">
+        <AnimatePresence mode="popLayout">
           {cards
             .slice(0, 3)
             .reverse()
@@ -138,16 +139,12 @@ export default function SwipeDeck({ cards, currentUserId, onSwipe }: SwipeDeckPr
                 <motion.div
                   key={user.id}
                   className="absolute inset-0 pointer-events-none"
-                  style={{
-                    scale: 1 - stackIndex * 0.05,
-                    y: stackIndex * 8,
-                  }}
                   initial={false}
                   animate={{
                     scale: 1 - stackIndex * 0.05,
-                    y: stackIndex * 8,
+                    y: stackIndex * 6,
                   }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                 >
                   <SwipeCard user={user} />
                 </motion.div>
@@ -161,7 +158,7 @@ export default function SwipeDeck({ cards, currentUserId, onSwipe }: SwipeDeckPr
         <button
           type="button"
           onClick={() => handleSwipe('left')}
-          disabled={isFollowing || cards.length === 0}
+          disabled={isFollowing || swiping || cards.length === 0}
           className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-red-300 text-red-500 transition-all hover:bg-red-50 hover:border-red-400 hover:scale-110 active:scale-95 disabled:opacity-50"
           aria-label="Ignorer"
           title="Ignorer"
@@ -172,7 +169,7 @@ export default function SwipeDeck({ cards, currentUserId, onSwipe }: SwipeDeckPr
         <button
           type="button"
           onClick={() => handleSwipe('right')}
-          disabled={isFollowing || cards.length === 0}
+          disabled={isFollowing || swiping || cards.length === 0}
           className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-green-300 text-green-500 transition-all hover:bg-green-50 hover:border-green-400 hover:scale-110 active:scale-95 disabled:opacity-50"
           aria-label="Suivre"
           title="Suivre"
