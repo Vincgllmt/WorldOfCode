@@ -5,17 +5,12 @@ namespace App\Service;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class SuggestionService
 {
     public function __construct(
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $em,
-        #[Autowire(service: "cache.suggestions")]
-        private readonly CacheInterface $cache,
     ) {}
 
     /**
@@ -23,23 +18,7 @@ class SuggestionService
      */
     public function getSuggestedUsers(User $currentUser, int $limit = 5, int $offset = 0): array
     {
-        $userId = $currentUser->getId();
-        $cacheKey = "user_suggestions_{$userId}_{$limit}_{$offset}";
-
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($currentUser, $limit, $offset) {
-            $item->expiresAfter(1800);
-            return $this->computeUserSuggestions($currentUser, $limit, $offset);
-        });
-    }
-
-    public function invalidateUserCache(int $userId): void
-    {
-        // Invalider les cles courantes
-        foreach ([5, 20] as $limit) {
-            for ($offset = 0; $offset <= 100; $offset += 5) {
-                $this->cache->delete("user_suggestions_{$userId}_{$limit}_{$offset}");
-            }
-        }
+        return $this->computeUserSuggestions($currentUser, $limit, $offset);
     }
 
     /**

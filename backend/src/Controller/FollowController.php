@@ -13,9 +13,6 @@ use OpenApi\Attributes as OA;
 use App\Entity\User;
 use App\Service\NotificationService;
 use App\Enum\NotificationType;
-use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-
 #[Route('/api/follow')]
 #[OA\Tag(name: 'Follow')]
 class FollowController extends AbstractController
@@ -24,8 +21,6 @@ class FollowController extends AbstractController
         private UserRepository $userRepo,
         private FollowRepository $followRepo,
         private NotificationService $notificationService,
-        #[Autowire(service: 'cache.suggestions')]
-        private CacheItemPoolInterface $suggestionsCache,
     ) {}
 
     ####
@@ -75,9 +70,6 @@ class FollowController extends AbstractController
         $follow->setFollowed($followed);
         $this->followRepo->save($follow);
 
-        // Invalider le cache suggestions du follower
-        $this->suggestionsCache->clear();
-
         // Notifier l'utilisateur suivi
         $this->notificationService->createAndPush(
             $followed,
@@ -125,9 +117,6 @@ class FollowController extends AbstractController
         }
 
         $this->followRepo->remove($follow);
-
-        // Invalider le cache suggestions
-        $this->suggestionsCache->clear();
 
         return $this->json(['success' => true, 'message' => 'User unfollowed']);
     }
