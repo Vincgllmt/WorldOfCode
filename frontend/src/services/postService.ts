@@ -1,8 +1,6 @@
-import { getCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { CreatePostPayload, Liker, Post, SharePostPayload, UpdatePostPayload } from '@/interfaces/post'
 import type { FetchPostsPaginatedParams, PaginatedPostsResponse } from '@/interfaces/postPagination'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 type RawLiker = {
   id?: number | string | null
@@ -24,14 +22,8 @@ type RawLiker = {
 }
 
 export const createPost = async (data: CreatePostPayload): Promise<Post> => {
-  const token = getCookie('token')
-
-  const res = await fetch(`${API_URL}/post`, {
+  const res = await fetchWithAuth('/post', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     body: JSON.stringify(data)
   })
 
@@ -51,13 +43,7 @@ type RawPaginatedPostsResponse = {
 }
 
 export const getAllPosts = async (): Promise<Post[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  })
+  const res = await fetchWithAuth('/post')
 
   if (!res.ok) throw new Error('Impossible de récupérer les posts')
 
@@ -72,17 +58,7 @@ export const getAllPosts = async (): Promise<Post[]> => {
 export const getPostsPaginated = async (
   { page, limit }: FetchPostsPaginatedParams
 ): Promise<PaginatedPostsResponse> => {
-  const token = getCookie('token')
-  const url = new URL(`${API_URL}/post`)
-  url.searchParams.set('page', String(page))
-  url.searchParams.set('limit', String(limit))
-
-  const res = await fetch(url.toString(), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  })
+  const res = await fetchWithAuth(`/post?page=${page}&limit=${limit}`)
 
   if (!res.ok) throw new Error('Impossible de récupérer les posts paginés')
 
@@ -103,7 +79,7 @@ export const getPostsPaginated = async (
 
 export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
   // IMPORTANT: ne pas charger tous les posts (trop coûteux en prod).
-  // En attendant un endpoint dédié côté API, on “parcourt” la pagination globale
+  // En attendant un endpoint dédié côté API, on "parcourt" la pagination globale
   // et on filtre côté client, avec des bornes pour éviter un scan infini.
 
   const PAGE_SIZE = 50
@@ -121,7 +97,7 @@ export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
       if (post.authorId === userId) collected.push(post)
     }
 
-    // Si l'API ne renvoie pas totalPages (ou renvoie 0), on s'arrête dès que la page est “courte”.
+    // Si l'API ne renvoie pas totalPages (ou renvoie 0), on s'arrête dès que la page est "courte".
     if (!Number.isFinite(totalPages) || totalPages <= 0) {
       if (res.items.length < PAGE_SIZE) break
     }
@@ -134,13 +110,8 @@ export const getPostsByUserId = async (userId: number): Promise<Post[]> => {
 
 
 export const getPostById = async (id: string): Promise<Post> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${id}`, {
+  const res = await fetchWithAuth(`/post/${id}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
   })
 
   if (!res.ok) throw new Error('Impossible de récupérer le post')
@@ -148,13 +119,7 @@ export const getPostById = async (id: string): Promise<Post> => {
   return res.json()
 }
 export const getPostsByGroupId = async (groupId: number): Promise<Post[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${groupId}/posts`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  })
+  const res = await fetchWithAuth(`/group/${groupId}/posts`)
 
   if (!res.ok) throw new Error('Erreur lors de la récupération des posts du groupe')
   return res.json()
@@ -162,13 +127,8 @@ export const getPostsByGroupId = async (groupId: number): Promise<Post[]> => {
 
 export const updatePost = async (id: number,
   data: UpdatePostPayload): Promise<Post> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${id}`, {
+  const res = await fetchWithAuth(`/post/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(data),
   })
 
@@ -178,50 +138,30 @@ export const updatePost = async (id: number,
 
 
 export async function deletePost(id: number): Promise<void> {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${id}`, {
+  const res = await fetchWithAuth(`/post/${id}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
   })
 
   if (!res.ok) throw new Error('Erreur lors de la suppression du post')
 }
 
 export const likePost = async (postId: number): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${postId}/like`, {
+  const res = await fetchWithAuth(`/post/${postId}/like`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
   })
   if (!res.ok) throw new Error('Erreur lors du like du post')
 }
 
 export const unlikePost = async (postId: number): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${postId}/like`, {
+  const res = await fetchWithAuth(`/post/${postId}/like`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
   })
   if (!res.ok) throw new Error('Erreur lors du retrait du like')
 }
 
 export const getLikers = async (postId: number): Promise<Liker[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${postId}/likes`, {
+  const res = await fetchWithAuth(`/post/${postId}/likes`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
   })
   if (!res.ok) throw new Error('Impossible de récupérer les likers')
 
@@ -241,13 +181,8 @@ export const sharePost = async ({
   readonly postId: number
   readonly payload: SharePostPayload
 }): Promise<Post> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/post/${postId}/share`, {
+  const res = await fetchWithAuth(`/post/${postId}/share`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Erreur lors du partage du post')
@@ -256,13 +191,8 @@ export const sharePost = async ({
 }
 
 export const reportPost = async (postId: number, reason?: string): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/report/post/${postId}`, {
+  const res = await fetchWithAuth(`/report/post/${postId}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     body: reason ? JSON.stringify({ reason }) : undefined
   })
   if (!res.ok) throw new Error('Erreur lors du signalement du post')

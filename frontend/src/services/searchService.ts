@@ -1,20 +1,11 @@
-import { getCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { SearchParams, SearchResponse, UserPreview, GroupPreview } from '@/interfaces/search'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export async function search({ q, limit = 5 }: SearchParams): Promise<SearchResponse> {
   const query = q.trim()
   if (!query) return { users: [], groups: [] }
 
-  const token = getCookie('token')
-  const url = `${API_URL}/search?q=${encodeURIComponent(query)}&limit=${limit}`
-
-  const res = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetchWithAuth(`/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
     credentials: 'include',
   })
 

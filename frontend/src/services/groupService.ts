@@ -1,43 +1,23 @@
-
-import { getCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { CreateGroupPayload, Group, UpdateGroupPayload } from '@/interfaces/group'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
-
 export const getGroups = async (): Promise<Group[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  })
+  const res = await fetchWithAuth('/group')
 
   if (!res.ok) throw new Error('Erreur lors du chargement des groupes')
   return res.json()
 }
 
 export const getGroupById = async (id: number): Promise<Group>  => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${id}`, {
-    headers: {
-      'Content-Type': 'application/json',
-       Authorization: `Bearer ${token}`
-    },
-  })
+  const res = await fetchWithAuth(`/group/${id}`)
 
   if (!res.ok) throw new Error('Erreur lors de la récupération du groupe')
   return res.json()
 }
 
 export const createGroup = async (data: CreateGroupPayload): Promise<Group> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group`, {
+  const res = await fetchWithAuth('/group', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     body: JSON.stringify(data)
   })
 
@@ -46,13 +26,8 @@ export const createGroup = async (data: CreateGroupPayload): Promise<Group> => {
 }
 
 export const updateGroup = async (data: UpdateGroupPayload): Promise<Group> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${data.id}`, {
+  const res = await fetchWithAuth(`/group/${data.id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     body: JSON.stringify({ name: data.name, description: data.description })
   })
 
@@ -61,26 +36,16 @@ export const updateGroup = async (data: UpdateGroupPayload): Promise<Group> => {
 }
 
 export const deleteGroup = async (id: number): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${id}`, {
+  const res = await fetchWithAuth(`/group/${id}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
   })
 
   if (!res.ok) throw new Error('Erreur lors de la suppression du groupe')
 }
 
 export async function joinGroup(id:number): Promise<void> {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${id}/join`, {
+  const res = await fetchWithAuth(`/group/${id}/join`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     credentials: 'include',
   })
 
@@ -88,13 +53,8 @@ export async function joinGroup(id:number): Promise<void> {
 }
 
 export async function leaveGroup(id: number): Promise<void> {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/group/${id}/join`, {
+  const res = await fetchWithAuth(`/group/${id}/join`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     credentials: 'include',
   })
 

@@ -1,4 +1,5 @@
 import { setCookie, getCookie, deleteCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { LoginCredentials, AuthenticatedUser, TokenResponse } from '@/interfaces/Authentification'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
@@ -19,7 +20,7 @@ export const login = async (credentials: LoginCredentials): Promise<Authenticate
     const { token }: TokenResponse = await res.json()
 
     // ✅ on stocke le token dans un cookie pour les requêtes futures
-    setCookie('token', token, { path: '/' })
+    setCookie('token', token, { path: '/', maxAge: 3600 })
 
     // ✅ on récupère maintenant les infos utilisateur
     const meRes = await fetch(`${API_URL}/me`, {
@@ -44,9 +45,7 @@ export const getMe = async (): Promise<AuthenticatedUser> => {
     const token = getCookie('token')
     if (!token) throw new Error('Aucun token trouvé')
 
-    const res = await fetch(`${API_URL}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await fetchWithAuth('/me')
 
     if (!res.ok) throw new Error('Token invalide')
 
