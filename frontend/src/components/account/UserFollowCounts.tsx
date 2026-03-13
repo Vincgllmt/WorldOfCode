@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { UserMinus } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useFollowers, useFollowing } from '@/hooks/useFollow'
+import { useFollowers, useFollowing, useUnfollowUser } from '@/hooks/useFollow'
 import { useUserPosts } from '@/hooks/useUserProfile'
 
 type UserFollowCountsProps = {
   userId: number
+  isOwnProfile?: boolean
 }
 
 const sortByUsername = <T extends { username: string }>(list: T[] | undefined): T[] =>
@@ -26,13 +28,14 @@ const getInitials = (username: string): string => {
   return `${first?.[0] ?? ''}${second?.[0] ?? ''}`.toUpperCase()
 }
 
-export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
+export default function UserFollowCounts({ userId, isOwnProfile = false }: UserFollowCountsProps) {
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false)
   const [followingDialogOpen, setFollowingDialogOpen] = useState(false)
 
   const { followers, isLoading: followersLoading, error: followersError } = useFollowers(userId)
   const { following, isLoading: followingLoading, error: followingError } = useFollowing(userId)
   const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId)
+  const { mutate: unfollowUser, isPending: isUnfollowing } = useUnfollowUser()
 
   const followersList = useMemo(() => sortByUsername(followers), [followers])
   const followingList = useMemo(() => sortByUsername(following), [following])
@@ -115,10 +118,10 @@ export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
           {followingList.length > 0 ? (
             <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
               {followingList.map((user) => (
-                <li key={user.id}>
+                <li key={user.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted">
                   <Link
                     href={`/user/${user.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                    className="flex flex-1 items-center gap-3"
                   >
                     <Avatar className="h-8 w-8 border border-border/70">
                       <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
@@ -127,6 +130,17 @@ export default function UserFollowCounts({ userId }: UserFollowCountsProps) {
                     </Avatar>
                     <span>{user.username}</span>
                   </Link>
+                  {isOwnProfile && (
+                    <button
+                      type="button"
+                      onClick={() => unfollowUser(user.id)}
+                      disabled={isUnfollowing}
+                      className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-100 hover:text-red-500 disabled:opacity-50"
+                      title={`Ne plus suivre ${user.username}`}
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
