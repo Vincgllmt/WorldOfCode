@@ -129,23 +129,25 @@ class SuggestionService
         }
 
         $sql = "
-            SELECT u.id,
-                (COALESCE(sk.shared_skills, 0) * 3
-                 + COALESCE(gr.shared_groups, 0) * 2
-                 + COALESCE(mf.mutual_follows, 0) * 2
-                 + {$locationCase}
-                 + {$availabilityCase}
-                 + CASE WHEN u.bio IS NOT NULL AND u.avatar_url IS NOT NULL THEN 0.5 ELSE 0 END
-                ) AS score,
-                COALESCE(sk.shared_skills, 0) AS shared_skills_count,
-                COALESCE(gr.shared_groups, 0) AS shared_groups_count,
-                COALESCE(mf.mutual_follows, 0) AS mutual_follows_count
-            FROM user u
-            {$skillJoin}
-            {$groupJoin}
-            {$mutualJoin}
-            WHERE u.id NOT IN ({$inExclude})
-            HAVING score > 0
+            SELECT * FROM (
+                SELECT u.id,
+                    (COALESCE(sk.shared_skills, 0) * 3
+                     + COALESCE(gr.shared_groups, 0) * 2
+                     + COALESCE(mf.mutual_follows, 0) * 2
+                     + {$locationCase}
+                     + {$availabilityCase}
+                     + CASE WHEN u.bio IS NOT NULL AND u.avatar_url IS NOT NULL THEN 0.5 ELSE 0 END
+                    ) AS score,
+                    COALESCE(sk.shared_skills, 0) AS shared_skills_count,
+                    COALESCE(gr.shared_groups, 0) AS shared_groups_count,
+                    COALESCE(mf.mutual_follows, 0) AS mutual_follows_count
+                FROM user u
+                {$skillJoin}
+                {$groupJoin}
+                {$mutualJoin}
+                WHERE u.id NOT IN ({$inExclude})
+            ) ranked
+            WHERE score > 0
             ORDER BY score DESC
             LIMIT {$limit}
             OFFSET {$offset}
