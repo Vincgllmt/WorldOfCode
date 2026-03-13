@@ -5,6 +5,7 @@ import { PenSquare, Newspaper } from 'lucide-react'
 import PostForm from '@/components/post/postForm'
 import PostList from '@/components/post/PostList'
 import TechWatchFeedList from '@/components/techwatch/TechWatchFeedList'
+import SuggestionsSidebar from '@/components/suggestions/SuggestionsSidebar'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -29,39 +30,53 @@ export default function HomePage() {
   return (
     <>
       <div className="fixed top-[var(--navbar-height,64px)] left-0 right-0 z-30 bg-background/80 backdrop-blur-md">
-        <div className="max-w-2xl mx-auto px-4 py-2">
-          <div className="flex gap-1 bg-muted/50 border border-border/70 rounded-2xl p-1.5">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.key
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => handleTabChange(tab.key)}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              )
-            })}
+        <div className="mx-auto max-w-5xl px-4 py-2 lg:pr-[calc(320px+2rem)]">
+          <div className="mx-auto max-w-2xl">
+            <div className="flex gap-1 bg-muted/50 border border-border/70 rounded-2xl p-1.5">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.key
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => handleTabChange(tab.key)}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 pt-20 space-y-6">
-        {activeTab === 'publications' && (
-          <div className="space-y-6">
-            <PostForm />
-            <PostList />
+      <div className="mx-auto max-w-5xl px-4 pt-20">
+        <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
+          {/* --- Colonne principale (feed) --- */}
+          <div className="space-y-6 pb-8">
+            {activeTab === 'publications' && (
+              <div className="space-y-6">
+                <PostForm />
+                <PostList />
+              </div>
+            )}
+            {activeTab === 'actualites' && <TechWatchFeedList />}
           </div>
-        )}
-        {activeTab === 'actualites' && <TechWatchFeedList />}
+
+          {/* --- Sidebar suggestions (desktop uniquement) --- */}
+          <div className="hidden lg:block">
+            <div className="sticky top-[calc(var(--navbar-height,64px)+60px)]">
+              <SuggestionsSidebar />
+            </div>
+          </div>
+        </div>
       </div>
     </>
   )
