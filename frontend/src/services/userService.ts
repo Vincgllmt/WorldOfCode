@@ -1,31 +1,17 @@
-
-import { getCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { User, UpdateUserPayload, ChangePasswordPayload, PublicUser, UpdateProfilePayload, Skill, UserLink, CreateLinkPayload } from '@/interfaces/user'
 import { Group } from '@/interfaces/group'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
-
 export const getAllUsers = async (): Promise<User[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  })
+  const res = await fetchWithAuth('/user')
   if (!res.ok) throw new Error('Erreur lors du chargement des utilisateurs')
   return res.json()
 }
 
 export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
-  const token = getCookie('token')
   const { id, ...payload } = data
-  const res = await fetch(`${API_URL}/user/${id}`, {
+  const res = await fetchWithAuth(`/user/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     credentials: 'include',
     body: JSON.stringify(payload)
   })
@@ -34,24 +20,14 @@ export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
 }
 
 export const deleteUser = async (id: number): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${id}`, {
+  const res = await fetchWithAuth(`/user/${id}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
   })
   if (!res.ok) throw new Error('Erreur lors de la suppression')
 }
 
 export async function getUserGroups(userId: number): Promise<Group[]> {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}/groups`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetchWithAuth(`/user/${userId}/groups`, {
     credentials: 'include',
   })
 
@@ -64,17 +40,12 @@ export async function getUserGroups(userId: number): Promise<Group[]> {
 }
 
 export async function getUserById(userId: number): Promise<PublicUser> {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetchWithAuth(`/user/${userId}`, {
     credentials: 'include',
   })
 
   if (!res.ok) {
-    throw new Error('Erreur lors de la récupération de l’utilisateur')
+    throw new Error('Erreur lors de la récupération de l\'utilisateur')
   }
 
   const user = (await res.json()) as PublicUser
@@ -82,13 +53,8 @@ export async function getUserById(userId: number): Promise<PublicUser> {
 }
 
 export const updateUserTheme = async (userId: number, theme: string): Promise<User> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}/theme`, {
+  const res = await fetchWithAuth(`/user/${userId}/theme`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ theme }),
   })
   if (!res.ok) throw new Error('Erreur lors de la mise à jour du thème')
@@ -96,14 +62,8 @@ export const updateUserTheme = async (userId: number, theme: string): Promise<Us
 }
 
 export const changeUserPassword = async ({id, currentPassword, newPassword,}: ChangePasswordPayload): Promise<{ message: string }> => {
-  const token = getCookie('token')
-
-  const res = await fetch(`${API_URL}/user/${id}/password`, {
+  const res = await fetchWithAuth(`/user/${id}/password`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ currentPassword, newPassword }),
   })
 
@@ -116,13 +76,8 @@ export const changeUserPassword = async ({id, currentPassword, newPassword,}: Ch
 }
 
 export const updateUserProfile = async (userId: number, data: UpdateProfilePayload): Promise<User> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}/profile`, {
+  const res = await fetchWithAuth(`/user/${userId}/profile`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error('Erreur lors de la mise à jour du profil')
@@ -130,13 +85,8 @@ export const updateUserProfile = async (userId: number, data: UpdateProfilePaylo
 }
 
 export const updateUserSkills = async (userId: number, skillIds: number[]): Promise<Skill[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}/skills`, {
+  const res = await fetchWithAuth(`/user/${userId}/skills`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ skillIds }),
   })
   if (!res.ok) throw new Error('Erreur lors de la mise à jour des compétences')
@@ -144,13 +94,8 @@ export const updateUserSkills = async (userId: number, skillIds: number[]): Prom
 }
 
 export const createUserLink = async (userId: number, data: CreateLinkPayload): Promise<UserLink> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/user/${userId}/links`, {
+  const res = await fetchWithAuth(`/user/${userId}/links`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error('Erreur lors de la création du lien')

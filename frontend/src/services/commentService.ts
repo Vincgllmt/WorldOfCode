@@ -1,16 +1,9 @@
-import { getCookie } from 'cookies-next'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { Comment, CreateCommentPayload, UpdateCommentPayload } from '@/interfaces/comment'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
-
 export const createComment = async (data: CreateCommentPayload): Promise<Comment> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/comment`, {
+  const res = await fetchWithAuth('/comment', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
     body: JSON.stringify(data)
   })
 
@@ -20,12 +13,7 @@ export const createComment = async (data: CreateCommentPayload): Promise<Comment
 }
 
 export const getAllComments = async (): Promise<Comment[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/comment`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
-  })
+  const res = await fetchWithAuth('/comment')
 
   if (!res.ok) throw new Error('Erreur lors du chargement des commentaires')
 
@@ -33,12 +21,7 @@ export const getAllComments = async (): Promise<Comment[]> => {
 }
 
 export const getCommentsByPostId = async (postId: string): Promise<Comment[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/comment/post/${postId}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
-  })
+  const res = await fetchWithAuth(`/comment/post/${postId}`)
 
   if (!res.ok) throw new Error('Erreur lors du chargement des commentaires pour ce post')
 
@@ -46,26 +29,17 @@ export const getCommentsByPostId = async (postId: string): Promise<Comment[]> =>
 }
 
 export const deleteComment = async (id: string): Promise<void> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/comment/${id}`, {
+  const res = await fetchWithAuth(`/comment/${id}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
   })
 
   if (!res.ok) throw new Error('Erreur lors de la suppression du commentaire')
 }
 
 export const updateComment = async (data: UpdateCommentPayload): Promise<Comment> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/comment/${data.id}`, {
+  const res = await fetchWithAuth(`/comment/${data.id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ content: data.content }) // ✅ Manquait ici
+    body: JSON.stringify({ content: data.content })
   })
 
   if (!res.ok) throw new Error('Erreur lors de la mise à jour du commentaire')

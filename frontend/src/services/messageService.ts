@@ -1,16 +1,9 @@
-import { getCookie } from "cookies-next"
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { Message } from "@/interfaces/message"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8090"
-
 export async function getMessages(conversationId: string): Promise<Message[]> {
-    const token = getCookie("token")
-    const res = await fetch(`${API_URL}/messaging/conversations/${conversationId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await fetchWithAuth(`/messaging/conversations/${conversationId}/messages`)
 
     if (!res.ok) throw new Error("Erreur lors du chargement des messages")
     return res.json()
 }
-
-
