@@ -7,4 +7,7 @@ export interface SuggestedUser {
   bio: string | null
   location: string | null
   score: number
+  sharedSkills: string[]
+  sharedGroups: string[]
+  mutualFollowsCount: number
 }

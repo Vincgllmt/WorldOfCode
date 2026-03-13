@@ -19,35 +19,46 @@ class SuggestionService
     ) {}
 
     /**
-     * @return array<int, array{user: User, score: float}>
+     * @return array<int, array{user: User, score: float, sharedSkills: string[], sharedGroups: string[], mutualFollowsCount: int}>
      */
-    public function getSuggestedUsers(User $currentUser, int $limit = 5): array
+    public function getSuggestedUsers(User $currentUser, int $limit = 5, int $offset = 0): array
     {
         $userId = $currentUser->getId();
-        $cacheKey = "user_suggestions_{$userId}_{$limit}";
+        $cacheKey = "user_suggestions_{$userId}_{$limit}_{$offset}";
 
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($currentUser, $limit) {
+        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($currentUser, $limit, $offset) {
             $item->expiresAfter(1800);
-            return $this->computeUserSuggestions($currentUser, $limit);
+            return $this->computeUserSuggestions($currentUser, $limit, $offset);
         });
     }
 
     public function invalidateUserCache(int $userId): void
     {
-        $this->cache->delete("user_suggestions_{$userId}_5");
-        $this->cache->delete("user_suggestions_{$userId}_20");
+        // Invalider les cles courantes
+        foreach ([5, 20] as $limit) {
+            for ($offset = 0; $offset <= 100; $offset += 5) {
+                $this->cache->delete("user_suggestions_{$userId}_{$limit}_{$offset}");
+            }
+        }
     }
 
     /**
-     * @return array<int, array{user: User, score: float}>
+     * @return array<int, array{user: User, score: float, sharedSkills: string[], sharedGroups: string[], mutualFollowsCount: int}>
      */
-    private function computeUserSuggestions(User $currentUser, int $limit): array
+    private function computeUserSuggestions(User $currentUser, int $limit, int $offset = 0): array
     {
         $currentId = $currentUser->getId();
         $conn = $this->em->getConnection();
 
-        $mySkillIds = array_map(fn($s) => $s->getId(), $currentUser->getSkills()->toArray());
-        $myGroupIds = array_map(fn($g) => $g->getId(), $currentUser->getJoinedGroups()->toArray());
+        // Recuperer skills et groupes directement en SQL (evite les problemes de lazy loading)
+        $mySkillIds = $conn->fetchFirstColumn(
+            "SELECT skill_id FROM user_skill WHERE user_id = :uid",
+            ["uid" => $currentId]
+        );
+        $myGroupIds = $conn->fetchFirstColumn(
+            "SELECT tech_group_id FROM techgroup_user WHERE user_id = :uid",
+            ["uid" => $currentId]
+        );
         $myLocation = $currentUser->getLocation();
         $myAvailability = $currentUser->getAvailability()?->value;
 
@@ -60,12 +71,11 @@ class SuggestionService
 
         // Si profil vide, fallback vers les utilisateurs les plus suivis
         if (empty($mySkillIds) && empty($myGroupIds) && empty($myLocation)) {
-            return $this->fallbackPopularUsers($excludeIds, $limit);
+            return $this->fallbackPopularUsers($excludeIds, $limit, $offset);
         }
 
         // Construction de la requete de scoring
         $params = ["currentId" => $currentId];
-        $types = [];
 
         // Sous-requete skills
         $skillJoin = "LEFT JOIN (SELECT 0 AS user_id, 0 AS shared_skills WHERE 1=0) sk ON sk.user_id = u.id";
@@ -126,7 +136,10 @@ class SuggestionService
                  + {$locationCase}
                  + {$availabilityCase}
                  + CASE WHEN u.bio IS NOT NULL AND u.avatar_url IS NOT NULL THEN 0.5 ELSE 0 END
-                ) AS score
+                ) AS score,
+                COALESCE(sk.shared_skills, 0) AS shared_skills_count,
+                COALESCE(gr.shared_groups, 0) AS shared_groups_count,
+                COALESCE(mf.mutual_follows, 0) AS mutual_follows_count
             FROM user u
             {$skillJoin}
             {$groupJoin}
@@ -135,19 +148,36 @@ class SuggestionService
             HAVING score > 0
             ORDER BY score DESC
             LIMIT {$limit}
+            OFFSET {$offset}
         ";
 
         $rows = $conn->fetchAllAssociative($sql, $params);
 
         if (empty($rows)) {
-            return $this->fallbackPopularUsers($excludeIds, $limit);
+            if ($offset === 0) {
+                return $this->fallbackPopularUsers($excludeIds, $limit, 0);
+            }
+            return [];
         }
 
         $userIds = array_column($rows, "id");
         $scoreMap = [];
+        $countsMap = [];
         foreach ($rows as $row) {
-            $scoreMap[(int) $row["id"]] = (float) $row["score"];
+            $id = (int) $row["id"];
+            $scoreMap[$id] = (float) $row["score"];
+            $countsMap[$id] = [
+                "sharedSkillsCount" => (int) $row["shared_skills_count"],
+                "sharedGroupsCount" => (int) $row["shared_groups_count"],
+                "mutualFollowsCount" => (int) $row["mutual_follows_count"],
+            ];
         }
+
+        // Recuperer les noms des skills en commun par user
+        $sharedSkillsMap = $this->fetchSharedSkillNames($mySkillIds, $userIds);
+
+        // Recuperer les noms des groupes en commun par user
+        $sharedGroupsMap = $this->fetchSharedGroupNames($myGroupIds, $userIds);
 
         $users = $this->userRepository->findBy(["id" => $userIds]);
 
@@ -157,14 +187,109 @@ class SuggestionService
         return array_map(fn(User $u) => [
             "user" => $u,
             "score" => $scoreMap[$u->getId()] ?? 0,
+            "sharedSkills" => $sharedSkillsMap[$u->getId()] ?? [],
+            "sharedGroups" => $sharedGroupsMap[$u->getId()] ?? [],
+            "mutualFollowsCount" => $countsMap[$u->getId()]["mutualFollowsCount"] ?? 0,
         ], $users);
     }
 
     /**
-     * @param int[] $excludeIds
-     * @return array<int, array{user: User, score: float}>
+     * @param int[] $mySkillIds
+     * @param int[] $userIds
+     * @return array<int, string[]>
      */
-    private function fallbackPopularUsers(array $excludeIds, int $limit): array
+    private function fetchSharedSkillNames(array $mySkillIds, array $userIds): array
+    {
+        if (empty($mySkillIds) || empty($userIds)) {
+            return [];
+        }
+
+        $conn = $this->em->getConnection();
+        $params = [];
+
+        $skillPlaceholders = [];
+        foreach ($mySkillIds as $i => $sid) {
+            $key = "fsk_{$i}";
+            $skillPlaceholders[] = ":{$key}";
+            $params[$key] = $sid;
+        }
+
+        $userPlaceholders = [];
+        foreach ($userIds as $i => $uid) {
+            $key = "fsu_{$i}";
+            $userPlaceholders[] = ":{$key}";
+            $params[$key] = $uid;
+        }
+
+        $sql = "
+            SELECT us2.user_id, s.name
+            FROM user_skill us2
+            JOIN skill s ON s.id = us2.skill_id
+            WHERE us2.skill_id IN (" . implode(",", $skillPlaceholders) . ")
+            AND us2.user_id IN (" . implode(",", $userPlaceholders) . ")
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, $params);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row["user_id"]][] = $row["name"];
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param int[] $myGroupIds
+     * @param int[] $userIds
+     * @return array<int, string[]>
+     */
+    private function fetchSharedGroupNames(array $myGroupIds, array $userIds): array
+    {
+        if (empty($myGroupIds) || empty($userIds)) {
+            return [];
+        }
+
+        $conn = $this->em->getConnection();
+        $params = [];
+
+        $groupPlaceholders = [];
+        foreach ($myGroupIds as $i => $gid) {
+            $key = "fgr_{$i}";
+            $groupPlaceholders[] = ":{$key}";
+            $params[$key] = $gid;
+        }
+
+        $userPlaceholders = [];
+        foreach ($userIds as $i => $uid) {
+            $key = "fgu_{$i}";
+            $userPlaceholders[] = ":{$key}";
+            $params[$key] = $uid;
+        }
+
+        $sql = "
+            SELECT tu.user_id, tg.name
+            FROM techgroup_user tu
+            JOIN tech_group tg ON tg.id = tu.tech_group_id
+            WHERE tu.tech_group_id IN (" . implode(",", $groupPlaceholders) . ")
+            AND tu.user_id IN (" . implode(",", $userPlaceholders) . ")
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, $params);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row["user_id"]][] = $row["name"];
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param int[] $excludeIds
+     * @return array<int, array{user: User, score: float, sharedSkills: string[], sharedGroups: string[], mutualFollowsCount: int}>
+     */
+    private function fallbackPopularUsers(array $excludeIds, int $limit, int $offset = 0): array
     {
         $conn = $this->em->getConnection();
 
@@ -185,6 +310,7 @@ class SuggestionService
             GROUP BY u.id
             ORDER BY follower_count DESC
             LIMIT {$limit}
+            OFFSET {$offset}
         ";
 
         $rows = $conn->fetchAllAssociative($sql, $params);
@@ -199,6 +325,9 @@ class SuggestionService
         return array_map(fn(User $u) => [
             "user" => $u,
             "score" => 0.0,
+            "sharedSkills" => [],
+            "sharedGroups" => [],
+            "mutualFollowsCount" => 0,
         ], $users);
     }
 }

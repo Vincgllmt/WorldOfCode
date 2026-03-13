@@ -50,6 +50,7 @@ export const useFollowUser = () => {
       queryClient.invalidateQueries({ queryKey: ['followers'] })
       queryClient.invalidateQueries({ queryKey: ['following'] })
       queryClient.invalidateQueries({ queryKey: ['suggested-users'] })
+      queryClient.invalidateQueries({ queryKey: ['suggested-users-swipe'] })
     },
     onError: () => toast.error("Erreur lors du suivi de l\u2019utilisateur"),
   })
@@ -65,6 +66,7 @@ export const useUnfollowUser = () => {
       queryClient.invalidateQueries({ queryKey: ['followers'] })
       queryClient.invalidateQueries({ queryKey: ['following'] })
       queryClient.invalidateQueries({ queryKey: ['suggested-users'] })
+      queryClient.invalidateQueries({ queryKey: ['suggested-users-swipe'] })
     },
     onError: () => toast.error("Erreur lors du d\u00e9sabonnement de l\u2019utilisateur"),
   })
