@@ -71,15 +71,8 @@ export default function NotificationBell() {
         }
     }
 
-    const handleOpenChange = (isOpen: boolean) => {
-        setOpen(isOpen)
-        if (isOpen && unreadCount > 0) {
-            markAllRead.mutate()
-        }
-    }
-
     return (
-        <Popover open={open} onOpenChange={handleOpenChange}>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button className="relative p-1 text-muted-foreground hover:text-primary transition">
                     <Bell className="h-5 w-5" />
@@ -94,8 +87,17 @@ export default function NotificationBell() {
                 </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-hidden">
-                <div className="px-4 py-3 border-b">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
                     <h3 className="text-sm font-semibold">Notifications</h3>
+                    {unreadCount > 0 && (
+                        <button
+                            onClick={() => markAllRead.mutate()}
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                            <Check className="h-3 w-3" />
+                            Tout marquer lu
+                        </button>
+                    )}
                 </div>
                 <div className="overflow-y-auto max-h-72">
                     {isLoading && <p className="p-4 text-sm text-muted-foreground">Chargement...</p>}
