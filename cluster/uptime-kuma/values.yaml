@@ -1,14 +1,37 @@
-ingress:
-  enabled: true
-  className: "traefik"
-  hosts:
-    - host: kuma.woc
-      paths:
-        - path: /
-          pathType: Prefix
+uptime-kuma:
+  ingress:
+    enabled: true
+    className: "traefik"
+    hosts:
+      - host: kuma.woc
+        paths:
+          - path: /
+            pathType: Prefix
 
-volume:
+  volume:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    storageClassName: "longhorn-dev"
+
+  externalDatabase:
+    enabled: true
+    type: "mariadb"
+    hostname: "uptime-kuma-mariadb"
+    port: 3306
+    database: "uptime_kuma"
+    username: "uptime_kuma"
+    password: "password"
+
+mariadb:
   enabled: true
-  accessMode: ReadWriteOnce
-  size: 5Gi
-  storageClassName: "longhorn-one-replica"
+  fullnameOverride: uptime-kuma-mariadb
+  auth:
+    database: uptime_kuma
+    username: uptime_kuma
+    password: password
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: "longhorn"

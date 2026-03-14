@@ -1,0 +1,14 @@
+apiVersion: v2
+name: uptime-kuma
+description: Uptime-Kuma with MariaDB dependency
+type: application
+version: 0.1.0
+appVersion: "1.0"
+
+dependencies:
+  - name: uptime-kuma
+    version: 4.0.0
+    repository: https://dirsigler.github.io/uptime-kuma-helm
+  - name: mariadb
+    version: 19.1.5 # Using a slightly older stable version I'm familiar with, or the one found 25.0.1
+    repository: https://charts.bitnami.com/bitnami

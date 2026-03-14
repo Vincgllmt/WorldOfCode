@@ -3,16 +3,16 @@ deploy:uptime-kuma:
   variables:
     UPTIME_KUMA_NAMESPACE: "monitoring"
     UPTIME_KUMA_RELEASE: "uptime-kuma"
-    UPTIME_KUMA_CHART: "uptime-kuma/uptime-kuma"
-    UPTIME_KUMA_VERSION: "4.0.0"
   when: manual
   script:
     - kubectl create namespace "$UPTIME_KUMA_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - helm repo add uptime-kuma https://dirsigler.github.io/uptime-kuma-helm
-    - helm repo update uptime-kuma
-    - echo "Déploiement d'Uptime-Kuma..."
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo update
+    - echo "Mise à jour des dépendances Helm..."
+    - helm dependency update cluster/uptime-kuma
+    - echo "Déploiement d'Uptime-Kuma avec MariaDB..."
     - |
-      helm upgrade --install "$UPTIME_KUMA_RELEASE" "$UPTIME_KUMA_CHART" \
+      helm upgrade --install "$UPTIME_KUMA_RELEASE" cluster/uptime-kuma \
         --namespace "$UPTIME_KUMA_NAMESPACE" \
-        --version "$UPTIME_KUMA_VERSION" \
         --values cluster/uptime-kuma/values.yaml
