@@ -26,7 +26,6 @@ build:backend:
         --skip-tls-verify \
         --cache=true
 
-
 scan:backend:
   extends: .trivy_scan_template
   variables:
@@ -94,8 +93,8 @@ seed:backend:dev:
     - echo "Attente que le pod backend soit prêt..."
     - kubectl rollout status deployment/backend -n dev --timeout=120s || true
     - echo "Exécution des commandes Doctrine dans le pod backend..."
-    - POD_NAME=$(kubectl get pods -n dev -l app.kubernetes.io/name=backend -o jsonpath='{.items[0].metadata.name}')
-    - if [ -z "$POD_NAME" ]; then echo "Pod backend introuvable." && exit 1; fi
+    - POD_NAME=$(kubectl get pods -n dev -l app=backend -o jsonpath='{.items..metadata.name}' | awk '{print $1}')
+    - if [ -z "$POD_NAME" ]; then echo "❌ Erreur: Aucun pod backend trouvé avec le label app=backend" && exit 1; fi
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:drop --force || true
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:database:create
     - kubectl exec -n dev $POD_NAME -- php bin/console doctrine:migrations:migrate -n
