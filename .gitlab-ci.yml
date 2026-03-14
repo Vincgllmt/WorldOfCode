@@ -1,14 +1,14 @@
 variables:
   REGISTRY_HOST: "registry-docker-registry.registry.svc.cluster.local:5000"
-  
+
 stages:
   - lint
-  - test             
-  - build            # Tous les builds Docker en parallèle
-  - scan             # Scan de sécurité Trivy 
-  - deploy-infra     # Longhorn en premier
-  - deploy-services  # MySQL, MinIO, Registry en parallèle
-  - deploy-apps      # Backend, Frontend, Messagerie, Backoffice en parallèle
+  - test
+  - build # Tous les builds Docker en parallèle
+  - scan # Scan de sécurité Trivy
+  - deploy-infra # Longhorn en premier
+  - deploy-services # MySQL, MinIO, Registry en parallèle
+  - deploy-apps # Backend, Frontend, Messagerie, Backoffice en parallèle
   - deploy-monitoring
   - deploy-n8n-ollama
 
@@ -34,7 +34,7 @@ before_script:
 
 .trivy_scan_template:
   stage: scan
-  image: 
+  image:
     name: aquasec/trivy:latest
     entrypoint: [""]
   variables:
@@ -42,13 +42,12 @@ before_script:
     TRIVY_PASSWORD: "$REGISTRY_PASSWORD"
   script:
     - echo "🛡️ Démarrage du scan Trivy pour ${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}..."
-    
+
     # 1. On génère un rapport complet (High, Critical) pour information, sans faire planter le job
     - trivy image --ignore-unfixed --no-progress --scanners vuln --severity HIGH,CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
-    
+
     # 2. On relance le scan MAIS on fait planter le job (exit-code 1) UNIQUEMENT s'il y a des failles CRITIQUES
     - trivy image --ignore-unfixed --no-progress --scanners vuln --exit-code 1 --severity CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
-
 
 include:
   - local: cluster/longhorn/.gitlab-ci.yml
@@ -63,7 +62,7 @@ include:
   - local: cluster/backoffice/.gitlab-ci.yml
   #- local: cluster/n8n/.gitlab-ci.yml
   - local: cluster/cert-manager/.gitlab-ci.yml
-
+  - local: cluster/uptime-kuma/.gitlab-ci.yml
 
 # ===================================
 # JOB 1: LINTER (Frontend & Backoffice)
@@ -90,7 +89,7 @@ lint:frontend-backoffice:
       npm run lint 2>&1 | tee lint-output.txt
       LINT_EXIT_CODE=$?
       set -e
-      
+
       # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
       if [ $LINT_EXIT_CODE -eq 2 ]; then
         echo "❌ Erreur de configuration du linter Frontend"
@@ -108,7 +107,6 @@ lint:frontend-backoffice:
         echo "✅ Linter Frontend OK"
       fi
     - cd ..
-
     # Lint Backoffice
     - echo "🔍 Linting Backoffice..."
     - cd backoffice
@@ -118,7 +116,7 @@ lint:frontend-backoffice:
       npm run lint 2>&1 | tee lint-output.txt
       LINT_EXIT_CODE=$?
       set -e
-      
+
       # ESLint exit code 1 = erreurs trouvées, 2 = problèmes de config
       if [ $LINT_EXIT_CODE -eq 2 ]; then
         echo "❌ Erreur de configuration du linter Backoffice"

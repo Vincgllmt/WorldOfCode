@@ -1,0 +1,14 @@
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: kuma.woc
+      paths:
+        - path: /
+          pathType: Prefix
+
+volume:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  storageClassName: "longhorn-one-replica"

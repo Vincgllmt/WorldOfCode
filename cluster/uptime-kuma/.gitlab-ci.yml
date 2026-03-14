@@ -1,0 +1,18 @@
+deploy:uptime-kuma:
+  stage: deploy-monitoring
+  variables:
+    UPTIME_KUMA_NAMESPACE: "monitoring"
+    UPTIME_KUMA_RELEASE: "uptime-kuma"
+    UPTIME_KUMA_CHART: "uptime-kuma/uptime-kuma"
+    UPTIME_KUMA_VERSION: "4.0.0"
+  when: manual
+  script:
+    - kubectl create namespace "$UPTIME_KUMA_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add uptime-kuma https://dirsigler.github.io/uptime-kuma-helm
+    - helm repo update uptime-kuma
+    - echo "Déploiement d'Uptime-Kuma..."
+    - |
+      helm upgrade --install "$UPTIME_KUMA_RELEASE" "$UPTIME_KUMA_CHART" \
+        --namespace "$UPTIME_KUMA_NAMESPACE" \
+        --version "$UPTIME_KUMA_VERSION" \
+        --values cluster/uptime-kuma/values.yaml
