@@ -3,7 +3,7 @@ deploy:mysql:dev:
   environment:
     name: dev
   variables:
-    APP_NAMESPACE: "dev" 
+    APP_NAMESPACE: "dev"
     RELEASE_NAME: "mysql"
     MYSQL_CHART: "bitnami/mysql"
     MYSQL_CHART_VERSION: "12.2.2"
@@ -14,6 +14,7 @@ deploy:mysql:dev:
       allow_failure: true
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl apply -f cluster/mysql/templates/storageclass.yaml
     - helm repo add bitnami https://charts.bitnami.com/bitnami
     - helm repo update
     - echo "Déploiement de MySQL sur la DEV"
@@ -38,6 +39,7 @@ deploy:mysql:prod:
       when: manual
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl apply -f cluster/mysql/templates/storageclass.yaml
     - helm repo add bitnami https://charts.bitnami.com/bitnami
     - helm repo update
     - echo "Déploiement de MySQL sur la PRODUCTION"
@@ -46,4 +48,4 @@ deploy:mysql:prod:
         --namespace "$APP_NAMESPACE" \
         --version "$MYSQL_CHART_VERSION" \
         --values "$VALUES_FILE"
-        
+
