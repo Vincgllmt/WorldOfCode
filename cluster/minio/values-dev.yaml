@@ -15,7 +15,7 @@ auth:
 
 persistence:
   enabled: true
-  storageClass: longhorn-dev
+  storageClass: longhorn
   size: 2Gi
 
 ingress:
@@ -28,8 +28,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.entrypoints: web
   tls: false
 
-
-console:  
+console:
   image:
     repository: bitnamilegacy/minio-object-browser
   enabled: true
@@ -42,7 +41,6 @@ console:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web
     tls: false
-
 
 resources:
   requests:

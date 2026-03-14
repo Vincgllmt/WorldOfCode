@@ -20,12 +20,11 @@ primary:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: longhorn
-# resources:
-#     requests:
-#       memory: "256Mi"
-#       cpu: "100m"
-#     limits:
-#       memory: "512Mi"
-#       cpu: "500m"
-
+    storageClass: longhorn-mysql
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
