@@ -28,27 +28,3 @@ uptime-kuma:
         enabled: true
         size: 3Gi
         storageClass: "longhorn-dev"
-
-
-mariadb:
-    enabled: true
-    global:
-      defaultStorageClass: "synology-iscsi-nascluster"
-    architecture: standalone
-    auth:
-      existingSecret: kuma-mariadb
-      database: ""
-      username: ""
-      
-    primary:
-      extraEnvVars:
-        - name: MARIADB_USER
-          valueFrom:
-            secretKeyRef:
-              name: kuma-mariadb
-              key: mariadb-username
-        - name: MARIADB_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: kuma-mariadb
-              key: mariadb-database
