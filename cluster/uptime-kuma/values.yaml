@@ -11,27 +11,44 @@ uptime-kuma:
   volume:
     enabled: true
     accessMode: ReadWriteOnce
-    size: 5Gi
+    size: 3Gi
     storageClassName: "longhorn-dev"
 
-  externalDatabase:
+  mariadb:
     enabled: true
-    type: "mariadb"
-    hostname: "uptime-kuma-mariadb"
-    port: 3306
-    database: "uptime_kuma"
-    username: "uptime_kuma"
-    password: "password"
+    global:
+      defaultStorageClass: "longhorn-dev"
+    fullnameOverride: uptime-kuma-mariadb
+    auth:
+      database: uptime_kuma
+      username: kuma
+      password: kuma
+    primary:
+      persistence:
+        enabled: true
+        size: 3Gi
+        storageClass: "longhorn-dev"
+
 
 mariadb:
-  enabled: true
-  fullnameOverride: uptime-kuma-mariadb
-  auth:
-    database: uptime_kuma
-    username: uptime_kuma
-    password: password
-  primary:
-    persistence:
-      enabled: true
-      size: 5Gi
-      storageClass: "longhorn"
+    enabled: true
+    global:
+      defaultStorageClass: "synology-iscsi-nascluster"
+    architecture: standalone
+    auth:
+      existingSecret: kuma-mariadb
+      database: ""
+      username: ""
+      
+    primary:
+      extraEnvVars:
+        - name: MARIADB_USER
+          valueFrom:
+            secretKeyRef:
+              name: kuma-mariadb
+              key: mariadb-username
+        - name: MARIADB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: kuma-mariadb
+              key: mariadb-database
