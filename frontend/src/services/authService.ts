@@ -1,28 +1,61 @@
 import { setCookie, getCookie, deleteCookie } from 'cookies-next'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
-import type { LoginCredentials, AuthenticatedUser, TokenResponse } from '@/interfaces/Authentification'
+import type {
+    LoginCredentials,
+    AuthenticatedUser,
+    TokenResponse,
+    TwoFactorRequiredResponse,
+    LoginResponse,
+} from '@/interfaces/Authentification'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 /**
- * Authentifie un utilisateur et enregistre le token dans un cookie
+ * Étape 1 : soumet les credentials, retourne soit un token 2FA temporaire, soit un JWT direct
  */
-export const login = async (credentials: LoginCredentials): Promise<AuthenticatedUser> => {
+export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const res = await fetch(`${API_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
     })
 
-    if (!res.ok) throw new Error('Identifiants invalides')
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Identifiants invalides')
+    }
 
-    // le backend renvoie { token: "eyJ0..." }
+    return await res.json()
+}
+
+/**
+ * Vérifie si la réponse du login nécessite une vérification 2FA
+ */
+export const isTwoFactorRequired = (response: LoginResponse): response is TwoFactorRequiredResponse => {
+    return 'requires2FA' in response && response.requires2FA === true
+}
+
+/**
+ * Étape 2 : vérifie le code 2FA et retourne le JWT final + user data
+ */
+export const verify2FA = async (tempToken: string, code: string): Promise<AuthenticatedUser> => {
+    const res = await fetch(`${API_URL}/2fa/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempToken, code }),
+    })
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Code invalide ou expiré')
+    }
+
     const { token }: TokenResponse = await res.json()
 
-    // ✅ on stocke le token dans un cookie pour les requêtes futures
+    // Stocker le vrai JWT
     setCookie('token', token, { path: '/', maxAge: 3600 })
 
-    // ✅ on récupère maintenant les infos utilisateur
+    // Récupérer le profil utilisateur
     const meRes = await fetch(`${API_URL}/me`, {
         headers: { Authorization: `Bearer ${token}` },
     })
@@ -30,12 +63,7 @@ export const login = async (credentials: LoginCredentials): Promise<Authenticate
     if (!meRes.ok) throw new Error('Impossible de récupérer le profil utilisateur')
 
     const userData = await meRes.json()
-
-    // ✅ on renvoie le profil complet avec le token inclus
-    return {
-        ...userData,
-        token,
-    }
+    return { ...userData, token }
 }
 
 /**

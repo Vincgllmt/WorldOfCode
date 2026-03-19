@@ -18,6 +18,7 @@ services:
       RESET_PASSWORD_URL: http://localhost:3000
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
       MESSAGERIE_URL: http://messagerie:8081
+      MAILER_DSN: smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587
 
     volumes:
       - ./backend:/var/www/backend

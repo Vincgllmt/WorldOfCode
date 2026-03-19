@@ -16,6 +16,7 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Service\PasswordValidator;
+use App\Service\TwoFactorService;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use App\Service\PasswordResetService;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -116,7 +117,7 @@ class AuthenticationController extends AbstractController
     ####
     #[Route('/api/authenticate', name: 'authenticate', methods: ['POST'])]
     #[OA\Post(
-        summary: 'Authentifie un utilisateur et renvoie un token JWT',
+        summary: 'Authentifie un utilisateur (étape 1 : credentials puis code 2FA envoyé par email)',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -131,16 +132,18 @@ class AuthenticationController extends AbstractController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Authentification réussie',
+                description: '2FA requis, code envoyé par email',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJK...')
+                        new OA\Property(property: 'requires2FA', type: 'boolean', example: true),
+                        new OA\Property(property: 'tempToken', type: 'string', example: 'eyJ0eXAiOiJK...')
                     ],
                     type: 'object'
                 )
             ),
             new OA\Response(response: 400, description: 'Champs manquants'),
-            new OA\Response(response: 401, description: 'Identifiants invalides')
+            new OA\Response(response: 401, description: 'Identifiants invalides'),
+            new OA\Response(response: 429, description: 'Trop de tentatives')
         ]
     )]
     #[OA\Tag(name: 'Authentication')]
@@ -149,9 +152,9 @@ class AuthenticationController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         JWTTokenManagerInterface $jwtManager,
         UserRepository $userRepository,
-        RateLimiterFactory $loginAttemptsLimiter
+        RateLimiterFactory $loginAttemptsLimiter,
+        TwoFactorService $twoFactorService
     ): JsonResponse {
-
 
         $data = json_decode($request->getContent(), true);
 
@@ -162,10 +165,8 @@ class AuthenticationController extends AbstractController
             return $this->json(['error' => 'Missing username or password'], 400);
         }
 
-        // bloquer si trop de tentative - multi IP
         $key = sprintf('%s_%s', strtolower($username), $request->getClientIp());
         $limiter = $loginAttemptsLimiter->create($key);
-
 
         if (false === $limiter->consume(1)->isAccepted()) {
             return $this->json(['error' => 'Too many login attempts. Please try again later.'], 429);
@@ -177,10 +178,120 @@ class AuthenticationController extends AbstractController
             return $this->json(['error' => 'Invalid credentials'], 401);
         }
 
+        // Générer et envoyer le code 2FA par email
+        try {
+            $twoFactorService->generateAndSend($user);
+        } catch (TransportExceptionInterface $e) {
+            return $this->json(['error' => 'Unable to send verification email.'], 500);
+        }
+
+        // Token temporaire avec claim 2fa_pending (bloqué sur les routes protégées)
+        $tempToken = $jwtManager->createFromPayload($user, [
+            '2fa_pending' => true,
+        ]);
+
+        // Masquer l'email : ex "eugenie@gmail.com" → "eu***@gmail.com"
+        $email = $user->getEmail();
+        $parts = explode('@', $email);
+        $local = $parts[0];
+        $domain = $parts[1] ?? '';
+        $visibleChars = min(2, strlen($local));
+        $maskedEmail = substr($local, 0, $visibleChars) . str_repeat('*', max(0, strlen($local) - $visibleChars)) . '@' . $domain;
+
+        return $this->json([
+            'requires2FA' => true,
+            'tempToken' => $tempToken,
+            'maskedEmail' => $maskedEmail,
+        ]);
+    }
+
+    ####
+    ##
+    ####
+    #[Route('/api/2fa/verify', name: '2fa_verify', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Vérifie le code 2FA et renvoie le token JWT final (étape 2)',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['tempToken', 'code'],
+                properties: [
+                    new OA\Property(property: 'tempToken', type: 'string', example: 'eyJ0eXAiOiJK...'),
+                    new OA\Property(property: 'code', type: 'string', example: '123456'),
+                ],
+                type: 'object'
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Vérification réussie, token JWT final',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJK...')
+                    ],
+                    type: 'object'
+                )
+            ),
+            new OA\Response(response: 400, description: 'Champs manquants'),
+            new OA\Response(response: 401, description: 'Code invalide ou expiré'),
+            new OA\Response(response: 429, description: 'Trop de tentatives')
+        ]
+    )]
+    #[OA\Tag(name: 'Authentication')]
+    public function verify2FA(
+        Request $request,
+        JWTTokenManagerInterface $jwtManager,
+        UserRepository $userRepository,
+        TwoFactorService $twoFactorService,
+        RateLimiterFactory $loginAttemptsLimiter
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        $tempToken = $data['tempToken'] ?? null;
+        $code = $data['code'] ?? null;
+
+        if (!$tempToken || !$code) {
+            return $this->json(['error' => 'Missing tempToken or code'], 400);
+        }
+
+        try {
+            $payload = $jwtManager->parse($tempToken);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid or expired token'], 401);
+        }
+
+        if (empty($payload['2fa_pending'])) {
+            return $this->json(['error' => 'Invalid token type'], 401);
+        }
+
+        $username = $payload['username'] ?? null;
+        if (!$username) {
+            return $this->json(['error' => 'Invalid token'], 401);
+        }
+
+        $user = $userRepository->findOneBy(['username' => $username]);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 401);
+        }
+
+        // Rate limiter sur les tentatives 2FA
+        $key = sprintf('2fa_%s', $user->getId());
+        $limiter = $loginAttemptsLimiter->create($key);
+        if (false === $limiter->consume(1)->isAccepted()) {
+            return $this->json(['error' => 'Too many attempts. Please try again later.'], 429);
+        }
+
+        if (!$twoFactorService->verifyCode($user, $code)) {
+            return $this->json(['error' => 'Invalid or expired code'], 401);
+        }
+
+        // Code valide → vrai JWT final
         $token = $jwtManager->create($user);
 
         return $this->json(['token' => $token]);
     }
+
     ####
     ##
     ####

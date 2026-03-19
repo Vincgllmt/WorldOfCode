@@ -18,7 +18,13 @@ export const useRegister = () => {
                     password: variables.password,
                 })
                 router.push('/onboarding')
-            } catch {
+            } catch (error: unknown) {
+                // Si c'est une redirection 2FA, ne pas afficher d'erreur
+                if (error instanceof Error && error.message === '2FA required') {
+                    // Marquer qu'on vient d'une inscription pour rediriger vers onboarding après 2FA
+                    sessionStorage.setItem('2fa_redirect', '/onboarding')
+                    return
+                }
                 toast.error('Compte créé. Veuillez vous connecter.')
                 router.push('/login')
             }
