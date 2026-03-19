@@ -15,7 +15,7 @@ class TechWatchSource
     private int $id;
 
     #[ORM\ManyToOne(targetEntity: TechGroup::class)]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private TechGroup $techGroup;
 
     #[ORM\Column(type: 'string', length: 500)]
@@ -23,9 +23,6 @@ class TechWatchSource
 
     #[ORM\Column(type: 'string', length: 255)]
     private string $name;
-
-    #[ORM\Column(type: 'boolean')]
-    private bool $isAutoDetected = false;
 
     #[ORM\Column(type: 'datetime', nullable: true)]
     private ?\DateTimeInterface $lastFetchedAt = null;
@@ -52,9 +49,6 @@ class TechWatchSource
 
     public function getName(): string { return $this->name; }
     public function setName(string $name): self { $this->name = $name; return $this; }
-
-    public function isAutoDetected(): bool { return $this->isAutoDetected; }
-    public function setIsAutoDetected(bool $isAutoDetected): self { $this->isAutoDetected = $isAutoDetected; return $this; }
 
     public function getLastFetchedAt(): ?\DateTimeInterface { return $this->lastFetchedAt; }
     public function setLastFetchedAt(?\DateTimeInterface $lastFetchedAt): self { $this->lastFetchedAt = $lastFetchedAt; return $this; }

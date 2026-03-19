@@ -10,7 +10,6 @@ use App\Repository\TechWatchSourceRepository;
 use App\Repository\TechWatchItemRepository;
 use App\Mapper\TechWatchSourceMapper;
 use App\Mapper\TechWatchItemMapper;
-use App\Service\TechWatchAutoDetector;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,7 +25,6 @@ class TechWatchController extends AbstractController
         private TechWatchItemRepository $itemRepo,
         private TechWatchSourceMapper $sourceMapper,
         private TechWatchItemMapper $itemMapper,
-        private TechWatchAutoDetector $autoDetector,
     ) {}
 
     #[Route('/api/tech-watch/feed', name: 'tech_watch_feed', methods: ['GET'])]
@@ -194,11 +192,55 @@ class TechWatchController extends AbstractController
         $source->setTechGroup($group);
         $source->setFeedUrl($data['feedUrl']);
         $source->setName($data['name']);
-        $source->setIsAutoDetected(false);
 
         $this->sourceRepo->save($source, true);
 
         return $this->json($this->sourceMapper->toDto($source), 201);
+    }
+
+    #[Route('/api/group/{groupId}/tech-watch/sources/{sourceId}', name: 'tech_watch_source_update', methods: ['PUT'])]
+    #[OA\Put(
+        summary: 'Modifier une source RSS',
+        parameters: [
+            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'sourceId', in: 'path', required: true, description: 'ID de la source RSS', schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'feedUrl', type: 'string', example: 'https://example.com/rss.xml'),
+                    new OA\Property(property: 'name', type: 'string', example: 'Blog Tech Example'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Source RSS modifiée', content: new OA\JsonContent(ref: TechWatchSourceResponse::class)),
+            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
+            new OA\Response(response: 404, description: 'Source non trouvée'),
+        ]
+    )]
+    public function updateSource(int $groupId, int $sourceId, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $source = $this->sourceRepo->find($sourceId);
+        if (!$source || $source->getTechGroup()->getId() !== $groupId) {
+            return $this->json(['error' => 'Source not found'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['feedUrl'])) {
+            $source->setFeedUrl($data['feedUrl']);
+        }
+        if (isset($data['name'])) {
+            $source->setName($data['name']);
+        }
+
+        $this->sourceRepo->save($source, true);
+
+        return $this->json($this->sourceMapper->toDto($source));
     }
 
     #[Route('/api/group/{groupId}/tech-watch/sources/{sourceId}', name: 'tech_watch_source_delete', methods: ['DELETE'])]
@@ -226,45 +268,5 @@ class TechWatchController extends AbstractController
         $this->sourceRepo->remove($source, true);
 
         return $this->json(['success' => true]);
-    }
-
-    #[Route('/api/group/{groupId}/tech-watch/auto-detect', name: 'tech_watch_auto_detect', methods: ['POST'])]
-    #[OA\Post(
-        summary: 'Lancer l\'auto-détection des sources RSS',
-        description: 'Détecte automatiquement les flux RSS associés au nom du groupe et crée les sources correspondantes.',
-        parameters: [
-            new OA\Parameter(name: 'groupId', in: 'path', required: true, description: 'ID du groupe', schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Sources auto-détectées',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'message', type: 'string', example: '3 source(s) auto-detected'),
-                        new OA\Property(property: 'sources', type: 'array', items: new OA\Items(ref: TechWatchSourceResponse::class)),
-                    ]
-                )
-            ),
-            new OA\Response(response: 403, description: 'Accès réservé aux administrateurs'),
-            new OA\Response(response: 404, description: 'Groupe non trouvé'),
-        ]
-    )]
-    public function autoDetect(int $groupId): JsonResponse
-    {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
-        $group = $this->groupRepo->find($groupId);
-        if (!$group) {
-            return $this->json(['error' => 'Group not found'], 404);
-        }
-
-        $created = $this->autoDetector->detectAndCreateSources($group);
-        $data = array_map([$this->sourceMapper, 'toDto'], $created);
-
-        return $this->json([
-            'message' => sprintf('%d source(s) auto-detected', count($created)),
-            'sources' => $data,
-        ]);
     }
 }
