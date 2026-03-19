@@ -13,16 +13,18 @@ export default function TwoFactorPage() {
     const [code, setCode] = useState<string[]>(['', '', '', '', '', ''])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isReady, setIsReady] = useState(false)
+    const [maskedEmail, setMaskedEmail] = useState<string>('')
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
     const router = useRouter()
     const { verify2FA } = useAuth()
 
-    // Vérifier le tempToken et afficher la page uniquement s'il existe
+    // Vérifier le tempToken et récupérer le maskedEmail
     useEffect(() => {
         const tempToken = sessionStorage.getItem('2fa_tempToken')
         if (!tempToken) {
             router.push('/login')
         } else {
+            setMaskedEmail(sessionStorage.getItem('2fa_maskedEmail') || '')
             setIsReady(true)
         }
     }, [router])
@@ -77,7 +79,6 @@ export default function TwoFactorPage() {
         setIsSubmitting(true)
         try {
             await verify2FA(fullCode)
-            toast.success('Connexion réussie')
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Code invalide ou expiré'
             toast.error(message)
@@ -118,7 +119,12 @@ export default function TwoFactorPage() {
                             Vérification en deux étapes
                         </CardTitle>
                         <p className="text-sm text-muted-foreground text-center">
-                            Un code de vérification a été envoyé à votre adresse email.
+                            Un code de vérification a été envoyé à{' '}
+                            {maskedEmail ? (
+                                <span className="font-medium text-foreground">{maskedEmail}</span>
+                            ) : (
+                                'votre adresse email'
+                            )}
                         </p>
                     </CardHeader>
                     <CardContent>

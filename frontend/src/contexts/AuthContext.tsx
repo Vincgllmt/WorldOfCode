@@ -34,8 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const result = await authService.login(credentials)
 
       if (authService.isTwoFactorRequired(result)) {
-        // Stocker le tempToken en sessionStorage pour la page 2FA
         sessionStorage.setItem('2fa_tempToken', result.tempToken)
+        sessionStorage.setItem('2fa_maskedEmail', result.maskedEmail)
         router.push('/2fa')
         return
       }
@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (authService.isTwoFactorRequired(result)) {
       sessionStorage.setItem('2fa_tempToken', result.tempToken)
+      sessionStorage.setItem('2fa_maskedEmail', result.maskedEmail)
       router.push('/2fa')
       throw new Error('2FA required')
     }
@@ -85,7 +86,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const authenticatedUser = await authService.verify2FA(tempToken, code)
     sessionStorage.removeItem('2fa_tempToken')
     setUser(authenticatedUser)
-    router.push('/home')
+
+    // Rediriger vers onboarding si inscription, sinon home
+    const redirect = sessionStorage.getItem('2fa_redirect') || '/home'
+    sessionStorage.removeItem('2fa_redirect')
+    router.push(redirect)
   }
 
   const logout = () => {

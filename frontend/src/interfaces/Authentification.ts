@@ -39,6 +39,7 @@ export interface RegisterCredentials {
 export interface TwoFactorRequiredResponse {
     requires2FA: true
     tempToken: string
+    maskedEmail: string
 }
 
 export type LoginResponse = TokenResponse | TwoFactorRequiredResponse

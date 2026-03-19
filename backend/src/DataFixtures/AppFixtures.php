@@ -18,7 +18,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
 {
     public function __construct(
         private UserPasswordHasherInterface $hasher,
-        private SkillRepository $skillRepo
+        private SkillRepository $skillRepo,
     ) {}
 
     public function getDependencies(): array
@@ -62,7 +62,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $admin->setLastname('System');
         $admin->setEmail('admin@woc.dev');
         $admin->setRole(UserRole::ROLE_ADMIN);
-        $admin->setPassword($this->hasher->hashPassword($admin, 'admin123'));
+        $admin->setPassword($this->hasher->hashPassword($admin, 'Woc@Admin2026!$'));
         $admin->setBio('Administrateur de la plateforme World of Code');
         $admin->setLocation('Paris, France');
         $admin->setAvailability(Availability::EMPLOYED);

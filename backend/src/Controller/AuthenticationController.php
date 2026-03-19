@@ -190,9 +190,18 @@ class AuthenticationController extends AbstractController
             '2fa_pending' => true,
         ]);
 
+        // Masquer l'email : ex "eugenie@gmail.com" → "eu***@gmail.com"
+        $email = $user->getEmail();
+        $parts = explode('@', $email);
+        $local = $parts[0];
+        $domain = $parts[1] ?? '';
+        $visibleChars = min(2, strlen($local));
+        $maskedEmail = substr($local, 0, $visibleChars) . str_repeat('*', max(0, strlen($local) - $visibleChars)) . '@' . $domain;
+
         return $this->json([
             'requires2FA' => true,
             'tempToken' => $tempToken,
+            'maskedEmail' => $maskedEmail,
         ]);
     }
 
