@@ -6,6 +6,7 @@ import PostForm from '@/components/post/postForm'
 import PostList from '@/components/post/PostList'
 import TechWatchFeedList from '@/components/techwatch/TechWatchFeedList'
 import SuggestionsSidebar from '@/components/suggestions/SuggestionsSidebar'
+import MyGroupsSidebar from '@/components/group/MyGroupsSidebar'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -28,10 +29,20 @@ export default function HomePage() {
   }, [activeTab])
 
   return (
-    <>
-      <div className="fixed top-[var(--navbar-height,64px)] left-0 right-0 z-30 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto max-w-5xl px-4 py-2 lg:pr-[calc(320px+2rem)]">
-          <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-[1400px] px-4">
+      <div className="flex justify-center gap-8">
+
+        {/* Sidebar gauche — sticky sous la navbar */}
+        <aside className="hidden xl:block w-[220px] shrink-0">
+          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
+            <MyGroupsSidebar />
+          </div>
+        </aside>
+
+        {/* Colonne centrale : tabs + feed */}
+        <div className="w-full max-w-[680px]">
+          {/* Barre de tabs sticky */}
+          <div className="sticky top-[var(--navbar-height,64px)] z-30 bg-background/80 backdrop-blur-md py-2">
             <div className="flex gap-1 bg-muted/50 border border-border/70 rounded-2xl p-1.5">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -54,13 +65,9 @@ export default function HomePage() {
               })}
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="mx-auto max-w-5xl px-4 pt-20">
-        <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
-          {/* --- Colonne principale (feed) --- */}
-          <div className="space-y-6 pb-8">
+          {/* Feed */}
+          <div className="space-y-6 pb-8 pt-4">
             {activeTab === 'publications' && (
               <div className="space-y-6">
                 <PostForm />
@@ -69,15 +76,16 @@ export default function HomePage() {
             )}
             {activeTab === 'actualites' && <TechWatchFeedList />}
           </div>
-
-          {/* --- Sidebar suggestions (desktop uniquement) --- */}
-          <div className="hidden lg:block">
-            <div className="sticky top-[calc(var(--navbar-height,64px)+60px)]">
-              <SuggestionsSidebar />
-            </div>
-          </div>
         </div>
+
+        {/* Sidebar droite — sticky sous la navbar */}
+        <aside className="hidden lg:block w-[300px] shrink-0">
+          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
+            <SuggestionsSidebar />
+          </div>
+        </aside>
+
       </div>
-    </>
+    </div>
   )
 }
