@@ -5,9 +5,7 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity()]
-#[ORM\Table(
-    uniqueConstraints: [new ORM\UniqueConstraint(name: 'unique_item_url', columns: ['url'])]
-)]
+#[ORM\UniqueConstraint(name: 'unique_item_url', columns: ['url'])]
 class TechWatchItem
 {
     #[ORM\Id]

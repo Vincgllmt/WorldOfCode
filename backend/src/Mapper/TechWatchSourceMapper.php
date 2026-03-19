@@ -12,9 +12,9 @@ class TechWatchSourceMapper
         $dto = new TechWatchSourceResponse();
         $dto->id = $source->getId();
         $dto->techGroupId = $source->getTechGroup()->getId();
+        $dto->techGroupName = $source->getTechGroup()->getName();
         $dto->feedUrl = $source->getFeedUrl();
         $dto->name = $source->getName();
-        $dto->isAutoDetected = $source->isAutoDetected();
         $dto->lastFetchedAt = $source->getLastFetchedAt()?->format('Y-m-d H:i:s');
         $dto->createdAt = $source->getCreatedAt()->format('Y-m-d H:i:s');
         return $dto;

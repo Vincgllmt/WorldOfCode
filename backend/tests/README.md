@@ -12,6 +12,18 @@ Ce document définit les règles et bonnes pratiques à respecter pour écrire e
 ## 🛠️ Outils
 - **WebTestCase** : outil symfony de tests unitaires.
 
+## Lancer les tests
+
+**Important** : les tests doivent être lancés **dans le conteneur Docker**, pas en local.
+
+```bash
+# Lancer tous les tests
+docker compose exec backend bash -c "rm -rf var/cache/test var/test.db && php vendor/bin/phpunit tests/Service/ --testdox"
+
+# Lancer un fichier de test spécifique
+docker compose exec backend bash -c "rm -rf var/cache/test var/test.db && php vendor/bin/phpunit tests/Service/TechWatchControllerTest.php --testdox"
+```
+
 ## Règles et bonne pratique
 
 - On teste le plus de cas possible, au moins un OK et un NOK (plusieurs NOK c'est cool aussi)
@@ -42,6 +54,7 @@ Ce document définit les règles et bonnes pratiques à respecter pour écrire e
 | **ConversationControllerTest**   | 🗡️ **The Legend of Zelda** | LinkHyrule<br>ZeldaPrincess | MasterSword!@2024<br>TriforceWisdom!@2024    |
 | **MessageControllerTest**        | ⚡ **Hades**                 | Zagreus<br>Thanatos         | EscapeFromHell!@2024<br>DeathIncarnate!@2024 |
 | **ReportControllerTest**         | 🪓 **God of War**           | Kratos<br>Atreus            | GhostOfSparta!@2024<br>BoyOfWar!@2024        |
+| **TechWatchControllerTest**      | 🌃 **Cyberpunk 2077**       | VNightCity<br>JackieWelles  | Samurai2077!@2024<br>TuMiTiempo!@2024        |
 
 ### Comment Choisir une Référence ?
 
@@ -93,6 +106,6 @@ Voici quelques idées de jeux vidéo à utiliser pour de nouveaux tests :
 
 ---
 
-*Dernière mise à jour : 27 février 2026*
+*Dernière mise à jour : 19 mars 2026*
 
 *"Un bon test est un test qui raconte une histoire" - The Tester's Creed*

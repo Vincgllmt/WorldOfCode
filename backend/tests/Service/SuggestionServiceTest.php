@@ -43,10 +43,6 @@ class SuggestionServiceTest extends KernelTestCase
         $conn->executeStatement('DELETE FROM user');
         $conn->executeStatement('DELETE FROM skill');
         $conn->executeStatement('DELETE FROM tech_group');
-
-        // Vider le cache suggestions
-        $cache = $container->get('cache.suggestions');
-        $cache->clear();
     }
 
     // ========== HELPERS ==========

@@ -16,6 +16,9 @@ if ($_SERVER['APP_DEBUG']) {
 // Initialisation de la base de données de test
 $console = dirname(__DIR__).'/bin/console';
 
+// Vider le cache Doctrine pour prendre en compte les changements d'entités
+(new Process(['php', $console, 'cache:clear', '--env=test']))->run();
+
 // Supprimer et recréer la base SQLite de test
 (new Process(['php', $console, 'doctrine:database:drop', '--force', '--if-exists', '--env=test']))->run();
 (new Process(['php', $console, 'doctrine:database:create', '--env=test']))->run();
