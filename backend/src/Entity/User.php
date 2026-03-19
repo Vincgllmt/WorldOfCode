@@ -67,6 +67,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $resetToken = null;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $twoFactorCode = null;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $twoFactorExpiresAt = null;
+
     #[ORM\Column(type: 'string', length: 50, nullable: true)]
     private ?string $theme = null;
 
@@ -285,6 +291,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setResetToken(?string $resetToken): self
     {
         $this->resetToken = $resetToken;
+        return $this;
+    }
+
+    public function getTwoFactorCode(): ?string
+    {
+        return $this->twoFactorCode;
+    }
+
+    public function setTwoFactorCode(?string $twoFactorCode): self
+    {
+        $this->twoFactorCode = $twoFactorCode;
+        return $this;
+    }
+
+    public function getTwoFactorExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->twoFactorExpiresAt;
+    }
+
+    public function setTwoFactorExpiresAt(?\DateTimeInterface $twoFactorExpiresAt): self
+    {
+        $this->twoFactorExpiresAt = $twoFactorExpiresAt;
         return $this;
     }
 

@@ -31,23 +31,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      const authenticatedUser = await authService.login(credentials)
-      setUser(authenticatedUser)
-      router.push('/home')
-    } catch (error) {
-      toast.error('Échec de la connexion')
-      console.error(error)
+      const result = await authService.login(credentials)
+
+      if (authService.isTwoFactorRequired(result)) {
+        // Stocker le tempToken en sessionStorage pour la page 2FA
+        sessionStorage.setItem('2fa_tempToken', result.tempToken)
+        router.push('/2fa')
+        return
+      }
+
+      // Fallback si 2FA désactivé (ne devrait pas arriver, mais sécurité)
+      const { token } = result
+      const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (meRes.ok) {
+        const userData = await meRes.json()
+        setUser({ ...userData, token })
+        router.push('/home')
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Identifiants invalides'
+      toast.error(message)
+      throw error
     }
   }
 
   const loginSilent = async (credentials: LoginCredentials): Promise<AuthenticatedUser> => {
-    const authenticatedUser = await authService.login(credentials)
+    const result = await authService.login(credentials)
+
+    if (authService.isTwoFactorRequired(result)) {
+      sessionStorage.setItem('2fa_tempToken', result.tempToken)
+      router.push('/2fa')
+      throw new Error('2FA required')
+    }
+
+    const { token } = result
+    const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const userData = await meRes.json()
+    const authenticatedUser = { ...userData, token }
     setUser(authenticatedUser)
     return authenticatedUser
   }
 
+  const verify2FA = async (code: string) => {
+    const tempToken = sessionStorage.getItem('2fa_tempToken')
+    if (!tempToken) {
+      throw new Error('Aucun token temporaire trouvé. Veuillez vous reconnecter.')
+    }
+
+    const authenticatedUser = await authService.verify2FA(tempToken, code)
+    sessionStorage.removeItem('2fa_tempToken')
+    setUser(authenticatedUser)
+    router.push('/home')
+  }
+
   const logout = () => {
     authService.logout()
+    sessionStorage.removeItem('2fa_tempToken')
     setUser(null)
     router.push('/login')
   }
@@ -72,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         login,
         loginSilent,
+        verify2FA,
         logout,
         setUserTheme,
         setUserAvatar,

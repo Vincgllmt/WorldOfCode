@@ -35,3 +35,10 @@ export interface RegisterCredentials {
     password: string
     avatarUrl?: string | null
 }
+
+export interface TwoFactorRequiredResponse {
+    requires2FA: true
+    tempToken: string
+}
+
+export type LoginResponse = TokenResponse | TwoFactorRequiredResponse
