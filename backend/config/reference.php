@@ -1267,8 +1267,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     role_hierarchy?: array<string, string|list<scalar|Param|null>>,
  * }
  * @psalm-type LexikJwtAuthenticationConfig = array{
- *     private_key_path?: scalar|Param|null, // Deprecated: The "lexik_jwt_authentication.private_key_path.private_key_path" configuration key is deprecated since version 2.5. Use "lexik_jwt_authentication.private_key_path.secret_key" instead. // Default: null
- *     public_key_path?: scalar|Param|null, // Deprecated: The "lexik_jwt_authentication.public_key_path.public_key_path" configuration key is deprecated since version 2.5. Use "lexik_jwt_authentication.public_key_path.public_key" instead. // Default: null
  *     public_key?: scalar|Param|null, // The key used to sign tokens (useless for HMAC). If not set, the key will be automatically computed from the secret key. // Default: null
  *     additional_public_keys?: list<scalar|Param|null>,
  *     secret_key?: scalar|Param|null, // The key used to sign tokens. It can be a raw secret (for HMAC), a raw RSA/ECDSA key or the path to a file itself being plaintext or PEM. // Default: null
@@ -1279,10 +1277,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     encoder?: array{
  *         service?: scalar|Param|null, // Default: "lexik_jwt_authentication.encoder.lcobucci"
  *         signature_algorithm?: scalar|Param|null, // Default: "RS256"
- *         crypto_engine?: "openssl"|"phpseclib"|Param, // Deprecated: The "lexik_jwt_authentication.encoder.crypto_engine.crypto_engine" configuration key is deprecated since version 2.5, built-in encoders support OpenSSL only // Default: "openssl"
  *     },
- *     user_identity_field?: scalar|Param|null, // Deprecated: The "lexik_jwt_authentication.user_identity_field.user_identity_field" configuration key is deprecated since version 2.16, use "lexik_jwt_authentication.user_identity_field.user_id_claim" or implement "Symfony\Component\Security\Core\User\UserInterface::getUserIdentifier()" instead. // Default: "username"
- *     user_id_claim?: scalar|Param|null, // If null, the user ID claim will have the same name as the one defined by the option "user_identity_field" // Default: null
+ *     user_id_claim?: scalar|Param|null, // Default: "username"
  *     token_extractors?: array{
  *         authorization_header?: bool|array{
  *             enabled?: bool|Param, // Default: true
