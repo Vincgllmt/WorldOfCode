@@ -25,16 +25,20 @@ class ConversationRepository extends ServiceEntityRepository
     }
     public function findDirectConversationBetween(int $userA, int $userB): ?Conversation
     {
-        $qb = $this->createQueryBuilder('c')
-            ->join('c.participants', 'p')
+        return $this->createQueryBuilder('c')
             ->where('c.type = :type')
+            ->andWhere(
+                'EXISTS (SELECT 1 FROM App\Entity\Messaging\ConversationParticipant p1 WHERE p1.conversation = c AND IDENTITY(p1.user) = :userA)'
+            )
+            ->andWhere(
+                'EXISTS (SELECT 1 FROM App\Entity\Messaging\ConversationParticipant p2 WHERE p2.conversation = c AND IDENTITY(p2.user) = :userB)'
+            )
             ->setParameter('type', 'direct')
-            ->andWhere('p.user IN (:users)')
-            ->setParameter('users', [$userA, $userB])
-            ->groupBy('c.id')
-            ->having('COUNT(p.user) = 2');
-
-        return $qb->getQuery()->getOneOrNullResult();
+            ->setParameter('userA', $userA)
+            ->setParameter('userB', $userB)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
     public function findByUserId(int $userId): array
     {

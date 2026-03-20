@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80cd4a101e0c0ce47c6ee12d07578d66",
+    "content-hash": "4fd9b3209ada03193a5e25a9e29c5e4a",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -62,16 +62,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.371.5",
+            "version": "3.373.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "d40b962154a146901f71561519f9d9c5a3863a6e"
+                "reference": "adad2a5f7785e71928b4a9eb1eaadf5d0ede5edc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/d40b962154a146901f71561519f9d9c5a3863a6e",
-                "reference": "d40b962154a146901f71561519f9d9c5a3863a6e",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/adad2a5f7785e71928b4a9eb1eaadf5d0ede5edc",
+                "reference": "adad2a5f7785e71928b4a9eb1eaadf5d0ede5edc",
                 "shasum": ""
             },
             "require": {
@@ -92,12 +92,12 @@
                 "aws/aws-php-sns-message-validator": "~1.0",
                 "behat/behat": "~3.0",
                 "composer/composer": "^2.7.8",
-                "dms/phpunit-arraysubset-asserts": "^0.4.0",
+                "dms/phpunit-arraysubset-asserts": "^v0.5.0",
                 "doctrine/cache": "~1.4",
                 "ext-dom": "*",
                 "ext-openssl": "*",
                 "ext-sockets": "*",
-                "phpunit/phpunit": "^9.6",
+                "phpunit/phpunit": "^10.0",
                 "psr/cache": "^2.0 || ^3.0",
                 "psr/simple-cache": "^2.0 || ^3.0",
                 "sebastian/comparator": "^1.2.3 || ^4.0 || ^5.0",
@@ -153,9 +153,9 @@
             "support": {
                 "forum": "https://github.com/aws/aws-sdk-php/discussions",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.371.5"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.373.6"
             },
-            "time": "2026-03-04T19:06:59+00:00"
+            "time": "2026-03-19T19:38:25+00:00"
         },
         {
             "name": "brick/math",
@@ -10656,5 +10656,5 @@
         "ext-iconv": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
