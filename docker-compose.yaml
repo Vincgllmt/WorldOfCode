@@ -104,9 +104,11 @@ services:
       - ./messagerie:/app
       - /app/node_modules
       - jwt_keys:/app/src/config/jwt
-    command: npm run dev
+    command: >
+      sh -c "until [ -f /app/src/config/jwt/public.pem ]; do echo 'Waiting for JWT public key...'; sleep 2; done && npm run dev"
     depends_on:
       - db
+      - backend
     networks:
       - projet_network
 

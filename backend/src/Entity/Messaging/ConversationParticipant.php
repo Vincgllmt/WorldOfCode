@@ -8,6 +8,7 @@ use DateTimeImmutable;
 
 #[ORM\Entity]
 #[ORM\Table(name: "msg_conversation_participants")]
+#[ORM\Index(name: "idx_participant_user_conv", columns: ["user_id", "conversation_id"])]
 #[ORM\HasLifecycleCallbacks]
 class ConversationParticipant
 {

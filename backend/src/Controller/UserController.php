@@ -26,6 +26,7 @@ use App\Mapper\SkillMapper;
 use App\Mapper\UserLinkMapper;
 use App\Dto\TechGroupResponse;
 use App\Mapper\TechGroupMapper;
+use Symfony\Component\Security\Core\Validator\Constraints\UserPasswordValidator;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use App\Dto\UserUpdateRequest;
@@ -235,7 +236,8 @@ final class UserController extends AbstractController
     public function changePassword(
         int $id,
         Request $request,
-        UserPasswordHasherInterface $passwordHasher
+        UserPasswordHasherInterface $passwordHasher,
+        UserPasswordValidator $passwordValidator
     ): JsonResponse {
         $currentUser = $this->getUser();
         $user = $this->repo->find($id);
@@ -258,6 +260,18 @@ final class UserController extends AbstractController
 
         if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
             return $this->json(['error' => 'Current password is incorrect'], 403);
+        }
+
+        if ($currentPassword === $newPassword) {
+            return $this->json([
+                'error' => 'New password must be different from current password'
+            ], 400);
+        }
+
+        // Valider la force du mot de passe
+        $error = $passwordValidator->validate($newPassword);
+        if ($error) {
+            return $this->json(['error' => $error], 400);
         }
 
         $user->setPassword($passwordHasher->hashPassword($user, $newPassword));

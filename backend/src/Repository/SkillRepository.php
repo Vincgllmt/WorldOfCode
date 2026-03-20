@@ -4,12 +4,14 @@ namespace App\Repository;
 
 use App\Entity\Skill;
 use App\Enum\SkillCategory;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 class SkillRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, CacheInterface $cache)
     {
         parent::__construct($registry, Skill::class);
     }
@@ -53,10 +55,22 @@ class SkillRepository extends ServiceEntityRepository
      */
     public function findByIds(array $ids): array
     {
-        return $this->createQueryBuilder('s')
-            ->where('s.id IN (:ids)')
-            ->setParameter('ids', $ids)
-            ->getQuery()
-            ->getResult();
+        if (empty($ids)) {
+            return [];
+        }
+
+        // Limiter à 100 skills max
+        $ids = array_slice($ids, 0, 100);
+        $cacheKey = 'skills_' . md5(implode(',', $ids));
+
+        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($ids) {
+            $item->expiresAfter(3600); // 1 heure
+
+            return $this->createQueryBuilder('s')
+                ->where('s.id IN (:ids)')
+                ->setParameter('ids', $ids)
+                ->getQuery()
+                ->getResult();
+        });
     }
 }
