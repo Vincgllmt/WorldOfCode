@@ -40,7 +40,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/sh", "-c"]
-          args: ["source /vault/secrets/config && exec npm run start:dev"]
+          args: [". /vault/secrets/config && exec npm run start"]
           ports:
             - containerPort: {{ .Values.containerPort }}
           

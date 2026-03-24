@@ -35,7 +35,7 @@ spec:
               workingDir: /var/www/backend
               
               command: ["/bin/sh", "-c"]
-              args: ["source /vault/secrets/config && exec php bin/console app:fetch-tech-news"]
+              args: [". /vault/secrets/config && exec php bin/console app:fetch-tech-news"]
               
               env:
                 - name: APP_ENV
