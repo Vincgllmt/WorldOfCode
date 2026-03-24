@@ -11,7 +11,18 @@ mode: standalone
 
 auth:
   rootUser: admin
-  rootPassword: admin1234
+
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/role: "app"
+  vault.hashicorp.com/agent-inject-secret-minio-root: "secret/data/minio"
+  vault.hashicorp.com/agent-inject-template-minio-root: |
+    {{ "{{- with secret \"secret/data/minio\" -}}" }}
+    {{ "{{ .Data.data.rootPassword }}" }}
+    {{ "{{- end -}}" }}
+extraEnvVars:
+  - name: MINIO_ROOT_PASSWORD_FILE
+    value: "/vault/secrets/minio-root"
 
 persistence:
   enabled: true

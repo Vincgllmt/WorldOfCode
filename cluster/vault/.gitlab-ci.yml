@@ -1,0 +1,48 @@
+deploy:vault:dev:
+  stage: deploy-services
+  environment:
+    name: dev
+  variables:
+    APP_NAMESPACE: "vault"
+    RELEASE_NAME: "vault"
+    VAULT_CHART: "hashicorp/vault"
+    VAULT_CHART_VERSION: "0.32.0"
+    VALUES_FILE: "cluster/vault/values-dev.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add hashicorp https://helm.releases.hashicorp.com
+    - helm repo update
+    - echo "Déploiement de Vault sur la DEV"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$VAULT_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$VAULT_CHART_VERSION" \
+        --values "$VALUES_FILE"
+
+deploy:vault:prod:
+  stage: deploy-services
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "vault"
+    RELEASE_NAME: "vault"
+    VAULT_CHART: "hashicorp/vault"
+    VAULT_CHART_VERSION: "0.32.0"
+    VALUES_FILE: "cluster/vault/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - helm repo add hashicorp https://helm.releases.hashicorp.com
+    - helm repo update
+    - echo "Déploiement de Vault sur la PRODUCTION"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$VAULT_CHART" \
+        --namespace "$APP_NAMESPACE" \
+        --version "$VAULT_CHART_VERSION" \
+        --values "$VALUES_FILE"

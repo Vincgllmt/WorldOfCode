@@ -26,11 +26,9 @@ mediasoup:
   announcedIp: "51.178.143.54"
 
 database:
-  secretName: woc-messagerie-db
   host: "mysql"
   port: "3306"
   user: "application"
-  password: "password"
   name: "projet_web"
 
 env:

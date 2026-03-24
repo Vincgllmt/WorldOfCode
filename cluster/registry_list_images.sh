@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_URL="http://registry.woc:32000"
 REGISTRY_USER="admin"
-REGISTRY_PASSWORD="ijDFDfslk@!ade132"
+REGISTRY_PASSWORD=$(kubectl exec vault-0 -n vault -- vault kv get -field=password secret/registry)
 
 echo "Listing repositories on ${BASE_URL}..."
 

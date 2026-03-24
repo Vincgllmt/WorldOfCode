@@ -55,6 +55,7 @@ include:
   - local: cluster/mysql/.gitlab-ci.yml
   - local: cluster/registry/.gitlab-ci.yml
   - local: cluster/minio/.gitlab-ci.yml
+  - local: cluster/vault/.gitlab-ci.yml
   - local: cluster/monitoring/.gitlab-ci.yml
   - local: cluster/backend/.gitlab-ci.yml
   - local: cluster/frontend/.gitlab-ci.yml

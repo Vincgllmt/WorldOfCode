@@ -11,12 +11,28 @@ fullnameOverride: mysql
 architecture: standalone
 
 auth:
-  rootPassword: changeme
   database: projet_web
   username: application
-  password: password
 
 primary:
+  podAnnotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/role: "app"
+    vault.hashicorp.com/agent-inject-secret-mysql-root: "secret/data/mysql"
+    vault.hashicorp.com/agent-inject-template-mysql-root: |
+      {{ "{{- with secret \"secret/data/mysql\" -}}" }}
+      {{ "{{ .Data.data.rootPassword }}" }}
+      {{ "{{- end -}}" }}
+    vault.hashicorp.com/agent-inject-secret-mysql-user: "secret/data/mysql"
+    vault.hashicorp.com/agent-inject-template-mysql-user: |
+      {{ "{{- with secret \"secret/data/mysql\" -}}" }}
+      {{ "{{ .Data.data.password }}" }}
+      {{ "{{- end -}}" }}
+  extraEnvVars:
+    - name: MYSQL_ROOT_PASSWORD_FILE
+      value: "/vault/secrets/mysql-root"
+    - name: MYSQL_PASSWORD_FILE
+      value: "/vault/secrets/mysql-user"
   persistence:
     enabled: true
     size: 10Gi

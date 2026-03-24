@@ -1,0 +1,10 @@
+Vault Initialization Credentials
+
+Unseal Key 1: VAhu5lIJCOp1hcq4VCa0deUTjzoLa7Fh5fhI0gwo8Is=
+Initial Root Token: hvs.BRfNCraThBYMga4s3IROBA36
+
+# Instructions
+1. Unseal the vault:
+   vault operator unseal VAhu5lIJCOp1hcq4VCa0deUTjzoLa7Fh5fhI0gwo8Is=
+2. Login to vault:
+   vault login hvs.BRfNCraThBYMga4s3IROBA36

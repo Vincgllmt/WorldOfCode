@@ -11,6 +11,14 @@ spec:
     metadata:
       labels:
         app: {{ include "woc-backend.name" . }}
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/backend"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ "{{- with secret \"secret/data/backend\" -}}" }}
+          export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
+          {{ "{{- end -}}" }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
@@ -20,6 +28,8 @@ spec:
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args: ["source /vault/secrets/config && exec php-fpm"]
           ports:
             - containerPort: 9000
           env:
@@ -31,11 +41,6 @@ spec:
               value: {{ .Values.env.RESET_PASSWORD_URL | quote }}
             - name: MESSAGERIE_URL
               value: {{ .Values.env.MESSAGERIE_URL | quote }}
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: woc-db
-                  key: DATABASE_URL
             - name: MINIO_ENDPOINT
               value: {{ .Values.env.MINIO_ENDPOINT | quote }}
             - name: MINIO_ACCESS_KEY
