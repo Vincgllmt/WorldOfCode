@@ -12,9 +12,16 @@ build:frontend:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
+  variables:
+    API_DOMAIN: "api-woc-dev.duckdns.org"
+    WOC_DOMAIN: "woc-dev.duckdns.org"
   script:
     - echo "Configuration de l'authentification Kaniko..."
-    # Utilisation de | pour éviter les erreurs de guillemets YAML
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "production" ]; then
+        export API_DOMAIN="api-woc-prod.duckdns.org"
+        export WOC_DOMAIN="woc-prod.duckdns.org"
+      fi
     - |
       echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     
@@ -23,10 +30,10 @@ build:frontend:
         --context "${CI_PROJECT_DIR}/frontend" \
         --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile.prod" \
         --destination "${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}" \
-        --build-arg NEXT_PUBLIC_API_URL="https://api.${APP_NAMESPACE}.woc/api" \
-        --build-arg NEXT_PUBLIC_SOCKET_URL="https://api.${APP_NAMESPACE}.woc" \
-        --build-arg NEXT_PUBLIC_WOC_URL="https://${APP_NAMESPACE}.woc" \
-        --build-arg NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL}" \
+        --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api" \
+        --build-arg NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}" \
+        --build-arg NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}" \
+        --build-arg NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage" \
         --insecure \
         --skip-tls-verify \
         --cache=true
