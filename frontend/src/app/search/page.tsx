@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -33,7 +34,7 @@ function UserAvatar({ name, avatarUrl, size = 40 }: { name: string; avatarUrl: s
     )
 }
 
-export default function SearchPage() {
+function SearchContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const initialQuery = searchParams.get('q') ?? ''
@@ -189,5 +190,13 @@ export default function SearchPage() {
                 </p>
             )}
         </div>
+    )
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="max-w-5xl mx-auto p-4">Chargement...</div>}>
+            <SearchContent />
+        </Suspense>
     )
 }

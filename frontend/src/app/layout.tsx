@@ -2,7 +2,7 @@
 
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { ReactNode } from 'react'
+import { ReactNode, Suspense } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { VideoCallProvider } from '@/contexts/VideoCallContext'
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         <AuthProvider>
                             <ThemeSyncer />
                             <VideoCallProvider>
-                                {!hideNavbar && <Navbar />}
+                                {!hideNavbar && <Suspense fallback={null}><Navbar /></Suspense>}
                                 {children}
                                 {!hideMessageFab && <MessageFab />}
                                 <Toaster

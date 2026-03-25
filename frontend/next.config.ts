@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const storageUrl = new URL(process.env.NEXT_PUBLIC_STORAGE_URL || 'http://localhost:9000')
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },
