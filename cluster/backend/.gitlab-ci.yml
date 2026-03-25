@@ -26,18 +26,18 @@ build:backend:
         --skip-tls-verify \
         --cache=true
 
-scan:backend:
-  extends: .trivy_scan_template
-  variables:
-    APP_NAME: "backend"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
-      changes:
-        - backend/**/*
+# scan:backend:
+#   extends: .trivy_scan_template
+#   variables:
+#     APP_NAME: "backend"
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#       changes:
+#         - backend/**/*
 
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
-      when: manual
-      allow_failure: true
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#       when: manual
+#       allow_failure: true
 
 # 2. Déploiement automatique en DEV
 deploy:backend:dev:

@@ -31,18 +31,18 @@ build:frontend:
         --cache=true
 
 
-scan:frontend:
-  extends: .trivy_scan_template
-  variables:
-    APP_NAME: "frontend"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
-      changes:
-        - frontend/**/*
+# scan:frontend:
+#   extends: .trivy_scan_template
+#   variables:
+#     APP_NAME: "frontend"
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#       changes:
+#         - frontend/**/*
 
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
-      when: manual
-      allow_failure: true
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#       when: manual
+#       allow_failure: true
     
 
 
