@@ -6,7 +6,18 @@ metadata:
 spec:
   backoffLimit: 0
   template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/backend"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/backend" -}}
+          export DATABASE_URL="{{ .Data.data.url }}"
+          {{- end -}}
     spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: "true"
       restartPolicy: Never
       imagePullSecrets:
         - name: woc-regcred
@@ -14,18 +25,8 @@ spec:
         - name: seed
           image: registry.woc:32000/woc-backend:faker
           imagePullPolicy: Always
-          command:
-            [
-              "php",
-              "-d",
-              "memory_limit=512M",
-              "bin/console",
-              "doctrine:fixtures:load",
-              "--no-interaction",
-              "--env=dev",
-            ]
+          command: ["/bin/sh", "-c"]
+          args: [". /vault/secrets/config && php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction --env=dev"]
           env:
             - name: APP_ENV
               value: "dev"
-            - name: DATABASE_URL
-              value: "mysql://application:password@mysql:3306/projet_web"

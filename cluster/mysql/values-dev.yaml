@@ -2,6 +2,10 @@ global:
   security:
     allowInsecureImages: true
 
+serviceAccount:
+  create: true
+  automountServiceAccountToken: true
+
 image:
   repository: bitnamilegacy/mysql
   tag: 9.4.0-debian-12-r1
@@ -15,6 +19,7 @@ auth:
   username: application
 
 primary:
+  automountServiceAccountToken: true
   podAnnotations:
     vault.hashicorp.com/agent-inject: "true"
     vault.hashicorp.com/role: "app"
