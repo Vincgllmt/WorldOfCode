@@ -12,19 +12,4 @@ uptime-kuma:
     enabled: true
     accessMode: ReadWriteOnce
     size: 3Gi
-    storageClassName: "longhorn-dev"
-
-  mariadb:
-    enabled: true
-    global:
-      defaultStorageClass: "longhorn-dev"
-    fullnameOverride: uptime-kuma-mariadb
-    auth:
-      database: uptime_kuma
-      username: kuma
-      password: kuma
-    primary:
-      persistence:
-        enabled: true
-        size: 3Gi
-        storageClass: "longhorn-dev"
+    storageClassName: "local-path"
