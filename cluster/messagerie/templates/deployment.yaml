@@ -16,9 +16,9 @@ spec:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "app"
-        vault.hashicorp.com/agent-inject-secret-config: "secret/data/messagerie"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/mysql"
         vault.hashicorp.com/agent-inject-template-config: |
-          {{ "{{- with secret \"secret/data/messagerie\" -}}" }}
+          {{ "{{- with secret \"secret/data/mysql\" -}}" }}
           export DB_PASS={{ "\"{{ .Data.data.password }}\"" }}
           {{ "{{- end -}}" }}
     spec:
