@@ -11,5 +11,5 @@ uptime-kuma:
   volume:
     enabled: true
     accessMode: ReadWriteOnce
-    size: 3Gi
-    storageClassName: "local-path"
+    size: 2Gi
+    storageClassName: "longhorn"
