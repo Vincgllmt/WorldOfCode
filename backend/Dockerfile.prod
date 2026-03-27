@@ -25,6 +25,9 @@ COPY . .
 # 5. Génération de l'autoloader optimisé maintenant que le code est présent
 RUN composer dump-autoload --optimize --classmap-authoritative
 
+# 5.5. Permissions sur les répertoires de cache et logs
+RUN mkdir -p var/cache var/log && chown -R www-data:www-data var
+
 # 6. Configuration de l'entrypoint et de PHP-FPM
 COPY entrypoint-prod.sh /usr/local/bin/entrypoint-prod.sh
 RUN chmod +x /usr/local/bin/entrypoint-prod.sh

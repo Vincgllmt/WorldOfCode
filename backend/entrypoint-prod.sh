@@ -21,5 +21,8 @@ php bin/console cache:clear --env=prod --no-interaction
 echo "→ Cache warmup..."
 php bin/console cache:warmup --env=prod --no-interaction
 
+echo "→ Fix permissions (var)..."
+chown -R www-data:www-data var
+
 echo "→ Lancement PHP-FPM"
 exec "$@"
