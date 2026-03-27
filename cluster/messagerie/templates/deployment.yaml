@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: {{ include "woc-messagerie.fullname" . }}
 spec:
+  strategy:
+    type: Recreate
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
