@@ -2,8 +2,8 @@ FROM php:8.4-cli
 
 # 1. Installer les libs nécessaires + extensions PHP
 RUN apt-get update && apt-get install -y \
-    unzip git curl libzip-dev libicu-dev libonig-dev \
-    && docker-php-ext-install pdo_mysql intl zip \
+    unzip git curl libzip-dev libicu-dev libonig-dev libmariadb-dev \
+    && docker-php-ext-install pdo pdo_mysql intl zip \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Installer Composer
