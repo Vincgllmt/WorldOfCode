@@ -13,25 +13,11 @@ build:backend:
       allow_failure: true
   script:
     - echo "Configuration de l'authentification Kaniko..."
-    - echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - "echo \"{\\\"auths\\\":{\\\"${REGISTRY_HOST}\\\":{\\\"auth\\\":\\\"$(printf '%s:%s' '${REGISTRY_USER}' '${REGISTRY_PASSWORD}' | base64 | tr -d '\n')\\\"}}}\" > /kaniko/.docker/config.json"
     - echo "Build et Push Production Image: ${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}"
-    - |
-      /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/backend" \
-        --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.prod" \
-        --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}" \
-        --insecure \
-        --skip-tls-verify \
-        --cache=true
+    - /kaniko/executor --context "${CI_PROJECT_DIR}/backend" --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.prod" --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}" --insecure --skip-tls-verify --cache=true
     - echo "Build et Push Seed (Faker) Image: ${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}-faker"
-    - |
-      /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/backend" \
-        --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.faker" \
-        --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}-faker" \
-        --insecure \
-        --skip-tls-verify \
-        --cache=true
+    - /kaniko/executor --context "${CI_PROJECT_DIR}/backend" --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.faker" --destination "${REGISTRY_HOST}/backend:${CI_COMMIT_SHORT_SHA}-faker" --insecure --skip-tls-verify --cache=true
 
 deploy:backend:dev:
   stage: deploy-apps
