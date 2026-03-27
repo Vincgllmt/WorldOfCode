@@ -17,6 +17,7 @@ spec:
         metadata:
           annotations:
             vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-pre-populate-only: "true"
             vault.hashicorp.com/role: "app"
             vault.hashicorp.com/agent-inject-secret-config: "secret/data/backend"
             vault.hashicorp.com/agent-inject-template-config: |
