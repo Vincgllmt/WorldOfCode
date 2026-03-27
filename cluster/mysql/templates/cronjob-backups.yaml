@@ -10,8 +10,17 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/role: "app"
+            vault.hashicorp.com/agent-inject-secret-mysql: "secret/data/mysql"
+            vault.hashicorp.com/agent-inject-template-mysql: |
+              {{- with secret "secret/data/mysql" -}}
+              export DB_PASS="{{ .Data.data.rootPassword }}"
+              export DB_HOST="{{ .Data.data.host }}"
+              {{- end -}}
         spec:
-
           nodeSelector:
             kubernetes.io/hostname: "kube-worker-01"
 
@@ -23,38 +32,24 @@ spec:
                 runAsUser: 0 
                 
               env:
-                - name: DB_HOST
-                  valueFrom:
-                    secretKeyRef:
-                      name: woc-messagerie-db
-                      key: DB_HOST
                 - name: DB_PORT
-                  valueFrom:
-                    secretKeyRef:
-                      name: woc-messagerie-db
-                      key: DB_PORT
+                  value: "3306"
                 - name: DB_USER
-                  valueFrom:
-                    secretKeyRef:
-                      name: woc-messagerie-db
-                      key: DB_USER
-                - name: DB_PASS
-                  valueFrom:
-                    secretKeyRef:
-                      name: woc-messagerie-db
-                      key: DB_PASS
+                  value: "root"
                 - name: DB_NAME
-                  valueFrom:
-                    secretKeyRef:
-                      name: woc-messagerie-db
-                      key: DB_NAME
+                  value: "projet_web"
 
               command:
                 - /bin/sh
                 - -c
                 - |
+                  # Source des secrets Vault si le fichier existe
+                  if [ -f /vault/secrets/mysql ]; then
+                    . /vault/secrets/mysql
+                  fi
+
                   echo "Démarrage de la sauvegarde MySQL..."
-                  DATE=$(date +\%Y-\%m-\%d_\%H-\%M-\%S)
+                  DATE=$(date +%Y-%m-%d_%H-%M-%S)
                   FILE="/backups/woc_mysql_backup_${DATE}.sql"
                   
                   # Ajout d'un timeout de 10s pour ne pas bloquer dans le vide si le réseau bug
@@ -71,7 +66,7 @@ spec:
                     exit 1
                   fi
                   
-                  find /backups -type f -name "${DB_NAME}_*.sql.gz" -mtime +7 -exec rm {} \;
+                  find /backups -type f -name "woc_mysql_backup_*.sql.gz" -mtime +7 -exec rm {} \;
               
               volumeMounts:
                 - name: host-backup-dir
