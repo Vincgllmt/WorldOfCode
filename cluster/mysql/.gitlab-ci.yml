@@ -20,10 +20,14 @@ deploy:mysql:dev:
     - helm repo update
     - echo "Déploiement de MySQL sur la DEV"
     - |
+      EXISTING_ROOT_PWD=$(kubectl get secret --namespace "$APP_NAMESPACE" "$RELEASE_NAME" -o jsonpath="{.data.mysql-root-password}" 2>/dev/null | base64 -d || echo "vault-managed-root")
+      EXISTING_APP_PWD=$(kubectl get secret --namespace "$APP_NAMESPACE" "$RELEASE_NAME" -o jsonpath="{.data.mysql-password}" 2>/dev/null | base64 -d || echo "vault-managed-user")
       helm upgrade --install "$RELEASE_NAME" "$MYSQL_CHART" \
         --namespace "$APP_NAMESPACE" \
         --version "$MYSQL_CHART_VERSION" \
-        --values "$VALUES_FILE"
+        --values "$VALUES_FILE" \
+        --set auth.rootPassword="$EXISTING_ROOT_PWD" \
+        --set auth.password="$EXISTING_APP_PWD"
 
 deploy:mysql:prod:
   stage: deploy-services
@@ -46,8 +50,12 @@ deploy:mysql:prod:
     - helm repo update
     - echo "Déploiement de MySQL sur la PRODUCTION"
     - |
+      EXISTING_ROOT_PWD=$(kubectl get secret --namespace "$APP_NAMESPACE" "$RELEASE_NAME" -o jsonpath="{.data.mysql-root-password}" 2>/dev/null | base64 -d || echo "vault-managed-root")
+      EXISTING_APP_PWD=$(kubectl get secret --namespace "$APP_NAMESPACE" "$RELEASE_NAME" -o jsonpath="{.data.mysql-password}" 2>/dev/null | base64 -d || echo "vault-managed-user")
       helm upgrade --install "$RELEASE_NAME" "$MYSQL_CHART" \
         --namespace "$APP_NAMESPACE" \
         --version "$MYSQL_CHART_VERSION" \
-        --values "$VALUES_FILE"
+        --values "$VALUES_FILE" \
+        --set auth.rootPassword="$EXISTING_ROOT_PWD" \
+        --set auth.password="$EXISTING_APP_PWD"
 
