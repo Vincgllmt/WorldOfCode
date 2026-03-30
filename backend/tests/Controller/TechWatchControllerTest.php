@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Tests\Service;
+namespace App\Tests\Controller;
 
 use App\Entity\TechGroup;
 use App\Entity\TechWatchSource;
 use App\Entity\User;
 use App\Enum\UserRole;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -80,16 +81,10 @@ class TechWatchControllerTest extends WebTestCase
 
     private function authenticate(string $username, string $password): string
     {
-        $this->client->request('POST', '/api/authenticate', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode([
-            'username' => $username,
-            'password' => $password,
-        ]));
+        $user = $this->em->getRepository(User::class)->findOneBy(['username' => $username]);
+        $jwtManager = static::getContainer()->get(JWTTokenManagerInterface::class);
 
-        $data = json_decode($this->client->getResponse()->getContent(), true);
-
-        return $data['token'];
+        return $jwtManager->create($user);
     }
 
     private function createGroup(string $name): TechGroup
@@ -447,6 +442,7 @@ class TechWatchControllerTest extends WebTestCase
 
         $this->requestAsUser('GET', '/api/group/' . $group->getId() . '/tech-watch');
 
+        $this->assertResponseIsSuccessful();
         $data = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertEquals(1, $data['page']);
         $this->assertEquals(20, $data['limit']);
@@ -462,6 +458,7 @@ class TechWatchControllerTest extends WebTestCase
 
         $this->requestAsUser('GET', '/api/group/' . $group->getId() . '/tech-watch?page=2&limit=5');
 
+        $this->assertResponseIsSuccessful();
         $data = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertEquals(2, $data['page']);
         $this->assertEquals(5, $data['limit']);
@@ -477,6 +474,7 @@ class TechWatchControllerTest extends WebTestCase
 
         $this->requestAsUser('GET', '/api/group/' . $group->getId() . '/tech-watch?limit=100');
 
+        $this->assertResponseIsSuccessful();
         $data = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertEquals(50, $data['limit']);
     }

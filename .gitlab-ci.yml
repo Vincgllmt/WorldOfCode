@@ -144,7 +144,7 @@ lint:frontend-backoffice:
 # ===================================
 coverage:backend:
   stage: test
-  image: php:8.2-cli # Écrase l'image K8s globale
+  image: php:8.4-cli # Écrase l'image K8s globale
   cache:
     key:
       files:
@@ -152,7 +152,7 @@ coverage:backend:
     paths:
       - backend/vendor/
   before_script: # Écrase le before_script K8s global
-    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev
+    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev bc
     - docker-php-ext-install zip pdo pdo_mysql pdo_sqlite
     # Installer Xdebug pour le coverage
     - pecl install xdebug
@@ -161,6 +161,9 @@ coverage:backend:
     - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - cd backend
     - composer install --no-interaction --prefer-dist --optimize-autoloader
+    # Générer les clés JWT pour les tests (via la commande Lexik JWT pour garantir le bon format)
+    - mkdir -p config/jwt
+    - php bin/console lexik:jwt:generate-keypair --overwrite --env=test
   script:
     - echo "🗄️ Setting up test database..."
     # Créer la base de données de test
@@ -186,8 +189,19 @@ coverage:backend:
         fi
       fi
 
-    # Si c'est juste des warnings ou des notices, on accepte
-    - echo "✅ Coverage Backend OK (warnings/notices acceptés)"
+    # Vérifier le seuil de coverage (minimum 90%)
+    - |
+      COVERAGE=$(grep -oP '^\s*Lines:\s*\K[\d.]+' coverage-output.txt | head -1)
+      if [ -z "$COVERAGE" ]; then
+        echo "⚠️  Impossible d'extraire le pourcentage de coverage"
+        exit 1
+      fi
+      echo "📊 Coverage Lines: ${COVERAGE}%"
+      if [ "$(echo "$COVERAGE < 90" | bc -l)" -eq 1 ]; then
+        echo "❌ Coverage insuffisant: ${COVERAGE}% < 90% requis"
+        exit 1
+      fi
+      echo "✅ Coverage Backend OK: ${COVERAGE}%"
   coverage: '/^\s*Lines:\s*\d+\.\d+\%/'
   artifacts:
     reports:
@@ -198,7 +212,6 @@ coverage:backend:
       - backend/coverage-output.txt
     expire_in: 1 week
   rules:
-    - when: never # refacto des TU avant
-    #- if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    #- if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
   allow_failure: false
