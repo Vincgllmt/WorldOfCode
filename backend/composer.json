@@ -75,7 +75,7 @@
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
-        "test": [
+        "tests": [
             "php bin/console doctrine:database:drop --force --env=test",
             "php bin/console doctrine:database:create --env=test",
             "php bin/console doctrine:schema:create --env=test",

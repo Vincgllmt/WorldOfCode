@@ -16,7 +16,9 @@ RUN apt-get update && \
     libsqlite3-dev \
     cron \
     && docker-php-ext-install intl pdo pdo_mysql pdo_sqlite zip \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov
 
 # Vérifier la version de PHP installée
 RUN php -v
