@@ -94,4 +94,41 @@ class UserRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+    ####
+    ##
+    ####
+    public function countSince(\DateTime $since): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->where('u.creationDate >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+    ####
+    ##
+    ####
+    /**
+     * Retourne le nombre de nouveaux utilisateurs par jour depuis $since.
+     * @return array<string, int>  clé = 'Y-m-d', valeur = count
+     */
+    public function countByDay(\DateTime $since): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = '
+            SELECT DATE(creation_date) AS day, COUNT(*) AS cnt
+            FROM user
+            WHERE creation_date >= :since
+            GROUP BY DATE(creation_date)
+            ORDER BY day ASC
+        ';
+        $rows = $conn->executeQuery($sql, ['since' => $since->format('Y-m-d H:i:s')])->fetchAllAssociative();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['day']] = (int) $row['cnt'];
+        }
+        return $result;
+    }
 }

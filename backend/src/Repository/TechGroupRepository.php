@@ -63,4 +63,37 @@ class TechGroupRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+    ####
+    ##
+    ####
+    /**
+     * @return \App\Dto\AdminTopGroupDto[]
+     */
+    public function findTopByActivity(int $limit = 5): array
+    {
+        $since = new \DateTime('-30 days');
+
+        $results = $this->createQueryBuilder('g')
+            ->select(
+                'g.id',
+                'g.name',
+                'COUNT(DISTINCT u.id) AS memberCount',
+                'COUNT(DISTINCT p.id) AS postCountThisMonth'
+            )
+            ->leftJoin('g.users', 'u')
+            ->leftJoin('g.posts', 'p', 'WITH', 'p.createdAt >= :since')
+            ->setParameter('since', $since)
+            ->groupBy('g.id')
+            ->orderBy('postCountThisMonth', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn($r) => new \App\Dto\AdminTopGroupDto(
+            id: $r['id'],
+            name: $r['name'],
+            memberCount: (int) $r['memberCount'],
+            postCountThisMonth: (int) $r['postCountThisMonth'],
+        ), $results);
+    }
 }

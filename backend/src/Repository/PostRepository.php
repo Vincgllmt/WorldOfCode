@@ -148,6 +148,43 @@ class PostRepository extends ServiceEntityRepository
         ];
     }
 
+    public function countSince(\DateTime $since): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.createdAt >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+    ####
+    ##
+    ####
+    /**
+     * Retourne le nombre de nouveaux posts par jour depuis $since.
+     * @return array<string, int>  clé = 'Y-m-d', valeur = count
+     */
+    public function countByDay(\DateTime $since): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = '
+            SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+            FROM post
+            WHERE created_at >= :since
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        ';
+        $rows = $conn->executeQuery($sql, ['since' => $since->format('Y-m-d H:i:s')])->fetchAllAssociative();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['day']] = (int) $row['cnt'];
+        }
+        return $result;
+    }
+    ####
+    ##
+    ####
     private function createBaseQueryBuilder(): QueryBuilder
     {
         return $this->createQueryBuilder('p')
