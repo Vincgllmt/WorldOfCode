@@ -21,6 +21,14 @@ class ReportRepository extends ServiceEntityRepository
         }
     }
 
+    public function remove(Report $report, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($report);
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
     /**
      * Compte le nombre total de reports sur les posts d'un utilisateur.
      */
