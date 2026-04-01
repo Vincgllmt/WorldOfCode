@@ -66,7 +66,7 @@ export default function AdminGroupPanel() {
   }
 
   return (
-    <div className="space-y-8 bg-red-50 p-6 rounded-lg shadow-md mb-5">
+    <div className="space-y-6 bg-card p-6 rounded-xl shadow-sm border mb-5">
       <h2 className="text-xl font-bold">Gestion des Groupes</h2>
 
       {/* ➕ Création */}

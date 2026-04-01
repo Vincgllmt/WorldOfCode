@@ -76,7 +76,7 @@ export default function AdminPostPanel() {
   if (isLoading) return <p className="text-muted-foreground">Chargement...</p>
 
   return (
-    <div className="space-y-6 p-6 rounded-xl shadow-sm border bg-green-50 mb-5">
+    <div className="space-y-6 p-6 rounded-xl shadow-sm border bg-card mb-5">
       <h2 className="text-xl font-bold">Gestion des posts</h2>
 
       {/* Filtres */}

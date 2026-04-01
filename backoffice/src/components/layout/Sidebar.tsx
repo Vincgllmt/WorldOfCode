@@ -21,16 +21,19 @@ import {
 import { Button } from "@/components/ui/button"
 import clsx from "clsx"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
-import { LogOut } from "lucide-react"
+import { LogOut, UserCircle } from "lucide-react"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import { useState, useEffect } from "react"
+import { useAdminStats } from "@/hooks/useAdminStats"
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const { state, toggleSidebar } = useSidebar()
-  const { logout } = useAdminAuth()
+  const { user, logout } = useAdminAuth()
+  const { stats } = useAdminStats()
+  const pendingCount = stats?.pendingReportsCount ?? 0
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -76,11 +79,24 @@ export function AdminSidebar() {
               return (
                 <SidebarMenuItem key={href}>
                   <SidebarMenuButton asChild isActive={active}>
-                    <Link href={href} className="gap-2">
-                      <Icon className="h-5 w-5 shrink-0" />
-                      <span className={clsx("truncate", state === "collapsed" && "hidden")}>
+                    <Link href={href} className="gap-2 flex items-center w-full">
+                      <div className="relative">
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {href === "/reports" && pendingCount > 0 && state === "collapsed" && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+                        )}
+                      </div>
+                      <span className={clsx("truncate flex-1", state === "collapsed" && "hidden")}>
                         {label}
                       </span>
+                      {href === "/reports" && pendingCount > 0 && (
+                        <span className={clsx(
+                          "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground",
+                          state === "collapsed" && "hidden"
+                        )}>
+                          {pendingCount > 99 ? "99+" : pendingCount}
+                        </span>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -91,6 +107,21 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t">
+        {/* Identité admin */}
+        <div className={clsx(
+          "flex items-center gap-2 px-2 py-2",
+          state === "collapsed" && "justify-center"
+        )}>
+          <UserCircle className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <span className={clsx(
+            "truncate text-sm font-medium",
+            state === "collapsed" && "hidden"
+          )}>
+            {user?.username}
+          </span>
+        </div>
+
+        {/* Sélecteur de thème */}
         <div className={clsx(
           "flex items-center px-2 py-1",
           state === "collapsed" ? "justify-center" : "justify-start"
@@ -100,6 +131,8 @@ export function AdminSidebar() {
             Thème
           </span>
         </div>
+
+        {/* Bouton Déconnexion */}
         <Button
           variant="ghost"
           className={clsx("w-full justify-start gap-2", state === "collapsed" && "justify-center")}
