@@ -185,6 +185,39 @@ class PostRepository extends ServiceEntityRepository
     ####
     ##
     ####
+    ####
+    ##
+    ####
+    /**
+     * Retourne tous les posts avec leurs compteurs agrégés (likes, commentaires, reports).
+     * @return array<int, array{id:int, content:?string, createdAt:\DateTime, authorUsername:string, techGroupName:?string, likesCount:int, commentsCount:int, reportsCount:int}>
+     */
+    public function findAllWithCounts(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select(
+                'p.id',
+                'p.content',
+                'p.createdAt',
+                'u.username AS authorUsername',
+                'g.name AS techGroupName',
+                'COUNT(DISTINCT l.id) AS likesCount',
+                'COUNT(DISTINCT c.id) AS commentsCount',
+                'COUNT(DISTINCT r.id) AS reportsCount'
+            )
+            ->innerJoin('p.author', 'u')
+            ->leftJoin('p.techGroup', 'g')
+            ->leftJoin('p.likes', 'l')
+            ->leftJoin('p.comments', 'c')
+            ->leftJoin('App\Entity\Report', 'r', 'WITH', 'r.post = p')
+            ->groupBy('p.id')
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+    ####
+    ##
+    ####
     private function createBaseQueryBuilder(): QueryBuilder
     {
         return $this->createQueryBuilder('p')

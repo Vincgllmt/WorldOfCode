@@ -2,196 +2,234 @@
 
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { MoreVertical } from 'lucide-react'
 
-import { useGroups } from '@/hooks/useGroups'
-import { usePosts, useUpdatePost, useDeletePost } from '@/hooks/usePosts'
-import { Post } from '@/interfaces/post'
+import { useAdminPosts, useAdminDeletePost } from '@/hooks/useAdminPosts'
 
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { TableCell, TableHead, TableRow } from '@/components/ui/table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { PaginatedTable } from '../shared/PaginationTable'
 
-export default function AdminPostPanel() {
-  const { posts, isLoading } = usePosts()
-  const { groups } = useGroups()
-  const updatePost = useUpdatePost()
-  const deletePost = useDeletePost()
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState<{ content: string; groupId: number }>({
-    content: '',
-    groupId: 0,
+type SortKey = 'likesCount' | 'commentsCount' | 'reportsCount' | 'createdAt' | null
+
+// ─── Composant principal ──────────────────────────────────────────────────────
+
+export default function AdminPostPanel() {
+  const { posts, isLoading } = useAdminPosts()
+  const deletePost = useAdminDeletePost()
+
+  // Filtres
+  const [search, setSearch] = useState('')
+  const [minReports, setMinReports] = useState<number>(0)
+
+  // Tri
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  // AlertDialog suppression (Story 5.2)
+  const [postToDelete, setPostToDelete] = useState<{
+    id: number
+    excerpt: string | null
+  } | null>(null)
+
+  // ─── Tri ──────────────────────────────────────────────────────────────────
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
+
+  const sortIndicator = (key: SortKey) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+
+  // ─── Filtrage + tri ────────────────────────────────────────────────────────
+
+  const filteredPosts = posts.filter((post) => {
+    const matchesSearch =
+      !search ||
+      (post.excerpt ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      post.authorUsername.toLowerCase().includes(search.toLowerCase())
+
+    const matchesMinReports = post.reportsCount >= minReports
+
+    return matchesSearch && matchesMinReports
   })
 
-  const [filterGroup, setFilterGroup] = useState<number | 'ALL'>('ALL')
-  const [searchContent, setSearchContent] = useState('')
-
-  const startEditing = (post: Post) => {
-    setEditingId(post.id)
-    setForm({ content: post.content, groupId: post.techGroupId })
-  }
-
-  const handleUpdate = () => {
-    if (!editingId) return
-    updatePost.mutate(
-      { id: editingId, data: form },
-      {
-        onSuccess: () => {
-          toast.success('Post mis à jour ✅')
-          setEditingId(null)
-        },
-        onError: () => toast.error('Erreur lors de la mise à jour ❌'),
-      }
-    )
-  }
-
-  const handleDelete = (id: number) => {
-    deletePost.mutate(id, {
-      onSuccess: () => toast.success('Post supprimé 🗑️'),
-      onError: () => toast.error('Erreur lors de la suppression ❌'),
-    })
-  }
-
-  const filteredPosts = posts?.filter((post) => {
-    const matchesGroup = filterGroup === 'ALL' || post.techGroupId === filterGroup
-    const matchesSearch = post.content.toLowerCase().includes(searchContent.toLowerCase())
-    return matchesGroup && matchesSearch
-  }) || []
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (!sortKey) return 0
+    const valA = a[sortKey]
+    const valB = b[sortKey]
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return sortDir === 'asc' ? valA - valB : valB - valA
+    }
+    return sortDir === 'asc'
+      ? String(valA).localeCompare(String(valB))
+      : String(valB).localeCompare(String(valA))
+  })
 
   if (isLoading) return <p className="text-muted-foreground">Chargement...</p>
 
   return (
-    <div className="space-y-6 p-6 rounded-xl shadow-sm border bg-card mb-5">
-      <h2 className="text-xl font-bold">Gestion des posts</h2>
+    <>
+      <div className="space-y-6 p-6 rounded-xl shadow-sm border bg-card mb-5">
+        <h2 className="text-xl font-bold">Gestion des posts</h2>
 
-      {/* Filtres */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full">
+        {/* Filtres */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Input
-            placeholder="Rechercher un post..."
-            value={searchContent}
-            onChange={(e) => setSearchContent(e.target.value)}
+            placeholder="Rechercher par contenu ou auteur..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="sm:max-w-sm w-full"
           />
-          <Select
-            value={String(filterGroup)}
-            onValueChange={(val) => setFilterGroup(val === 'ALL' ? 'ALL' : parseInt(val))}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrer par groupe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tous les groupes</SelectItem>
-              {groups?.map((group) => (
-                <SelectItem key={group.id} value={String(group.id)}>
-                  {group.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Reports min.</label>
+            <input
+              type="number"
+              min={0}
+              value={minReports}
+              onChange={(e) => setMinReports(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-16 border rounded-md px-2 py-2 text-sm bg-background text-center"
+            />
+          </div>
+          {(search || minReports > 0) && (
+            <button
+              onClick={() => { setSearch(''); setMinReports(0) }}
+              className="text-sm text-muted-foreground underline hover:text-foreground"
+            >
+              Réinitialiser
+            </button>
+          )}
         </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setSearchContent('')
-            setFilterGroup('ALL')
-          }}
-        >
-          Réinitialiser
-        </Button>
+
+        <PaginatedTable
+          data={sortedPosts}
+          itemsPerPage={10}
+          headers={
+            <>
+              <TableHead>Auteur</TableHead>
+              <TableHead>Extrait</TableHead>
+              <TableHead>Groupe</TableHead>
+              <TableHead
+                className="cursor-pointer select-none text-right"
+                onClick={() => toggleSort('likesCount')}
+              >
+                Likes{sortIndicator('likesCount')}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none text-right"
+                onClick={() => toggleSort('commentsCount')}
+              >
+                Commentaires{sortIndicator('commentsCount')}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none text-right"
+                onClick={() => toggleSort('reportsCount')}
+              >
+                Reports{sortIndicator('reportsCount')}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => toggleSort('createdAt')}
+              >
+                Date{sortIndicator('createdAt')}
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </>
+          }
+          renderRow={(post) => (
+            <TableRow key={post.id}>
+              <TableCell className="font-medium">{post.authorUsername}</TableCell>
+              <TableCell className="max-w-[200px]">
+                <p className="text-sm truncate">{post.excerpt ?? '(sans contenu)'}</p>
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {post.techGroupName ?? '—'}
+              </TableCell>
+              <TableCell className="text-right text-sm">{post.likesCount}</TableCell>
+              <TableCell className="text-right text-sm">{post.commentsCount}</TableCell>
+              <TableCell className="text-right text-sm">
+                {post.reportsCount > 0 ? (
+                  <span className="font-medium text-orange-600">{post.reportsCount}</span>
+                ) : (
+                  <span>0</span>
+                )}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                {new Date(post.createdAt).toLocaleDateString('fr-FR')}
+              </TableCell>
+              <TableCell className="text-right">
+                <button
+                  onClick={() => setPostToDelete({ id: post.id, excerpt: post.excerpt })}
+                  className="text-destructive hover:text-destructive/80 text-sm"
+                >
+                  Supprimer
+                </button>
+              </TableCell>
+            </TableRow>
+          )}
+        />
       </div>
 
-      <PaginatedTable
-        data={filteredPosts}
-        itemsPerPage={5}
-        headers={
-          <>
-            <TableHead>ID</TableHead>
-            <TableHead>Contenu</TableHead>
-            <TableHead>Groupe</TableHead>
-            <TableHead>Auteur</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </>
-        }
-        renderRow={(post) => (
-          <TableRow key={post.id}>
-            <TableCell>{post.id}</TableCell>
-            <TableCell className="max-w-[200px] whitespace-normal break-words">
-              {editingId === post.id ? (
-                <Input
-                  value={form.content}
-                  onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
-                />
-              ) : (
-                post.content
-              )}
-            </TableCell>
-            <TableCell>
-              {editingId === post.id ? (
-                <Select
-                  value={String(form.groupId)}
-                  onValueChange={(value) => setForm((prev) => ({ ...prev, groupId: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Groupe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups?.map((group) => (
-                      <SelectItem key={group.id} value={String(group.id)}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                groups?.find((g) => g.id === post.techGroupId)?.name || '—'
-              )}
-            </TableCell>
-            <TableCell>{post.authorUsername || '—'}</TableCell>
-            <TableCell className="text-right">
-              {editingId === post.id ? (
-                <Button size="sm" onClick={handleUpdate}>
-                  Sauvegarder
-                </Button>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Options">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => startEditing(post)}>
-                      Modifier
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(post.id)}
-                      className="text-destructive"
-                    >
-                      Supprimer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </TableCell>
-          </TableRow>
-        )}
-      />
-    </div>
+      {/* AlertDialog suppression (Story 5.2) */}
+      <AlertDialog
+        open={postToDelete !== null}
+        onOpenChange={(open) => { if (!open) setPostToDelete(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce post ?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                {postToDelete?.excerpt && (
+                  <span className="block italic text-muted-foreground mb-2">
+                    &ldquo;{postToDelete.excerpt}&rdquo;
+                  </span>
+                )}
+                <span>
+                  Cette action est <strong>irréversible</strong>. Le post et ses commentaires seront définitivement supprimés.
+                </span>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPostToDelete(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (!postToDelete) return
+                deletePost.mutate(postToDelete.id, {
+                  onSuccess: () => {
+                    setPostToDelete(null)
+                    toast.success('Post supprimé')
+                  },
+                  onError: () => {
+                    setPostToDelete(null)
+                    toast.error('Erreur lors de la suppression')
+                  },
+                })
+              }}
+            >
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
