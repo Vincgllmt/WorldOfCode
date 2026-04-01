@@ -131,4 +131,31 @@ class UserRepository extends ServiceEntityRepository
         }
         return $result;
     }
+    ####
+    ##
+    ####
+    /**
+     * Retourne tous les utilisateurs avec leurs compteurs agrégés.
+     * @return array<int, array{id: int, username: string, email: string, role: mixed, creationDate: \DateTime, avatarUrl: ?string, postCount: int, followerCount: int}>
+     */
+    public function findAllWithCounts(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->select(
+                'u.id',
+                'u.username',
+                'u.email',
+                'u.role',
+                'u.creationDate',
+                'u.avatarUrl',
+                'COUNT(DISTINCT p.id) AS postCount',
+                'COUNT(DISTINCT f.id) AS followerCount'
+            )
+            ->leftJoin('u.posts', 'p')
+            ->leftJoin('App\Entity\Follow', 'f', 'WITH', 'f.followed = u')
+            ->groupBy('u.id')
+            ->orderBy('u.creationDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

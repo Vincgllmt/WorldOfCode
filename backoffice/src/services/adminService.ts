@@ -2,6 +2,8 @@ import { getCookie } from 'cookies-next'
 import { AdminStats } from '@/interfaces/adminStats'
 import { AdminActivityPoint } from '@/interfaces/adminActivity'
 import { AdminRecentEvent } from '@/interfaces/adminRecentEvent'
+import { AdminUserListItem } from '@/interfaces/adminUser'
+import { AdminUserDetail } from '@/interfaces/adminUserDetail'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -38,5 +40,29 @@ export const getAdminRecentActivity = async (): Promise<AdminRecentEvent[]> => {
     },
   })
   if (!res.ok) throw new Error("Erreur lors du chargement de l'activité récente")
+  return res.json()
+}
+
+export const getAllAdminUsers = async (): Promise<AdminUserListItem[]> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/users`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('Erreur lors du chargement des utilisateurs')
+  return res.json()
+}
+
+export const getAdminUserDetail = async (id: number): Promise<AdminUserDetail> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/users/${id}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('Erreur lors du chargement du profil utilisateur')
   return res.json()
 }

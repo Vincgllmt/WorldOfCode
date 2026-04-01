@@ -20,4 +20,19 @@ class ReportRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+    /**
+     * Compte le nombre total de reports sur les posts d'un utilisateur.
+     */
+    public function countByAuthorId(int $userId): int
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = '
+            SELECT COUNT(r.id)
+            FROM report r
+            INNER JOIN post p ON r.post_id = p.id
+            WHERE p.author_id = :userId
+        ';
+        return (int) $conn->executeQuery($sql, ['userId' => $userId])->fetchOne();
+    }
 }
