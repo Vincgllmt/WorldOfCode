@@ -5,6 +5,7 @@ import { AdminRecentEvent } from '@/interfaces/adminRecentEvent'
 import { AdminUserListItem } from '@/interfaces/adminUser'
 import { AdminUserDetail } from '@/interfaces/adminUserDetail'
 import { AdminPostListItem } from '@/interfaces/adminPost'
+import { AdminGroupListItem } from '@/interfaces/adminGroup'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -77,5 +78,17 @@ export const getAllAdminPosts = async (): Promise<AdminPostListItem[]> => {
     },
   })
   if (!res.ok) throw new Error('Erreur lors du chargement des posts')
+  return res.json()
+}
+
+export const getAllAdminGroups = async (): Promise<AdminGroupListItem[]> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/groups`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('Erreur lors du chargement des groupes')
   return res.json()
 }
