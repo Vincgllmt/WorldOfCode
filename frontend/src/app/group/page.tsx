@@ -3,16 +3,19 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useGroups } from '@/hooks/useGroups'
+import { useAuth } from '@/hooks/useAuth'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import GroupJoinToggle from '@/components/group/GroupJoinToggle'
+import GroupSuggestionForm from '@/components/groups/GroupSuggestionForm'
 import { Badge } from '@/components/ui/badge'
 import { Search, Users, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function GroupsPage() {
   const { groups, isLoading, error } = useGroups()
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
 
   const filteredGroups = useMemo(() => {
@@ -51,14 +54,17 @@ export default function GroupsPage() {
         <p className="text-sm text-muted-foreground">
           Rejoignez des communautés et restez informé de leurs actualités.
         </p>
-        <div className="relative sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Rechercher un groupe..."
-            className="pl-9"
-          />
+        <div className="flex items-center gap-3">
+          {user && <GroupSuggestionForm />}
+          <div className="relative sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Rechercher un groupe..."
+              className="pl-9"
+            />
+          </div>
         </div>
       </div>
 
