@@ -23,20 +23,40 @@ import clsx from "clsx"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
 import { LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
+import Image from "next/image"
+import { useTheme } from "next-themes"
+import { useState, useEffect } from "react"
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const { state, toggleSidebar } = useSidebar()
   const { logout } = useAdminAuth()
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const isDark = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
+  const logoSrc = mounted ? (isDark ? "/logo_white.png" : "/logo2.png") : "/logo2.png"
 
   return (
     <Sidebar collapsible="icon">
       {/* "collapsible='icon'" => réduit à une rail d’icônes */}
       <SidebarHeader className="border-b">
         <div className="flex items-center justify-between px-2 py-2">
-          <span className={clsx("font-bold text-lg", state === "collapsed" && "hidden")}>
-            Backoffice
-          </span>
+          <div className={clsx("flex items-center", state === "collapsed" && "hidden")}>
+            {mounted ? (
+              <Image
+                src={logoSrc}
+                alt="World of Code"
+                width={140}
+                height={44}
+                className="h-9 w-auto max-w-[140px]"
+                priority
+              />
+            ) : (
+              <div className="h-9 w-[140px]" />
+            )}
+          </div>
           <SidebarTrigger
             className="ml-auto"
             onClick={toggleSidebar}
