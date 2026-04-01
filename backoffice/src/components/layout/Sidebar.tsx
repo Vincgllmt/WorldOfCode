@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import clsx from "clsx"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
 import { LogOut } from "lucide-react"
+import { ThemeToggle } from "@/components/layout/ThemeToggle"
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -70,6 +71,15 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t">
+        <div className={clsx(
+          "flex items-center px-2 py-1",
+          state === "collapsed" ? "justify-center" : "justify-start"
+        )}>
+          <ThemeToggle />
+          <span className={clsx("text-sm ml-2", state === "collapsed" && "hidden")}>
+            Thème
+          </span>
+        </div>
         <Button
           variant="ghost"
           className={clsx("w-full justify-start gap-2", state === "collapsed" && "justify-center")}

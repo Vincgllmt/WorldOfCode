@@ -9,6 +9,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { usePathname } from "next/navigation"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar, AdminSidebarInset } from "@/components/layout/Sidebar"
+import { ThemeProvider } from "@/components/providers/ThemeProvider"
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] })
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] })
@@ -23,10 +24,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   )
 
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} bg-gray-50 text-black antialiased`}>
-        <QueryClientProvider client={queryClient}>
-          <AdminAuthProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <AdminAuthProvider>
             {showSidebar ? (
               <SidebarProvider defaultOpen>
                 <div className="flex min-h-screen w-full">
@@ -42,8 +44,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </main>
             )}
             <Toaster position="top-right" />
-          </AdminAuthProvider>
-        </QueryClientProvider>
+            </AdminAuthProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
