@@ -6,4 +6,5 @@ export interface AdminGroupListItem {
   postCount: number
   creatorUsername: string | null
   createdAt: string  // ISO 8601
+  rssFeedUrl: string | null
 }

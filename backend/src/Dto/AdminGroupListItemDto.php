@@ -27,5 +27,8 @@ class AdminGroupListItemDto
 
         #[OA\Property(description: 'Date de création ISO 8601', example: '2026-01-10T09:00:00+00:00')]
         public readonly string $createdAt,
+
+        #[OA\Property(description: 'URL du flux RSS lié (TechWatchSource), ou null', nullable: true)]
+        public readonly ?string $rssFeedUrl = null,
     ) {}
 }
