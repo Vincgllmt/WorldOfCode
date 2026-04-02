@@ -223,7 +223,7 @@ function TopGroupsCard({
 
 // ─── Fil d'activité récente ──────────────────────────────────────────────────
 
-const EVENT_CONFIG = {
+const EVENT_CONFIG: Record<string, { icon: React.ElementType; label: (e: AdminRecentEvent) => string }> = {
   new_user: {
     icon: Users,
     label: (e: AdminRecentEvent) => `Nouvel utilisateur : ${e.actor}`,
@@ -236,7 +236,9 @@ const EVENT_CONFIG = {
     icon: Flag,
     label: (e: AdminRecentEvent) => `Report signalé par ${e.actor}`,
   },
-} as const
+}
+
+const EVENT_CONFIG_FALLBACK = { icon: Flag, label: (e: AdminRecentEvent) => `Événement : ${e.actor}` }
 
 function RecentActivityFeed() {
   const { events, isLoading } = useAdminRecentActivity()
@@ -262,13 +264,13 @@ function RecentActivityFeed() {
             Aucune activité récente
           </p>
         ) : (
-          events.map((event, index) => {
-            const config = EVENT_CONFIG[event.type]
+          events.map((event) => {
+            const config = EVENT_CONFIG[event.type] ?? EVENT_CONFIG_FALLBACK
             const Icon = config.icon
 
             return (
               <div
-                key={index}
+                key={`${event.type}-${event.actor}-${event.createdAt}`}
                 className="flex items-start gap-3 py-2 border-b last:border-0"
               >
                 <Icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />

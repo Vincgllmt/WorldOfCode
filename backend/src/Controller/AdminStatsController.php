@@ -128,7 +128,7 @@ final class AdminStatsController extends AbstractController
 
             $events[] = new AdminRecentEventDto(
                 type: 'new_post',
-                actor: $post->getAuthor()->getUsername(),
+                actor: $post->getAuthor()?->getUsername() ?? '[supprimé]',
                 excerpt: $excerpt ?: null,
                 createdAt: $post->getCreatedAt()->format(\DateTimeInterface::ATOM),
             );
@@ -139,14 +139,14 @@ final class AdminStatsController extends AbstractController
         foreach ($reports as $report) {
             $events[] = new AdminRecentEventDto(
                 type: 'new_report',
-                actor: $report->getUser()->getUsername(),
+                actor: $report->getUser()?->getUsername() ?? '[supprimé]',
                 excerpt: null,
                 createdAt: $report->getCreatedAt()->format(\DateTimeInterface::ATOM),
             );
         }
 
         // Tri par date décroissante + slice 10
-        usort($events, fn($a, $b) => strcmp($b->createdAt, $a->createdAt));
+        usort($events, fn($a, $b) => new \DateTimeImmutable($b->createdAt) <=> new \DateTimeImmutable($a->createdAt));
         $events = array_slice($events, 0, 10);
 
         return $this->json($events);
