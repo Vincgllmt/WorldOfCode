@@ -14,7 +14,7 @@ import {
 const themes = [
   { value: 'light',           label: 'Clair',          colors: ['#ffffff', '#16a34a', '#dcfce7'] },
   { value: 'dark',            label: 'Sombre Vert',    colors: ['#111827', '#4ade80', '#1f2937'] },
-  { value: 'cyberpunk-dark',  label: 'Cyberpunk Dark', colors: ['#0a0a0f', '#06b6d4', '#a855f7'] },
+  { value: 'cyberpunk-dark',  label: 'Cyberpunk Dark', colors: ['#08080f', '#06b6d4', '#a855f7'] },
   { value: 'cyberpunk-light', label: 'Cyberpunk Light',colors: ['#f0f9ff', '#0891b2', '#7c3aed'] },
 ]
 
