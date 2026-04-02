@@ -110,20 +110,22 @@ final class AdminReportController extends AbstractController
         $data = json_decode($request->getContent(), true) ?? [];
         $resolutionNote = $data['resolutionNote'] ?? null;
 
-        $post = $report->getPost();
-        if ($post) {
-            $this->postRepo->remove($post, flush: true);
-        }
+        $em = $this->reportRepo->getEntityManager();
+        $em->wrapInTransaction(function () use ($report, $currentUser, $resolutionNote) {
+            $post = $report->getPost();
+            if ($post) {
+                $this->postRepo->remove($post, flush: true);
+                $this->reportRepo->getEntityManager()->refresh($report);
+            }
 
-        $this->reportRepo->getEntityManager()->refresh($report);
-
-        $report->setStatus(ReportStatus::RESOLVED);
-        $report->setResolvedBy($currentUser);
-        $report->setResolvedAt(new \DateTime());
-        if ($resolutionNote) {
-            $report->setResolutionNote($resolutionNote);
-        }
-        $this->reportRepo->save($report);
+            $report->setStatus(ReportStatus::RESOLVED);
+            $report->setResolvedBy($currentUser);
+            $report->setResolvedAt(new \DateTime());
+            if ($resolutionNote) {
+                $report->setResolutionNote($resolutionNote);
+            }
+            $this->reportRepo->save($report);
+        });
 
         return $this->json($this->mapper->toDto($report));
     }
