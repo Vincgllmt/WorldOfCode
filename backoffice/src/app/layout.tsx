@@ -39,9 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
               </SidebarProvider>
             ) : (
-              <main className="min-h-screen">
-                <div className="container mx-auto p-6">{children}</div>
-              </main>
+              <main>{children}</main>
             )}
             <Toaster position="top-right" />
             </AdminAuthProvider>
