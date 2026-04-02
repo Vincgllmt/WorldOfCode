@@ -4,7 +4,7 @@ import { createContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCookie, deleteCookie } from 'cookies-next'
 import toast from 'react-hot-toast'
-import { AdminAuthContextType } from '@/interfaces/AdminAuthContext'
+import { AdminAuthContextType, TwoFAPendingState } from '@/interfaces/AdminAuthContext'
 import { AuthenticatedUser, LoginCredentials } from '@/interfaces/Authentification'
 import * as authService from '@/services/authService'
 
@@ -13,6 +13,7 @@ export const AdminAuthContext = createContext<AdminAuthContextType | undefined>(
 export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [twoFAPending, setTwoFAPending] = useState<TwoFAPendingState | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -34,18 +35,34 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      const authenticatedUser = await authService.login(credentials)
+      const response = await authService.login(credentials)
+      setTwoFAPending({ tempToken: response.tempToken, maskedEmail: response.maskedEmail })
+    } catch (error) {
+      toast.error('Identifiants invalides')
+      console.error(error)
+    }
+  }
+
+  const verify2FA = async (code: string) => {
+    if (!twoFAPending) return
+    try {
+      const authenticatedUser = await authService.verify2FA({
+        tempToken: twoFAPending.tempToken,
+        code,
+      })
 
       if (authenticatedUser.role !== 'ROLE_ADMIN') {
-        toast.error('Vous n’avez pas accès à l’interface admin')
+        toast.error("Vous n'avez pas accès à l'interface admin")
+        setTwoFAPending(null)
         return router.push('/unauthorized')
       }
 
       setUser(authenticatedUser)
+      setTwoFAPending(null)
       toast.success('Connexion admin réussie ✅')
       router.push('/')
     } catch (error) {
-      toast.error('Échec de la connexion ❌')
+      toast.error('Code invalide ou expiré ❌')
       console.error(error)
     }
   }
@@ -53,13 +70,14 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout()
     setUser(null)
+    setTwoFAPending(null)
     deleteCookie('token')
     toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }
 
   return (
-    <AdminAuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AdminAuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, twoFAPending, login, verify2FA, logout }}>
       {children}
     </AdminAuthContext.Provider>
   )

@@ -17,8 +17,7 @@ final class Version20260402000000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // Supprimer la contrainte unique sur (user_id, post_id) car post_id peut devenir NULL
-        $this->addSql('ALTER TABLE reports DROP INDEX UNIQ_F11FA745A76ED395 IF EXISTS');
-        $this->addSql('ALTER TABLE reports DROP INDEX uniq_f11fa7454b89032c IF EXISTS');
+        $this->addSql('ALTER TABLE reports DROP INDEX UNIQ_F11FA745A76ED3954B89032C');
 
         // Rendre post_id nullable + SET NULL
         $this->addSql('ALTER TABLE reports DROP FOREIGN KEY FK_F11FA7454B89032C');
