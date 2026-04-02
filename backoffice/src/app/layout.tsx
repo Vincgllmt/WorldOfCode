@@ -7,7 +7,6 @@ import { AdminAuthProvider } from "@/contexts/AdminAuthContext"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Outfit, Fira_Code } from "next/font/google"
 import { usePathname } from "next/navigation"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar, AdminSidebarInset } from "@/components/layout/Sidebar"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 
@@ -42,14 +41,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <AdminAuthProvider>
               {showSidebar ? (
-                <SidebarProvider defaultOpen>
-                  <div className="flex min-h-screen w-full">
-                    <AdminSidebar />
-                    <AdminSidebarInset>
-                      <div className="container mx-auto p-6 animate-fade-up">{children}</div>
-                    </AdminSidebarInset>
-                  </div>
-                </SidebarProvider>
+                <div className="flex min-h-screen w-full">
+                  <AdminSidebar />
+                  <AdminSidebarInset>
+                    <div className="container mx-auto p-6 animate-fade-up">{children}</div>
+                  </AdminSidebarInset>
+                </div>
               ) : (
                 <main>{children}</main>
               )}
