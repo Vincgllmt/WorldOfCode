@@ -34,6 +34,7 @@ export function AdminSidebar() {
   const { user, logout } = useAdminAuth()
   const { stats } = useAdminStats()
   const pendingCount = stats?.pendingReportsCount ?? 0
+  const pendingGroupSuggestionsCount = stats?.pendingGroupSuggestionsCount ?? 0
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -83,6 +84,9 @@ export function AdminSidebar() {
                         {href === "/reports" && pendingCount > 0 && isCollapsed && (
                           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
                         )}
+                        {href === "/groups" && pendingGroupSuggestionsCount > 0 && isCollapsed && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+                        )}
                       </div>
                       <span className={clsx("truncate flex-1", isCollapsed && "hidden")}>
                         {label}
@@ -90,6 +94,11 @@ export function AdminSidebar() {
                       {href === "/reports" && pendingCount > 0 && !isCollapsed && (
                         <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive/15 px-1.5 text-[10px] font-bold text-destructive">
                           {pendingCount > 99 ? "99+" : pendingCount}
+                        </span>
+                      )}
+                      {href === "/groups" && pendingGroupSuggestionsCount > 0 && !isCollapsed && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive/15 px-1.5 text-[10px] font-bold text-destructive">
+                          {pendingGroupSuggestionsCount > 99 ? "99+" : pendingGroupSuggestionsCount}
                         </span>
                       )}
                     </Link>

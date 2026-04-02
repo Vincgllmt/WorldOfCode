@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Dto\AdminActivityPointDto;
 use App\Dto\AdminRecentEventDto;
 use App\Dto\AdminStatsResponse;
+use App\Enum\SuggestionStatus;
+use App\Repository\GroupSuggestionRepository;
 use App\Repository\PostRepository;
 use App\Repository\ReportRepository;
 use App\Repository\TechGroupRepository;
@@ -24,6 +26,7 @@ final class AdminStatsController extends AbstractController
         private PostRepository $postRepo,
         private TechGroupRepository $groupRepo,
         private ReportRepository $reportRepo,
+        private GroupSuggestionRepository $groupSuggestionRepo,
     ) {}
 
     #[Route('/stats', name: 'admin_stats', methods: ['GET'])]
@@ -46,6 +49,7 @@ final class AdminStatsController extends AbstractController
             totalPosts: $this->postRepo->count([]),
             totalGroups: $this->groupRepo->count([]),
             pendingReportsCount: $this->reportRepo->count([]),
+            pendingGroupSuggestionsCount: $this->groupSuggestionRepo->count(['status' => SuggestionStatus::PENDING]),
             newUsersThisWeek: $this->userRepo->countSince($oneWeekAgo),
             newPostsThisWeek: $this->postRepo->countSince($oneWeekAgo),
             topGroups: $this->groupRepo->findTopByActivity(5),

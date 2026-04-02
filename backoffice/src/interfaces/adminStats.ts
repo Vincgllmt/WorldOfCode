@@ -10,6 +10,7 @@ export interface AdminStats {
   totalPosts: number
   totalGroups: number
   pendingReportsCount: number
+  pendingGroupSuggestionsCount: number
   newUsersThisWeek: number
   newPostsThisWeek: number
   topGroups: AdminTopGroup[]
