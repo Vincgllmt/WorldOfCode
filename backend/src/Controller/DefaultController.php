@@ -13,17 +13,11 @@ final class DefaultController extends AbstractController
     {
         return new Response('success', 200);
     }
-    ####
-    ##
-    ####
     #[Route('/testNotFound')]
     public function testNotFound(): Response
     {
         return new Response('not found', 404);
     }
-    ####
-    ##
-    ####
     #[Route('/testError')]
     public function testError(): Response
     {

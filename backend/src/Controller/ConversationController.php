@@ -100,9 +100,6 @@ class ConversationController extends AbstractController
 
         return $this->json($this->mapper->toDto($conv), 201);
     }
-    ####
-    ##
-    ####
     #[Route('', name: 'conversation_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Lister les conversations de l’utilisateur courant',

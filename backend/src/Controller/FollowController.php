@@ -23,9 +23,6 @@ class FollowController extends AbstractController
         private NotificationService $notificationService,
     ) {}
 
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'follow_user', methods: ['POST'])]
     #[OA\Post(
         summary: 'Suivre un utilisateur',
@@ -82,9 +79,6 @@ class FollowController extends AbstractController
         return $this->json(['success' => true, 'message' => 'User followed'], 201);
     }
 
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'unfollow_user', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Ne plus suivre un utilisateur',
@@ -121,9 +115,6 @@ class FollowController extends AbstractController
         return $this->json(['success' => true, 'message' => 'User unfollowed']);
     }
 
-    ####
-    ##
-    ####
     #[Route("/{id}/followers", name: "user_followers", methods: ["GET"])]
     #[OA\Get(
         summary: "Liste les followers d’un utilisateur",
@@ -158,9 +149,6 @@ class FollowController extends AbstractController
         return $this->json($data);
     }
 
-    ####
-    ##
-    ####
     #[Route("/{id}/following", name: "user_following", methods: ["GET"])]
     #[OA\Get(
         summary: "Liste les utilisateurs suivis par un utilisateur",

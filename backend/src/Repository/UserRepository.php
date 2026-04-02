@@ -13,9 +13,7 @@ class UserRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, User::class);
     }
-    ####
-    ##
-    ####
+
     public function save(User $user, bool $flush = true): void
     {
         $this->getEntityManager()->persist($user);
@@ -24,9 +22,7 @@ class UserRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function findByUsernameInsensitive(string $username): ?User
     {
         $username = mb_strtolower(trim($username));
@@ -37,9 +33,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
-    ####
-    ##
-    ####
+
     public function existsOtherWithUsername(int $userId, string $username): bool
     {
         return (bool) $this->createQueryBuilder('u')
@@ -51,9 +45,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
+
     public function existsOtherWithEmail(int $userId, string $email): bool
     {
         return (bool) $this->createQueryBuilder('u')
@@ -65,10 +57,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
-    /** @return User[] */
+
     /** @return User[] */
     public function searchByQuery(string $q, int $limit = 5): array
     {
@@ -84,9 +73,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-    ####
-    ##
-    ####
+
     public function remove(User $user, bool $flush = false): void
     {
         $this->getEntityManager()->remove($user);
@@ -94,9 +81,7 @@ class UserRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function countSince(\DateTime $since): int
     {
         return (int) $this->createQueryBuilder('u')
@@ -106,9 +91,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
+
     /**
      * Retourne le nombre de nouveaux utilisateurs par jour depuis $since.
      * @return array<string, int>  clé = 'Y-m-d', valeur = count
@@ -131,9 +114,7 @@ class UserRepository extends ServiceEntityRepository
         }
         return $result;
     }
-    ####
-    ##
-    ####
+
     /**
      * Retourne tous les utilisateurs avec leurs compteurs agrégés.
      * @return array<int, array{id: int, username: string, email: string, role: mixed, creationDate: \DateTime, avatarUrl: ?string, postCount: int, followerCount: int}>

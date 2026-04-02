@@ -112,9 +112,6 @@ class AuthenticationController extends AbstractController
         return $this->json($this->userMapper->toDto($user), 201);
     }
 
-    ####
-    ##
-    ####
     #[Route('/api/authenticate', name: 'authenticate', methods: ['POST'])]
     #[OA\Post(
         summary: 'Authentifie un utilisateur (étape 1 : credentials puis code 2FA envoyé par email)',
@@ -205,9 +202,6 @@ class AuthenticationController extends AbstractController
         ]);
     }
 
-    ####
-    ##
-    ####
     #[Route('/api/2fa/verify', name: '2fa_verify', methods: ['POST'])]
     #[OA\Post(
         summary: 'Vérifie le code 2FA et renvoie le token JWT final (étape 2)',
@@ -292,9 +286,6 @@ class AuthenticationController extends AbstractController
         return $this->json(['token' => $token]);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/me', name: 'me', methods: ['GET'])]
     #[OA\Get(
         summary: 'Renvoie les informations de l’utilisateur connecté',
@@ -322,9 +313,6 @@ class AuthenticationController extends AbstractController
 
         return $this->json($this->userMapper->toDto($user));
     }
-    ####
-    ##
-    ####
     #[Route('api/reset-password/request', name: 'reset_password_request', methods: ['POST'])]
     #[OA\Post(
         summary: 'Demande un lien de réinitialisation de mot de passe',
@@ -372,9 +360,6 @@ class AuthenticationController extends AbstractController
         return $this->json(['message' => 'Password reset email sent.'], 200);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/reset-password/confirm', name: 'reset_password_confirm', methods: ['POST'])]
     #[OA\Post(
         summary: 'Réinitialise le mot de passe via un token reçu par email',

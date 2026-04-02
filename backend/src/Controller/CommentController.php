@@ -46,9 +46,6 @@ class CommentController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'comment_get', methods: ['GET'])]
     #[OA\Get(
         summary: 'Détail d\'un commentaire',
@@ -71,9 +68,6 @@ class CommentController extends AbstractController
 
         return $this->json($this->mapper->toDto($comment));
     }
-    ####
-    ##
-    ####
     #[Route('', name: 'comment_create', methods: ['POST'])]
     #[OA\Post(
         summary: 'Créer un commentaire',
@@ -124,9 +118,6 @@ class CommentController extends AbstractController
 
         return $this->json($this->mapper->toDto($comment), 201);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'comment_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un commentaire',
@@ -167,9 +158,6 @@ class CommentController extends AbstractController
 
         return $this->json($this->mapper->toDto($comment));
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'comment_delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprime un commentaire',

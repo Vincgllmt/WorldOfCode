@@ -18,9 +18,7 @@ class PostRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Post::class);
     }
-    ####
-    ##
-    ####
+
     public function save(Post $post, bool $flush = false): void
     {
         $this->getEntityManager()->persist($post);
@@ -28,9 +26,7 @@ class PostRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function remove(Post $post, bool $flush = false): void
     {
         $this->getEntityManager()->remove($post);
@@ -38,9 +34,7 @@ class PostRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function findWithLikes(int $id): ?Post
     {
         return $this->createQueryBuilder('p')
@@ -61,18 +55,14 @@ class PostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
-    ####
-    ##
-    ####
+
     public function findAllWithLikes(): array
     {
         return $this->createBaseQueryBuilder()
             ->getQuery()
             ->getResult();
     }
-    ####
-    ##
-    ####
+
     /**
      * @return array{items: Post[], totalItems: int}
      */
@@ -157,9 +147,7 @@ class PostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
+
     /**
      * Retourne le nombre de nouveaux posts par jour depuis $since.
      * @return array<string, int>  clé = 'Y-m-d', valeur = count
@@ -182,12 +170,7 @@ class PostRepository extends ServiceEntityRepository
         }
         return $result;
     }
-    ####
-    ##
-    ####
-    ####
-    ##
-    ####
+
     /**
      * Retourne tous les posts avec leurs compteurs agrégés (likes, commentaires, reports).
      * @return array<int, array{id:int, content:?string, createdAt:\DateTime, authorUsername:string, techGroupName:?string, likesCount:int, commentsCount:int, reportsCount:int}>
@@ -215,9 +198,7 @@ class PostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-    ####
-    ##
-    ####
+
     private function createBaseQueryBuilder(): QueryBuilder
     {
         return $this->createQueryBuilder('p')

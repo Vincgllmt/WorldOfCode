@@ -87,9 +87,6 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'post_get', methods: ['GET'])]
     #[OA\Get(
         summary: 'Détail d\'un post',
@@ -119,9 +116,6 @@ class PostController extends AbstractController
 
         return $this->json($dto);
     }
-    ####
-    ##
-    ####
     #[Route('', name: 'post_create', methods: ['POST'])]
     #[OA\Post(
         summary: 'Créer un post',
@@ -179,9 +173,6 @@ class PostController extends AbstractController
 
         return $this->json($this->mapper->toDto($post), 201);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'post_delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprime un post',
@@ -212,9 +203,6 @@ class PostController extends AbstractController
 
         return $this->json(['success' => true]);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'post_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un post',
@@ -275,9 +263,6 @@ class PostController extends AbstractController
 
         return $this->json($this->mapper->toDto($post));
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/comment', name: 'post_comments', methods: ['GET'])]
     #[OA\Get(
         summary: 'Commentaires associés à un post',
@@ -310,9 +295,6 @@ class PostController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/share', name: 'post_share', methods: ['POST'])]
     #[OA\Post(
         summary: 'Partager un post existant',
@@ -371,9 +353,6 @@ class PostController extends AbstractController
 
         return $this->json($this->mapper->toDto($post, $this->getUser()), 201);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/like', name: 'post_like', methods: ['POST'])]
     #[OA\Post(
         summary: 'Ajoute un like à un post',
@@ -425,9 +404,6 @@ class PostController extends AbstractController
 
         return $this->json($dto);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/like', name: 'post_unlike', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Retire un like d\'un post',
@@ -461,9 +437,6 @@ class PostController extends AbstractController
 
         return $this->json(['success' => true, 'likesCount' => $post->getLikesCount()]);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/likes', name: 'post_likes', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les utilisateurs qui ont liké un post',
