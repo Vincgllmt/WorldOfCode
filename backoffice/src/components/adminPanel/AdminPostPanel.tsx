@@ -86,9 +86,7 @@ export default function AdminPostPanel() {
 
   return (
     <>
-      <div className="space-y-6 p-6 rounded-xl shadow-sm border bg-card mb-5">
-        <h2 className="text-xl font-bold">Gestion des posts</h2>
-
+      <div className="space-y-4">
         {/* Filtres */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Input
@@ -99,12 +97,12 @@ export default function AdminPostPanel() {
           />
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground whitespace-nowrap">Reports min.</label>
-            <input
+            <Input
               type="number"
               min={0}
               value={minReports}
               onChange={(e) => setMinReports(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-16 border rounded-md px-2 py-2 text-sm bg-background text-center"
+              className="w-20 text-center"
             />
           </div>
           {(search || minReports > 0) && (
@@ -186,7 +184,7 @@ export default function AdminPostPanel() {
         />
       </div>
 
-      {/* AlertDialog suppression (Story 5.2) */}
+      {/* AlertDialog suppression */}
       <AlertDialog
         open={postToDelete !== null}
         onOpenChange={(open) => { if (!open) setPostToDelete(null) }}
