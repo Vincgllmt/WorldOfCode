@@ -22,7 +22,6 @@ security:
       jwt: ~
 
   access_control:
-    - { path: ^/api, roles: PUBLIC_ACCESS, methods: [OPTIONS] }
     - { path: ^/api/register, roles: PUBLIC_ACCESS }
     - { path: ^/api/authenticate, roles: PUBLIC_ACCESS }
     - { path: ^/api/2fa/verify, roles: PUBLIC_ACCESS }
