@@ -174,16 +174,7 @@ export default function AdminUserPanel() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold tracking-tight">Utilisateurs</h2>
-        {!isLoading && (
-          <span className="text-xs text-muted-foreground font-mono">
-            {sortedUsers.length} résultat{sortedUsers.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
+    <div className="space-y-4">
       {/* Filtres */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -235,6 +226,12 @@ export default function AdminUserPanel() {
             <X className="h-3.5 w-3.5 mr-1.5" />
             Effacer
           </Button>
+        )}
+
+        {!isLoading && (
+          <span className="ml-auto text-xs text-muted-foreground font-mono">
+            {sortedUsers.length} résultat{sortedUsers.length !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
 

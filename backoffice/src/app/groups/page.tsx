@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useAdminStats } from '@/hooks/useAdminStats'
 
@@ -25,7 +26,18 @@ function GroupsPageContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Groupes</h1>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Groupes</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gérez les groupes et modérez les suggestions de la communauté.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => location.reload()}>
+          Rafraîchir
+        </Button>
+      </header>
+
       <Tabs value={tab} onValueChange={(val) => router.push(`/groups?tab=${val}`)}>
         <TabsList>
           <TabsTrigger value="groups">Groupes</TabsTrigger>

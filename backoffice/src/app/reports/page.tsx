@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 const AdminReportPanel = dynamic(
   () => import('@/components/adminPanel/AdminReportPanel'),
@@ -15,23 +15,21 @@ const AdminReportPanel = dynamic(
 export default function ReportsPage() {
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="text-sm text-muted-foreground">
-          Gérez les signalements de contenu. La liste se rafraîchit automatiquement toutes les 30 secondes.
-        </p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gérez les signalements de contenu. La liste se rafraîchit automatiquement toutes les 30 secondes.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => location.reload()}>
+          Rafraîchir
+        </Button>
       </header>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Signalements</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
-            <AdminReportPanel />
-          </Suspense>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
+        <AdminReportPanel />
+      </Suspense>
     </div>
   )
 }

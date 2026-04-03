@@ -12,8 +12,16 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -205,67 +213,71 @@ export default function AdminReportPanel() {
 
   return (
     <>
-      {/* Filtres (Story 4.5) */}
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as ReportStatus | '')}
-          className="border rounded-md px-3 py-2 text-sm bg-background"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="PENDING">En attente</option>
-          <option value="IN_PROGRESS">En cours</option>
-          <option value="RESOLVED">Résolu</option>
-          <option value="REJECTED">Rejeté</option>
-        </select>
+      {/* Filtres */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Select value={filterStatus || 'ALL'} onValueChange={(val) => setFilterStatus(val === 'ALL' ? '' : val as ReportStatus)}>
+          <SelectTrigger className="h-9 w-[160px] text-sm">
+            <SelectValue placeholder="Tous les statuts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tous les statuts</SelectItem>
+            <SelectItem value="PENDING">En attente</SelectItem>
+            <SelectItem value="IN_PROGRESS">En cours</SelectItem>
+            <SelectItem value="RESOLVED">Résolu</SelectItem>
+            <SelectItem value="REJECTED">Rejeté</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <select
-          value={filterReason}
-          onChange={(e) => setFilterReason(e.target.value)}
-          className="border rounded-md px-3 py-2 text-sm bg-background"
+        <Select
+          value={filterReason || 'ALL'}
+          onValueChange={(val) => setFilterReason(val === 'ALL' ? '' : val)}
           disabled={uniqueReasons.length === 0}
         >
-          <option value="">Toutes les raisons</option>
-          {uniqueReasons.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
+          <SelectTrigger className="h-9 w-[180px] text-sm">
+            <SelectValue placeholder="Toutes les raisons" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Toutes les raisons</SelectItem>
+            {uniqueReasons.map((r) => (
+              <SelectItem key={r} value={r}>{r}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <div className="flex items-center gap-1">
-          <label className="text-xs text-muted-foreground whitespace-nowrap">Depuis</label>
-          <input
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span>Depuis</span>
+          <Input
             type="date"
             value={filterDateFrom}
             onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="border rounded-md px-2 py-2 text-sm bg-background"
+            className="h-9 w-[140px] text-sm"
           />
-        </div>
-
-        <div className="flex items-center gap-1">
-          <label className="text-xs text-muted-foreground whitespace-nowrap">Jusqu&apos;à</label>
-          <input
+          <span>jusqu&apos;au</span>
+          <Input
             type="date"
             value={filterDateTo}
             onChange={(e) => setFilterDateTo(e.target.value)}
-            className="border rounded-md px-2 py-2 text-sm bg-background"
+            className="h-9 w-[140px] text-sm"
           />
         </div>
 
         {hasActiveFilter && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={resetFilters}
-            className="text-sm text-muted-foreground underline hover:text-foreground"
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
           >
-            Réinitialiser
-          </button>
+            Effacer
+          </Button>
+        )}
+
+        {hasActiveFilter && (
+          <span className="ml-auto text-xs text-muted-foreground font-mono">
+            {filteredReports.length} résultat{filteredReports.length !== 1 ? 's' : ''} sur {reports.length}
+          </span>
         )}
       </div>
-
-      {hasActiveFilter && (
-        <p className="text-xs text-muted-foreground mb-2">
-          {filteredReports.length} résultat{filteredReports.length !== 1 ? 's' : ''} sur {reports.length}
-        </p>
-      )}
 
       {/* Tableau (Stories 4.3) */}
       <Table>
