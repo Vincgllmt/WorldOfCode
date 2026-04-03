@@ -414,10 +414,6 @@ export default function AdminDashboardPage() {
             Vue d&apos;ensemble du réseau World of Code
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground border border-border rounded-lg px-3 py-1.5 bg-muted/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          En ligne
-        </div>
       </div>
 
       {/* KPI cards */}
