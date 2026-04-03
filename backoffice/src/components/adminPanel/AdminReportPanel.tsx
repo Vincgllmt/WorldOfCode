@@ -33,11 +33,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // ─── Badge de statut ──────────────────────────────────────────────────────────
 
@@ -345,19 +345,19 @@ export default function AdminReportPanel() {
       </Table>
 
       {/* Sheet détail (Story 4.5) */}
-      <Sheet
+      <Dialog
         open={selectedReportId !== null}
         onOpenChange={(open) => { if (!open) setSelectedReportId(null) }}
       >
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border">
-          <SheetHeader className="border-b border-border pb-4">
-            <SheetTitle className="text-base font-bold">
+        <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="border-b border-border pb-4">
+            <DialogTitle className="text-base font-bold">
               Report <span className="text-muted-foreground font-mono">#{selectedReport?.id}</span>
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
 
           {selectedReport && (
-            <div className="mt-5 space-y-5 pr-1">
+            <div className="space-y-5">
 
               {/* Statut */}
               <div className="flex items-center gap-2">
@@ -452,8 +452,8 @@ export default function AdminReportPanel() {
               )}
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* AlertDialog résolution (Story 4.4) */}
       <AlertDialog
