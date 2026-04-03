@@ -294,16 +294,55 @@ export default function AdminGroupSuggestionPanel() {
         open={approveTarget !== null}
         onOpenChange={(open) => { if (!open) setApproveTarget(null) }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[520px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Approuver la suggestion « {approveTarget?.name} » ?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Approuver cette suggestion ?</AlertDialogTitle>
           </AlertDialogHeader>
-          <p className="text-sm text-muted-foreground px-1">
-            Un nouveau groupe sera créé avec ce nom et cette description.
-            {approveTarget?.rssFeedUrl && " Une source de veille technologique sera également créée avec l'URL RSS fournie."}
-          </p>
+
+          {approveTarget && (
+            <div className="space-y-3 py-1">
+              {/* Nom */}
+              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Nom du groupe</p>
+                <p className="font-semibold text-sm">{approveTarget.name}</p>
+              </div>
+
+              {/* Description */}
+              {approveTarget.description && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Description</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{approveTarget.description}</p>
+                </div>
+              )}
+
+              {/* RSS */}
+              {approveTarget.rssFeedUrl && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">URL RSS</p>
+                  <a
+                    href={approveTarget.rssFeedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline break-all"
+                  >
+                    {approveTarget.rssFeedUrl}
+                  </a>
+                </div>
+              )}
+
+              {/* Meta */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>Soumis par <strong className="text-foreground">{approveTarget.suggestedBy.username}</strong></span>
+                <span>{formatDate(approveTarget.createdAt)}</span>
+              </div>
+
+              <p className="text-xs text-muted-foreground px-1">
+                ✓ Un nouveau groupe sera créé.
+                {approveTarget.rssFeedUrl && ' Une source de veille technologique sera également ajoutée.'}
+              </p>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
@@ -311,7 +350,7 @@ export default function AdminGroupSuggestionPanel() {
               className="bg-emerald-600 hover:bg-emerald-700"
               disabled={approveMutation.isPending}
             >
-              {approveMutation.isPending ? 'Approbation…' : 'Confirmer'}
+              {approveMutation.isPending ? 'Création…' : 'Créer le groupe'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -328,30 +367,44 @@ export default function AdminGroupSuggestionPanel() {
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[520px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Rejeter la suggestion « {rejectTarget?.name} » ?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Rejeter cette suggestion ?</AlertDialogTitle>
           </AlertDialogHeader>
-          <div className="space-y-2 px-1">
-            <p className="text-sm text-muted-foreground">
-              Veuillez indiquer la raison du rejet. Cette note sera visible par les admins.
-            </p>
-            <Textarea
-              placeholder="ex: Un groupe similaire existe déjà sous le nom 'DevOps France'."
-              value={rejectNote}
-              onChange={(e) => {
-                setRejectNote(e.target.value)
-                if (e.target.value.trim()) setRejectNoteError('')
-              }}
-              rows={4}
-              className={rejectNoteError ? 'border-destructive' : ''}
-            />
-            {rejectNoteError && (
-              <p className="text-sm text-destructive">{rejectNoteError}</p>
-            )}
-          </div>
+
+          {rejectTarget && (
+            <div className="space-y-3 py-1">
+              {/* Résumé suggestion */}
+              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Suggestion</p>
+                <p className="font-semibold text-sm">{rejectTarget.name}</p>
+                {rejectTarget.description && (
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{rejectTarget.description}</p>
+                )}
+              </div>
+
+              {/* Note de rejet */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium">
+                  Note de rejet <span className="text-destructive">*</span>
+                </p>
+                <Textarea
+                  placeholder="ex: Un groupe similaire existe déjà sous le nom 'DevOps France'."
+                  value={rejectNote}
+                  onChange={(e) => {
+                    setRejectNote(e.target.value)
+                    if (e.target.value.trim()) setRejectNoteError('')
+                  }}
+                  rows={3}
+                  className={rejectNoteError ? 'border-destructive' : ''}
+                />
+                {rejectNoteError && (
+                  <p className="text-xs text-destructive">{rejectNoteError}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
