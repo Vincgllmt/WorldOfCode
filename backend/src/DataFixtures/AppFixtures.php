@@ -69,6 +69,20 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($admin);
         $this->addReference('admin', $admin);
 
+        // --- ADMIN 2 ---
+        $admin2 = new User();
+        $admin2->setUsername('admin2');
+        $admin2->setFirstname('Admin');
+        $admin2->setLastname('Modération');
+        $admin2->setEmail('admin2@woc.dev');
+        $admin2->setRole(UserRole::ROLE_ADMIN);
+        $admin2->setPassword($this->hasher->hashPassword($admin2, 'Woc@Admin2026!$'));
+        $admin2->setBio('Co-administrateur chargé de la modération');
+        $admin2->setLocation('Lyon, France');
+        $admin2->setAvailability(Availability::EMPLOYED);
+        $manager->persist($admin2);
+        $this->addReference('admin2', $admin2);
+
         // --- UTILISATEURS DE TEST ---
         $testUsers = [
             ['username' => 'sarah.dev', 'firstname' => 'Sarah', 'lastname' => 'Martin', 'email' => 'sarah.martin@woc.dev'],
