@@ -33,7 +33,7 @@ export default function HomePage() {
       <div className="flex justify-center gap-8">
 
         {/* Sidebar gauche — sticky sous la navbar */}
-        <aside className="hidden xl:block w-[220px] shrink-0">
+        <aside className="hidden lg:block w-[220px] shrink-0">
           <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
             <MyGroupsSidebar />
           </div>
@@ -79,7 +79,7 @@ export default function HomePage() {
         </div>
 
         {/* Sidebar droite — sticky sous la navbar */}
-        <aside className="hidden lg:block w-[300px] shrink-0">
+        <aside className="hidden xl:block w-[300px] shrink-0">
           <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
             <SuggestionsSidebar />
           </div>
