@@ -19,9 +19,6 @@ final class SkillController extends AbstractController
         private SkillMapper $mapper
     ) {}
 
-    ####
-    ##
-    ####
     #[Route('api/skills', name: 'skill_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste toutes les competences disponibles',
@@ -48,9 +45,6 @@ final class SkillController extends AbstractController
         return $this->json($data);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/skills/category/{category}', name: 'skill_list_by_category', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les competences par categorie',

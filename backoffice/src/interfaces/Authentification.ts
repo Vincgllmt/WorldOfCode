@@ -14,3 +14,14 @@ export interface AuthenticatedUser {
 export interface TokenResponse {
   token: string
 }
+
+export interface TwoFAResponse {
+  requires2FA: true
+  tempToken: string
+  maskedEmail: string
+}
+
+export interface Verify2FAPayload {
+  tempToken: string
+  code: string
+}

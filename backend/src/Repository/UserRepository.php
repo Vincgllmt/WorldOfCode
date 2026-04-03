@@ -13,9 +13,7 @@ class UserRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, User::class);
     }
-    ####
-    ##
-    ####
+
     public function save(User $user, bool $flush = true): void
     {
         $this->getEntityManager()->persist($user);
@@ -24,9 +22,7 @@ class UserRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function findByUsernameInsensitive(string $username): ?User
     {
         $username = mb_strtolower(trim($username));
@@ -37,9 +33,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
-    ####
-    ##
-    ####
+
     public function existsOtherWithUsername(int $userId, string $username): bool
     {
         return (bool) $this->createQueryBuilder('u')
@@ -51,9 +45,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
+
     public function existsOtherWithEmail(int $userId, string $email): bool
     {
         return (bool) $this->createQueryBuilder('u')
@@ -65,10 +57,7 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
-    ####
-    ##
-    ####
-    /** @return User[] */
+
     /** @return User[] */
     public function searchByQuery(string $q, int $limit = 5): array
     {
@@ -84,14 +73,70 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-    ####
-    ##
-    ####
+
     public function remove(User $user, bool $flush = false): void
     {
         $this->getEntityManager()->remove($user);
         if ($flush) {
             $this->getEntityManager()->flush();
         }
+    }
+
+    public function countSince(\DateTime $since): int
+    {
+        return (int) $this->createQueryBuilder('u')
+            ->select('COUNT(u.id)')
+            ->where('u.creationDate >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Retourne le nombre de nouveaux utilisateurs par jour depuis $since.
+     * @return array<string, int>  clé = 'Y-m-d', valeur = count
+     */
+    public function countByDay(\DateTime $since): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = '
+            SELECT DATE(creation_date) AS day, COUNT(*) AS cnt
+            FROM user
+            WHERE creation_date >= :since
+            GROUP BY DATE(creation_date)
+            ORDER BY day ASC
+        ';
+        $rows = $conn->executeQuery($sql, ['since' => $since->format('Y-m-d H:i:s')])->fetchAllAssociative();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['day']] = (int) $row['cnt'];
+        }
+        return $result;
+    }
+
+    /**
+     * Retourne tous les utilisateurs avec leurs compteurs agrégés.
+     * @return array<int, array{id: int, username: string, email: string, role: mixed, creationDate: \DateTime, avatarUrl: ?string, postCount: int, followerCount: int}>
+     */
+    public function findAllWithCounts(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->select(
+                'u.id',
+                'u.username',
+                'u.email',
+                'u.role',
+                'u.creationDate',
+                'u.avatarUrl',
+                'COUNT(DISTINCT p.id) AS postCount',
+                'COUNT(DISTINCT f.id) AS followerCount'
+            )
+            ->leftJoin('u.posts', 'p')
+            ->leftJoin('App\Entity\Follow', 'f', 'WITH', 'f.followed = u')
+            ->groupBy('u.id')
+            ->orderBy('u.creationDate', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }

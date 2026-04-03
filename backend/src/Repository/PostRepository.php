@@ -18,9 +18,7 @@ class PostRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Post::class);
     }
-    ####
-    ##
-    ####
+
     public function save(Post $post, bool $flush = false): void
     {
         $this->getEntityManager()->persist($post);
@@ -28,9 +26,7 @@ class PostRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function remove(Post $post, bool $flush = false): void
     {
         $this->getEntityManager()->remove($post);
@@ -38,9 +34,7 @@ class PostRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-    ####
-    ##
-    ####
+
     public function findWithLikes(int $id): ?Post
     {
         return $this->createQueryBuilder('p')
@@ -61,18 +55,14 @@ class PostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
-    ####
-    ##
-    ####
+
     public function findAllWithLikes(): array
     {
         return $this->createBaseQueryBuilder()
             ->getQuery()
             ->getResult();
     }
-    ####
-    ##
-    ####
+
     /**
      * @return array{items: Post[], totalItems: int}
      */
@@ -146,6 +136,67 @@ class PostRepository extends ServiceEntityRepository
             'items' => $items,
             'totalItems' => count($paginator),
         ];
+    }
+
+    public function countSince(\DateTime $since): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.createdAt >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Retourne le nombre de nouveaux posts par jour depuis $since.
+     * @return array<string, int>  clé = 'Y-m-d', valeur = count
+     */
+    public function countByDay(\DateTime $since): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = '
+            SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+            FROM post
+            WHERE created_at >= :since
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        ';
+        $rows = $conn->executeQuery($sql, ['since' => $since->format('Y-m-d H:i:s')])->fetchAllAssociative();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['day']] = (int) $row['cnt'];
+        }
+        return $result;
+    }
+
+    /**
+     * Retourne tous les posts avec leurs compteurs agrégés (likes, commentaires, reports).
+     * @return array<int, array{id:int, content:?string, createdAt:\DateTime, authorUsername:string, techGroupName:?string, likesCount:int, commentsCount:int, reportsCount:int}>
+     */
+    public function findAllWithCounts(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select(
+                'p.id',
+                'p.content',
+                'p.createdAt',
+                'u.username AS authorUsername',
+                'g.name AS techGroupName',
+                'COUNT(DISTINCT l.id) AS likesCount',
+                'COUNT(DISTINCT c.id) AS commentsCount',
+                'COUNT(DISTINCT r.id) AS reportsCount'
+            )
+            ->innerJoin('p.author', 'u')
+            ->leftJoin('p.techGroup', 'g')
+            ->leftJoin('p.likes', 'l')
+            ->leftJoin('p.comments', 'c')
+            ->leftJoin('App\Entity\Report', 'r', 'WITH', 'r.post = p')
+            ->groupBy('p.id')
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 
     private function createBaseQueryBuilder(): QueryBuilder

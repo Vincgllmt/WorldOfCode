@@ -55,9 +55,6 @@ class TechGroupController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'group_get', methods: ['GET'])]
     #[OA\Get(
         summary: 'Détail d\'un groupe',
@@ -84,9 +81,6 @@ class TechGroupController extends AbstractController
 
         return $this->json($this->mapper->toDto($group));
     }
-    ####
-    ##
-    ####
     #[Route('', name: 'group_create', methods: ['POST'])]
     #[OA\Post(
         summary: 'Créer un groupe',
@@ -128,9 +122,6 @@ class TechGroupController extends AbstractController
 
         return $this->json($this->mapper->toDto($group), 201);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'group_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met à jour un groupe',
@@ -170,9 +161,6 @@ class TechGroupController extends AbstractController
 
         return $this->json($this->mapper->toDto($group));
     }
-    ####
-    ##
-    ####
     #[Route('/{id}', name: 'group_delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprime un groupe',
@@ -198,9 +186,6 @@ class TechGroupController extends AbstractController
 
         return $this->json(['success' => true]);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/users', name: 'group_users', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les utilisateurs membres d’un groupe',
@@ -230,9 +215,6 @@ class TechGroupController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/join', name: 'group_join', methods: ['POST'])]
     #[OA\Post(
         summary: 'Rejoindre un groupe en tant qu’utilisateur connecté',
@@ -266,9 +248,6 @@ class TechGroupController extends AbstractController
 
         return $this->json(['message' => 'Successfully joined the group.']);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/join', name: 'group_leave', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Quitter un groupe en tant qu’utilisateur connecté',
@@ -298,9 +277,6 @@ class TechGroupController extends AbstractController
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
-    ####
-    ##
-    ####
     #[Route('/{id}/posts', name: 'group_posts', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les posts d’un groupe donné',

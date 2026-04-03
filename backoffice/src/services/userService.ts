@@ -1,21 +1,8 @@
 
 import { getCookie } from 'cookies-next'
 import { User, UpdateUserPayload } from '@/interfaces/user'
-import { Group } from '@/interfaces/group'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
-
-export const getAllUsers = async (): Promise<User[]> => {
-  const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/user`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  })
-  if (!res.ok) throw new Error('Erreur lors du chargement des utilisateurs')
-  return res.json()
-}
 
 export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
   const token = getCookie('token')
@@ -41,38 +28,4 @@ export const deleteUser = async (id: number): Promise<void> => {
     }
   })
   if (!res.ok) throw new Error('Erreur lors de la suppression')
-}
-
-export async function getUserGroups(userId: number): Promise<Group[]> {
-  const token = getCookie('token')
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}/groups`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    credentials: 'include',
-  })
-
-  if (!res.ok) {
-    throw new Error('Erreur lors de la récupération des groupes utilisateur')
-  }
-
-  return res.json()
-}
-
-export async function getUserById(userId: number): Promise<User> {
-  const token = getCookie('token')
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/${userId}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    credentials: 'include',
-  })
-
-  if (!res.ok) {
-    throw new Error('Erreur lors de la récupération de l’utilisateur')
-  }
-
-  return res.json()
 }

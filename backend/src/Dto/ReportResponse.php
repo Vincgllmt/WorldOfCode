@@ -52,4 +52,44 @@ class ReportResponse
         example: "2025-09-18 16:45:00"
     )]
     public string $createdAt;
+
+    #[OA\Property(
+        description: "Statut du signalement",
+        type: "string",
+        enum: ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'],
+        example: "PENDING"
+    )]
+    public string $status = 'PENDING';
+
+    #[OA\Property(
+        description: "Username de l'admin qui a pris en charge",
+        type: "string",
+        nullable: true,
+        example: "admin.dupont"
+    )]
+    public ?string $claimedByUsername = null;
+
+    #[OA\Property(
+        description: "Username de l'admin qui a résolu/rejeté",
+        type: "string",
+        nullable: true,
+        example: "admin.dupont"
+    )]
+    public ?string $resolvedByUsername = null;
+
+    #[OA\Property(
+        description: "Date de résolution ISO 8601",
+        type: "string",
+        nullable: true,
+        example: "2026-03-11T15:00:00+00:00"
+    )]
+    public ?string $resolvedAt = null;
+
+    #[OA\Property(
+        description: "Note de résolution",
+        type: "string",
+        nullable: true,
+        example: "Contenu conforme aux règles"
+    )]
+    public ?string $resolutionNote = null;
 }

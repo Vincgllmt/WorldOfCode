@@ -24,9 +24,6 @@ class ReportController extends AbstractController
         private ReportMapper $mapper
     ) {}
 
-    ####
-    ##
-    ####
     #[Route('/post/{id}', name: 'report_post', methods: ['POST'])]
     #[OA\Post(
         summary: 'Signaler un post',
@@ -76,9 +73,6 @@ class ReportController extends AbstractController
         return $this->json(['success' => true, 'message' => 'Post reported'], 201);
     }
 
-    ####
-    ##
-    ####
     #[Route('/post/all', name: 'report_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste tous les signalements (admin uniquement)',

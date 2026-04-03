@@ -64,9 +64,6 @@ final class UserController extends AbstractController
 
         return $this->json($data);
     }
-    ####
-    ##
-    ####
     #[Route('api/user/{id}', name: 'user_get', methods: ['GET'])]
     #[OA\Get(
         summary: 'Detail d\'un utilisateur',
@@ -94,9 +91,6 @@ final class UserController extends AbstractController
 
         return $this->json($this->mapper->toDto($user));
     }
-    ####
-    ##
-    ####
     #[Route('api/user/{id}', name: 'user_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met a jour un utilisateur',
@@ -173,9 +167,6 @@ final class UserController extends AbstractController
 
         return $this->json($this->mapper->toDto($user));
     }
-    ####
-    ##
-    ####
     #[Route('api/user/{id}', name: 'user_delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprime un utilisateur',
@@ -206,9 +197,6 @@ final class UserController extends AbstractController
 
         return $this->json(['success' => true]);
     }
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/password', name: 'user_change_password', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Modifier son mot de passe',
@@ -280,9 +268,6 @@ final class UserController extends AbstractController
     }
 
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/groups', name: 'user_joined_groups_by_id', methods: ['GET'])]
     #[OA\Get(
         summary: 'Groupes rejoints par un utilisateur donne',
@@ -317,9 +302,6 @@ final class UserController extends AbstractController
         return $this->json($data);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/theme', name: 'user_update_theme', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met a jour le theme d\'interface de l\'utilisateur',
@@ -374,9 +356,7 @@ final class UserController extends AbstractController
         return $this->json($this->mapper->toDto($user));
     }
 
-    ####
     ##  PROFIL CV
-    ####
     #[Route('api/user/{id}/profile', name: 'user_update_profile', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Met a jour le profil CV de l\'utilisateur',
@@ -464,9 +444,7 @@ final class UserController extends AbstractController
         return $this->json($this->mapper->toDto($user));
     }
 
-    ####
     ##  LIENS EXTERNES
-    ####
     #[Route('api/user/{id}/links', name: 'user_links_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les liens externes d\'un utilisateur',
@@ -500,9 +478,6 @@ final class UserController extends AbstractController
         return $this->json($data);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/links', name: 'user_links_create', methods: ['POST'])]
     #[OA\Post(
         summary: 'Ajoute un lien externe au profil utilisateur',
@@ -562,9 +537,6 @@ final class UserController extends AbstractController
         return $this->json($this->linkMapper->toDto($link), 201);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/links/{linkId}', name: 'user_links_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Modifie un lien externe du profil utilisateur',
@@ -628,9 +600,6 @@ final class UserController extends AbstractController
         return $this->json($this->linkMapper->toDto($link));
     }
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/links/{linkId}', name: 'user_links_delete', methods: ['DELETE'])]
     #[OA\Delete(
         summary: 'Supprime un lien externe du profil utilisateur',
@@ -668,9 +637,7 @@ final class UserController extends AbstractController
         return $this->json(['success' => true]);
     }
 
-    ####
     ##  SKILLS UTILISATEUR
-    ####
     #[Route('api/user/{id}/skills', name: 'user_skills_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste les competences d\'un utilisateur',
@@ -704,9 +671,6 @@ final class UserController extends AbstractController
         return $this->json($data);
     }
 
-    ####
-    ##
-    ####
     #[Route('api/user/{id}/skills', name: 'user_skills_update', methods: ['PUT'])]
     #[OA\Put(
         summary: 'Remplace les competences de l\'utilisateur',

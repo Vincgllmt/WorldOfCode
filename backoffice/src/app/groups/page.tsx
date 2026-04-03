@@ -1,23 +1,36 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useAdminStats } from '@/hooks/useAdminStats'
 
 const AdminGroupPanel = dynamic(
   () => import('@/components/adminPanel/AdminGroupPanel'),
-  { ssr: false, loading: () => <p className="text-muted-foreground">Chargement du module…</p> }
+  { ssr: false, loading: () => <p className="text-muted-foreground">Chargement…</p> }
 )
 
-export default function GroupsPage() {
+const AdminGroupSuggestionPanel = dynamic(
+  () => import('@/components/adminPanel/AdminGroupSuggestionPanel'),
+  { ssr: false, loading: () => <p className="text-muted-foreground">Chargement…</p> }
+)
+
+function GroupsPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tab = searchParams.get('tab') ?? 'groups'
+  const { stats } = useAdminStats()
+  const pendingCount = stats?.pendingGroupSuggestionsCount ?? 0
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Groupes</h1>
-          <p className="text-sm text-muted-foreground">
-            Créez, modifiez et supprimez les groupes.
+          <h1 className="text-2xl font-bold tracking-tight">Groupes</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gérez les groupes et modérez les suggestions de la communauté.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => location.reload()}>
@@ -25,16 +38,33 @@ export default function GroupsPage() {
         </Button>
       </header>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Gestion des groupes</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
-            <AdminGroupPanel />
-          </Suspense>
-        </CardContent>
-      </Card>
+      <Tabs value={tab} onValueChange={(val) => router.push(`/groups?tab=${val}`)}>
+        <TabsList>
+          <TabsTrigger value="groups">Groupes</TabsTrigger>
+          <TabsTrigger value="suggestions" className="gap-2">
+            Suggestions
+            {pendingCount > 0 && (
+              <span className="h-5 min-w-5 flex items-center justify-center rounded-full bg-destructive/15 px-1.5 text-[10px] font-bold text-destructive">
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="groups" className="mt-4">
+          <AdminGroupPanel />
+        </TabsContent>
+        <TabsContent value="suggestions" className="mt-4">
+          <AdminGroupSuggestionPanel />
+        </TabsContent>
+      </Tabs>
     </div>
+  )
+}
+
+export default function GroupsPage() {
+  return (
+    <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
+      <GroupsPageContent />
+    </Suspense>
   )
 }
