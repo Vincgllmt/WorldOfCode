@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Users, Search } from 'lucide-react'
+import { Users, Search, MessageSquareHeart } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
@@ -38,6 +38,7 @@ export default function MyGroupsSidebar() {
     }
 
     return (
+    <>
         <div className="rounded-2xl border border-border/60 bg-card p-4">
             <div className="flex items-center gap-2 text-sm font-semibold mb-3">
                 <Users className="h-4 w-4 text-primary" />
@@ -92,5 +93,22 @@ export default function MyGroupsSidebar() {
                 Voir tous les groupes
             </Link>
         </div>
+
+        <div className="rounded-2xl border border-border/60 bg-card p-4 mt-4">
+            <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">
+                <MessageSquareHeart className="h-4 w-4 text-primary" />
+                Votre avis
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+                Aidez-nous à améliorer WOC en partageant votre expérience !
+            </p>
+            <Link
+                href="/feedback"
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+                Donner mon avis
+            </Link>
+        </div>
+    </>
     )
 }
