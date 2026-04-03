@@ -5,16 +5,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const createPost = async (data: CreatePostPayload): Promise<Post> => {
   const token = getCookie('token')
-  console.log('Token utilisé pour le POST :', token)
-  console.log('Creating post with data:', data)
-
   const res = await fetch(`${API_URL}/api/post`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-       Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
 
   if (!res.ok) throw new Error('Erreur lors de la création du post')
@@ -27,14 +24,13 @@ export const getAllPosts = async (): Promise<Post[]> => {
   const res = await fetch(`${API_URL}/api/post`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` }
+      Authorization: `Bearer ${token}`,
+    },
   })
 
   if (!res.ok) throw new Error('Impossible de récupérer les posts')
 
-  const data = await res.json()
-  console.log('Posts reçus :', data)
-  return data
+  return res.json()
 }
 
 export const getPostById = async (id  : string): Promise<Post> => {
