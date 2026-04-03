@@ -19,7 +19,7 @@ class GroupSuggestionFixtures extends Fixture implements DependentFixtureInterfa
     public function load(ObjectManager $manager): void
     {
         $admin  = $this->getReference('admin',  User::class);
-        $admin2 = $this->getReference('admin2', User::class);
+        $admin2 = $this->getReference('amine',  User::class);
 
         $suggestions = [
             // PENDING — en attente de modération

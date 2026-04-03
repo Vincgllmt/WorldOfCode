@@ -69,19 +69,29 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $manager->persist($admin);
         $this->addReference('admin', $admin);
 
-        // --- ADMIN 2 ---
-        $admin2 = new User();
-        $admin2->setUsername('admin2');
-        $admin2->setFirstname('Admin');
-        $admin2->setLastname('Modération');
-        $admin2->setEmail('admin2@woc.dev');
-        $admin2->setRole(UserRole::ROLE_ADMIN);
-        $admin2->setPassword($this->hasher->hashPassword($admin2, 'Woc@Admin2026!$'));
-        $admin2->setBio('Co-administrateur chargé de la modération');
-        $admin2->setLocation('Lyon, France');
-        $admin2->setAvailability(Availability::EMPLOYED);
-        $manager->persist($admin2);
-        $this->addReference('admin2', $admin2);
+        // --- ADMINS ÉQUIPE ---
+        $adminTeam = [
+            ['username' => 'amine',   'firstname' => 'Amine',   'lastname' => 'Admin', 'email' => 'amine@woc.dev',   'location' => 'Paris, France'],
+            ['username' => 'eugenie', 'firstname' => 'Eugénie', 'lastname' => 'Admin', 'email' => 'eugenie@woc.dev', 'location' => 'Lyon, France'],
+            ['username' => 'vincent', 'firstname' => 'Vincent', 'lastname' => 'Admin', 'email' => 'vincent@woc.dev', 'location' => 'Bordeaux, France'],
+            ['username' => 'hichem',  'firstname' => 'Hichem',  'lastname' => 'Admin', 'email' => 'hichem@woc.dev',  'location' => 'Marseille, France'],
+            ['username' => 'theo',    'firstname' => 'Théo',    'lastname' => 'Admin', 'email' => 'theo@woc.dev',    'location' => 'Nantes, France'],
+        ];
+
+        foreach ($adminTeam as $data) {
+            $adminUser = new User();
+            $adminUser->setUsername($data['username']);
+            $adminUser->setFirstname($data['firstname']);
+            $adminUser->setLastname($data['lastname']);
+            $adminUser->setEmail($data['email']);
+            $adminUser->setRole(UserRole::ROLE_ADMIN);
+            $adminUser->setPassword($this->hasher->hashPassword($adminUser, 'Woc@Admin2026!$'));
+            $adminUser->setBio('Administrateur de la plateforme World of Code');
+            $adminUser->setLocation($data['location']);
+            $adminUser->setAvailability(Availability::EMPLOYED);
+            $manager->persist($adminUser);
+            $this->addReference($data['username'], $adminUser);
+        }
 
         // --- UTILISATEURS DE TEST ---
         $testUsers = [
