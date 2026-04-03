@@ -349,26 +349,33 @@ export default function AdminReportPanel() {
         open={selectedReportId !== null}
         onOpenChange={(open) => { if (!open) setSelectedReportId(null) }}
       >
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Détail du report #{selectedReport?.id}</SheetTitle>
+        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border">
+          <SheetHeader className="border-b border-border pb-4">
+            <SheetTitle className="text-base font-bold">
+              Report <span className="text-muted-foreground font-mono">#{selectedReport?.id}</span>
+            </SheetTitle>
           </SheetHeader>
 
           {selectedReport && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-5 space-y-5 pr-1">
+
+              {/* Statut */}
               <div className="flex items-center gap-2">
                 <StatusBadge status={selectedReport.status} />
                 {selectedReport.claimedByUsername && (
                   <span className="text-xs text-muted-foreground">
-                    pris en charge par <strong>{selectedReport.claimedByUsername}</strong>
+                    pris en charge par <strong className="text-foreground">{selectedReport.claimedByUsername}</strong>
                   </span>
                 )}
               </div>
 
+              {/* Contenu du post */}
               <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Contenu du post</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Contenu du post
+                </p>
                 {selectedReport.postContent ? (
-                  <div className="rounded-md border p-3 text-sm bg-muted/30 whitespace-pre-wrap">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedReport.postContent}
                   </div>
                 ) : (
@@ -376,56 +383,68 @@ export default function AdminReportPanel() {
                 )}
               </div>
 
+              {/* Infos post */}
               {selectedReport.postAuthorId && (
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <span className="text-muted-foreground">Auteur : </span>
+                <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 space-y-1.5 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs">Auteur</span>
                     <a
                       href={`/utilisateurs?search=${selectedReport.postAuthorUsername ?? ''}`}
-                      className="text-primary hover:underline font-medium"
+                      className="text-primary hover:underline font-medium text-xs"
                     >
                       {selectedReport.postAuthorUsername}
                     </a>
-                  </p>
+                  </div>
                   {selectedReport.postTechGroupName && (
-                    <p>
-                      <span className="text-muted-foreground">Groupe : </span>
-                      <span className="font-medium">{selectedReport.postTechGroupName}</span>
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">Groupe</span>
+                      <span className="font-medium text-xs">{selectedReport.postTechGroupName}</span>
+                    </div>
                   )}
-                  <div className="flex gap-4 text-muted-foreground">
-                    <span>{selectedReport.postLikesCount ?? 0} like{selectedReport.postLikesCount !== 1 ? 's' : ''}</span>
-                    <span>{selectedReport.postCommentsCount ?? 0} commentaire{selectedReport.postCommentsCount !== 1 ? 's' : ''}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-xs">Engagement</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {selectedReport.postLikesCount ?? 0} like{selectedReport.postLikesCount !== 1 ? 's' : ''}
+                      {' · '}
+                      {selectedReport.postCommentsCount ?? 0} commentaire{selectedReport.postCommentsCount !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
               )}
 
-              <div className="border-t pt-3 space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Signalé par : </span>
+              {/* Signalement */}
+              <div className="border-t border-border pt-4 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  Signalement
+                </p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Signalé par</span>
                   <strong>{selectedReport.reportedByUsername}</strong>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Raison : </span>
-                  {selectedReport.reason ?? '—'}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Le : </span>
-                  {new Date(selectedReport.createdAt).toLocaleDateString('fr-FR')}
-                </p>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Raison</span>
+                  <span className="font-medium">{selectedReport.reason ?? '—'}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Date</span>
+                  <span className="font-mono text-xs">{new Date(selectedReport.createdAt).toLocaleDateString('fr-FR')}</span>
+                </div>
               </div>
 
+              {/* Note de résolution */}
               {selectedReport.resolutionNote && (
-                <div className="border-t pt-3">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Note de résolution</p>
-                  <p className="text-sm border-l-2 pl-2 text-muted-foreground">
+                <div className="border-t border-border pt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Note de résolution
+                  </p>
+                  <p className="text-sm border-l-2 border-primary/40 pl-3 py-0.5 text-muted-foreground bg-muted/30 rounded-r-md">
                     {selectedReport.resolutionNote}
                   </p>
                   {selectedReport.resolvedByUsername && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      par <strong>{selectedReport.resolvedByUsername}</strong>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      par <strong className="text-foreground">{selectedReport.resolvedByUsername}</strong>
                       {selectedReport.resolvedAt && (
-                        <> le {new Date(selectedReport.resolvedAt).toLocaleDateString('fr-FR')}</>
+                        <> · {new Date(selectedReport.resolvedAt).toLocaleDateString('fr-FR')}</>
                       )}
                     </p>
                   )}
