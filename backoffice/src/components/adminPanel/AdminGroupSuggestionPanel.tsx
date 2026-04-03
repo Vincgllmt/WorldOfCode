@@ -34,6 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 // ─── STATUS_CONFIG ────────────────────────────────────────────────────────────
@@ -165,16 +166,27 @@ export default function AdminGroupSuggestionPanel() {
   const approveMutation = useApproveSuggestion()
   const rejectMutation  = useRejectSuggestion()
 
-  const [approveTarget, setApproveTarget] = useState<GroupSuggestion | null>(null)
-  const [rejectTarget, setRejectTarget]   = useState<GroupSuggestion | null>(null)
-  const [rejectNote, setRejectNote]       = useState('')
+  const [approveTarget, setApproveTarget]     = useState<GroupSuggestion | null>(null)
+  const [approveName, setApproveName]         = useState('')
+  const [approveDesc, setApproveDesc]         = useState('')
+  const [approveRss, setApproveRss]           = useState('')
+  const [rejectTarget, setRejectTarget]       = useState<GroupSuggestion | null>(null)
+  const [rejectNote, setRejectNote]           = useState('')
   const [rejectNoteError, setRejectNoteError] = useState('')
+
+  const openApproveDialog = (suggestion: GroupSuggestion) => {
+    setApproveName(suggestion.name)
+    setApproveDesc(suggestion.description ?? '')
+    setApproveRss(suggestion.rssFeedUrl ?? '')
+    setApproveTarget(suggestion)
+  }
 
   const handleApproveConfirm = () => {
     if (!approveTarget) return
-    approveMutation.mutate(approveTarget.id, {
-      onSettled: () => setApproveTarget(null),
-    })
+    approveMutation.mutate(
+      { id: approveTarget.id, payload: { name: approveName, description: approveDesc, rssFeedUrl: approveRss } },
+      { onSettled: () => setApproveTarget(null) }
+    )
   }
 
   const handleRejectConfirm = () => {
@@ -274,7 +286,7 @@ export default function AdminGroupSuggestionPanel() {
                         suggestion={suggestion}
                         currentAdminId={currentAdmin.id}
                         onClaim={(id) => claimMutation.mutate(id)}
-                        onApproveClick={setApproveTarget}
+                        onApproveClick={openApproveDialog}
                         onRejectClick={openRejectDialog}
                         isClaiming={claimMutation.isPending}
                         isApproving={approveMutation.isPending}
@@ -301,45 +313,52 @@ export default function AdminGroupSuggestionPanel() {
 
           {approveTarget && (
             <div className="space-y-3 py-1">
-              {/* Nom */}
-              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Nom du groupe</p>
-                <p className="font-semibold text-sm">{approveTarget.name}</p>
-              </div>
-
-              {/* Description */}
-              {approveTarget.description && (
-                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Description</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{approveTarget.description}</p>
-                </div>
-              )}
-
-              {/* RSS */}
-              {approveTarget.rssFeedUrl && (
-                <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">URL RSS</p>
-                  <a
-                    href={approveTarget.rssFeedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline break-all"
-                  >
-                    {approveTarget.rssFeedUrl}
-                  </a>
-                </div>
-              )}
-
               {/* Meta */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Soumis par <strong className="text-foreground">{approveTarget.suggestedBy.username}</strong></span>
                 <span>{formatDate(approveTarget.createdAt)}</span>
               </div>
 
-              <p className="text-xs text-muted-foreground px-1">
-                ✓ Un nouveau groupe sera créé.
-                {approveTarget.rssFeedUrl && ' Une source de veille technologique sera également ajoutée.'}
-              </p>
+              {/* Nom */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Nom du groupe <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={approveName}
+                  onChange={(e) => setApproveName(e.target.value)}
+                  placeholder="Nom du groupe"
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Description
+                </label>
+                <Textarea
+                  value={approveDesc}
+                  onChange={(e) => setApproveDesc(e.target.value)}
+                  placeholder="Description du groupe (optionnelle)"
+                  rows={3}
+                  className="text-sm resize-none"
+                />
+              </div>
+
+              {/* RSS */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  URL RSS <span className="text-muted-foreground font-normal normal-case">(optionnel)</span>
+                </label>
+                <Input
+                  value={approveRss}
+                  onChange={(e) => setApproveRss(e.target.value)}
+                  placeholder="https://example.com/feed.xml"
+                  className="h-9 text-sm"
+                  type="url"
+                />
+              </div>
             </div>
           )}
 

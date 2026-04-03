@@ -1,5 +1,5 @@
 import { getCookie } from 'cookies-next'
-import { GroupSuggestion, RejectSuggestionPayload } from '@/interfaces/groupSuggestion'
+import { GroupSuggestion, ApproveSuggestionPayload, RejectSuggestionPayload } from '@/interfaces/groupSuggestion'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -31,7 +31,10 @@ export const claimGroupSuggestion = async (id: number): Promise<GroupSuggestion>
   return res.json()
 }
 
-export const approveGroupSuggestion = async (id: number): Promise<GroupSuggestion> => {
+export const approveGroupSuggestion = async (
+  id: number,
+  payload: ApproveSuggestionPayload
+): Promise<GroupSuggestion> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/api/admin/group-suggestions/${id}/approve`, {
     method: 'PATCH',
@@ -39,6 +42,7 @@ export const approveGroupSuggestion = async (id: number): Promise<GroupSuggestio
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify(payload),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))

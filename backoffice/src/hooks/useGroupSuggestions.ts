@@ -6,7 +6,7 @@ import {
   approveGroupSuggestion,
   rejectGroupSuggestion,
 } from '@/services/groupSuggestionService'
-import { RejectSuggestionPayload } from '@/interfaces/groupSuggestion'
+import { ApproveSuggestionPayload, RejectSuggestionPayload } from '@/interfaces/groupSuggestion'
 
 const QUERY_KEY = ['groupSuggestions']
 
@@ -36,7 +36,8 @@ export const useClaimSuggestion = () => {
 export const useApproveSuggestion = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => approveGroupSuggestion(id),
+    mutationFn: ({ id, payload }: { id: number; payload: ApproveSuggestionPayload }) =>
+      approveGroupSuggestion(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       toast.success('Suggestion approuvée et groupe créé.')

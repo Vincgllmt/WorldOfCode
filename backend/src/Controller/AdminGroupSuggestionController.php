@@ -130,7 +130,7 @@ class AdminGroupSuggestionController extends AbstractController
             new OA\Response(response: 409, description: 'Suggestion non claimée par cet admin'),
         ]
     )]
-    public function approve(int $id): JsonResponse
+    public function approve(int $id, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -150,17 +150,26 @@ class AdminGroupSuggestionController extends AbstractController
             ], 409);
         }
 
+        $data = json_decode($request->getContent(), true) ?? [];
+        $name        = trim($data['name'] ?? '') ?: $suggestion->getName();
+        $description = array_key_exists('description', $data)
+            ? ($data['description'] !== '' ? $data['description'] : null)
+            : $suggestion->getDescription();
+        $rssFeedUrl  = array_key_exists('rssFeedUrl', $data)
+            ? ($data['rssFeedUrl'] !== '' ? $data['rssFeedUrl'] : null)
+            : $suggestion->getRssFeedUrl();
+
         $group = new TechGroup();
-        $group->setName($suggestion->getName());
-        $group->setDescription($suggestion->getDescription());
+        $group->setName($name);
+        $group->setDescription($description);
         $group->setCreator($currentAdmin);
         $this->techGroupRepo->save($group);
 
-        if ($suggestion->getRssFeedUrl() !== null) {
+        if ($rssFeedUrl !== null) {
             $source = new TechWatchSource();
             $source->setTechGroup($group);
-            $source->setFeedUrl($suggestion->getRssFeedUrl());
-            $source->setName($suggestion->getName());
+            $source->setFeedUrl($rssFeedUrl);
+            $source->setName($name);
             $this->techWatchSourceRepo->save($source);
         }
 

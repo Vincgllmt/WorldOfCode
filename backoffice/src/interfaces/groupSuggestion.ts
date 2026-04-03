@@ -25,3 +25,9 @@ export interface GroupSuggestion {
 export interface RejectSuggestionPayload {
   resolutionNote: string
 }
+
+export interface ApproveSuggestionPayload {
+  name: string
+  description: string
+  rssFeedUrl: string
+}
