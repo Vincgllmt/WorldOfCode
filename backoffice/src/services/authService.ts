@@ -10,7 +10,7 @@ import type {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
 export const login = async (credentials: LoginCredentials): Promise<TwoFAResponse> => {
-  const res = await fetch(`${API_URL}/api/authenticate`, {
+  const res = await fetch(`${API_URL}/authenticate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -22,7 +22,7 @@ export const login = async (credentials: LoginCredentials): Promise<TwoFARespons
 }
 
 export const verify2FA = async (payload: Verify2FAPayload): Promise<AuthenticatedUser> => {
-  const res = await fetch(`${API_URL}/api/2fa/verify`, {
+  const res = await fetch(`${API_URL}/2fa/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -40,7 +40,7 @@ export const getMe = async (): Promise<AuthenticatedUser> => {
   const token = getCookie('token') as string | undefined
   if (!token) throw new Error('Token manquant')
 
-  const res = await fetch(`${API_URL}/api/me`, {
+  const res = await fetch(`${API_URL}/me`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,

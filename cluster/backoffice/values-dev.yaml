@@ -2,6 +2,7 @@ replicaCount: 1
 
 image:
   repository: registry.woc:32000/backoffice
+  tag: 132917c1
   pullPolicy: IfNotPresent
 
 registry:
