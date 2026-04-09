@@ -12,6 +12,9 @@ mode: standalone
 auth:
   rootUser: admin
 
+serviceAccount:
+  automountServiceAccountToken: true
+
 podAnnotations:
   vault.hashicorp.com/agent-inject: "true"
   vault.hashicorp.com/role: "app"
