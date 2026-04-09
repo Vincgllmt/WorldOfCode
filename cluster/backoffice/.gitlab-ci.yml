@@ -1,29 +1,79 @@
-deploy:backoffice:
-  stage: deploy-apps
-  when: manual
+# 1. Build avec Kaniko (sans Docker-in-Docker)
+build:backoffice:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+      changes:
+        - backoffice/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
   variables:
-    BACKOFFICE_NAMESPACE: "backoffice"
-    BACKOFFICE_RELEASE_NAME: "woc-backoffice"
-    BACKOFFICE_CHART_PATH: "cluster/backoffice"
-    IMAGE_PULL_SECRET: "woc-backoffice-regcred"
-    REGISTRY_HOST: "registry.woc"
+    API_DOMAIN: "api-woc-dev.duckdns.org"
   script:
-    - kubectl create namespace "$BACKOFFICE_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-    - echo "Récupération des identifiants de pull depuis le secret du namespace registry"
+    - echo "Configuration de l'authentification Kaniko..."
     - |
-      USER_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.username}')
-      PASS_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.password}')
-      REGISTRY_USER=$(echo -n "$USER_B64" | base64 -d)
-      REGISTRY_PASSWORD=$(echo -n "$PASS_B64" | base64 -d)
-      kubectl create secret docker-registry "$IMAGE_PULL_SECRET" \
-        --docker-server="$REGISTRY_HOST" \
-        --docker-username="$REGISTRY_USER" \
-        --docker-password="$REGISTRY_PASSWORD" \
-        --docker-email="ci@example.local" \
-        -n "$BACKOFFICE_NAMESPACE" \
-        --dry-run=client -o yaml | kubectl apply -f -
-    - echo "Déploiement du backoffice Helm (sans --set, valeurs depuis values.yaml)"
+      if [ "$CI_COMMIT_BRANCH" = "production" ]; then
+        export API_DOMAIN="api-woc-prod.duckdns.org"
+      fi
     - |
-      helm upgrade --install "$BACKOFFICE_RELEASE_NAME" "$BACKOFFICE_CHART_PATH" \
-        --namespace "$BACKOFFICE_NAMESPACE" \
-        --values cluster/backoffice/values.yaml
+      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}"> /kaniko/.docker/config.json
+
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/backoffice" \
+        --dockerfile "${CI_PROJECT_DIR}/backoffice/Dockerfile.prod" \
+        --destination "${REGISTRY_HOST}/backoffice:${CI_COMMIT_SHORT_SHA}" \
+        --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api" \
+        --insecure \
+        --skip-tls-verify \
+        --cache=true
+
+
+# 2. Déploiement en DEV
+deploy:backoffice:dev:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: dev
+  variables:
+    APP_NAMESPACE: "dev"
+    RELEASE_NAME: "backoffice"
+    CHART_PATH: "cluster/backoffice"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/backoffice/values-dev.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - backoffice/**/*
+      when: on_success
+
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+
+# 3. Déploiement en PRODUCTION
+deploy:backoffice:prod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "backoffice"
+    CHART_PATH: "cluster/backoffice"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/backoffice/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      changes:
+        - backoffice/**/*
+      when: manual
+
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+      allow_failure: true

@@ -1,0 +1,37 @@
+# ── Stage 1 : Build ──────────────────────────────────────────────────────────
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+# Copie des manifestes de dépendances
+COPY package.json package-lock.json ./
+
+# Installation des dépendances (frozen lockfile = reproductible)
+RUN npm ci
+
+# Copie des sources
+COPY . .
+
+# Variables publiques nécessaires au build Next.js (baked-in côté client)
+ARG NEXT_PUBLIC_API_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN npm run build
+
+# ── Stage 2 : Runner ─────────────────────────────────────────────────────────
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copie uniquement ce qui est nécessaire à l'exécution
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+
+# Serveur HTTP autonome généré par Next.js standalone
+CMD ["node", "server.js"]

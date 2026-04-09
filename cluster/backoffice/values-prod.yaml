@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: registry.woc:32000/backoffice
+  pullPolicy: IfNotPresent
+
+registry:
+  imagePullSecretName: woc-regcred
+
+service:
+  type: ClusterIP
+  port: 3000
+
+containerPort: 3000
+
+env:
+  NEXT_PUBLIC_API_URL: "https://api-woc-prod.duckdns.org/api"
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: backoffice-woc-prod.duckdns.org
+      paths:
+        - path: /
+          pathType: Prefix
