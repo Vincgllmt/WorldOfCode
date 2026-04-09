@@ -14,7 +14,7 @@ service:
 containerPort: 3000
 
 env:
-  NEXT_PUBLIC_API_URL: "https://api-woc-prod.duckdns.org/api"
+  NEXT_PUBLIC_API_URL: "https://api-woc-prod.duckdns.org"
 
 ingress:
   enabled: true

@@ -28,7 +28,7 @@ build:backoffice:
         --context "${CI_PROJECT_DIR}/backoffice" \
         --dockerfile "${CI_PROJECT_DIR}/backoffice/Dockerfile.prod" \
         --destination "${REGISTRY_HOST}/backoffice:${CI_COMMIT_SHORT_SHA}" \
-        --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api" \
+        --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}" \
         --insecure \
         --skip-tls-verify \
         --cache=true
