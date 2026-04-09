@@ -18,10 +18,10 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-import { MessageCircle, SquarePen, X, Loader2 } from "lucide-react"
+import { MessageCircle, SquarePen, X, Loader2, ImageIcon, FileArchive } from "lucide-react"
 import { useOnlineUsers } from "@/hooks/useOnlineUsers"
 
-function getMessagePreview(body: string, isMine: boolean, type?: string): string {
+function getMessagePreview(body: string, isMine: boolean, type?: string): React.ReactNode {
     if (type === 'missed_call') {
         if (body === 'rejected') return isMine ? '📞 Appel refusé' : '📞 Appel refusé'
         if (body === 'timeout') return isMine ? '📞 Appel sans réponse' : '📞 Appel manqué'
@@ -30,6 +30,17 @@ function getMessagePreview(body: string, isMine: boolean, type?: string): string
     }
     if (type === 'call' || body.startsWith('Appel vidéo')) {
         return `📞 ${body}`
+    }
+    if (type === 'image') {
+        return <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Photo</span>
+    }
+    if (type === 'file') {
+        try {
+            const data = JSON.parse(body)
+            return <span className="inline-flex items-center gap-1"><FileArchive className="h-3.5 w-3.5" /> {data.name || 'Fichier'}</span>
+        } catch {
+            return <span className="inline-flex items-center gap-1"><FileArchive className="h-3.5 w-3.5" /> Fichier</span>
+        }
     }
     if (body.includes('shared-post-card')) {
         return isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'

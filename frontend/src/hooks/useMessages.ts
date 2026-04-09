@@ -92,8 +92,8 @@ export const useRealtimeMessages = (
     }, [conversationId, userId, user])
 
     // --- Envoi de message ---
-    const sendMessage = (body: string) => {
-        console.log("📤 sendMessage called", { body, user: !!user, conversationId })
+    const sendMessage = (body: string, type: Message['type'] = 'text') => {
+        console.log("📤 sendMessage called", { body, type, user: !!user, conversationId })
         if (!body.trim() || !user) {
             console.log("🔴 sendMessage: missing body or user")
             return
@@ -105,12 +105,13 @@ export const useRealtimeMessages = (
             conversation_id: conversationId,
             temp_id: tempId,
             body,
+            type,
         })
 
         const optimisticMessage: Message = {
             id: tempId,
             body,
-            type: "text",
+            type,
             createdAt: new Date().toISOString(),
             read: true,
             sender: {
