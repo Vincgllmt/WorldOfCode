@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getMessages } from "@/services/messageService"
+import { getMessages, searchMessages } from "@/services/messageService"
 import { socket } from "@/lib/socket"
 import { Message } from "@/interfaces/message"
 import { Conversation } from "@/interfaces/conversation"
@@ -92,8 +92,8 @@ export const useRealtimeMessages = (
     }, [conversationId, userId, user])
 
     // --- Envoi de message ---
-    const sendMessage = (body: string) => {
-        console.log("📤 sendMessage called", { body, user: !!user, conversationId })
+    const sendMessage = (body: string, type: Message['type'] = 'text') => {
+        console.log("📤 sendMessage called", { body, type, user: !!user, conversationId })
         if (!body.trim() || !user) {
             console.log("🔴 sendMessage: missing body or user")
             return
@@ -105,12 +105,13 @@ export const useRealtimeMessages = (
             conversation_id: conversationId,
             temp_id: tempId,
             body,
+            type,
         })
 
         const optimisticMessage: Message = {
             id: tempId,
             body,
-            type: "text",
+            type,
             createdAt: new Date().toISOString(),
             read: true,
             sender: {
@@ -138,4 +139,20 @@ export const useRealtimeMessages = (
     }
 
     return { messages, isLoading, error, sendMessage, refetch, typingUsers }
+}
+
+// === Hook recherche globale de messages ===
+export function useSearchMessages(query: string) {
+    const [debouncedQuery, setDebouncedQuery] = useState('')
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(query), 300)
+        return () => clearTimeout(timer)
+    }, [query])
+
+    return useQuery({
+        queryKey: ['messageSearch', debouncedQuery],
+        queryFn: () => searchMessages(debouncedQuery),
+        enabled: debouncedQuery.length >= 2,
+    })
 }

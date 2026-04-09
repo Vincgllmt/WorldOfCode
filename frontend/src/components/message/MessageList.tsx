@@ -1,16 +1,18 @@
-import { useEffect, useRef, useMemo, useCallback } from "react"
+import { useEffect, useRef, useMemo, useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone, PhoneMissed } from "lucide-react"
+import { Send, Phone, PhoneMissed, X, Download, FileArchive } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 
 type Props = {
     messages: Message[]
     userId?: string
+    conversationId?: string
     convType?: string
     typingUsers?: string[]
     otherUsername?: string
+    highlightMessageId?: string | null
 }
 
 function formatMessageTime(dateStr: string) {
@@ -53,15 +55,48 @@ function formatMissedCallText(reason: string, isMe: boolean, senderUsername: str
     }
 }
 
+function parseFileBody(body: string): { url: string; name: string; size: number } | null {
+    try {
+        const data = JSON.parse(body)
+        if (data.url && data.name) return data
+    } catch { /* not JSON, fallback */ }
+    return null
+}
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} o`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`
+}
+
+async function downloadFile(url: string, filename: string) {
+    try {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = blobUrl
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(blobUrl)
+    } catch {
+        window.open(url, "_blank")
+    }
+}
+
 export function MessageList({
     messages,
     userId,
+    conversationId,
     convType,
     typingUsers = [],
     otherUsername,
+    highlightMessageId,
 }: Props) {
     const router = useRouter()
     const parentRef = useRef<HTMLDivElement | null>(null)
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+    const [highlightedId, setHighlightedId] = useState<string | null>(highlightMessageId ?? null)
 
     // Intercepte les clics sur les liens internes (ex: /post/123) pour utiliser
     // la navigation client-side Next.js au lieu d'un rechargement complet,
@@ -86,19 +121,51 @@ export function MessageList({
     })
 
     const prevLengthRef = useRef(0)
+    const hasScrolledInitial = useRef(false)
+
+    // Reset quand la conversation change
+    useEffect(() => {
+        prevLengthRef.current = 0
+        hasScrolledInitial.current = false
+        setHighlightedId(highlightMessageId ?? null)
+    }, [conversationId, highlightMessageId])
 
     useEffect(() => {
-        if (messages?.length) {
-            const isInitialLoad = prevLengthRef.current === 0
-            prevLengthRef.current = messages.length
+        if (!messages?.length) return
 
+        const isInitialLoad = !hasScrolledInitial.current
+
+        if (isInitialLoad) {
+            hasScrolledInitial.current = true
+
+            // Si highlight demandé, scroller vers ce message
+            if (highlightedId) {
+                const idx = messages.findIndex((m) => m.id === highlightedId)
+                if (idx >= 0) {
+                    setTimeout(() => {
+                        virtualizer.scrollToIndex(idx, { align: "center", behavior: "auto" })
+                        setTimeout(() => setHighlightedId(null), 3000)
+                    }, 150)
+                    prevLengthRef.current = messages.length
+                    return
+                }
+            }
+
+            // Sinon scroll vers le bas
             setTimeout(() => {
-                virtualizer.scrollToIndex(messages.length - 1, {
-                    align: "end",
-                    behavior: isInitialLoad ? "auto" : "smooth",
-                })
+                virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "auto" })
+            }, 50)
+            prevLengthRef.current = messages.length
+            return
+        }
+
+        // Nouveau message reçu → scroll vers le bas
+        if (messages.length > prevLengthRef.current) {
+            setTimeout(() => {
+                virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "smooth" })
             }, 50)
         }
+        prevLengthRef.current = messages.length
     }, [messages?.length])
 
     if (!messages || messages.length === 0) {
@@ -136,12 +203,17 @@ export function MessageList({
                     const hasSharedPost = m.body.includes('shared-post-card')
                     const isCallMessage = m.type === 'call' || m.type === 'missed_call'
                     const isMissedCall = m.type === 'missed_call'
+                    const isImage = m.type === 'image'
+                    const isFile = m.type === 'file'
+                    const fileData = isFile ? parseFileBody(m.body) : null
+                    const isHighlighted = m.id === highlightedId
 
                     return (
                         <div
                             key={m.id}
                             data-index={virtualRow.index}
                             ref={virtualizer.measureElement}
+                            className={isHighlighted ? "animate-pulse bg-primary/10 rounded-lg transition-colors duration-1000" : ""}
                             style={{
                                 position: "absolute",
                                 top: 0,
@@ -183,6 +255,82 @@ export function MessageList({
                                         </span>
                                     </div>
                                 </div>
+                            ) : isImage ? (
+                            <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
+                                <div className="max-w-[300px]">
+                                    {convType === "group" && !isMe && !isContinuation && (
+                                        <div className="text-xs font-semibold text-primary mb-0.5 ml-1">
+                                            {m.sender.username}
+                                        </div>
+                                    )}
+                                    <div className="relative group">
+                                        <button type="button" onClick={() => setLightboxUrl(m.body)} className="block">
+                                            <img
+                                                src={m.body}
+                                                alt="Image partagée"
+                                                className={`rounded-2xl object-cover max-h-[300px] w-auto cursor-pointer hover:opacity-90 transition-opacity ${
+                                                    isMe
+                                                        ? isContinuation ? "rounded-tr-md" : "rounded-br-md"
+                                                        : isContinuation ? "rounded-tl-md" : "rounded-bl-md"
+                                                }`}
+                                            />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await fetch(m.body)
+                                                    const blob = await res.blob()
+                                                    const url = URL.createObjectURL(blob)
+                                                    const a = document.createElement("a")
+                                                    a.href = url
+                                                    a.download = `image-${Date.now()}.${blob.type.split("/")[1] || "png"}`
+                                                    a.click()
+                                                    URL.revokeObjectURL(url)
+                                                } catch {
+                                                    window.open(m.body, "_blank")
+                                                }
+                                            }}
+                                            className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                                        >
+                                            <Download className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                    <p className={`text-[10px] mt-0.5 ${isMe ? "text-right text-muted-foreground" : "text-muted-foreground"}`}>
+                                        {formatMessageTime(m.createdAt)}
+                                    </p>
+                                </div>
+                            </div>
+                            ) : isFile && fileData ? (
+                            <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
+                                <div className="max-w-[300px]">
+                                    {convType === "group" && !isMe && !isContinuation && (
+                                        <div className="text-xs font-semibold text-primary mb-0.5 ml-1">
+                                            {m.sender.username}
+                                        </div>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => downloadFile(fileData.url, fileData.name)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors cursor-pointer ${
+                                            isMe
+                                                ? `bg-primary text-primary-foreground hover:bg-primary/90 ${isContinuation ? "rounded-tr-md" : "rounded-br-md"}`
+                                                : `bg-card text-card-foreground shadow-sm hover:bg-muted ${isContinuation ? "rounded-tl-md" : "rounded-bl-md"}`
+                                        }`}
+                                    >
+                                        <FileArchive className="h-8 w-8 shrink-0" />
+                                        <div className="min-w-0 text-left">
+                                            <p className="text-sm font-medium truncate">{fileData.name}</p>
+                                            <p className={`text-xs ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                                {formatFileSize(fileData.size)} — Cliquez pour télécharger
+                                            </p>
+                                        </div>
+                                    </button>
+                                    <p className={`text-[10px] mt-0.5 ${isMe ? "text-right text-muted-foreground" : "text-muted-foreground"}`}>
+                                        {formatMessageTime(m.createdAt)}
+                                    </p>
+                                </div>
+                            </div>
                             ) : (
                             <div className={`flex ${isContinuation ? "pt-0.5" : "pt-2"} ${isMe ? "justify-end" : "justify-start"}`}>
                                 <div className={hasSharedPost ? "max-w-[85%] min-w-[260px]" : "max-w-[70%]"}>
@@ -230,6 +378,51 @@ export function MessageList({
                         </div>
                         <span className="text-xs text-muted-foreground">est en train d&apos;écrire</span>
                     </div>
+                </div>
+            )}
+
+            {/* Lightbox */}
+            {lightboxUrl && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                    onClick={() => setLightboxUrl(null)}
+                >
+                    <div className="absolute top-4 right-4 flex gap-2">
+                        <button
+                            type="button"
+                            onClick={async (e) => {
+                                e.stopPropagation()
+                                try {
+                                    const res = await fetch(lightboxUrl)
+                                    const blob = await res.blob()
+                                    const url = URL.createObjectURL(blob)
+                                    const a = document.createElement("a")
+                                    a.href = url
+                                    a.download = `image-${Date.now()}.${blob.type.split("/")[1] || "png"}`
+                                    a.click()
+                                    URL.revokeObjectURL(url)
+                                } catch {
+                                    window.open(lightboxUrl, "_blank")
+                                }
+                            }}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        >
+                            <Download className="h-5 w-5" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLightboxUrl(null)}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <img
+                        src={lightboxUrl}
+                        alt="Image en grand"
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                 </div>
             )}
         </div>

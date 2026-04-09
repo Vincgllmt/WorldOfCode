@@ -43,10 +43,12 @@ class UploadController extends AbstractController
     )]
     public function upload(Request $request, S3Storage $s3): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
         $file = $request->files->get('file');
 
         if (!$file) {
-            return new Response('Aucun fichier envoyé', 400);
+            return $this->json(['error' => 'Aucun fichier envoyé'], 400);
         }
 
         $key = time() . '-' . $file->getClientOriginalName();
@@ -56,7 +58,7 @@ class UploadController extends AbstractController
         $url = $s3->upload($key, $localPath, $mime);
 
         if (!$url) {
-            return new Response('Erreur upload MinIO', 500);
+            return $this->json(['error' => 'Erreur upload MinIO'], 500);
         }
 
         return $this->json(['url' => $url]);

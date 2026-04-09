@@ -1,6 +1,6 @@
 "use client"
 
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useRealtimeMessages } from "@/hooks/useMessages"
 import { useAuth } from "@/hooks/useAuth"
 import { useConversations, useMarkConversationAsRead } from "@/hooks/useConversations"
@@ -12,6 +12,8 @@ import { useVideoCallContext } from "@/contexts/VideoCallContext"
 
 export default function ConversationPage() {
     const { id } = useParams<{ id: string }>()
+    const searchParams = useSearchParams()
+    const highlightMessageId = searchParams.get('msg')
     const { user } = useAuth()
     const userId = user?.id?.toString()
 
@@ -47,9 +49,11 @@ export default function ConversationPage() {
             <MessageList
                 messages={messages || []}
                 userId={userId}
+                conversationId={id}
                 convType={conv?.type}
                 typingUsers={typingUsers}
                 otherUsername={otherUser?.username}
+                highlightMessageId={highlightMessageId}
             />
             <MessageInput onSend={sendMessage} conversationId={id} />
         </div>

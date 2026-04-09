@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, MessageCircle, UserPlus } from 'lucide-react'
+import { Loader2, MessageCircle, UserPlus, ImageIcon, FileArchive } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -175,7 +175,7 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
           const isMissedCall = lastMsgType === 'missed_call'
           const isMine = conversation.lastMessage?.sender?.id === userId
 
-          let preview: string
+          let preview: React.ReactNode
           if (isMissedCall) {
             const reason = rawPreview
             if (reason === 'rejected') preview = isMine ? '📞 Appel refusé' : '📞 Appel refusé'
@@ -184,6 +184,12 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
             else preview = '📞 Appel manqué'
           } else if (isCallMessage) {
             preview = `📞 ${rawPreview}`
+          } else if (lastMsgType === 'image') {
+            preview = <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> Photo</span>
+          } else if (lastMsgType === 'file') {
+            let fileName = 'Fichier'
+            try { fileName = JSON.parse(rawPreview).name || fileName } catch {}
+            preview = <span className="inline-flex items-center gap-1"><FileArchive className="h-3 w-3" /> {fileName}</span>
           } else if (isSharedPost) {
             preview = isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
           } else {

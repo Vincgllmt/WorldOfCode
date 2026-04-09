@@ -20,6 +20,10 @@ RUN apt-get update && \
     && pecl install pcov \
     && docker-php-ext-enable pcov
 
+# Augmenter les limites d'upload PHP
+RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 12M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Vérifier la version de PHP installée
 RUN php -v
 

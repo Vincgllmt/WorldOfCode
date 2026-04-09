@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Settings, MapPin, Pencil, Camera } from 'lucide-react'
+import { Settings, MapPin, Pencil, Camera, MessageCircle } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,9 @@ import ProfileLinksSection from '@/components/profile/ProfileLinksSection'
 import EditLinksDialog from '@/components/profile/EditLinksDialog'
 import AvatarPicker from '@/components/register/AvatarPicker'
 import { useUpdateAvatar } from '@/hooks/useUsers'
+import { useCreateConversation } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
 import type { PublicUser } from '@/interfaces/user'
 import type { Group } from '@/interfaces/group'
 
@@ -53,6 +55,8 @@ export default function ProfileSidebar({
   const [pickerAvatar, setPickerAvatar] = useState<string | null>(null)
   const [displayedAvatarUrl, setDisplayedAvatarUrl] = useState<string | null | undefined>(user.avatarUrl)
   const updateAvatar = useUpdateAvatar()
+  const createConversation = useCreateConversation()
+  const router = useRouter()
   const { setUserAvatar } = useAuth()
 
   const hasLocation = Boolean(user.location)
@@ -134,14 +138,36 @@ export default function ProfileSidebar({
               Modifier le profil
             </Button>
           ) : (
-            <FollowToggleButton
-              currentUserId={viewerId}
-              targetUserId={user.id}
-              initialIsFollowing={isFollowedByViewer}
-              variant="solid"
-              size="md"
-              className="w-full"
-            />
+            <div className="flex gap-2">
+              <FollowToggleButton
+                currentUserId={viewerId}
+                targetUserId={user.id}
+                initialIsFollowing={isFollowedByViewer}
+                variant="solid"
+                size="md"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={createConversation.isPending}
+                onClick={() => {
+                  createConversation.mutate(
+                    { targetUserId: user.id, type: 'direct' },
+                    {
+                      onSuccess: (conv) => {
+                        router.push(`/message/${conv.id}`)
+                      },
+                    }
+                  )
+                }}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Message
+              </Button>
+            </div>
           )}
         </div>
 
