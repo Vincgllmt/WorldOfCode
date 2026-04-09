@@ -18,8 +18,10 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-import { MessageCircle, SquarePen, X, Loader2, ImageIcon, FileArchive } from "lucide-react"
+import { MessageCircle, SquarePen, X, Loader2, ImageIcon, FileArchive, Search } from "lucide-react"
 import { useOnlineUsers } from "@/hooks/useOnlineUsers"
+import { useSearchMessages } from "@/hooks/useMessages"
+import type { MessageSearchResult } from "@/services/messageService"
 
 function getMessagePreview(body: string, isMine: boolean, type?: string): React.ReactNode {
     if (type === 'missed_call') {
@@ -72,6 +74,9 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
     const [showNewConversation, setShowNewConversation] = useState(false)
     const [contactQuery, setContactQuery] = useState('')
     const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
+    const { data: searchResults, isLoading: isSearching } = useSearchMessages(searchQuery)
+    const isSearchActive = searchQuery.length >= 2
 
     const { contacts, isLoading: isLoadingContacts } = useContacts()
     const createConversation = useCreateConversation()
@@ -129,24 +134,36 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
             {/* Sidebar conversations */}
             <div className="w-[360px] border-r border-border bg-background flex flex-col">
                 {/* Header sidebar */}
-                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-foreground">Messages</h2>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            setShowNewConversation(!showNewConversation)
-                            setContactQuery('')
-                        }}
-                        title="Nouvelle conversation"
-                    >
-                        {showNewConversation ? (
-                            <X className="h-5 w-5" />
-                        ) : (
-                            <SquarePen className="h-5 w-5" />
-                        )}
-                    </Button>
+                <div className="px-5 py-4 border-b border-border">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-bold text-foreground">Messages</h2>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                                setShowNewConversation(!showNewConversation)
+                                setContactQuery('')
+                            }}
+                            title="Nouvelle conversation"
+                        >
+                            {showNewConversation ? (
+                                <X className="h-5 w-5" />
+                            ) : (
+                                <SquarePen className="h-5 w-5" />
+                            )}
+                        </Button>
+                    </div>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Rechercher dans les messages..."
+                            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-muted/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+                        />
+                    </div>
                 </div>
 
                 {/* Panneau nouvelle conversation */}
@@ -205,6 +222,79 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
 
                 {/* Liste */}
                 <div className="flex-1 overflow-y-auto">
+                    {/* Résultats de recherche */}
+                    {isSearchActive ? (
+                        <div>
+                            {isSearching && (
+                                <div className="flex items-center justify-center py-10 text-muted-foreground">
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                </div>
+                            )}
+                            {!isSearching && searchResults && searchResults.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                                    <Search className="h-10 w-10 mb-3 stroke-1" />
+                                    <p className="text-sm">Aucun résultat</p>
+                                </div>
+                            )}
+                            {searchResults?.map((result) => {
+                                const convName = result.conversation
+                                    ? result.conversation.participants
+                                        .filter((p) => p.id !== user?.id)
+                                        .map((p) => p.username)
+                                        .join(', ') || 'Conversation'
+                                    : 'Conversation'
+                                const initials = convName.slice(0, 2).toUpperCase()
+
+                                // Mettre en gras le terme recherché dans l'extrait
+                                const bodyPreview = result.body.replace(/<[^>]*>/g, '').trim()
+                                const lowerBody = bodyPreview.toLowerCase()
+                                const lowerQuery = searchQuery.toLowerCase()
+                                const matchIndex = lowerBody.indexOf(lowerQuery)
+
+                                let snippet: React.ReactNode = bodyPreview.slice(0, 80)
+                                if (matchIndex >= 0) {
+                                    const start = Math.max(0, matchIndex - 20)
+                                    const end = Math.min(bodyPreview.length, matchIndex + searchQuery.length + 40)
+                                    const before = bodyPreview.slice(start, matchIndex)
+                                    const match = bodyPreview.slice(matchIndex, matchIndex + searchQuery.length)
+                                    const after = bodyPreview.slice(matchIndex + searchQuery.length, end)
+                                    snippet = (
+                                        <>
+                                            {start > 0 && '…'}{before}<span className="font-bold text-primary">{match}</span>{after}{end < bodyPreview.length && '…'}
+                                        </>
+                                    )
+                                }
+
+                                return (
+                                    <Link
+                                        key={result.id}
+                                        href={`/message/${result.conversationId}?msg=${result.id}`}
+                                        onClick={() => setSearchQuery('')}
+                                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
+                                    >
+                                        <Avatar className="h-10 w-10 shrink-0">
+                                            <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                                                {initials}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium text-foreground truncate">{convName}</span>
+                                                <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                                                    {formatTime(result.createdAt)}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                                <span className="font-medium">{result.sender.username} :</span>{' '}
+                                                {snippet}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                    <>
                     {isLoading && (
                         <div className="flex items-center justify-center py-10 text-muted-foreground">
                             <div className="w-5 h-5 border-2 border-muted border-t-primary rounded-full animate-spin" />
@@ -301,6 +391,8 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                             <MessageCircle className="h-12 w-12 mb-3 stroke-1" />
                             <p className="text-sm">Aucune conversation</p>
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
             </div>

@@ -41,11 +41,6 @@ class UploadController extends AbstractController
             new OA\Response(response: 500, description: 'Erreur lors de l\'upload'),
         ]
     )]
-    private const MAX_IMAGE_SIZE = 5 * 1024 * 1024;  // 5 Mo
-    private const MAX_ZIP_SIZE = 10 * 1024 * 1024;    // 10 Mo
-    private const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    private const ALLOWED_ZIP_TYPES = ['application/zip', 'application/x-zip-compressed'];
-
     public function upload(Request $request, S3Storage $s3): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -56,26 +51,9 @@ class UploadController extends AbstractController
             return $this->json(['error' => 'Aucun fichier envoyé'], 400);
         }
 
-        $mime = $file->getMimeType();
-        $size = $file->getSize();
-
-        $isImage = in_array($mime, self::ALLOWED_IMAGE_TYPES, true);
-        $isZip = in_array($mime, self::ALLOWED_ZIP_TYPES, true);
-
-        if (!$isImage && !$isZip) {
-            return $this->json(['error' => 'Type de fichier non autorisé. Formats acceptés : JPG, PNG, WebP, GIF, ZIP'], 400);
-        }
-
-        if ($isImage && $size > self::MAX_IMAGE_SIZE) {
-            return $this->json(['error' => 'L\'image ne doit pas dépasser 5 Mo'], 400);
-        }
-
-        if ($isZip && $size > self::MAX_ZIP_SIZE) {
-            return $this->json(['error' => 'Le fichier ZIP ne doit pas dépasser 10 Mo'], 400);
-        }
-
         $key = time() . '-' . $file->getClientOriginalName();
         $localPath = $file->getPathname();
+        $mime = $file->getMimeType();
 
         $url = $s3->upload($key, $localPath, $mime);
 

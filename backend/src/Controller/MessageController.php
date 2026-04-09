@@ -7,6 +7,7 @@ use App\Repository\Messaging\MessageRepository;
 use App\Mapper\MessageMapper;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -15,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Core\Security;
 
 
-#[Route('/api/messaging/conversations')]
+#[Route('/api/messaging')]
 #[OA\Tag(name: 'Messaging')]
 class MessageController extends AbstractController
 {
@@ -25,7 +26,7 @@ class MessageController extends AbstractController
         private MessageMapper $mapper
     ) {}
 
-    #[Route('/{id}/messages', name: 'messages_list', methods: ['GET'])]
+    #[Route('/conversations/{id}/messages', name: 'messages_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Récupère tous les messages d’une conversation',
         parameters: [
@@ -61,7 +62,7 @@ class MessageController extends AbstractController
 
 
 
-    #[Route('/{id}/read', name: 'messages_mark_read', methods: ['POST'])]
+    #[Route('/conversations/{id}/read', name: 'messages_mark_read', methods: ['POST'])]
     #[OA\Post(
         summary: "Marque tous les messages d'une conversation comme lus",
         parameters: [
@@ -94,5 +95,70 @@ class MessageController extends AbstractController
         $em->flush();
 
         return $this->json(['status' => 'ok']);
+    }
+
+    #[Route('/messages/search', name: 'messages_search', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Recherche globale dans les messages de l\'utilisateur',
+        parameters: [
+            new OA\Parameter(name: 'q', in: 'query', required: true, schema: new OA\Schema(type: 'string', minLength: 2))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Résultats de recherche'),
+            new OA\Response(response: 400, description: 'Requête invalide')
+        ]
+    )]
+    public function search(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $query = trim($request->query->getString('q', ''));
+        if (mb_strlen($query) < 2) {
+            return $this->json(['error' => 'La recherche doit contenir au moins 2 caractères'], 400);
+        }
+
+        $user = $this->getUser();
+        $results = $this->repo->searchByUserAndQuery($user->getId(), $query);
+
+        // Regrouper les infos de conversation pour chaque résultat
+        $conversationCache = [];
+        $data = [];
+
+        foreach ($results as $row) {
+            $convId = $row['conversation_id'];
+
+            if (!isset($conversationCache[$convId])) {
+                $conv = $this->convRepo->find($convId);
+                if ($conv) {
+                    $participants = [];
+                    foreach ($conv->getParticipants() as $p) {
+                        $participants[] = [
+                            'id' => $p->getUser()->getId(),
+                            'username' => $p->getUser()->getUsername(),
+                        ];
+                    }
+                    $conversationCache[$convId] = [
+                        'id' => $convId,
+                        'type' => $conv->getType(),
+                        'participants' => $participants,
+                    ];
+                }
+            }
+
+            $data[] = [
+                'id' => $row['id'],
+                'body' => $row['body'],
+                'type' => $row['type'],
+                'createdAt' => $row['created_at'],
+                'conversationId' => $convId,
+                'sender' => [
+                    'id' => $row['sender_id'],
+                    'username' => $row['sender_username'],
+                ],
+                'conversation' => $conversationCache[$convId] ?? null,
+            ];
+        }
+
+        return $this->json($data);
     }
 }

@@ -11,6 +11,7 @@ type Props = {
     convType?: string
     typingUsers?: string[]
     otherUsername?: string
+    highlightMessageId?: string | null
 }
 
 function formatMessageTime(dateStr: string) {
@@ -88,10 +89,12 @@ export function MessageList({
     convType,
     typingUsers = [],
     otherUsername,
+    highlightMessageId,
 }: Props) {
     const router = useRouter()
     const parentRef = useRef<HTMLDivElement | null>(null)
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+    const [highlightedId, setHighlightedId] = useState<string | null>(highlightMessageId ?? null)
 
     // Intercepte les clics sur les liens internes (ex: /post/123) pour utiliser
     // la navigation client-side Next.js au lieu d'un rechargement complet,
@@ -116,19 +119,49 @@ export function MessageList({
     })
 
     const prevLengthRef = useRef(0)
+    const didScrollToHighlight = useRef(false)
 
+    // Scroll vers le message highlight
     useEffect(() => {
-        if (messages?.length) {
-            const isInitialLoad = prevLengthRef.current === 0
-            prevLengthRef.current = messages.length
+        if (!highlightedId || !messages?.length || didScrollToHighlight.current) return
 
+        const idx = messages.findIndex((m) => m.id === highlightedId)
+        if (idx >= 0) {
+            didScrollToHighlight.current = true
             setTimeout(() => {
-                virtualizer.scrollToIndex(messages.length - 1, {
-                    align: "end",
-                    behavior: isInitialLoad ? "auto" : "smooth",
-                })
-            }, 50)
+                virtualizer.scrollToIndex(idx, { align: "center", behavior: "auto" })
+                setTimeout(() => setHighlightedId(null), 3000)
+            }, 150)
         }
+    }, [highlightedId, messages?.length])
+
+    // Scroll vers le bas pour les nouveaux messages
+    useEffect(() => {
+        if (!messages?.length) return
+        // Ne pas scroll vers le bas si on vient d'un highlight
+        if (highlightedId || didScrollToHighlight.current) {
+            // Reset après le premier chargement pour que les futurs messages scrollent normalement
+            if (prevLengthRef.current > 0 && messages.length > prevLengthRef.current) {
+                // Nouveau message reçu après le highlight → scroll vers le bas
+                prevLengthRef.current = messages.length
+                setTimeout(() => {
+                    virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "smooth" })
+                }, 50)
+            } else {
+                prevLengthRef.current = messages.length
+            }
+            return
+        }
+
+        const isInitialLoad = prevLengthRef.current === 0
+        prevLengthRef.current = messages.length
+
+        setTimeout(() => {
+            virtualizer.scrollToIndex(messages.length - 1, {
+                align: "end",
+                behavior: isInitialLoad ? "auto" : "smooth",
+            })
+        }, 50)
     }, [messages?.length])
 
     if (!messages || messages.length === 0) {
@@ -169,12 +202,14 @@ export function MessageList({
                     const isImage = m.type === 'image'
                     const isFile = m.type === 'file'
                     const fileData = isFile ? parseFileBody(m.body) : null
+                    const isHighlighted = m.id === highlightedId
 
                     return (
                         <div
                             key={m.id}
                             data-index={virtualRow.index}
                             ref={virtualizer.measureElement}
+                            className={isHighlighted ? "animate-pulse bg-primary/10 rounded-lg transition-colors duration-1000" : ""}
                             style={{
                                 position: "absolute",
                                 top: 0,

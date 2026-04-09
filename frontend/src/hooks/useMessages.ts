@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getMessages } from "@/services/messageService"
+import { getMessages, searchMessages } from "@/services/messageService"
 import { socket } from "@/lib/socket"
 import { Message } from "@/interfaces/message"
 import { Conversation } from "@/interfaces/conversation"
@@ -139,4 +139,20 @@ export const useRealtimeMessages = (
     }
 
     return { messages, isLoading, error, sendMessage, refetch, typingUsers }
+}
+
+// === Hook recherche globale de messages ===
+export function useSearchMessages(query: string) {
+    const [debouncedQuery, setDebouncedQuery] = useState('')
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(query), 300)
+        return () => clearTimeout(timer)
+    }, [query])
+
+    return useQuery({
+        queryKey: ['messageSearch', debouncedQuery],
+        queryFn: () => searchMessages(debouncedQuery),
+        enabled: debouncedQuery.length >= 2,
+    })
 }
