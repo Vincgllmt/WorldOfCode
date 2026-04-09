@@ -49,6 +49,7 @@ export default function ConversationPage() {
             <MessageList
                 messages={messages || []}
                 userId={userId}
+                conversationId={id}
                 convType={conv?.type}
                 typingUsers={typingUsers}
                 otherUsername={otherUser?.username}

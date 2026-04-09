@@ -8,6 +8,7 @@ import { sanitizeHtml } from "@/lib/sanitizeHtml"
 type Props = {
     messages: Message[]
     userId?: string
+    conversationId?: string
     convType?: string
     typingUsers?: string[]
     otherUsername?: string
@@ -86,6 +87,7 @@ async function downloadFile(url: string, filename: string) {
 export function MessageList({
     messages,
     userId,
+    conversationId,
     convType,
     typingUsers = [],
     otherUsername,
@@ -119,49 +121,51 @@ export function MessageList({
     })
 
     const prevLengthRef = useRef(0)
-    const didScrollToHighlight = useRef(false)
+    const hasScrolledInitial = useRef(false)
 
-    // Scroll vers le message highlight
+    // Reset quand la conversation change
     useEffect(() => {
-        if (!highlightedId || !messages?.length || didScrollToHighlight.current) return
+        prevLengthRef.current = 0
+        hasScrolledInitial.current = false
+        setHighlightedId(highlightMessageId ?? null)
+    }, [conversationId, highlightMessageId])
 
-        const idx = messages.findIndex((m) => m.id === highlightedId)
-        if (idx >= 0) {
-            didScrollToHighlight.current = true
-            setTimeout(() => {
-                virtualizer.scrollToIndex(idx, { align: "center", behavior: "auto" })
-                setTimeout(() => setHighlightedId(null), 3000)
-            }, 150)
-        }
-    }, [highlightedId, messages?.length])
-
-    // Scroll vers le bas pour les nouveaux messages
     useEffect(() => {
         if (!messages?.length) return
-        // Ne pas scroll vers le bas si on vient d'un highlight
-        if (highlightedId || didScrollToHighlight.current) {
-            // Reset après le premier chargement pour que les futurs messages scrollent normalement
-            if (prevLengthRef.current > 0 && messages.length > prevLengthRef.current) {
-                // Nouveau message reçu après le highlight → scroll vers le bas
-                prevLengthRef.current = messages.length
-                setTimeout(() => {
-                    virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "smooth" })
-                }, 50)
-            } else {
-                prevLengthRef.current = messages.length
+
+        const isInitialLoad = !hasScrolledInitial.current
+
+        if (isInitialLoad) {
+            hasScrolledInitial.current = true
+
+            // Si highlight demandé, scroller vers ce message
+            if (highlightedId) {
+                const idx = messages.findIndex((m) => m.id === highlightedId)
+                if (idx >= 0) {
+                    setTimeout(() => {
+                        virtualizer.scrollToIndex(idx, { align: "center", behavior: "auto" })
+                        setTimeout(() => setHighlightedId(null), 3000)
+                    }, 150)
+                    prevLengthRef.current = messages.length
+                    return
+                }
             }
+
+            // Sinon scroll vers le bas
+            setTimeout(() => {
+                virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "auto" })
+            }, 50)
+            prevLengthRef.current = messages.length
             return
         }
 
-        const isInitialLoad = prevLengthRef.current === 0
+        // Nouveau message reçu → scroll vers le bas
+        if (messages.length > prevLengthRef.current) {
+            setTimeout(() => {
+                virtualizer.scrollToIndex(messages.length - 1, { align: "end", behavior: "smooth" })
+            }, 50)
+        }
         prevLengthRef.current = messages.length
-
-        setTimeout(() => {
-            virtualizer.scrollToIndex(messages.length - 1, {
-                align: "end",
-                behavior: isInitialLoad ? "auto" : "smooth",
-            })
-        }, 50)
     }, [messages?.length])
 
     if (!messages || messages.length === 0) {

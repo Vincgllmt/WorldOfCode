@@ -7,6 +7,10 @@ RUN apt-get update && apt-get install -y \
     git unzip libicu-dev libzip-dev libonig-dev \
  && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring
 
+# Augmenter les limites d'upload PHP
+RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 12M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ENV APP_ENV=prod APP_DEBUG=0
