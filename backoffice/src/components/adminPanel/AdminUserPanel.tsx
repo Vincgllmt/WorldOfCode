@@ -4,7 +4,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { MoreVertical, MapPin, Briefcase, Link as LinkIcon, FileText, Flag, Search, SlidersHorizontal, X } from 'lucide-react'
 
-import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser } from '@/hooks/useAdminUsers'
+import { useAdminUsers, useAdminUpdateUserRole, useAdminDeleteUser } from '@/hooks/useAdminUsers'
 import { useAdminUserDetail } from '@/hooks/useAdminUserDetail'
 
 import { Input } from '@/components/ui/input'
@@ -86,7 +86,7 @@ function UserPanelSkeleton() {
 
 export default function AdminUserPanel() {
   const { users, isLoading } = useAdminUsers()
-  const updateUser = useAdminUpdateUser()
+  const updateUserRole = useAdminUpdateUserRole()
   const deleteUser = useAdminDeleteUser()
 
   const [search, setSearch] = useState('')
@@ -147,8 +147,8 @@ export default function AdminUserPanel() {
 
   const handleConfirmRoleChange = () => {
     if (!pendingRoleChange) return
-    updateUser.mutate(
-      { id: pendingRoleChange.userId, username: pendingRoleChange.username, role: pendingRoleChange.newRole },
+    updateUserRole.mutate(
+      { id: pendingRoleChange.userId, role: pendingRoleChange.newRole },
       {
         onSuccess: () => toast.success('Rôle mis à jour'),
         onError: () => toast.error('Erreur lors de la mise à jour'),
