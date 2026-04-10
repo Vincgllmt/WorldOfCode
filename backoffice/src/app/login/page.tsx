@@ -251,7 +251,7 @@ export default function AdminLoginPage() {
                   <Button
                     type="submit"
                     disabled={auth?.isLoading}
-                    className="w-full"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
                   >
                     {auth?.isLoading ? 'Vérification...' : 'Confirmer'}
                   </Button>
@@ -338,7 +338,7 @@ export default function AdminLoginPage() {
                   )}
                 </div>
 
-                <Button type="submit" disabled={auth?.isLoading} className="w-full">
+                <Button type="submit" disabled={auth?.isLoading} className="w-full bg-green-600 hover:bg-green-700 text-white">
                   {auth?.isLoading ? 'Connexion...' : 'Se connecter'}
                 </Button>
               </form>
