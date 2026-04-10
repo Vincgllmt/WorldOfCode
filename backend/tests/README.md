@@ -47,33 +47,36 @@ docker compose exec backend composer run tests
 
 ### Tableau de Références Actuelles
 
-| Fichier de Test                  | 🎮 Jeu Vidéo             | Utilisateur(s)                                   | Mot(s) de Passe                       |
-|----------------------------------|--------------------------|--------------------------------------------------|---------------------------------------|
-| **AuthenticationControllerTest** | 🎮 **Portal 2**          | Chell<br>Wheatley<br>GLaDOS<br>Cave Johnson      | Ap3rtur3Sc!ence<br>—<br>—<br>—        |
-| **PostControllerTest**           | 🗡️ **Elden Ring**       | Tarnished<br>Malenia                             | (mock - hashed)                       |
-| **UserControllerTest**           | 🚀 **Mass Effect**       | Shepard<br>Garrus                                | (mock - hashed)                       |
-| **TechWatchControllerTest**      | 🌃 **Cyberpunk 2077**    | VNightCity<br>JackieWelles                       | Samurai2077!@2024<br>TuMiTiempo!@2024 |
-| **CommentControllerTest**        | 🌊 **BioShock**          | JackRyan<br>AndrewRyan                           | (mock - hashed)                       |
-| **ConversationControllerTest**   | 🗡️ **Assassin's Creed** | EzioAuditore<br>AltairIbnLaAhad                  | (mock - hashed)                       |
-| **FollowControllerTest**         | 🐍 **Metal Gear Solid**  | SolidSnake<br>OtaconEmmerich<br>MerylSilverburgh | (mock - hashed)                       |
-| **MessageControllerTest**        | 🐉 **Yakuza**            | KiryuKazuma<br>MajimaGoro                        | (mock - hashed)                       |
-| **NotificationControllerTest**   | 🌼 **Undertale**         | FriskDreemurr<br>TorielDreemurr                  | (mock - hashed)                       |
-| **ReportControllerTest**         | 🧟 **Resident Evil**     | LeonKennedy<br>AdaWong                           | (mock - hashed)                       |
-| **SearchControllerTest**         | ⚔️ **Sekiro**            | WolfShinobi<br>KuroTheDivineHeir                 | (mock - hashed)                       |
-| **SkillControllerTest**          | 🩸 **Bloodborne**        | GoodHunter<br>GehrmanFirstHunter                 | (mock - hashed)                       |
-| **SuggestionControllerTest**     | 🪓 **God of War**        | KratosGhost<br>FreyrAesir                        | (mock - hashed)                       |
-| **TechGroupControllerTest**      | 🔫 **Hotline Miami**     | Jacket<br>Biker                                  | (mock - hashed)                       |
-| **UploadControllerTest**         | 🔬 **Half-Life**         | GordonFreeman                                    | (mock - hashed)                       |
-| **CorsPreflightControllerTest**  | 🕹️ **Pac-Man**          | PacManYellow<br>GhostBlinky                      | (sans auth)                           |
-| **DefaultControllerTest**        | 🗡️ **The Legend of Zelda** | LinkHylian<br>GanondorfDorf                   | (sans auth)                           |
-| **PasswordValidatorTest**        | ⚔️ **Dark Souls**         | UndyingUndead<br>SolaireLordran                  | (pas d'auth)                          |
-| **NotificationServiceTest**      | 🎯 **Overwatch**          | TraceOxton<br>SoldiersGabe                       | (mock - hashed)                       |
-| **TechGroupMembershipServiceTest** | 🧙 **World of Warcraft** | ThrallGoEl<br>JainaProudmoore                   | (mock - hashed)                       |
-| **SuggestionServiceTest**        | 🦋 **Hollow Knight**      | TheKnight<br>Hornet<br>Quirrel                   | (mock - hashed)                       |
-| **PasswordResetServiceTest**     | 🌟 **Final Fantasy VII**  | CloudStrife<br>AerithGainsborough                | (mock - hashed)                       |
-| **TwoFactorServiceTest**         | 🤖 **Deus Ex**            | JCDenton<br>AdamJensen                           | (mock - hashed)                       |
-| **RssFetcherServiceTest**        | 🚀 **StarCraft**          | JimRaynor<br>SarahKerrigan                       | (mock - hashed)                       |
-| **S3StorageTest**                | ⛏️ **Minecraft**          | SteveBuilder<br>HerobrineVoid                    | (mock - hashed)                       |
+| Fichier de Test                    | 🎮 Jeu Vidéo                | Utilisateur(s)                                   | Mot(s) de Passe                       |
+|------------------------------------|-----------------------------|--------------------------------------------------|---------------------------------------|
+| **AuthenticationControllerTest**   | 🎮 **Portal 2**             | Chell<br>Wheatley<br>GLaDOS<br>Cave Johnson      | Ap3rtur3Sc!ence<br>—<br>—<br>—        |
+| **PostControllerTest**             | 🗡️ **Elden Ring**          | Tarnished<br>Malenia                             | (mock - hashed)                       |
+| **UserControllerTest**             | 🚀 **Mass Effect**          | Shepard<br>Garrus                                | (mock - hashed)                       |
+| **TechWatchControllerTest**        | 🌃 **Cyberpunk 2077**       | VNightCity<br>JackieWelles                       | Samurai2077!@2024<br>TuMiTiempo!@2024 |
+| **CommentControllerTest**          | 🌊 **BioShock**             | JackRyan<br>AndrewRyan                           | (mock - hashed)                       |
+| **ConversationControllerTest**     | 🗡️ **Assassin's Creed**    | EzioAuditore<br>AltairIbnLaAhad                  | (mock - hashed)                       |
+| **FollowControllerTest**           | 🐍 **Metal Gear Solid**     | SolidSnake<br>OtaconEmmerich<br>MerylSilverburgh | (mock - hashed)                       |
+| **MessageControllerTest**          | 🐉 **Yakuza**               | KiryuKazuma<br>MajimaGoro                        | (mock - hashed)                       |
+| **NotificationControllerTest**     | 🌼 **Undertale**            | FriskDreemurr<br>TorielDreemurr                  | (mock - hashed)                       |
+| **ReportControllerTest**           | 🧟 **Resident Evil**        | LeonKennedy<br>AdaWong                           | (mock - hashed)                       |
+| **SearchControllerTest**           | ⚔️ **Sekiro**               | WolfShinobi<br>KuroTheDivineHeir                 | (mock - hashed)                       |
+| **SkillControllerTest**            | 🩸 **Bloodborne**           | GoodHunter<br>GehrmanFirstHunter                 | (mock - hashed)                       |
+| **SuggestionControllerTest**       | 🪓 **God of War**           | KratosGhost<br>FreyrAesir                        | (mock - hashed)                       |
+| **TechGroupControllerTest**        | 🔫 **Hotline Miami**        | Jacket<br>Biker                                  | (mock - hashed)                       |
+| **UploadControllerTest**           | 🔬 **Half-Life**            | GordonFreeman                                    | (mock - hashed)                       |
+| **CorsPreflightControllerTest**    | 🕹️ **Pac-Man**             | PacManYellow<br>GhostBlinky                      | (sans auth)                           |
+| **DefaultControllerTest**          | 🗡️ **The Legend of Zelda** | LinkHylian<br>GanondorfDorf                      | (sans auth)                           |
+| **PasswordValidatorTest**          | ⚔️ **Dark Souls**           | UndyingUndead<br>SolaireLordran                  | (pas d'auth)                          |
+| **NotificationServiceTest**        | 🎯 **Overwatch**            | TraceOxton<br>SoldiersGabe                       | (mock - hashed)                       |
+| **TechGroupMembershipServiceTest** | 🧙 **World of Warcraft**    | ThrallGoEl<br>JainaProudmoore                    | (mock - hashed)                       |
+| **SuggestionServiceTest**          | 🦋 **Hollow Knight**        | TheKnight<br>Hornet<br>Quirrel                   | (mock - hashed)                       |
+| **PasswordResetServiceTest**       | 🌟 **Final Fantasy VII**    | CloudStrife<br>AerithGainsborough                | (mock - hashed)                       |
+| **TwoFactorServiceTest**           | 🤖 **Deus Ex**              | JCDenton<br>AdamJensen                           | (mock - hashed)                       |
+| **RssFetcherServiceTest**          | 🚀 **StarCraft**            | JimRaynor<br>SarahKerrigan                       | (mock - hashed)                       |
+| **S3StorageTest**                  | ⛏️ **Minecraft**            | SteveBuilder<br>HerobrineVoid                    | (mock - hashed)                       |
+| **GroupSuggestionControllerTest**  | 🎭 **The Witcher 3**        | GeraltRivia<br>YenneferVengerberg                | (mock - hashed)                       |
+| **PaymentControllerTest**          | 🕵️ **Disco Elysium**       | HarryDuBois<br>KimKitsuragi                      | (mock - hashed)                       |
+| **StripeServiceTest**              | ⚙️ **Factorio**             | EngineerBuilder<br>BitersHorde                   | (mock - hashed)                       |
 
 ### Comment Choisir une Référence ?
 

@@ -38,3 +38,7 @@ services:
       $bucket: "%env(MINIO_BUCKET)%"
       $publicBaseUrl: "%env(MINIO_PUBLIC_URL)%"
 
+  App\Service\StripeService:
+    arguments:
+      $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
+      $stripeWebhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'
