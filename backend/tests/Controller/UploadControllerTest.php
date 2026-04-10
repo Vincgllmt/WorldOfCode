@@ -8,6 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 /**
  * 🎮 Half-Life - Tests unitaires du UploadController
@@ -22,8 +25,28 @@ class UploadControllerTest extends TestCase
 
     private function makeController(): UploadController
     {
+        $token = $this->createMock(TokenInterface::class);
+
+        $tokenStorage = $this->createMock(TokenStorageInterface::class);
+        $tokenStorage->method('getToken')->willReturn($token);
+
+        $authChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authChecker->method('isGranted')->willReturn(true);
+
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnCallback(
+            fn(string $id) => in_array($id, ['security.token_storage', 'security.authorization_checker'], true)
+        );
+        $container->method('get')->willReturnCallback(
+            fn(string $id) => match ($id) {
+                'security.token_storage'         => $tokenStorage,
+                'security.authorization_checker' => $authChecker,
+                default => throw new \RuntimeException("Service inattendu : $id"),
+            }
+        );
+
         $controller = new UploadController();
-        $controller->setContainer($this->createMock(ContainerInterface::class));
+        $controller->setContainer($container);
 
         return $controller;
     }
