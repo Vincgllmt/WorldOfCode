@@ -14,6 +14,7 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -204,5 +205,133 @@ class AdminUserControllerTest extends TestCase
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
         $this->makeController($admin, isAdmin: false)->detail(1);
+    }
+
+    // ======================================================================
+    //  updateRole()
+    // ======================================================================
+
+    private function makeJsonRequest(array $payload): Request
+    {
+        return Request::create('', 'PUT', [], [], [], [], json_encode($payload) ?: '');
+    }
+
+    public function testUpdateRolePromotesToAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+
+        $target = new User();
+        $target->setUsername('GarrusVakarian')
+            ->setEmail('garrus@citadel.net')
+            ->setFirstname('Garrus')
+            ->setLastname('Vakarian')
+            ->setPassword('hash')
+            ->setRole(UserRole::ROLE_USER);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($target, 42);
+        $target->onCreate();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->with(42)->willReturn($target);
+        $userRepo->expects($this->once())->method('save')->with($target, true);
+
+        $response = $this->makeController($admin, $userRepo)
+            ->updateRole(42, $this->makeJsonRequest(['role' => 'ROLE_ADMIN']));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['success']);
+        $this->assertSame(UserRole::ROLE_ADMIN, $target->getRole());
+    }
+
+    public function testUpdateRoleDemotesToUser(): void
+    {
+        $admin = $this->buildAdmin();
+
+        $target = new User();
+        $target->setUsername('GarrusVakarian')
+            ->setEmail('garrus@citadel.net')
+            ->setFirstname('Garrus')
+            ->setLastname('Vakarian')
+            ->setPassword('hash')
+            ->setRole(UserRole::ROLE_ADMIN);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($target, 42);
+        $target->onCreate();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->with(42)->willReturn($target);
+        $userRepo->expects($this->once())->method('save');
+
+        $response = $this->makeController($admin, $userRepo)
+            ->updateRole(42, $this->makeJsonRequest(['role' => 'ROLE_USER']));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(UserRole::ROLE_USER, $target->getRole());
+    }
+
+    public function testUpdateRoleReturns404WhenUserNotFound(): void
+    {
+        $admin    = $this->buildAdmin();
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn(null);
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->makeController($admin, $userRepo)
+            ->updateRole(999, $this->makeJsonRequest(['role' => 'ROLE_ADMIN']));
+    }
+
+    public function testUpdateRoleReturns400WhenRoleMissing(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = new User();
+        $target->setUsername('GarrusVakarian')
+            ->setEmail('garrus@citadel.net')
+            ->setFirstname('Garrus')
+            ->setLastname('Vakarian')
+            ->setPassword('hash')
+            ->setRole(UserRole::ROLE_USER);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($target, 42);
+        $target->onCreate();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $response = $this->makeController($admin, $userRepo)
+            ->updateRole(42, $this->makeJsonRequest([]));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUpdateRoleReturns400WhenRoleInvalid(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = new User();
+        $target->setUsername('GarrusVakarian')
+            ->setEmail('garrus@citadel.net')
+            ->setFirstname('Garrus')
+            ->setLastname('Vakarian')
+            ->setPassword('hash')
+            ->setRole(UserRole::ROLE_USER);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($target, 42);
+        $target->onCreate();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $response = $this->makeController($admin, $userRepo)
+            ->updateRole(42, $this->makeJsonRequest(['role' => 'ROLE_SUPERVILLAIN']));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUpdateRoleDeniesNonAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+        $this->expectException(AccessDeniedException::class);
+        $this->makeController($admin, isAdmin: false)
+            ->updateRole(1, $this->makeJsonRequest(['role' => 'ROLE_ADMIN']));
     }
 }

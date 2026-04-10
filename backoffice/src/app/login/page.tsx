@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { useForm } from 'react-hook-form'
 import { AdminAuthContext } from '@/contexts/AdminAuthContext'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import type { LoginCredentials } from '@/interfaces/Authentification'
 import { Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react'
 
-// ─── Canvas réseau interactif (repris du frontend) ──────────────────────────
+// ─── Canvas réseau interactif ────────────────────────────────────────────────
 
 interface Node {
   x: number
@@ -207,56 +208,56 @@ export default function AdminLoginPage() {
       <div
         onMouseMove={onMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="h-screen flex items-center justify-center bg-gradient-to-b from-green-300 via-green-100 to-white relative overflow-hidden"
+        className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col relative overflow-hidden"
       >
         <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" />
 
-        <div className="relative z-10 w-full max-w-sm px-4">
-          {/* Branding */}
-          <div className="flex flex-col items-center mb-8 gap-2">
-            <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/30">
-              <KeyRound className="w-6 h-6 text-white" />
-            </div>
-            <p className="text-sm font-medium text-green-700 tracking-widest uppercase">
-              Vérification en deux étapes
-            </p>
-          </div>
-
-          {/* Card */}
-          <div className="bg-white/75 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl shadow-green-200/40 p-8">
-            <p className="text-sm text-gray-500 mb-6 text-center leading-relaxed">
-              Un code a été envoyé à{' '}
-              <span className="font-semibold text-gray-800">{auth.twoFAPending.maskedEmail}</span>.
-              Saisissez-le ci-dessous.
-            </p>
-
-            <form onSubmit={handle2FASubmit(onSubmit2FA)} className="space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="code" className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  Code de vérification
-                </Label>
-                <Input
-                  id="code"
-                  type="text"
-                  placeholder="123456"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className="text-center text-2xl font-mono tracking-[0.5em] h-14 bg-white/80"
-                  {...register2FA('code', { required: 'Code requis' })}
-                />
-                {errors2FA.code && (
-                  <p className="text-xs text-red-500 mt-1">{errors2FA.code.message}</p>
-                )}
+        <div className="flex-1 flex justify-center items-center px-4 relative z-10">
+          <div className="w-full max-w-md">
+            <div className="flex flex-col items-center mb-8 gap-2">
+              <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/30">
+                <KeyRound className="w-6 h-6 text-white" />
               </div>
+              <p className="text-sm font-medium text-green-700 tracking-widest uppercase">
+                Vérification en deux étapes
+              </p>
+            </div>
 
-              <Button
-                type="submit"
-                disabled={auth?.isLoading}
-                className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium shadow-md shadow-green-600/25"
-              >
-                {auth?.isLoading ? 'Vérification...' : 'Confirmer'}
-              </Button>
-            </form>
+            <Card className="w-full shadow-md">
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground mb-6 text-center leading-relaxed">
+                  Un code a été envoyé à{' '}
+                  <span className="font-semibold text-foreground">{auth.twoFAPending.maskedEmail}</span>.
+                  Saisissez-le ci-dessous.
+                </p>
+
+                <form onSubmit={handle2FASubmit(onSubmit2FA)} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="code">Code de vérification</Label>
+                    <Input
+                      id="code"
+                      type="text"
+                      placeholder="123456"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      className="text-center text-2xl font-mono tracking-[0.5em] h-14"
+                      {...register2FA('code', { required: 'Code requis' })}
+                    />
+                    {errors2FA.code && (
+                      <p className="text-xs text-red-500 mt-1">{errors2FA.code.message}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={auth?.isLoading}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {auth?.isLoading ? 'Vérification...' : 'Confirmer'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -268,93 +269,87 @@ export default function AdminLoginPage() {
     <div
       onMouseMove={onMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="h-screen flex items-center justify-center bg-gradient-to-b from-green-300 via-green-100 to-white relative overflow-hidden"
+      className="min-h-screen bg-gradient-to-b from-green-300 via-green-100 to-white flex flex-col relative overflow-hidden"
     >
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" />
 
-      <div className="relative z-10 w-full max-w-sm px-4">
-        {/* Branding */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/30">
-            <ShieldCheck className="w-7 h-7 text-white" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">World of Code</h1>
-            <p className="text-xs font-medium text-green-700 tracking-widest uppercase mt-0.5">
-              Espace Administrateur
-            </p>
-          </div>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white/75 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl shadow-green-200/40 p-8">
-          <form onSubmit={handleCredSubmit(onSubmitCredentials)} className="space-y-5">
-            {/* Username */}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="username"
-                className="text-xs font-semibold tracking-wide text-gray-500 uppercase"
-              >
-                Identifiant
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="admin"
-                autoComplete="username"
-                className="bg-white/80 h-11"
-                {...registerCreds('username', { required: 'Champ requis' })}
-              />
-              {credErrors.username && (
-                <p className="text-xs text-red-500">{credErrors.username.message}</p>
-              )}
+      <div className="flex-1 flex justify-center items-center px-4 relative z-10">
+        <div className="w-full max-w-md">
+          {/* Branding */}
+          <div className="flex flex-col items-center mb-8 gap-3">
+            <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/30">
+              <ShieldCheck className="w-7 h-7 text-white" />
             </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="password"
-                className="text-xs font-semibold tracking-wide text-gray-500 uppercase"
-              >
-                Mot de passe
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className="bg-white/80 h-11 pr-10"
-                  {...registerCreds('password', { required: 'Mot de passe requis' })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {credErrors.password && (
-                <p className="text-xs text-red-500">{credErrors.password.message}</p>
-              )}
+            <div className="text-center">
+              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">World of Code</h1>
+              <p className="text-xs font-medium text-green-700 tracking-widest uppercase mt-0.5">
+                Espace Administrateur
+              </p>
             </div>
+          </div>
 
-            <Button
-              type="submit"
-              disabled={auth?.isLoading}
-              className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium shadow-md shadow-green-600/25 mt-2"
-            >
-              {auth?.isLoading ? 'Connexion...' : 'Se connecter'}
-            </Button>
-          </form>
+          {/* Card */}
+          <Card className="w-full shadow-md">
+            <CardHeader className="flex flex-col items-center space-y-2">
+              <CardTitle className="text-xl font-semibold text-gray-800">
+                Connexion
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCredSubmit(onSubmitCredentials)} className="space-y-4">
+                {/* Identifiant */}
+                <div>
+                  <Label htmlFor="username">Identifiant</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="admin"
+                    autoComplete="username"
+                    {...registerCreds('username', { required: 'Champ requis' })}
+                  />
+                  {credErrors.username && (
+                    <p className="text-sm text-red-500 mt-1">{credErrors.username.message}</p>
+                  )}
+                </div>
+
+                {/* Mot de passe */}
+                <div>
+                  <Label htmlFor="password">Mot de passe</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className="pr-10"
+                      {...registerCreds('password', { required: 'Mot de passe requis' })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {credErrors.password && (
+                    <p className="text-sm text-red-500 mt-1">{credErrors.password.message}</p>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={auth?.isLoading} className="w-full bg-green-600 hover:bg-green-700 text-white">
+                  {auth?.isLoading ? 'Connexion...' : 'Se connecter'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Footer */}
+          <p className="text-center text-xs text-gray-400 mt-6">
+            Accès réservé aux administrateurs
+          </p>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Accès réservé aux administrateurs
-        </p>
       </div>
     </div>
   )
