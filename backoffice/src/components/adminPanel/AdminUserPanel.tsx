@@ -358,13 +358,13 @@ export default function AdminUserPanel() {
 
       {/* Sheet détail utilisateur */}
       <Sheet open={!!selectedUserId} onOpenChange={(open) => { if (!open) setSelectedUserId(null) }}>
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border">
-          <SheetHeader className="border-b border-border pb-4">
+        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border px-6">
+          <SheetHeader className="border-b border-border pb-4 -mx-6 px-6">
             <SheetTitle className="text-base font-bold">Profil utilisateur</SheetTitle>
           </SheetHeader>
 
           {isLoadingDetail ? (
-            <div className="space-y-4 mt-5">
+            <div className="space-y-4 mt-5 pb-6">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-14 w-14 rounded-full" />
                 <div className="space-y-2">
@@ -378,7 +378,7 @@ export default function AdminUserPanel() {
               <Skeleton className="h-24 w-full rounded-lg" />
             </div>
           ) : userDetail ? (
-            <div className="mt-5 space-y-5">
+            <div className="mt-5 space-y-5 pb-6">
               {/* Header avatar + nom */}
               <div className="flex items-center gap-3">
                 {userDetail.avatarUrl ? (
