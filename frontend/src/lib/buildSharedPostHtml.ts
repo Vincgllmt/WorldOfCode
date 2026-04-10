@@ -28,5 +28,7 @@ export function buildSharedPostHtml(post: Post, personalMessage?: string): strin
         ? `<p class="shared-post-personal">${personalMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
         : ''
 
-    return `<div class="shared-post-card"><div class="shared-post-accent"></div><div class="shared-post-body">${personalHtml}<div class="shared-post-header"><span class="shared-post-avatar">${initials}</span><div class="shared-post-meta"><p class="shared-post-author">${post.authorUsername}</p><p class="shared-post-group">${usersIcon}${post.techGroupName}</p></div></div>${excerpt ? `<p class="shared-post-excerpt">${excerpt}</p>` : ''}<a href="${postUrl}" class="shared-post-link">${linkIcon} Voir la publication</a></div></div>`
+    const authorUrl = `/user/${post.authorId}`
+
+    return `<div class="shared-post-card"><div class="shared-post-accent"></div><div class="shared-post-body">${personalHtml}<div class="shared-post-header"><span class="shared-post-avatar">${initials}</span><div class="shared-post-meta"><a href="${authorUrl}" class="shared-post-author">${post.authorUsername}</a><p class="shared-post-group">${usersIcon}${post.techGroupName}</p></div></div>${excerpt ? `<p class="shared-post-excerpt">${excerpt}</p>` : ''}<a href="${postUrl}" class="shared-post-link">${linkIcon} Voir la publication</a></div></div>`
 }

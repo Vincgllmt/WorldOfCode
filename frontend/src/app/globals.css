@@ -357,6 +357,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--card-foreground);
+  text-decoration: none;
+}
+
+.shared-post-card .shared-post-author:hover {
+  text-decoration: underline;
+  color: var(--primary);
 }
 
 /* Groupe */
