@@ -21,6 +21,7 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
   const { data: group, isLoading: groupLoading } = useGroup(post.techGroupId)
 
   const [isEditing, setIsEditing] = useState(false)
+  const [editGroupId, setEditGroupId] = useState(post.techGroupId)
   const [showDialog, setShowDialog] = useState(false)
   const [showComments, setShowComments] = useState(defaultShowComments)
 
@@ -42,7 +43,7 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
     }
 
     updatePost.mutate(
-      { id: post.id, data: { content: plainText ? cleanedHtml : null, groupId: post.techGroupId } },
+      { id: post.id, data: { content: plainText ? cleanedHtml : null, groupId: editGroupId } },
       {
         onSuccess: () => {
           setIsEditing(false)
@@ -77,6 +78,8 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
     groupLoading,
     isEditing,
     setIsEditing,
+    editGroupId,
+    setEditGroupId,
     showDialog,
     setShowDialog,
     showComments,

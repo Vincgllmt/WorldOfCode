@@ -19,6 +19,7 @@ import {
   AlertDialogDescription,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Flag, Pencil, Trash2, Save } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
 import PostActions from './PostActions'
@@ -28,6 +29,8 @@ import PostContent from './PostContent'
 import SharedPostCard from './SharedPostCard'
 import type { Post } from '@/interfaces/post'
 import { usePostItem } from '@/hooks/usePostItem'
+import { useUserGroups } from '@/hooks/useUsers'
+import { useAuth } from '@/hooks/useAuth'
 import toast from 'react-hot-toast'
 
 type PostItemProps = {
@@ -45,6 +48,8 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
     groupLoading,
     isEditing,
     setIsEditing,
+    editGroupId,
+    setEditGroupId,
     showDialog,
     setShowDialog,
     showComments,
@@ -57,6 +62,9 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
     handleDelete,
     openCommentsAndFocus,
   } = usePostItem(post, defaultShowComments)
+
+  const { user } = useAuth()
+  const { data: myGroups, isLoading: loadingGroups } = useUserGroups(user?.id)
 
   return (
     <div className="bg-card rounded-xl shadow p-4 space-y-2 relative">
@@ -165,10 +173,31 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
       ) : null}
 
       {isAuthor && isEditing && (
-        <div className="flex justify-end">
-          <Button size="sm" variant="ghost" onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" /> Enregistrer
-          </Button>
+        <div className="flex items-center justify-between gap-3">
+          <Select
+            value={String(editGroupId)}
+            onValueChange={(value) => setEditGroupId(Number(value))}
+            disabled={loadingGroups}
+          >
+            <SelectTrigger className="w-[200px] h-9 text-xs">
+              <SelectValue placeholder="Choisissez un groupe" />
+            </SelectTrigger>
+            <SelectContent>
+              {myGroups?.map((g) => (
+                <SelectItem key={g.id} value={String(g.id)}>
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => { setIsEditing(false); setEditGroupId(post.techGroupId) }}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" /> Enregistrer
+            </Button>
+          </div>
         </div>
       )}
 
