@@ -8,9 +8,13 @@ clientImage:
   repository: bitnamilegacy/minio-client
 
 mode: standalone
+automountServiceAccountToken: true
 
 auth:
   rootUser: admin
+
+serviceAccount:
+  automountServiceAccountToken: true
 
 podAnnotations:
   vault.hashicorp.com/agent-inject: "true"
@@ -41,6 +45,7 @@ ingress:
 
 
 console:  
+  automountServiceAccountToken: true
   image:
     repository: bitnamilegacy/minio-object-browser
   enabled: true
