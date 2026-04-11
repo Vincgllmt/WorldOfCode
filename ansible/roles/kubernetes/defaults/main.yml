@@ -7,3 +7,4 @@ kube_controller_group: k8s_controllers
 kube_worker_group: k8s_workers
 
 
+ssh_public_key_path: "~/.ssh/id_rsa.pub"

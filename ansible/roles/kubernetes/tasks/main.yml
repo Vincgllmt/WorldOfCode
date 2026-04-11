@@ -1,10 +1,20 @@
 ---
 # tasks file for roles/kubernetes
 
+- name: Create the 'ubuntu' user
+  ansible.builtin.import_tasks:
+    file: create_user_ubuntu.yml
+  tags: [create-user]
+
 - name: Cluster prep
   ansible.builtin.import_tasks:
     file: prereq.yml
   tags: [prereq]
+
+- name: Setup Tailscale Mesh VPN
+  ansible.builtin.import_tasks:
+    file: tailscale.yml
+  tags: [tailscale]
 
 - name: Init cluster
   ansible.builtin.import_tasks:

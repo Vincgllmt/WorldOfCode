@@ -54,18 +54,6 @@
   delegate_to: "{{ item }}"
   with_items: "{{ groups['all'] }}"
 
-- name: Configurer containerd pour accepter registry.woc en HTTP
-  blockinfile:
-    path: /etc/containerd/config.toml
-    marker: "# Ansible Block: Configuration pour registry.woc"
-    block: |
-      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.woc"]
-        endpoint = ["http://registry.woc"]
-        insecure_skip_verify = true
-  become: true
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['all'] }}"
-
 - name: Créer un secret Docker pour registry.woc dans le namespace backend
   k8s:
     state: present

@@ -136,7 +136,13 @@ lint:frontend-backoffice:
       fi
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - frontend/**/*
+        - backoffice/**/*
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      changes:
+        - frontend/**/*
+        - backoffice/**/*
   allow_failure: false
 
 # ===================================
@@ -213,5 +219,9 @@ coverage:backend:
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/**/*
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - backend/**/*
   allow_failure: false

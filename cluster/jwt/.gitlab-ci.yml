@@ -32,7 +32,7 @@ setup:secrets:prod:
   environment:
     name: production
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
       allow_failure: true
   script:

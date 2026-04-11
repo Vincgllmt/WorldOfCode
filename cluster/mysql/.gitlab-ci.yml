@@ -40,7 +40,7 @@ deploy:mysql:prod:
     MYSQL_CHART_VERSION: "12.2.2"
     VALUES_FILE: "cluster/mysql/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -

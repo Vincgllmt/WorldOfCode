@@ -1,0 +1,9 @@
+---
+
+- name: Registry config for nodes
+  hosts: kubernetes
+  become: true
+  roles:
+    - config_nodes_for_registry
+  tags: [registry]
+

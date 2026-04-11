@@ -1,5 +1,8 @@
 replicaCount: 1
 
+vault:
+  secretPath: "secret/data/backend"
+
 image:
   repository: registry.woc:32000/backend
   tag: 7b8fe86c

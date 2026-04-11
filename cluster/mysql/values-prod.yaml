@@ -18,14 +18,14 @@ primary:
   podAnnotations:
     vault.hashicorp.com/agent-inject: "true"
     vault.hashicorp.com/role: "app"
-    vault.hashicorp.com/agent-inject-secret-mysql-root: "secret/data/mysql"
+    vault.hashicorp.com/agent-inject-secret-mysql-root: "secret/data/production/mysql"
     vault.hashicorp.com/agent-inject-template-mysql-root: |
-      {{ "{{- with secret \"secret/data/mysql\" -}}" }}
+      {{ "{{- with secret \"secret/data/production/mysql\" -}}" }}
       {{ "{{ .Data.data.rootPassword }}" }}
       {{ "{{- end -}}" }}
-    vault.hashicorp.com/agent-inject-secret-mysql-user: "secret/data/mysql"
+    vault.hashicorp.com/agent-inject-secret-mysql-user: "secret/data/production/mysql"
     vault.hashicorp.com/agent-inject-template-mysql-user: |
-      {{ "{{- with secret \"secret/data/mysql\" -}}" }}
+      {{ "{{- with secret \"secret/data/production/mysql\" -}}" }}
       {{ "{{ .Data.data.password }}" }}
       {{ "{{- end -}}" }}
   extraEnvVars:

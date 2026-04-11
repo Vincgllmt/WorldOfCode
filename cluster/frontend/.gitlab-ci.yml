@@ -6,7 +6,7 @@ build:frontend:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       changes:
         - frontend/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
@@ -18,7 +18,7 @@ build:frontend:
   script:
     - echo "Configuration de l'authentification Kaniko..."
     - |
-      if [ "$CI_COMMIT_BRANCH" = "production" ]; then
+      if [ "$CI_COMMIT_BRANCH" = "main" ]; then
         export API_DOMAIN="api-woc-prod.duckdns.org"
         export WOC_DOMAIN="woc-prod.duckdns.org"
       fi
@@ -44,11 +44,11 @@ build:frontend:
 #   variables:
 #     APP_NAME: "frontend"
 #   rules:
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       changes:
 #         - frontend/**/*
 
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       when: manual
 #       allow_failure: true
     
@@ -89,11 +89,11 @@ deploy:frontend:prod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/frontend/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
         - frontend/**/*
       when: manual
 
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
       allow_failure: true

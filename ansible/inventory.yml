@@ -12,4 +12,13 @@ all:
               ansible_host: 51.178.143.54
             kube-worker-02:
               ansible_host: 51.178.141.115
-
+            kube-worker-03:
+              ansible_host: 172.16.249.83
+              ansible_user: desaun_e
+              ansible_password: "{{ kube_worker_03_ssh_pass }}"
+              ansible_become_password: "{{ kube_worker_03_ssh_pass }}"
+            kube-worker-04:
+              ansible_host: 172.16.249.84
+              ansible_user: desaun_e
+              ansible_password: "{{ kube_worker_04_ssh_pass }}"
+              ansible_become_password: "{{ kube_worker_04_ssh_pass }}"
