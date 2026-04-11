@@ -15,9 +15,9 @@ auth:
 podAnnotations:
   vault.hashicorp.com/agent-inject: "true"
   vault.hashicorp.com/role: "app"
-  vault.hashicorp.com/agent-inject-secret-minio-root: "secret/data/minio"
+  vault.hashicorp.com/agent-inject-secret-minio-root: "secret/data/production/minio"
   vault.hashicorp.com/agent-inject-template-minio-root: |
-    {{ "{{- with secret \"secret/data/minio\" -}}" }}
+    {{ "{{- with secret \"secret/data/production/minio\" -}}" }}
     {{ "{{ .Data.data.rootPassword }}" }}
     {{ "{{- end -}}" }}
 extraEnvVars:

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { MoreVertical, MapPin, Briefcase, Link as LinkIcon, FileText, Flag, Search, SlidersHorizontal, X } from 'lucide-react'
 
-import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser } from '@/hooks/useAdminUsers'
+import { useAdminUsers, useAdminUpdateUserRole, useAdminDeleteUser } from '@/hooks/useAdminUsers'
 import { useAdminUserDetail } from '@/hooks/useAdminUserDetail'
 
 import { Input } from '@/components/ui/input'
@@ -86,7 +86,7 @@ function UserPanelSkeleton() {
 
 export default function AdminUserPanel() {
   const { users, isLoading } = useAdminUsers()
-  const updateUser = useAdminUpdateUser()
+  const updateUserRole = useAdminUpdateUserRole()
   const deleteUser = useAdminDeleteUser()
 
   const [search, setSearch] = useState('')
@@ -147,8 +147,8 @@ export default function AdminUserPanel() {
 
   const handleConfirmRoleChange = () => {
     if (!pendingRoleChange) return
-    updateUser.mutate(
-      { id: pendingRoleChange.userId, username: pendingRoleChange.username, role: pendingRoleChange.newRole },
+    updateUserRole.mutate(
+      { id: pendingRoleChange.userId, role: pendingRoleChange.newRole },
       {
         onSuccess: () => toast.success('Rôle mis à jour'),
         onError: () => toast.error('Erreur lors de la mise à jour'),
@@ -358,13 +358,13 @@ export default function AdminUserPanel() {
 
       {/* Sheet détail utilisateur */}
       <Sheet open={!!selectedUserId} onOpenChange={(open) => { if (!open) setSelectedUserId(null) }}>
-        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border">
-          <SheetHeader className="border-b border-border pb-4">
+        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border px-6">
+          <SheetHeader className="border-b border-border pb-4 -mx-6 px-6">
             <SheetTitle className="text-base font-bold">Profil utilisateur</SheetTitle>
           </SheetHeader>
 
           {isLoadingDetail ? (
-            <div className="space-y-4 mt-5">
+            <div className="space-y-4 mt-5 pb-6">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-14 w-14 rounded-full" />
                 <div className="space-y-2">
@@ -378,7 +378,7 @@ export default function AdminUserPanel() {
               <Skeleton className="h-24 w-full rounded-lg" />
             </div>
           ) : userDetail ? (
-            <div className="mt-5 space-y-5">
+            <div className="mt-5 space-y-5 pb-6">
               {/* Header avatar + nom */}
               <div className="flex items-center gap-3">
                 {userDetail.avatarUrl ? (

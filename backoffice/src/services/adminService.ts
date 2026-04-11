@@ -67,6 +67,19 @@ export const getAdminUserDetail = async (id: number): Promise<AdminUserDetail> =
   return res.json()
 }
 
+export const updateAdminUserRole = async (id: number, role: 'ROLE_USER' | 'ROLE_ADMIN'): Promise<void> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/users/${id}/role`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ role }),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la mise à jour du rôle')
+}
+
 export const getAllAdminPosts = async (): Promise<AdminPostListItem[]> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/api/admin/posts`, {

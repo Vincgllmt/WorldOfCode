@@ -37,7 +37,7 @@ class ReportRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $sql = '
             SELECT COUNT(r.id)
-            FROM report r
+            FROM reports r
             INNER JOIN post p ON r.post_id = p.id
             WHERE p.author_id = :userId
         ';

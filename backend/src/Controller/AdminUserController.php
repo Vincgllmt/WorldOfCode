@@ -5,12 +5,14 @@ namespace App\Controller;
 use App\Dto\AdminPostSummaryDto;
 use App\Dto\AdminUserDetailDto;
 use App\Dto\AdminUserListItemDto;
+use App\Enum\UserRole;
 use App\Mapper\SkillMapper;
 use App\Mapper\UserLinkMapper;
 use App\Repository\ReportRepository;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
@@ -115,5 +117,43 @@ final class AdminUserController extends AbstractController
         );
 
         return $this->json($dto);
+    }
+
+    #[Route('/users/{id}/role', name: 'admin_user_update_role', methods: ['PUT'])]
+    #[OA\Put(
+        summary: "Modifie le rôle d'un utilisateur",
+        responses: [
+            new OA\Response(response: 200, description: 'Rôle mis à jour'),
+            new OA\Response(response: 400, description: 'Rôle invalide'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé'),
+        ]
+    )]
+    public function updateRole(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $user = $this->userRepo->find($id);
+        if (!$user) {
+            throw new NotFoundHttpException('Utilisateur non trouvé');
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        $roleValue = $payload['role'] ?? null;
+
+        if (!$roleValue) {
+            return $this->json(['error' => 'Champ role manquant'], 400);
+        }
+
+        try {
+            $role = UserRole::from($roleValue);
+        } catch (\ValueError) {
+            return $this->json(['error' => 'Rôle invalide'], 400);
+        }
+
+        $user->setRole($role);
+        $this->userRepo->save($user, true);
+
+        return $this->json(['success' => true]);
     }
 }

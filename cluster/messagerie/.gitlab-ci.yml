@@ -6,7 +6,7 @@ build:messagerie:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       changes:
         - messagerie/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
@@ -33,11 +33,11 @@ build:messagerie:
 #   variables:
 #     APP_NAME: "messagerie"
 #   rules:
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       changes:
 #         - messagerie/**/*
 
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       when: manual
 #       allow_failure: true
 
@@ -76,11 +76,11 @@ deploy:messagerie:prod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/messagerie/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
         - messagerie/**/*
       when: manual
 
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
       allow_failure: true

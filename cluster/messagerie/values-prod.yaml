@@ -1,5 +1,8 @@
 replicaCount: 1
 
+vault:
+  secretPath: "secret/data/production/messagerie"
+
 image:
   # CORRECTION : Localhost pour le NodePort
   repository: registry.woc:32000/messagerie
