@@ -6,3 +6,17 @@
     name: containerd
     state: restarted
   become: true
+
+- name: Redémarrer k3s
+  systemd:
+    name: k3s
+    state: restarted
+  become: true
+  ignore_errors: true
+
+- name: Redémarrer k3s-agent
+  systemd:
+    name: k3s-agent
+    state: restarted
+  become: true
+  ignore_errors: true
