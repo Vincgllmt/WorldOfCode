@@ -14,9 +14,9 @@ registry:
 service:
   type: ClusterIP
   port: 8081
-  targetPort: 3000
+  targetPort: 3001
 
-containerPort: 3000
+containerPort: 3001
 
 # Configuration réseau pour MediaSoup (WebRTC)
 hostNetwork: true
@@ -35,7 +35,7 @@ database:
   name: "projet_web"
 
 env:
-  PORT: "3000"
+  PORT: "3001"
   CORS_ORIGIN: "https://woc-prod.duckdns.org" 
 
 ingress:
