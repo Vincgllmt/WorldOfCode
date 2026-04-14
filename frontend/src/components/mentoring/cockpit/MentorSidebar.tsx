@@ -1,8 +1,14 @@
 'use client'
 
 import MentorStatsCard from './MentorStatsCard'
+import PinTimer from './PinTimer'
+import type { MentoringRequest } from '@/types/mentoring'
 
-export default function MentorSidebar() {
+interface Props {
+  pinnedRequests?: MentoringRequest[]
+}
+
+export default function MentorSidebar({ pinnedRequests = [] }: Props) {
   return (
     <div className="p-4 space-y-6">
       <MentorStatsCard />
@@ -15,12 +21,25 @@ export default function MentorSidebar() {
         <p className="text-xs text-muted-foreground">Aucune session active</p>
       </div>
 
-      {/* Épingles actives — complété en story 10.5 */}
+      {/* Demandes épinglées */}
       <div>
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
           Demandes épinglées
         </h3>
-        <p className="text-xs text-muted-foreground">Aucune demande épinglée</p>
+        {pinnedRequests.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aucune demande épinglée</p>
+        ) : (
+          <div className="space-y-2">
+            {pinnedRequests.map(r => (
+              <div key={r.id} className="p-2 bg-muted/40 rounded-lg space-y-1">
+                <p className="text-xs font-medium truncate">{r.title}</p>
+                {r.pin?.isActive && (
+                  <PinTimer expiresAt={r.pin.expiresAt} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

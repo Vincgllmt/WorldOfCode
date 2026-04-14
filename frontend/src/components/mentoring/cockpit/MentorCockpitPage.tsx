@@ -15,6 +15,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
   const [profile, setProfile] = useState(initialProfile)
   const [selectedRequest, setSelectedRequest] = useState<MentoringRequest | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [pinnedRequests, setPinnedRequests] = useState<MentoringRequest[]>([])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -42,7 +43,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
         {/* Sidebar gauche — masquée sur mobile, rétractable sur tablette */}
         {sidebarOpen && (
           <aside className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border overflow-y-auto">
-            <MentorSidebar />
+            <MentorSidebar pinnedRequests={pinnedRequests} />
           </aside>
         )}
 
@@ -52,6 +53,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
             mentorProfile={profile}
             onSelectRequest={setSelectedRequest}
             selectedRequestId={selectedRequest?.id ?? null}
+            onPinnedChange={setPinnedRequests}
           />
         </main>
 
