@@ -7,6 +7,10 @@ enum NotificationType: string
     case COMMENT = 'comment';
     case FOLLOW = 'follow';
     case LIKE = 'like';
+    case MENTORING_NEW_REQUEST = 'mentoring_new_request';
+    case MENTORING_REQUEST_ACCEPTED = 'mentoring_request_accepted';
+    case MENTORING_PIN_EXPIRED = 'mentoring_pin_expired';
+    case MENTORING_RATING_REMINDER = 'mentoring_rating_reminder';
 
     /**
      * @return array<int, string>
