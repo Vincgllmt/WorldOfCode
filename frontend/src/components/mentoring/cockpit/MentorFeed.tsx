@@ -10,11 +10,19 @@ interface Props {
   mentorProfile: MentorProfile
   onSelectRequest: (r: MentoringRequest) => void
   selectedRequestId: number | null
+  onPinnedChange?: (pinned: MentoringRequest[]) => void
 }
 
-export default function MentorFeed({ onSelectRequest, selectedRequestId }: Props) {
+export default function MentorFeed({ onSelectRequest, selectedRequestId, onPinnedChange }: Props) {
   const [techFilter, setTechFilter] = useState<string | undefined>(undefined)
   const { data, isLoading, error, refetch } = useMentorFeed(techFilter)
+
+  const handleRefetch = async () => {
+    await refetch()
+    if (onPinnedChange) {
+      onPinnedChange(data.filter(r => r.pin?.isActive))
+    }
+  }
 
   if (isLoading) {
     return (
@@ -55,7 +63,7 @@ export default function MentorFeed({ onSelectRequest, selectedRequestId }: Props
             request={r}
             isSelected={r.id === selectedRequestId}
             onClick={() => onSelectRequest(r)}
-            onRefetch={refetch}
+            onRefetch={handleRefetch}
           />
         ))}
       </div>

@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import RequestTypeBadge from './RequestTypeBadge'
+import PinTimer from '../cockpit/PinTimer'
+import { pinRequest, unpinRequest } from '@/lib/api/mentoring/requests'
 import type { MentoringRequest } from '@/types/mentoring'
 
 interface Props {
@@ -10,7 +13,39 @@ interface Props {
   onRefetch: () => void
 }
 
-export default function MentoringRequestCard({ request, isSelected, onClick }: Props) {
+export default function MentoringRequestCard({ request, isSelected, onClick, onRefetch }: Props) {
+  const [pinning, setPinning] = useState(false)
+  const [localPin, setLocalPin] = useState(request.pin ?? null)
+
+  const handlePin = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPinning(true)
+    try {
+      const pin = await pinRequest(request.id)
+      setLocalPin({ expiresAt: pin.expiresAt, isActive: true })
+      onRefetch()
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code === 'REQUEST_ALREADY_PINNED') {
+        alert('Cette demande est déjà réservée par un autre mentor.')
+      }
+    } finally {
+      setPinning(false)
+    }
+  }
+
+  const handleUnpin = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPinning(true)
+    try {
+      await unpinRequest(request.id)
+      setLocalPin(null)
+      onRefetch()
+    } finally {
+      setPinning(false)
+    }
+  }
+
   return (
     <article
       onClick={onClick}
@@ -40,13 +75,29 @@ export default function MentoringRequestCard({ request, isSelected, onClick }: P
         {request.descriptionExcerpt ?? request.description}
       </p>
 
-      {/* Tags + état épinglé */}
-      <div className="mt-3 flex items-center justify-between">
+      {/* Tags + actions */}
+      <div className="mt-3 flex items-center justify-between gap-2">
         <span className="px-2 py-0.5 bg-muted text-xs rounded-full">{request.techStack}</span>
-        {request.pin?.isActive && (
-          <span className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
-            <span aria-hidden="true">📌</span> Épinglée
-          </span>
+
+        {localPin?.isActive ? (
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <PinTimer expiresAt={localPin.expiresAt} onExpired={() => setLocalPin(null)} />
+            <button
+              onClick={handleUnpin}
+              disabled={pinning}
+              className="text-xs text-muted-foreground underline disabled:opacity-50"
+            >
+              Désépingler
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handlePin}
+            disabled={pinning || request.status === 'pinned'}
+            className="px-3 py-1 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-50 transition-colors"
+          >
+            {pinning ? 'Épinglage...' : '📌 Épingler'}
+          </button>
         )}
       </div>
     </article>
