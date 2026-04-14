@@ -3,7 +3,6 @@
 namespace App\Repository;
 
 use App\Entity\MentorProfile;
-use App\Entity\MentoringSession;
 use App\Enum\MentoringSessionStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -34,38 +33,56 @@ class MentorProfileRepository extends ServiceEntityRepository
     public function getStats(MentorProfile $profile): array
     {
         $em = $this->getEntityManager();
+        $mentorUser = $profile->getUser();
 
-        $totalSessions = $em->createQueryBuilder()
-            ->select('COUNT(s.id)')
-            ->from(MentoringSession::class, 's')
-            ->where('s.mentor = :profile')
-            ->andWhere('s.status = :completed')
-            ->setParameter('profile', $profile)
+        $totalSessions = (int) $em
+            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :completed')
+            ->setParameter('mentor', $profile)
             ->setParameter('completed', MentoringSessionStatus::COMPLETED)
-            ->getQuery()->getSingleScalarResult();
+            ->getSingleScalarResult();
 
-        $activeSessions = $em->createQueryBuilder()
-            ->select('COUNT(s.id)')
-            ->from(MentoringSession::class, 's')
-            ->where('s.mentor = :profile')
-            ->andWhere('s.status IN (:statuses)')
-            ->setParameter('profile', $profile)
-            ->setParameter('statuses', [MentoringSessionStatus::SCHEDULED, MentoringSessionStatus::IN_PROGRESS])
-            ->getQuery()->getSingleScalarResult();
+        $activeSessions = (int) $em
+            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status IN (:statuses)')
+            ->setParameter('mentor', $profile)
+            ->setParameter('statuses', [MentoringSessionStatus::IN_PROGRESS, MentoringSessionStatus::SCHEDULED])
+            ->getSingleScalarResult();
 
-        $totalMentees = $em->createQueryBuilder()
-            ->select('COUNT(DISTINCT s.junior)')
-            ->from(MentoringSession::class, 's')
-            ->where('s.mentor = :profile')
-            ->setParameter('profile', $profile)
-            ->getQuery()->getSingleScalarResult();
+        $totalMentees = (int) $em
+            ->createQuery('SELECT COUNT(DISTINCT s.junior) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :completed')
+            ->setParameter('mentor', $profile)
+            ->setParameter('completed', MentoringSessionStatus::COMPLETED)
+            ->getSingleScalarResult();
+
+        $threeMonthsAgo = (new \DateTime())->modify('-3 months');
+
+        $completedRecent = (int) $em
+            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :completed AND s.createdAt >= :from')
+            ->setParameter('mentor', $profile)
+            ->setParameter('completed', MentoringSessionStatus::COMPLETED)
+            ->setParameter('from', $threeMonthsAgo)
+            ->getSingleScalarResult();
+
+        $cancelledRecent = (int) $em
+            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :cancelled AND s.createdAt >= :from')
+            ->setParameter('mentor', $profile)
+            ->setParameter('cancelled', MentoringSessionStatus::CANCELLED)
+            ->setParameter('from', $threeMonthsAgo)
+            ->getSingleScalarResult();
+
+        $totalRecent = $completedRecent + $cancelledRecent;
+        $reliabilityRate = $totalRecent > 0 ? round($completedRecent / $totalRecent, 2) : null;
+
+        $avgRating = $em
+            ->createQuery('SELECT AVG(r.score) FROM App\Entity\MentoringRating r WHERE r.ratee = :user AND r.isVisible = true')
+            ->setParameter('user', $mentorUser)
+            ->getSingleScalarResult();
 
         return [
-            'totalSessions'   => (int) $totalSessions,
-            'activeSessions'  => (int) $activeSessions,
-            'totalMentees'    => (int) $totalMentees,
-            'averageRating'   => $profile->getAverageRating(),
-            'reliabilityRate' => $profile->getReliabilityRate(),
+            'totalSessions'   => $totalSessions,
+            'activeSessions'  => $activeSessions,
+            'averageRating'   => $avgRating !== null ? round((float) $avgRating, 1) : null,
+            'totalMentees'    => $totalMentees,
+            'reliabilityRate' => $reliabilityRate,
         ];
     }
 }
