@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Repository\MentoringPinRepository;
 use App\Repository\MentoringRequestRepository;
 use App\Repository\MentorProfileRepository;
+use App\Repository\MentoringSessionRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +23,7 @@ class MentorCockpitController extends AbstractController
         private MentorProfileRepository $mentorProfileRepo,
         private MentoringRequestRepository $requestRepo,
         private MentoringPinRepository $pinRepo,
+        private MentoringSessionRepository $sessionRepo,
     ) {}
 
     #[Route('', name: 'mentor_feed', methods: ['GET'])]
@@ -129,12 +131,32 @@ class MentorCockpitController extends AbstractController
     private function serializeRequestFull(MentoringRequest $r, MentorProfile $mentor): array
     {
         $base = $this->serializeRequest($r, $mentor);
+
+        $junior = $r->getJunior();
+
+        $previousSessions = $this->sessionRepo->findBy(
+            ['mentor' => $mentor, 'junior' => $junior],
+            ['createdAt' => 'DESC'],
+            5
+        );
+
         return array_merge($base, [
             'description'      => $r->getDescription(),
             'blockedSince'     => $r->getBlockedSince(),
             'alreadyTried'     => $r->getAlreadyTried(),
             'expectedBehavior' => $r->getExpectedBehavior(),
             'observedBehavior' => $r->getObservedBehavior(),
+            'juniorContext'    => [
+                'id'       => $junior->getId(),
+                'username' => $junior->getUsername(),
+                'skills'   => [],
+                'previousSessions' => array_map(fn($s) => [
+                    'id'          => $s->getId(),
+                    'status'      => $s->getStatus()->value,
+                    'format'      => $s->getFormat()->value,
+                    'completedAt' => $s->getCompletedAt()?->format('c'),
+                ], $previousSessions),
+            ],
         ]);
     }
 }
