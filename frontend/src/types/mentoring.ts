@@ -33,6 +33,7 @@ export interface MentoringRequest {
   alreadyTried: string | null
   expectedBehavior: string | null
   observedBehavior: string | null
+  descriptionExcerpt?: string
   isPublic: boolean
   compatibilityScore: number
   junior: { id: number; username: string; avatar?: string }
