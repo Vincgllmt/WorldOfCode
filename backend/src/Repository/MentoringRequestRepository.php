@@ -2,8 +2,8 @@
 
 namespace App\Repository;
 
+use App\Entity\MentorProfile;
 use App\Entity\MentoringRequest;
-use App\Entity\MentoringPin;
 use App\Enum\MentoringRequestStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -31,30 +31,41 @@ class MentoringRequestRepository extends ServiceEntityRepository
         }
     }
 
-    public function findPublicFeed(array $filters = [], int $page = 1, int $limit = 20): array
-    {
-        // Expire les pins périmés (lazy expiry)
-        $this->getEntityManager()->createQueryBuilder()
-            ->update(MentoringPin::class, 'p')
-            ->set('p.isActive', 'false')
-            ->where('p.expiresAt < :now')
-            ->andWhere('p.isActive = true')
-            ->setParameter('now', new \DateTime())
-            ->getQuery()->execute();
+    public function findPublicFeed(
+        MentorProfile $mentor,
+        int $page = 1,
+        int $limit = 20,
+        ?string $techStack = null
+    ): array {
+        $em = $this->getEntityManager();
+
+        // Lazy expiry : désactiver les pins expirés avant la requête principale
+        $em->createQuery(
+            'UPDATE App\Entity\MentoringPin p SET p.isActive = false WHERE p.expiresAt < :now AND p.isActive = true'
+        )->setParameter('now', new \DateTime())->execute();
 
         $qb = $this->createQueryBuilder('r')
             ->where('r.isPublic = true')
-            ->andWhere('r.status = :status')
-            ->setParameter('status', MentoringRequestStatus::PENDING)
-            ->orderBy('r.createdAt', 'DESC')
-            ->setFirstResult(($page - 1) * $limit)
-            ->setMaxResults($limit);
+            ->andWhere('r.status IN (:statuses)')
+            ->setParameter('statuses', [MentoringRequestStatus::PENDING, MentoringRequestStatus::PINNED]);
 
-        if (!empty($filters['techStack'])) {
+        if ($techStack !== null) {
             $qb->andWhere('r.techStack = :techStack')
-               ->setParameter('techStack', $filters['techStack']);
+               ->setParameter('techStack', $techStack);
         }
 
-        return $qb->getQuery()->getResult();
+        $total = (int) (clone $qb)
+            ->select('COUNT(r.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $requests = $qb
+            ->orderBy('r.createdAt', 'DESC')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return ['data' => $requests, 'total' => $total];
     }
 }
