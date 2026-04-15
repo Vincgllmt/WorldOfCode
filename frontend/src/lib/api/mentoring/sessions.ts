@@ -18,3 +18,9 @@ export async function startSession(id: number): Promise<MentoringSession> {
   if (!res.ok) throw new Error('Erreur démarrage session')
   return res.json()
 }
+
+export async function completeSession(id: number): Promise<MentoringSession> {
+  const res = await fetchWithAuth(`/api/mentoring/sessions/${id}/complete`, { method: 'PATCH' })
+  if (!res.ok) throw new Error('Erreur clôture session')
+  return res.json()
+}
