@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { useFollowUser, useUnfollowUser } from '@/hooks/useFollow'
 import type { MentorProfile } from '@/types/mentoring'
 
 function StarDisplay({ rating, total }: { rating: number; total: number }) {
@@ -34,9 +36,28 @@ const TEACHING_STYLE_LABELS: Record<string, string> = {
 interface Props {
   profile: MentorProfile
   userId: number
+  viewerId?: number
+  isFollowing?: boolean
 }
 
-export default function MentorPublicProfile({ profile }: Props) {
+export default function MentorPublicProfile({ profile, userId, viewerId, isFollowing: initialFollowing = false }: Props) {
+  const [following, setFollowing] = useState(initialFollowing)
+  const followMutation = useFollowUser()
+  const unfollowMutation = useUnfollowUser()
+  const isLoadingFollow = followMutation.isPending || unfollowMutation.isPending
+
+  const handleFollow = async () => {
+    if (following) {
+      await unfollowMutation.mutateAsync(userId)
+      setFollowing(false)
+    } else {
+      await followMutation.mutateAsync(userId)
+      setFollowing(true)
+    }
+  }
+
+  const showFollowButton = viewerId !== undefined && viewerId !== 0
+
   return (
     <section className="border border-border rounded-xl p-6 mt-6" aria-label="Profil Mentor">
       <div className="flex items-center justify-between mb-4">
@@ -92,6 +113,23 @@ export default function MentorPublicProfile({ profile }: Props) {
         <p className="text-sm text-muted-foreground">
           Style : {TEACHING_STYLE_LABELS[profile.teachingStyle] ?? profile.teachingStyle}
         </p>
+      )}
+
+      {/* Bouton Suivre / Ne plus suivre */}
+      {showFollowButton && (
+        <button
+          type="button"
+          onClick={handleFollow}
+          disabled={isLoadingFollow}
+          className={`mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+            following
+              ? 'bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+        >
+          <span aria-hidden="true">{following ? '✓' : '+'}</span>
+          <span>{isLoadingFollow ? 'Chargement...' : following ? 'Abonné' : 'Suivre'}</span>
+        </button>
       )}
     </section>
   )

@@ -121,8 +121,13 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
           user={user}
           isOwnProfile={isOwnProfile}
         />
-        {!mentorLoading && mentorProfile && (
-          <MentorPublicProfile profile={mentorProfile} userId={userId} />
+        {!mentorLoading && mentorProfile && !isOwnProfile && (
+          <MentorPublicProfile
+            profile={mentorProfile}
+            userId={userId}
+            viewerId={viewerId}
+            isFollowing={isFollowedByViewer}
+          />
         )}
       </main>
     </div>
