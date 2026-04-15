@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { getMentoringRequestsMine } from '@/lib/api/mentoring/requests'
+import { getMentoringRequestsMine, makeRequestPublic } from '@/lib/api/mentoring/requests'
 import type { MentoringRequest } from '@/types/mentoring'
 
 export default function MyRequestsPage() {
@@ -18,6 +18,11 @@ export default function MyRequestsPage() {
       .then(setRequests)
       .finally(() => setLoading(false))
   }, [])
+
+  const handleEscalade = async (id: number) => {
+    const updated = await makeRequestPublic(id)
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r))
+  }
 
   if (loading) return <div className="p-6 text-muted-foreground">Chargement...</div>
 
@@ -48,14 +53,23 @@ export default function MyRequestsPage() {
 
       <div className="space-y-4">
         {requests.map(r => (
-          <MyRequestCard key={r.id} request={r} />
+          <MyRequestCard key={r.id} request={r} onEscalade={handleEscalade} />
         ))}
       </div>
     </div>
   )
 }
 
-function MyRequestCard({ request: r }: { request: MentoringRequest }) {
+function MyRequestCard({
+  request: r,
+  onEscalade,
+}: {
+  request: MentoringRequest
+  onEscalade: (id: number) => Promise<void>
+}) {
+  const [escalading, setEscalading] = useState(false)
+  const [escaladed, setEscaladed] = useState(false)
+
   const statusLabel: Record<string, string> = {
     pending: '⏳ En attente',
     pinned: '📌 Épinglée',
@@ -72,6 +86,19 @@ function MyRequestCard({ request: r }: { request: MentoringRequest }) {
     expired: 'bg-muted text-muted-foreground',
   }
 
+  // AC 4 + 5 : bouton visible si ciblée (isPublic=false) et PENDING
+  const canEscalade = !r.isPublic && r.status === 'pending' && !escaladed
+
+  const handleClick = async () => {
+    setEscalading(true)
+    try {
+      await onEscalade(r.id)
+      setEscaladed(true)
+    } finally {
+      setEscalading(false)
+    }
+  }
+
   return (
     <div className="border border-border rounded-xl p-4">
       <div className="flex items-center justify-between gap-2">
@@ -82,6 +109,23 @@ function MyRequestCard({ request: r }: { request: MentoringRequest }) {
       </div>
       <p className="text-sm text-muted-foreground mt-1">{r.techStack}</p>
       <p className="text-xs text-muted-foreground mt-2">{new Date(r.createdAt).toLocaleDateString('fr-FR')}</p>
+
+      {/* Bouton escalade — AC 4, 5 */}
+      {canEscalade && (
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={escalading}
+          className="mt-3 text-xs px-3 py-1.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+        >
+          {escalading ? 'Escalade...' : '🌍 Rendre publique'}
+        </button>
+      )}
+      {escaladed && (
+        <p role="status" className="mt-3 text-xs text-green-600 dark:text-green-400">
+          ✓ Demande rendue publique — maintenant visible par tous les mentors.
+        </p>
+      )}
     </div>
   )
 }
