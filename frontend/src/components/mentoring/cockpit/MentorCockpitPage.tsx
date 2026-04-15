@@ -54,7 +54,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
         {/* Sidebar gauche — masquée sur mobile, rétractable sur tablette */}
         {sidebarOpen && (
           <aside className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border overflow-y-auto">
-            <MentorSidebar pinnedRequests={pinnedRequests} activeSessions={activeSessions} />
+            <MentorSidebar pinnedRequests={pinnedRequests} activeSessions={activeSessions} onSessionUpdate={refreshSessions} />
           </aside>
         )}
 
