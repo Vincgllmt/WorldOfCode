@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\MentoringRequest;
+use App\Entity\Notification;
 use App\Entity\User;
 use App\Enum\MentoringRequestStatus;
+use App\Enum\NotificationType;
 use App\Enum\MentoringRequestType;
 use App\Repository\MentoringRequestRepository;
 use App\Repository\MentoringSessionRepository;
@@ -98,6 +100,31 @@ class MentoringRequestController extends AbstractController
 
         $this->em->persist($mentoringRequest);
         $this->em->flush(); // PrePersist génère compatibilityScore = random_int(60, 99)
+
+        // Notifications MENTORING_NEW_REQUEST pour les mentors disponibles avec la spécialité
+        if ($mentoringRequest->isPublic()) {
+            $availableMentors = $this->mentorProfileRepo->findBy(['isAvailable' => true]);
+            foreach ($availableMentors as $mentorProfile) {
+                if ($mentorProfile->getUser() === $user) {
+                    continue; // Ne pas notifier soi-même
+                }
+                $specialtyNames = array_map(
+                    fn($s) => strtolower($s->getName()),
+                    $mentorProfile->getSpecialties()->toArray()
+                );
+                if (!in_array(strtolower($mentoringRequest->getTechStack()), $specialtyNames, true)) {
+                    continue;
+                }
+                $notif = new Notification();
+                $notif->setRecipient($mentorProfile->getUser())
+                    ->setSender($user)
+                    ->setType(NotificationType::MENTORING_NEW_REQUEST)
+                    ->setRelatedEntityId($mentoringRequest->getId())
+                    ->setMessage($user->getUsername() . ' cherche de l\'aide en ' . $mentoringRequest->getTechStack());
+                $this->em->persist($notif);
+            }
+            $this->em->flush();
+        }
 
         return $this->json($this->serialize($mentoringRequest), 201);
     }
