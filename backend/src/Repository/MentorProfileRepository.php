@@ -30,6 +30,23 @@ class MentorProfileRepository extends ServiceEntityRepository
         }
     }
 
+    /**
+     * @return MentorProfile[]
+     */
+    public function searchMentors(string $query, int $limit = 10): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.user', 'u')
+            ->where('p.isAvailable = true');
+
+        if ($query !== '') {
+            $qb->andWhere('u.username LIKE :q')
+               ->setParameter('q', '%' . $query . '%');
+        }
+
+        return $qb->setMaxResults($limit)->getQuery()->getResult();
+    }
+
     public function getStats(MentorProfile $profile): array
     {
         $em = $this->getEntityManager();
