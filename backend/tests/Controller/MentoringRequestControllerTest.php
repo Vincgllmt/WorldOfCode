@@ -10,6 +10,7 @@ use App\Enum\MentoringRequestStatus;
 use App\Enum\MentoringRequestType;
 use App\Enum\UserRole;
 use App\Repository\MentoringRequestRepository;
+use App\Repository\MentoringSessionRepository;
 use App\Repository\MentorProfileRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -95,6 +96,7 @@ class MentoringRequestControllerTest extends TestCase
         User $currentUser,
         ?MentoringRequestRepository $requestRepo = null,
         ?MentorProfileRepository $mentorProfileRepo = null,
+        ?MentoringSessionRepository $sessionRepo = null,
         ?EntityManagerInterface $em = null,
         bool $isGranted = true,
     ): MentoringRequestController {
@@ -103,6 +105,7 @@ class MentoringRequestControllerTest extends TestCase
         $controller = new MentoringRequestController(
             $requestRepo ?? $this->createMock(MentoringRequestRepository::class),
             $mentorProfileRepo ?? $this->createMock(MentorProfileRepository::class),
+            $sessionRepo ?? $this->createMock(MentoringSessionRepository::class),
             $em,
         );
         $controller->setContainer($this->makeContainer($currentUser, $isGranted));
@@ -428,5 +431,63 @@ class MentoringRequestControllerTest extends TestCase
         $response = $this->makeController($alice, requestRepo: $requestRepo)->cancel(999);
 
         $this->assertSame(404, $response->getStatusCode());
+    }
+
+    // ======================================================================
+    //  myRequests() avec session — AC 11.4
+    // ======================================================================
+
+    public function testMyRequestsIncludesSessionWhenAccepted(): void
+    {
+        $alice = $this->buildUser(1);
+        $req   = $this->buildRequest(10, $alice);
+        $req->setStatus(\App\Enum\MentoringRequestStatus::ACCEPTED);
+
+        // Mentor mock
+        $mentorUser = $this->buildUser(99, 'BobMentor');
+        $mentorProfile = $this->createMock(\App\Entity\MentorProfile::class);
+        $mentorProfile->method('getUser')->willReturn($mentorUser);
+        $mentorProfile->method('getId')->willReturn(5);
+
+        // Session mock
+        $session = $this->createMock(\App\Entity\MentoringSession::class);
+        $session->method('getId')->willReturn(42);
+        $session->method('getFormat')->willReturn(\App\Enum\SessionFormat::TEXT);
+        $session->method('getConversationId')->willReturn('conv-abc');
+        $session->method('getMentor')->willReturn($mentorProfile);
+        $session->method('getStatus')->willReturn(\App\Enum\MentoringSessionStatus::SCHEDULED);
+        $session->method('getScheduledAt')->willReturn(null);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('findBy')->willReturn([$req]);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('findOneBy')->with(['request' => $req])->willReturn($session);
+
+        $response = $this->makeController($alice, requestRepo: $requestRepo, sessionRepo: $sessionRepo)->myRequests();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(1, $payload);
+        $this->assertNotNull($payload[0]['session']);
+        $this->assertSame('text', $payload[0]['session']['format']);
+        $this->assertSame('conv-abc', $payload[0]['session']['conversationId']);
+        $this->assertSame('BobMentor', $payload[0]['session']['mentor']['username']);
+    }
+
+    public function testMyRequestsSessionNullWhenPending(): void
+    {
+        $alice = $this->buildUser(1);
+        $req   = $this->buildRequest(10, $alice);
+        // Status PENDING → pas de session
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('findBy')->willReturn([$req]);
+
+        $response = $this->makeController($alice, requestRepo: $requestRepo)->myRequests();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertNull($payload[0]['session']);
     }
 }
