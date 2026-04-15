@@ -3,8 +3,10 @@
 namespace App\Controller;
 
 use App\Entity\MentoringSession;
+use App\Entity\Notification;
 use App\Entity\User;
 use App\Enum\MentoringRequestStatus;
+use App\Enum\NotificationType;
 use App\Enum\SessionFormat;
 use App\Repository\MentoringRequestRepository;
 use App\Repository\MentorProfileRepository;
@@ -76,6 +78,16 @@ class MentoringAcceptController extends AbstractController
         $mentoringRequest->setStatus(MentoringRequestStatus::ACCEPTED);
 
         $this->em->persist($session);
+
+        // Notification MENTORING_REQUEST_ACCEPTED pour le junior
+        $notif = new Notification();
+        $notif->setRecipient($mentoringRequest->getJunior())
+            ->setSender($user)
+            ->setType(NotificationType::MENTORING_REQUEST_ACCEPTED)
+            ->setRelatedEntityId($mentoringRequest->getId())
+            ->setMessage($user->getUsername() . ' a accepté votre demande de mentorat.');
+        $this->em->persist($notif);
+
         $this->em->flush(); // PrePersist règle createdAt
 
         return $this->json($this->serializeSession($session), 201);
