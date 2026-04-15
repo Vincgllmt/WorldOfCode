@@ -4,7 +4,9 @@ namespace App\Repository;
 
 use App\Entity\MentorProfile;
 use App\Entity\MentoringRequest;
+use App\Entity\Notification;
 use App\Enum\MentoringRequestStatus;
+use App\Enum\NotificationType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -37,12 +39,29 @@ class MentoringRequestRepository extends ServiceEntityRepository
         int $limit = 20,
         ?string $techStack = null
     ): array {
-        $em = $this->getEntityManager();
+        $em  = $this->getEntityManager();
+        $now = new \DateTime();
 
-        // Lazy expiry : désactiver les pins expirés avant la requête principale
-        $em->createQuery(
-            'UPDATE App\Entity\MentoringPin p SET p.isActive = false WHERE p.expiresAt < :now AND p.isActive = true'
-        )->setParameter('now', new \DateTime())->execute();
+        // Lazy expiry : trouver les pins expirés, les désactiver et notifier les mentors
+        $expiredPins = $em->createQuery(
+            'SELECT p FROM App\Entity\MentoringPin p WHERE p.expiresAt < :now AND p.isActive = true'
+        )->setParameter('now', $now)->getResult();
+
+        foreach ($expiredPins as $pin) {
+            $pin->setIsActive(false);
+            $mentorUser = $pin->getMentor()->getUser();
+            $notif = new Notification();
+            $notif->setRecipient($mentorUser)
+                ->setSender($mentorUser)
+                ->setType(NotificationType::MENTORING_PIN_EXPIRED)
+                ->setRelatedEntityId($pin->getId())
+                ->setMessage('Votre réservation sur "' . $pin->getRequest()->getTitle() . '" a expiré.');
+            $em->persist($notif);
+        }
+
+        if (!empty($expiredPins)) {
+            $em->flush();
+        }
 
         $qb = $this->createQueryBuilder('r')
             ->where('r.isPublic = true')
