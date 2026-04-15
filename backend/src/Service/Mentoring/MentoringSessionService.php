@@ -4,7 +4,9 @@ namespace App\Service\Mentoring;
 
 use App\Entity\MentoringRating;
 use App\Entity\MentoringSession;
+use App\Entity\Notification;
 use App\Enum\MentoringSessionStatus;
+use App\Enum\NotificationType;
 use App\Repository\MentorProfileRepository;
 use App\Repository\MentoringRatingRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,6 +39,28 @@ class MentoringSessionService
 
         $this->em->persist($mentorRating);
         $this->em->persist($juniorRating);
+
+        // Notifications de rappel notation
+        $mentorUser  = $session->getMentor()->getUser();
+        $juniorUser  = $session->getJunior();
+        $sessionId   = $session->getId();
+
+        $notifMentor = new Notification();
+        $notifMentor->setRecipient($mentorUser)
+            ->setSender($juniorUser)
+            ->setType(NotificationType::MENTORING_RATING_REMINDER)
+            ->setRelatedEntityId($sessionId)
+            ->setMessage('Pensez à noter votre session avec ' . $juniorUser->getUsername());
+
+        $notifJunior = new Notification();
+        $notifJunior->setRecipient($juniorUser)
+            ->setSender($mentorUser)
+            ->setType(NotificationType::MENTORING_RATING_REMINDER)
+            ->setRelatedEntityId($sessionId)
+            ->setMessage('Pensez à noter votre session avec ' . $mentorUser->getUsername());
+
+        $this->em->persist($notifMentor);
+        $this->em->persist($notifJunior);
 
         // Recalculer stats du profil mentor
         $profile = $session->getMentor();
