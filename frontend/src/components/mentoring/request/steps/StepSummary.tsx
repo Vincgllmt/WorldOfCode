@@ -1,20 +1,30 @@
 'use client'
 
 import { useState } from 'react'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { MentoringRequestType } from '@/types/mentoring'
 
 const TYPE_OPTIONS: { value: MentoringRequestType; label: string }[] = [
-  { value: 'debug', label: 'Débogage' },
-  { value: 'one_to_one', label: 'One-to-one' },
-  { value: 'exercise', label: 'Exercice' },
-  { value: 'code_review', label: 'Code review' },
+  { value: 'debug', label: '🐛 Debug — J\'ai un bug à résoudre' },
+  { value: 'one_to_one', label: '💬 1-to-1 — J\'ai besoin d\'explications' },
+  { value: 'exercise', label: '📝 Exercice — Je veux pratiquer' },
+  { value: 'code_review', label: '🔍 Code Review — Relire mon code' },
 ]
+
+interface MentorResult {
+  id: number
+  username: string
+  mentorId: number
+  specialties: string[]
+  isAvailable: boolean
+}
 
 interface SummaryData {
   title: string
   description: string
   type: string
   isPublic: boolean
+  targetMentorId?: number
 }
 
 interface Props {
@@ -28,6 +38,15 @@ interface Props {
 
 export default function StepSummary({ data, onChange, onPrev, onSubmit, submitting, error }: Props) {
   const [localErrors, setLocalErrors] = useState<{ title?: string; description?: string }>({})
+  const [mentorSearch, setMentorSearch] = useState('')
+  const [mentorResults, setMentorResults] = useState<MentorResult[]>([])
+
+  const searchMentors = async (q: string) => {
+    setMentorSearch(q)
+    if (q.length < 2) { setMentorResults([]); return }
+    const res = await fetchWithAuth(`/api/users?isMentor=true&q=${encodeURIComponent(q)}`)
+    if (res.ok) setMentorResults(await res.json() as MentorResult[])
+  }
 
   const handleSubmit = () => {
     const errors: { title?: string; description?: string } = {}
@@ -82,7 +101,7 @@ export default function StepSummary({ data, onChange, onPrev, onSubmit, submitti
           value={data.description}
           onChange={e => onChange({ description: e.target.value })}
           placeholder="Résumez votre problème en quelques phrases..."
-          rows={4}
+          rows={3}
           className={`w-full rounded-md border bg-background px-3 py-2 resize-none ${localErrors.description ? 'border-destructive' : 'border-border'}`}
           aria-describedby={localErrors.description ? 'description-error' : undefined}
         />
@@ -108,26 +127,72 @@ export default function StepSummary({ data, onChange, onPrev, onSubmit, submitti
         </select>
       </div>
 
-      {/* Visibilité */}
-      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-        <div>
-          <p className="text-sm font-medium">Demande publique</p>
-          <p className="text-xs text-muted-foreground">Visible par tous les mentors disponibles</p>
+      {/* Visibilité — AC 1 */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Visibilité</label>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onChange({ isPublic: true, targetMentorId: undefined })}
+            className={`flex-1 p-3 rounded-lg border text-sm text-left transition-colors ${
+              data.isPublic ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <strong>🌍 Publique</strong>
+            <p className="text-muted-foreground text-xs mt-0.5">Visible par tous les mentors disponibles</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ isPublic: false })}
+            className={`flex-1 p-3 rounded-lg border text-sm text-left transition-colors ${
+              !data.isPublic ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <strong>🎯 Ciblée</strong>
+            <p className="text-muted-foreground text-xs mt-0.5">Vers un mentor spécifique</p>
+          </button>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={data.isPublic}
-          onClick={() => onChange({ isPublic: !data.isPublic })}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${data.isPublic ? 'bg-primary' : 'bg-muted'}`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${data.isPublic ? 'translate-x-6' : 'translate-x-1'}`}
-          />
-        </button>
+
+        {/* Recherche mentor si mode ciblé — AC 2 */}
+        {!data.isPublic && (
+          <div className="mt-3 relative">
+            <input
+              type="text"
+              value={mentorSearch}
+              onChange={e => searchMentors(e.target.value)}
+              placeholder="Rechercher un mentor par nom..."
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              aria-label="Rechercher un mentor"
+            />
+            {mentorResults.length > 0 && (
+              <div className="absolute z-10 w-full bg-background border border-border rounded-lg mt-1 shadow-lg">
+                {mentorResults.map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      onChange({ targetMentorId: m.mentorId })
+                      setMentorSearch(m.username)
+                      setMentorResults([])
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <span className="font-medium">{m.username}</span>
+                    {m.specialties.length > 0 && (
+                      <span className="text-muted-foreground ml-2 text-xs">{m.specialties.join(', ')}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {data.targetMentorId && mentorResults.length === 0 && mentorSearch && (
+              <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ Mentor sélectionné</p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Erreur globale (retour API) */}
+      {/* Erreur API */}
       {error && (
         <p role="alert" className="text-destructive text-sm flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
           <span aria-hidden="true">⚠️</span> {error}
@@ -149,7 +214,7 @@ export default function StepSummary({ data, onChange, onPrev, onSubmit, submitti
           disabled={submitting}
           className="flex-1 bg-primary text-primary-foreground rounded-md py-2.5 font-medium disabled:opacity-50"
         >
-          {submitting ? 'Envoi...' : 'Soumettre la demande'}
+          {submitting ? 'Envoi en cours...' : 'Envoyer la demande'}
         </button>
       </div>
     </div>
