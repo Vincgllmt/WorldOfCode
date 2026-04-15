@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import CloseSessionModal from './CloseSessionModal'
 import type { MentoringSession } from '@/types/mentoring'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: string; className: string }> = {
@@ -10,9 +12,11 @@ const STATUS_CONFIG: Record<string, { label: string; icon: string; className: st
 interface Props {
   session: MentoringSession
   onStart?: (id: number) => void
+  onComplete?: (id: number) => void
 }
 
-export default function SessionMiniCard({ session, onStart }: Props) {
+export default function SessionMiniCard({ session, onStart, onComplete }: Props) {
+  const [showCloseModal, setShowCloseModal] = useState(false)
   const config = STATUS_CONFIG[session.status] ?? { label: session.status, icon: '●', className: 'text-muted-foreground' }
 
   return (
@@ -41,14 +45,39 @@ export default function SessionMiniCard({ session, onStart }: Props) {
           Démarrer
         </button>
       )}
-      {session.status === 'in_progress' && session.conversationId && (
-        <a
-          href={`/message/${session.conversationId}`}
-          className="text-xs px-2 py-0.5 bg-muted rounded hover:bg-muted/70 transition-colors"
-          aria-label={`Ouvrir le chat avec ${session.junior.username}`}
-        >
-          Chat
-        </a>
+      {session.status === 'in_progress' && (
+        <>
+          {session.conversationId && (
+            <a
+              href={`/message/${session.conversationId}`}
+              className="text-xs px-2 py-0.5 bg-muted rounded hover:bg-muted/70 transition-colors"
+              aria-label={`Ouvrir le chat avec ${session.junior.username}`}
+            >
+              Chat
+            </a>
+          )}
+          {onComplete && (
+            <button
+              onClick={() => setShowCloseModal(true)}
+              className="text-xs px-2 py-0.5 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
+              aria-label={`Clôturer la session avec ${session.junior.username}`}
+            >
+              Clôturer
+            </button>
+          )}
+        </>
+      )}
+
+      {showCloseModal && (
+        <CloseSessionModal
+          sessionId={session.id}
+          juniorUsername={session.junior.username}
+          onClose={() => setShowCloseModal(false)}
+          onCompleted={() => {
+            setShowCloseModal(false)
+            onComplete?.(session.id)
+          }}
+        />
       )}
     </div>
   )
