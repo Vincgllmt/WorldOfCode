@@ -9,7 +9,18 @@ interface SessionEntry {
   id: number
   status: string
   format: string
+  startedAt: string | null
   completedAt: string | null
+}
+
+function formatDuration(startedAt: string | null, completedAt: string | null): string | null {
+  if (!startedAt || !completedAt) return null
+  const diffMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
+  const diffMin = Math.round(diffMs / 60000)
+  if (diffMin < 60) return `${diffMin} min`
+  const h = Math.floor(diffMin / 60)
+  const m = diffMin % 60
+  return m > 0 ? `${h}h ${m}min` : `${h}h`
 }
 
 interface RequestDetail {
@@ -103,16 +114,20 @@ export default function MentorRightPanel({ request }: Props) {
             Sessions précédentes
           </h4>
           <div className="space-y-2">
-            {detail!.juniorContext!.previousSessions.map((s) => (
-              <div key={s.id} className="text-xs p-2 bg-muted/40 rounded-lg flex justify-between">
-                <span className="capitalize">{s.status.replace('_', ' ')}</span>
-                {s.completedAt && (
-                  <span className="text-muted-foreground">
-                    {new Date(s.completedAt).toLocaleDateString('fr-FR')}
-                  </span>
-                )}
-              </div>
-            ))}
+            {detail!.juniorContext!.previousSessions.map((s) => {
+              const duration = formatDuration(s.startedAt, s.completedAt)
+              return (
+                <div key={s.id} className="text-xs p-2 bg-muted/40 rounded-lg flex justify-between">
+                  <span className="capitalize">{s.status.replace('_', ' ')}</span>
+                  <div className="text-right text-muted-foreground space-y-0.5">
+                    {s.completedAt && (
+                      <p>{new Date(s.completedAt).toLocaleDateString('fr-FR')}</p>
+                    )}
+                    {duration && <p>{duration}</p>}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
