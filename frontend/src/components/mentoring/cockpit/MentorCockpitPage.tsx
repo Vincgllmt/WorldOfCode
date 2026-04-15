@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import MentorSidebar from './MentorSidebar'
 import MentorFeed from './MentorFeed'
 import MentorRightPanel from './MentorRightPanel'
 import ModeToggle from './ModeToggle'
-import type { MentorProfile, MentoringRequest } from '@/types/mentoring'
+import { getMentorActiveSessions } from '@/lib/api/mentoring/sessions'
+import type { MentorProfile, MentoringRequest, MentoringSession } from '@/types/mentoring'
 
 interface Props {
   initialProfile: MentorProfile
@@ -16,6 +17,16 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
   const [selectedRequest, setSelectedRequest] = useState<MentoringRequest | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [pinnedRequests, setPinnedRequests] = useState<MentoringRequest[]>([])
+  const [activeSessions, setActiveSessions] = useState<MentoringSession[]>([])
+
+  const refreshSessions = useCallback(async () => {
+    try {
+      const sessions = await getMentorActiveSessions()
+      setActiveSessions(sessions)
+    } catch {}
+  }, [])
+
+  useEffect(() => { refreshSessions() }, [refreshSessions])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -43,7 +54,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
         {/* Sidebar gauche — masquée sur mobile, rétractable sur tablette */}
         {sidebarOpen && (
           <aside className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border overflow-y-auto">
-            <MentorSidebar pinnedRequests={pinnedRequests} />
+            <MentorSidebar pinnedRequests={pinnedRequests} activeSessions={activeSessions} />
           </aside>
         )}
 
@@ -54,6 +65,7 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
             onSelectRequest={setSelectedRequest}
             selectedRequestId={selectedRequest?.id ?? null}
             onPinnedChange={setPinnedRequests}
+            onSessionAccepted={refreshSessions}
           />
         </main>
 
