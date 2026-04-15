@@ -37,7 +37,7 @@ export default function MentorSidebar({ pinnedRequests = [], activeSessions = []
         ) : (
           <div className="space-y-1">
             {activeSessions.map(s => (
-              <SessionMiniCard key={s.id} session={s} onStart={handleStart} />
+              <SessionMiniCard key={s.id} session={s} onStart={handleStart} onComplete={() => onSessionUpdate?.()} />
             ))}
           </div>
         )}
