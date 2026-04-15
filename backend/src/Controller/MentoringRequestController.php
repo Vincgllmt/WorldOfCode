@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Enum\MentoringRequestStatus;
 use App\Enum\MentoringRequestType;
 use App\Repository\MentoringRequestRepository;
+use App\Repository\MentoringSessionRepository;
 use App\Repository\MentorProfileRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +23,7 @@ class MentoringRequestController extends AbstractController
     public function __construct(
         private MentoringRequestRepository $requestRepo,
         private MentorProfileRepository $mentorProfileRepo,
+        private MentoringSessionRepository $sessionRepo,
         private EntityManagerInterface $em,
     ) {}
 
@@ -217,7 +219,7 @@ class MentoringRequestController extends AbstractController
 
     private function serialize(MentoringRequest $r): array
     {
-        return [
+        $data = [
             'id'                 => $r->getId(),
             'type'               => $r->getType()->value,
             'status'             => $r->getStatus()->value,
@@ -232,6 +234,26 @@ class MentoringRequestController extends AbstractController
             'compatibilityScore' => $r->getCompatibilityScore(),
             'targetMentorId'     => $r->getTargetMentor()?->getId(),
             'createdAt'          => $r->getCreatedAt()->format('c'),
+            'session'            => null,
         ];
+
+        if ($r->getStatus() === MentoringRequestStatus::ACCEPTED) {
+            $session = $this->sessionRepo->findOneBy(['request' => $r]);
+            if ($session) {
+                $data['session'] = [
+                    'id'             => $session->getId(),
+                    'format'         => $session->getFormat()->value,
+                    'conversationId' => $session->getConversationId(),
+                    'mentor'         => [
+                        'id'       => $session->getMentor()->getUser()->getId(),
+                        'username' => $session->getMentor()->getUser()->getUsername(),
+                    ],
+                    'status'      => $session->getStatus()->value,
+                    'scheduledAt' => $session->getScheduledAt()?->format('c'),
+                ];
+            }
+        }
+
+        return $data;
     }
 }
