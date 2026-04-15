@@ -3,19 +3,22 @@
 import { useState } from 'react'
 import RequestTypeBadge from './RequestTypeBadge'
 import PinTimer from '../cockpit/PinTimer'
+import AcceptRequestModal from '../cockpit/AcceptRequestModal'
 import { pinRequest, unpinRequest } from '@/lib/api/mentoring/requests'
-import type { MentoringRequest } from '@/types/mentoring'
+import type { MentoringRequest, MentoringSession } from '@/types/mentoring'
 
 interface Props {
   request: MentoringRequest
   isSelected: boolean
   onClick: () => void
   onRefetch: () => void
+  onSessionAccepted?: () => void
 }
 
-export default function MentoringRequestCard({ request, isSelected, onClick, onRefetch }: Props) {
+export default function MentoringRequestCard({ request, isSelected, onClick, onRefetch, onSessionAccepted }: Props) {
   const [pinning, setPinning] = useState(false)
   const [localPin, setLocalPin] = useState(request.pin ?? null)
+  const [showAcceptModal, setShowAcceptModal] = useState(false)
 
   const handlePin = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -79,27 +82,48 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="px-2 py-0.5 bg-muted text-xs rounded-full">{request.techStack}</span>
 
-        {localPin?.isActive ? (
-          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-            <PinTimer expiresAt={localPin.expiresAt} onExpired={() => setLocalPin(null)} />
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          {localPin?.isActive ? (
+            <>
+              <PinTimer expiresAt={localPin.expiresAt} onExpired={() => setLocalPin(null)} />
+              <button
+                onClick={handleUnpin}
+                disabled={pinning}
+                className="text-xs text-muted-foreground underline disabled:opacity-50"
+              >
+                Désépingler
+              </button>
+            </>
+          ) : (
             <button
-              onClick={handleUnpin}
-              disabled={pinning}
-              className="text-xs text-muted-foreground underline disabled:opacity-50"
+              onClick={handlePin}
+              disabled={pinning || request.status === 'pinned'}
+              className="px-3 py-1 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-50 transition-colors"
             >
-              Désépingler
+              {pinning ? 'Épinglage...' : '📌 Épingler'}
             </button>
-          </div>
-        ) : (
+          )}
           <button
-            onClick={handlePin}
-            disabled={pinning || request.status === 'pinned'}
-            className="px-3 py-1 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-50 transition-colors"
+            onClick={e => { e.stopPropagation(); setShowAcceptModal(true) }}
+            className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
-            {pinning ? 'Épinglage...' : '📌 Épingler'}
+            Accepter
           </button>
-        )}
+        </div>
       </div>
     </article>
+
+    {showAcceptModal && (
+      <AcceptRequestModal
+        requestId={request.id}
+        requestTitle={request.title}
+        onClose={() => setShowAcceptModal(false)}
+        onAccepted={(_session: MentoringSession) => {
+          setShowAcceptModal(false)
+          onRefetch()
+          onSessionAccepted?.()
+        }}
+      />
+    )}
   )
 }
