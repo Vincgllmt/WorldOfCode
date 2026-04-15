@@ -49,6 +49,15 @@ export async function getMentoringRequestsMine(): Promise<import('@/types/mentor
   return res.json()
 }
 
+export async function makeRequestPublic(id: number): Promise<import('@/types/mentoring').MentoringRequest> {
+  const res = await fetchWithAuth(`/api/mentoring/requests/${id}/make-public`, { method: 'PATCH' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(new Error((err as { error?: string }).error ?? 'Erreur escalade'), { status: res.status })
+  }
+  return res.json()
+}
+
 export async function createMentoringRequest(data: {
   type: string
   title: string
