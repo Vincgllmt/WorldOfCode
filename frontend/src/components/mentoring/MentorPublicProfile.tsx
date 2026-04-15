@@ -2,6 +2,28 @@
 
 import type { MentorProfile } from '@/types/mentoring'
 
+function StarDisplay({ rating, total }: { rating: number; total: number }) {
+  const fullStars = Math.floor(rating)
+  const hasHalf = rating % 1 >= 0.25 && rating % 1 < 0.75
+  const emptyStars = Math.max(0, 5 - fullStars - (hasHalf ? 1 : 0))
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex" role="img" aria-label={`Note : ${rating.toFixed(1)} sur 5`}>
+        {Array(fullStars).fill(0).map((_, i) => (
+          <span key={`full-${i}`} className="text-yellow-400" aria-hidden="true">★</span>
+        ))}
+        {hasHalf && <span className="text-yellow-400 opacity-60" aria-hidden="true">★</span>}
+        {Array(emptyStars).fill(0).map((_, i) => (
+          <span key={`empty-${i}`} className="text-muted-foreground/30" aria-hidden="true">★</span>
+        ))}
+      </div>
+      <span className="text-sm font-semibold">{rating.toFixed(1)}</span>
+      <span className="text-xs text-muted-foreground">({total} session{total > 1 ? 's' : ''})</span>
+    </div>
+  )
+}
+
 const TEACHING_STYLE_LABELS: Record<string, string> = {
   guided: 'Guide sans donner les réponses',
   direct: 'Explications directes',
@@ -47,10 +69,12 @@ export default function MentorPublicProfile({ profile }: Props) {
           <p className="text-2xl font-bold">{profile.totalSessions}</p>
           <p className="text-xs text-muted-foreground">Sessions</p>
         </div>
-        <div>
-          <p className="text-2xl font-bold">
-            {profile.averageRating !== null ? `★ ${profile.averageRating.toFixed(1)}` : '—'}
-          </p>
+        <div className="flex flex-col items-center gap-1">
+          {profile.averageRating !== null ? (
+            <StarDisplay rating={profile.averageRating} total={profile.totalSessions} />
+          ) : (
+            <span className="text-muted-foreground text-sm">Aucune note</span>
+          )}
           <p className="text-xs text-muted-foreground">Note</p>
         </div>
         <div>
