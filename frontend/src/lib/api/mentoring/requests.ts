@@ -42,3 +42,32 @@ export async function acceptRequest(id: number, body: { format: string; conversa
   }
   return res.json()
 }
+
+export async function getMentoringRequestsMine(): Promise<import('@/types/mentoring').MentoringRequest[]> {
+  const res = await fetchWithAuth('/api/mentoring/requests/mine')
+  if (!res.ok) throw new Error('Erreur chargement demandes')
+  return res.json()
+}
+
+export async function createMentoringRequest(data: {
+  type: string
+  title: string
+  techStack: string
+  description: string
+  blockedSince?: string
+  alreadyTried?: string
+  expectedBehavior?: string
+  observedBehavior?: string
+  isPublic?: boolean
+  targetMentorId?: number
+}): Promise<import('@/types/mentoring').MentoringRequest> {
+  const res = await fetchWithAuth('/api/mentoring/requests', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(new Error((err as { error?: string }).error ?? 'Erreur création'), { status: res.status })
+  }
+  return res.json()
+}
