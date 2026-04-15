@@ -22,6 +22,15 @@ export interface MentorProfile {
   createdAt: string
 }
 
+export interface RequestSessionSummary {
+  id: number
+  format: SessionFormat
+  conversationId: string | null
+  mentor: { id: number; username: string }
+  status: MentoringSessionStatus
+  scheduledAt: string | null
+}
+
 export interface MentoringRequest {
   id: number
   type: MentoringRequestType
@@ -40,6 +49,7 @@ export interface MentoringRequest {
   targetMentor?: { id: number; username: string }
   createdAt: string
   pin?: { expiresAt: string; isActive: boolean }
+  session?: RequestSessionSummary | null
 }
 
 export interface MentoringSession {
