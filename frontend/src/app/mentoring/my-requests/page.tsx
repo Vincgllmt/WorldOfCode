@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getMentoringRequestsMine, makeRequestPublic } from '@/lib/api/mentoring/requests'
+import AcceptedRequestCard from '@/components/mentoring/request/AcceptedRequestCard'
 import type { MentoringRequest } from '@/types/mentoring'
 
 export default function MyRequestsPage() {
@@ -51,10 +52,21 @@ export default function MyRequestsPage() {
         </p>
       )}
 
+      {/* AC 3 : carte enrichie pour les demandes acceptées */}
       <div className="space-y-4">
-        {requests.map(r => (
-          <MyRequestCard key={r.id} request={r} onEscalade={handleEscalade} />
-        ))}
+        {requests.map(r => {
+          if (r.status === 'accepted' && r.session) {
+            return (
+              <AcceptedRequestCard
+                key={r.id}
+                title={r.title}
+                techStack={r.techStack}
+                session={r.session}
+              />
+            )
+          }
+          return <MyRequestCard key={r.id} request={r} onEscalade={handleEscalade} />
+        })}
       </div>
     </div>
   )
