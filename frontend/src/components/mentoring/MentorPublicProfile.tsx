@@ -47,12 +47,16 @@ export default function MentorPublicProfile({ profile, userId, viewerId, isFollo
   const isLoadingFollow = followMutation.isPending || unfollowMutation.isPending
 
   const handleFollow = async () => {
-    if (following) {
-      await unfollowMutation.mutateAsync(userId)
-      setFollowing(false)
-    } else {
-      await followMutation.mutateAsync(userId)
-      setFollowing(true)
+    try {
+      if (following) {
+        await unfollowMutation.mutateAsync(userId)
+        setFollowing(false)
+      } else {
+        await followMutation.mutateAsync(userId)
+        setFollowing(true)
+      }
+    } catch {
+      // mutation failed — state unchanged, button re-enables via isPending reset
     }
   }
 
