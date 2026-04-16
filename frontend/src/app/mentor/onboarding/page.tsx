@@ -10,17 +10,24 @@ export default function MentorOnboardingPage() {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     getMyMentorProfile()
-      .then(() => router.replace('/mentor/cockpit'))
+      .then(() => {
+        if (!cancelled) router.replace('/mentor/cockpit')
+      })
       .catch((err: unknown) => {
+        if (cancelled) return
         const status = (err as { status?: number }).status
-        if (status === 404 || status === 403) {
+        if (status === 404) {
           setChecking(false)
         } else {
           router.replace('/unauthorized')
         }
       })
-  }, [router])
+
+    return () => { cancelled = true }
+  }, [])
 
   if (checking) {
     return (

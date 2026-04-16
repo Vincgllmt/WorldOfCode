@@ -68,7 +68,7 @@ export interface MentoringSession {
 
 export interface MentoringRating {
   id: number
-  score: number
+  score: number | null
   comment: string | null
   submittedAt: string | null
   isVisible: boolean
