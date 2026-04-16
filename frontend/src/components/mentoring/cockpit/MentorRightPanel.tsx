@@ -40,12 +40,14 @@ interface Props {
 export default function MentorRightPanel({ request }: Props) {
   const [detail, setDetail] = useState<RequestDetail | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     setLoading(true)
+    setError(false)
     getMentorRequestDetail(request.id)
       .then((d: RequestDetail) => setDetail(d))
-      .catch(() => setDetail(null))
+      .catch(() => { setDetail(null); setError(true) })
       .finally(() => setLoading(false))
   }, [request.id])
 
@@ -132,7 +134,11 @@ export default function MentorRightPanel({ request }: Props) {
         </div>
       )}
 
-      {!loading && (detail?.juniorContext?.previousSessions?.length ?? 0) === 0 && detail !== null && (
+      {!loading && error && (
+        <p className="text-xs text-destructive" role="alert">Impossible de charger les détails de la demande.</p>
+      )}
+
+      {!loading && !error && (detail?.juniorContext?.previousSessions?.length ?? 0) === 0 && detail !== null && (
         <p className="text-xs text-muted-foreground">Aucune session précédente avec ce junior.</p>
       )}
     </div>
