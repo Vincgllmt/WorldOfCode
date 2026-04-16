@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface Props {
   expiresAt: string
@@ -19,25 +19,26 @@ export default function PinTimer({ expiresAt, onExpired }: Props) {
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
   )
+  const onExpiredRef = useRef(onExpired)
+  useEffect(() => { onExpiredRef.current = onExpired }, [onExpired])
 
+  // Redémarre l'intervalle uniquement quand expiresAt change (pas à chaque render parent)
   useEffect(() => {
-    if (remaining <= 0) {
-      onExpired?.()
-      return
-    }
+    const initial = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+    setRemaining(initial)
+    if (initial <= 0) return
     const interval = setInterval(() => {
-      setRemaining(prev => {
-        const next = prev - 1
-        if (next <= 0) {
-          clearInterval(interval)
-          onExpired?.()
-          return 0
-        }
-        return next
-      })
+      setRemaining(prev => Math.max(0, prev - 1))
     }, 1000)
     return () => clearInterval(interval)
-  }, [expiresAt, onExpired])
+  }, [expiresAt])
+
+  // Callback expiré séparé du state updater (évite double-appel en StrictMode)
+  useEffect(() => {
+    if (remaining <= 0) {
+      onExpiredRef.current?.()
+    }
+  }, [remaining])
 
   if (remaining <= 0) {
     return (
