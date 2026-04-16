@@ -24,26 +24,27 @@ class MentoringSessionService
         $session->setStatus(MentoringSessionStatus::COMPLETED);
         $session->setCompletedAt(new \DateTime());
 
-        // Créer les 2 MentoringRating vides (score = 0, submittedAt = null)
+        // Créer les 2 MentoringRating placeholder (score = null, à remplir lors de la notation)
         $mentorRating = new MentoringRating();
         $mentorRating->setSession($session);
         $mentorRating->setRater($session->getMentor()->getUser());
         $mentorRating->setRatee($session->getJunior());
-        $mentorRating->setScore(0);
+        $mentorRating->setScore(null);
 
         $juniorRating = new MentoringRating();
         $juniorRating->setSession($session);
         $juniorRating->setRater($session->getJunior());
         $juniorRating->setRatee($session->getMentor()->getUser());
-        $juniorRating->setScore(0);
+        $juniorRating->setScore(null);
 
         $this->em->persist($mentorRating);
         $this->em->persist($juniorRating);
+        $this->em->flush(); // flush pour obtenir l'ID de session avant les notifications
 
         // Notifications de rappel notation
         $mentorUser  = $session->getMentor()->getUser();
         $juniorUser  = $session->getJunior();
-        $sessionId   = $session->getId();
+        $sessionId   = $session->getId(); // sûr après flush
 
         $notifMentor = new Notification();
         $notifMentor->setRecipient($mentorUser)
@@ -66,10 +67,10 @@ class MentoringSessionService
         $profile = $session->getMentor();
         $profile->setTotalSessions($profile->getTotalSessions() + 1);
 
-        // Note moyenne depuis ratings visibles et soumis (score > 0)
+        // Note moyenne depuis ratings visibles et soumis
         $avg = $this->em->createQuery(
             'SELECT AVG(r.score) FROM App\Entity\MentoringRating r
-             WHERE r.ratee = :user AND r.isVisible = true AND r.score > 0'
+             WHERE r.ratee = :user AND r.isVisible = true AND r.score IS NOT NULL'
         )->setParameter('user', $profile->getUser())->getSingleScalarResult();
 
         if ($avg !== null) {

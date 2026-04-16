@@ -27,8 +27,8 @@ class MentoringRating
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $ratee;
 
-    #[ORM\Column(type: 'smallint')]
-    private int $score;
+    #[ORM\Column(type: 'smallint', nullable: true)]
+    private ?int $score = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $comment = null;
@@ -86,12 +86,12 @@ class MentoringRating
         return $this;
     }
 
-    public function getScore(): int
+    public function getScore(): ?int
     {
         return $this->score;
     }
 
-    public function setScore(int $score): self
+    public function setScore(?int $score): self
     {
         $this->score = $score;
         return $this;
