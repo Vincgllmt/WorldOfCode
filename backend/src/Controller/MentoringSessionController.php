@@ -97,9 +97,17 @@ class MentoringSessionController extends AbstractController
     public function startSession(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $user */
+        $user = $this->getUser();
         $session = $this->sessionRepo->find($id);
         if (!$session) {
             return $this->json(['error' => 'Session non trouvée.'], 404);
+        }
+        if ($session->getMentor()->getUser() !== $user) {
+            return $this->json(['error' => 'Accès non autorisé.'], 403);
+        }
+        if ($session->getStatus() !== MentoringSessionStatus::SCHEDULED) {
+            return $this->json(['error' => 'Seules les sessions planifiées peuvent être démarrées.', 'code' => 'SESSION_NOT_STARTABLE'], 422);
         }
 
         $session->setStatus(MentoringSessionStatus::IN_PROGRESS);
@@ -111,14 +119,25 @@ class MentoringSessionController extends AbstractController
     #[Route('/api/mentoring/sessions/{id}/complete', name: 'session_complete', methods: ['PATCH'])]
     #[OA\Patch(summary: 'Clôturer une session', responses: [
         new OA\Response(response: 200, description: 'Session complétée'),
+        new OA\Response(response: 403, description: 'Accès non autorisé'),
         new OA\Response(response: 404, description: 'Session non trouvée'),
+        new OA\Response(response: 422, description: 'Session non clôturable'),
     ])]
     public function completeSession(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_MENTOR');
+        /** @var User $user */
+        $user = $this->getUser();
+        $profile = $this->mentorProfileRepo->findOneBy(['user' => $user]);
         $session = $this->sessionRepo->find($id);
         if (!$session) {
             return $this->json(['error' => 'Session non trouvée.'], 404);
+        }
+        if ($session->getMentor() !== $profile) {
+            return $this->json(['error' => 'Accès non autorisé.'], 403);
+        }
+        if ($session->getStatus() !== MentoringSessionStatus::IN_PROGRESS) {
+            return $this->json(['error' => 'Seules les sessions en cours peuvent être clôturées.', 'code' => 'SESSION_NOT_COMPLETABLE'], 422);
         }
 
         $this->sessionService->complete($session);
@@ -128,14 +147,25 @@ class MentoringSessionController extends AbstractController
     #[Route('/api/mentoring/sessions/{id}/cancel', name: 'session_cancel', methods: ['PATCH'])]
     #[OA\Patch(summary: 'Annuler une session', responses: [
         new OA\Response(response: 200, description: 'Session annulée'),
+        new OA\Response(response: 403, description: 'Accès non autorisé'),
         new OA\Response(response: 404, description: 'Session non trouvée'),
+        new OA\Response(response: 422, description: 'Session non annulable'),
     ])]
     public function cancelSession(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $user */
+        $user = $this->getUser();
         $session = $this->sessionRepo->find($id);
         if (!$session) {
             return $this->json(['error' => 'Session non trouvée.'], 404);
+        }
+        if ($session->getMentor()->getUser() !== $user && $session->getJunior() !== $user) {
+            return $this->json(['error' => 'Accès non autorisé.'], 403);
+        }
+        $cancellable = [MentoringSessionStatus::SCHEDULED, MentoringSessionStatus::IN_PROGRESS];
+        if (!in_array($session->getStatus(), $cancellable, true)) {
+            return $this->json(['error' => 'Cette session ne peut pas être annulée.', 'code' => 'SESSION_NOT_CANCELLABLE'], 422);
         }
 
         $session->setStatus(MentoringSessionStatus::CANCELLED);

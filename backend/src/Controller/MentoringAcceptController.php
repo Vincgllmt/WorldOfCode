@@ -63,6 +63,18 @@ class MentoringAcceptController extends AbstractController
             ], 409);
         }
 
+        $acceptable = [MentoringRequestStatus::PENDING, MentoringRequestStatus::PINNED];
+        if (!in_array($mentoringRequest->getStatus(), $acceptable, true)) {
+            return $this->json([
+                'error' => 'Cette demande ne peut pas être acceptée.',
+                'code'  => 'REQUEST_NOT_ACCEPTABLE',
+            ], 422);
+        }
+
+        if ($mentoringRequest->getTargetMentor() !== null && $mentoringRequest->getTargetMentor() !== $profile) {
+            return $this->json(['error' => 'Cette demande est ciblée vers un autre mentor.'], 403);
+        }
+
         $data = json_decode($request->getContent(), true) ?? [];
         $format = SessionFormat::tryFrom($data['format'] ?? '') ?? SessionFormat::TEXT;
 
