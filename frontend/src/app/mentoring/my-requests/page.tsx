@@ -11,21 +11,33 @@ export default function MyRequestsPage() {
   const searchParams = useSearchParams()
   const [requests, setRequests] = useState<MentoringRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   const justCreated = searchParams.get('created') === '1'
 
   useEffect(() => {
     getMentoringRequestsMine()
       .then(setRequests)
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
   }, [])
 
   const handleEscalade = async (id: number) => {
-    const updated = await makeRequestPublic(id)
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r))
+    try {
+      const updated = await makeRequestPublic(id)
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r))
+    } catch {
+      // L'erreur est gérée dans MyRequestCard (escaladed reste false)
+      throw new Error('Escalade échouée')
+    }
   }
 
   if (loading) return <div className="p-6 text-muted-foreground">Chargement...</div>
+  if (fetchError) return (
+    <div className="p-6 text-destructive flex items-center gap-2" role="alert">
+      <span aria-hidden="true">⚠️</span> Impossible de charger vos demandes. Veuillez réessayer.
+    </div>
+  )
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -81,6 +93,7 @@ function MyRequestCard({
 }) {
   const [escalading, setEscalading] = useState(false)
   const [escaladed, setEscaladed] = useState(false)
+  const [escaladeError, setEscaladeError] = useState(false)
 
   const statusLabel: Record<string, string> = {
     pending: '⏳ En attente',
@@ -103,9 +116,12 @@ function MyRequestCard({
 
   const handleClick = async () => {
     setEscalading(true)
+    setEscaladeError(false)
     try {
       await onEscalade(r.id)
       setEscaladed(true)
+    } catch {
+      setEscaladeError(true)
     } finally {
       setEscalading(false)
     }
@@ -136,6 +152,11 @@ function MyRequestCard({
       {escaladed && (
         <p role="status" className="mt-3 text-xs text-green-600 dark:text-green-400">
           ✓ Demande rendue publique — maintenant visible par tous les mentors.
+        </p>
+      )}
+      {escaladeError && (
+        <p role="alert" className="mt-3 text-xs text-destructive">
+          ⚠️ Impossible de rendre la demande publique. Veuillez réessayer.
         </p>
       )}
     </div>

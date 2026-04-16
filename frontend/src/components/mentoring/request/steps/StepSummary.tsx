@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type { MentoringRequestType } from '@/types/mentoring'
 
@@ -37,22 +37,38 @@ interface Props {
 }
 
 export default function StepSummary({ data, onChange, onPrev, onSubmit, submitting, error }: Props) {
-  const [localErrors, setLocalErrors] = useState<{ title?: string; description?: string }>({})
+  const [localErrors, setLocalErrors] = useState<{ title?: string; description?: string; targetMentor?: string }>({})
   const [mentorSearch, setMentorSearch] = useState('')
   const [mentorResults, setMentorResults] = useState<MentorResult[]>([])
+  const abortRef = useRef<AbortController | null>(null)
 
   const searchMentors = async (q: string) => {
     setMentorSearch(q)
     if (q.length < 2) { setMentorResults([]); return }
-    const res = await fetchWithAuth(`/api/users?isMentor=true&q=${encodeURIComponent(q)}`)
-    if (res.ok) setMentorResults(await res.json() as MentorResult[])
+    // Annuler la requête précédente pour éviter les réponses hors-ordre
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+    try {
+      const res = await fetchWithAuth(
+        `/api/users?isMentor=true&q=${encodeURIComponent(q)}`,
+        { signal: abortRef.current.signal }
+      )
+      if (res.ok) setMentorResults(await res.json() as MentorResult[])
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      // Erreur réseau silencieuse — la liste reste vide
+      setMentorResults([])
+    }
   }
 
   const handleSubmit = () => {
-    const errors: { title?: string; description?: string } = {}
+    const errors: { title?: string; description?: string; targetMentor?: string } = {}
     if (!data.title.trim()) errors.title = 'Le titre est requis.'
     else if (data.title.length > 255) errors.title = 'Le titre ne peut pas dépasser 255 caractères.'
     if (!data.description.trim()) errors.description = 'La description est requise.'
+    if (!data.isPublic && !data.targetMentorId) {
+      errors.targetMentor = 'Veuillez sélectionner un mentor pour une demande ciblée.'
+    }
 
     if (Object.keys(errors).length > 0) {
       setLocalErrors(errors)
@@ -187,6 +203,11 @@ export default function StepSummary({ data, onChange, onPrev, onSubmit, submitti
             )}
             {data.targetMentorId && mentorResults.length === 0 && mentorSearch && (
               <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ Mentor sélectionné</p>
+            )}
+            {localErrors.targetMentor && (
+              <p role="alert" className="text-destructive text-sm flex items-center gap-1 mt-1">
+                <span aria-hidden="true">⚠️</span> {localErrors.targetMentor}
+              </p>
             )}
           </div>
         )}
