@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Enum\TeachingStyle;
 use App\Repository\MentorProfileRepository;
 use App\Repository\SkillRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -61,13 +62,18 @@ class MentorProfileController extends AbstractController
             ], 409);
         }
 
-        $data = json_decode($request->getContent(), true) ?? [];
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Corps de la requête JSON invalide.'], 400);
+        }
+        $data = $data ?? [];
 
         $maxMentees = (int) ($data['maxActiveMentees'] ?? 3);
         if ($maxMentees < 1 || $maxMentees > 10) {
             return $this->json(['error' => 'maxActiveMentees doit être entre 1 et 10.'], 422);
         }
 
+        $style = null;
         if (!empty($data['teachingStyle'])) {
             $style = TeachingStyle::tryFrom($data['teachingStyle']);
             if ($style === null) {
@@ -80,11 +86,8 @@ class MentorProfileController extends AbstractController
         $profile->setMaxActiveMentees($maxMentees);
         $profile->setMentorBio($data['mentorBio'] ?? null);
 
-        if (!empty($data['teachingStyle'])) {
-            $style = TeachingStyle::tryFrom($data['teachingStyle']);
-            if ($style) {
-                $profile->setTeachingStyle($style);
-            }
+        if ($style !== null) {
+            $profile->setTeachingStyle($style);
         }
 
         foreach ($data['specialties'] ?? [] as $skillId) {
@@ -95,7 +98,14 @@ class MentorProfileController extends AbstractController
             $profile->addSpecialty($skill);
         }
 
-        $this->mentorProfileRepo->save($profile);
+        try {
+            $this->mentorProfileRepo->save($profile);
+        } catch (UniqueConstraintViolationException) {
+            return $this->json([
+                'error' => 'Vous avez déjà un profil mentor.',
+                'code'  => 'MENTOR_PROFILE_ALREADY_EXISTS',
+            ], 409);
+        }
 
         return $this->json($this->serializeProfile($profile), 201);
     }
@@ -106,13 +116,12 @@ class MentorProfileController extends AbstractController
         responses: [
             new OA\Response(response: 200, description: 'Profil mentor'),
             new OA\Response(response: 401, description: 'Non authentifié'),
-            new OA\Response(response: 403, description: 'Pas de profil mentor'),
             new OA\Response(response: 404, description: 'Profil non trouvé'),
         ]
     )]
     public function getMyProfile(): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_MENTOR');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         /** @var User $user */
         $user = $this->getUser();
 
@@ -157,7 +166,11 @@ class MentorProfileController extends AbstractController
             return $this->json(['error' => 'Profil mentor non trouvé.'], 404);
         }
 
-        $data = json_decode($request->getContent(), true) ?? [];
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Corps de la requête JSON invalide.'], 400);
+        }
+        $data = $data ?? [];
 
         if (isset($data['maxActiveMentees'])) {
             $max = (int) $data['maxActiveMentees'];
@@ -171,23 +184,32 @@ class MentorProfileController extends AbstractController
             $profile->setMentorBio($data['mentorBio']);
         }
 
-        if (!empty($data['teachingStyle'])) {
-            $style = TeachingStyle::tryFrom($data['teachingStyle']);
-            if ($style === null) {
-                return $this->json(['error' => 'teachingStyle invalide.'], 422);
+        if (array_key_exists('teachingStyle', $data)) {
+            if ($data['teachingStyle'] === null) {
+                $profile->setTeachingStyle(null);
+            } else {
+                $style = TeachingStyle::tryFrom((string) $data['teachingStyle']);
+                if ($style === null) {
+                    return $this->json(['error' => 'teachingStyle invalide.'], 422);
+                }
+                $profile->setTeachingStyle($style);
             }
-            $profile->setTeachingStyle($style);
         }
 
         if (isset($data['specialties'])) {
-            foreach ($profile->getSpecialties()->toArray() as $s) {
-                $profile->removeSpecialty($s);
-            }
+            // Valider tous les IDs avant de modifier la collection
+            $newSkills = [];
             foreach ($data['specialties'] as $skillId) {
                 $skill = $this->skillRepo->find((int) $skillId);
                 if (!$skill) {
                     return $this->json(['error' => "Skill ID $skillId introuvable."], 422);
                 }
+                $newSkills[] = $skill;
+            }
+            foreach ($profile->getSpecialties()->toArray() as $s) {
+                $profile->removeSpecialty($s);
+            }
+            foreach ($newSkills as $skill) {
                 $profile->addSpecialty($skill);
             }
         }
@@ -224,10 +246,24 @@ class MentorProfileController extends AbstractController
         $profile = $this->mentorProfileRepo->findOneBy(['user' => $user]);
         // Ne peut pas être null ici car IS_MENTOR a déjà vérifié l'existence
 
-        $data = json_decode($request->getContent(), true) ?? [];
-        $isAvailable = isset($data['isAvailable'])
-            ? (bool) $data['isAvailable']
-            : !$profile->isAvailable();
+        if (!$profile) {
+            return $this->json(['error' => 'Profil mentor non trouvé.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Corps de la requête JSON invalide.'], 400);
+        }
+        $data = $data ?? [];
+
+        if (isset($data['isAvailable'])) {
+            $isAvailable = filter_var($data['isAvailable'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($isAvailable === null) {
+                return $this->json(['error' => 'isAvailable doit être un booléen.'], 422);
+            }
+        } else {
+            $isAvailable = !$profile->isAvailable();
+        }
 
         $profile->setIsAvailable($isAvailable);
         $this->mentorProfileRepo->save($profile);
