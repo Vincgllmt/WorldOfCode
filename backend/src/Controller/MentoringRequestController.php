@@ -92,10 +92,11 @@ class MentoringRequestController extends AbstractController
 
         if (!empty($data['targetMentorId'])) {
             $targetProfile = $this->mentorProfileRepo->find((int) $data['targetMentorId']);
-            if ($targetProfile) {
-                $mentoringRequest->setTargetMentor($targetProfile);
-                $mentoringRequest->setIsPublic(false);
+            if (!$targetProfile) {
+                return $this->json(['error' => 'Mentor cible introuvable.', 'code' => 'TARGET_MENTOR_NOT_FOUND'], 422);
             }
+            $mentoringRequest->setTargetMentor($targetProfile);
+            $mentoringRequest->setIsPublic(false);
         }
 
         $this->em->persist($mentoringRequest);
@@ -172,7 +173,12 @@ class MentoringRequestController extends AbstractController
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        if (isset($data['title'])) $mentoringRequest->setTitle($data['title']);
+        if (isset($data['title'])) {
+            if (empty($data['title']) || mb_strlen($data['title']) > 255) {
+                return $this->json(['error' => 'Le titre est requis (max 255 caractères).'], 422);
+            }
+            $mentoringRequest->setTitle($data['title']);
+        }
         if (isset($data['techStack'])) $mentoringRequest->setTechStack($data['techStack']);
         if (isset($data['description'])) $mentoringRequest->setDescription($data['description']);
         if (array_key_exists('blockedSince', $data)) $mentoringRequest->setBlockedSince($data['blockedSince']);
