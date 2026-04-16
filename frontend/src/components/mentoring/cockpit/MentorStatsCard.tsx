@@ -15,10 +15,19 @@ function StarRating({ value }: { value: number | null }) {
 
 export default function MentorStatsCard() {
   const [stats, setStats] = useState<MentorStats | null>(null)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    getMentorStats().then(setStats).catch(() => {})
+    getMentorStats().then(setStats).catch(() => setError(true))
   }, [])
+
+  if (error) {
+    return (
+      <p role="alert" className="text-sm text-destructive flex items-center gap-1">
+        <span aria-hidden="true">⚠</span> Impossible de charger les statistiques.
+      </p>
+    )
+  }
 
   if (!stats) {
     return <div className="animate-pulse h-24 bg-muted rounded-lg" aria-label="Chargement des stats..." />
