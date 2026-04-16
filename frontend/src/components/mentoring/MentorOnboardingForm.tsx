@@ -18,7 +18,10 @@ interface Props {
 
 export default function MentorOnboardingForm({ onSuccess }: Props) {
   const [skills, setSkills] = useState<Skill[]>([])
+  const [skillsLoading, setSkillsLoading] = useState(true)
+  const [skillsError, setSkillsError] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<number[]>([])
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null)
   const [teachingStyle, setTeachingStyle] = useState('')
   const [maxActiveMentees, setMaxActiveMentees] = useState(3)
   const [mentorBio, setMentorBio] = useState('')
@@ -29,8 +32,14 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   useEffect(() => {
     fetchWithAuth('/api/skills')
       .then(r => r.json())
-      .then((data: Skill[]) => setSkills(data))
-      .catch(() => {})
+      .then((data: Skill[]) => {
+        setSkills(data)
+        setSkillsLoading(false)
+      })
+      .catch(() => {
+        setSkillsLoading(false)
+        setSkillsError(true)
+      })
   }, [])
 
   const toggleSkill = (id: number) => {
@@ -51,6 +60,11 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (maxActiveMentees < 1 || maxActiveMentees > 10) return
+    if (selectedSkills.length === 0) {
+      setSpecialtiesError('Veuillez sélectionner au moins une spécialité.')
+      return
+    }
+    setSpecialtiesError(null)
     setError(null)
     setLoading(true)
     try {
@@ -62,6 +76,11 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
       })
       onSuccess()
     } catch (err: unknown) {
+      const status = (err as { status?: number }).status
+      if (status === 409) {
+        onSuccess()
+        return
+      }
       const message = err instanceof Error ? err.message : 'Une erreur est survenue'
       setError(message)
     } finally {
@@ -76,8 +95,12 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
         <label className="block text-sm font-medium mb-2">
           Spécialités technologiques
         </label>
-        {skills.length === 0 ? (
+        {skillsLoading ? (
           <p className="text-sm text-muted-foreground">Chargement des compétences...</p>
+        ) : skillsError ? (
+          <p role="alert" className="text-sm text-destructive flex items-center gap-1">
+            <span aria-hidden="true">⚠</span> Impossible de charger les compétences. Rechargez la page.
+          </p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {skills.map(skill => (
@@ -96,6 +119,11 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
               </button>
             ))}
           </div>
+        )}
+        {specialtiesError && (
+          <p role="alert" className="text-destructive text-sm flex items-center gap-1 mt-1">
+            <span aria-hidden="true">⚠</span> {specialtiesError}
+          </p>
         )}
       </div>
 
@@ -165,7 +193,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
 
       <button
         type="submit"
-        disabled={loading || !!maxError}
+        disabled={loading || skillsLoading || !!maxError}
         className="w-full bg-primary text-primary-foreground rounded-md py-2.5 font-medium disabled:opacity-50"
       >
         {loading ? 'Création en cours...' : 'Devenir Mentor'}
