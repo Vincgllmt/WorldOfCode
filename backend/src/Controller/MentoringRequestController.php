@@ -239,6 +239,14 @@ class MentoringRequestController extends AbstractController
             return $this->json(['error' => 'Accès non autorisé.'], 403);
         }
 
+        $cancellableStatuses = [MentoringRequestStatus::PENDING, MentoringRequestStatus::PINNED];
+        if (!in_array($mentoringRequest->getStatus(), $cancellableStatuses, true)) {
+            return $this->json([
+                'error' => 'Seules les demandes en attente ou épinglées peuvent être annulées.',
+                'code'  => 'REQUEST_NOT_CANCELLABLE',
+            ], 422);
+        }
+
         $mentoringRequest->setStatus(MentoringRequestStatus::CANCELLED);
         $this->em->flush();
         return $this->json(['message' => 'Demande annulée.']);
