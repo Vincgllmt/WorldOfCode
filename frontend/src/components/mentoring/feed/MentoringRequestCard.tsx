@@ -54,6 +54,7 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
   }
 
   return (
+    <>
     <article
       onClick={onClick}
       className={`rounded-xl border p-4 cursor-pointer transition-colors ${
@@ -134,5 +135,6 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
         }}
       />
     )}
+    </>
   )
 }

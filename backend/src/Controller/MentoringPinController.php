@@ -47,6 +47,19 @@ class MentoringPinController extends AbstractController
             return $this->json(['error' => 'Demande non trouvée.'], 404);
         }
 
+        // Demande en statut terminal : plus épinglable
+        if (in_array($mentoringRequest->getStatus()->value, ['accepted', 'cancelled', 'expired'])) {
+            return $this->json(['error' => 'Cette demande n\'est plus disponible.'], 404);
+        }
+
+        // Demande privée : seul le mentor ciblé peut épingler
+        if (!$mentoringRequest->isPublic()) {
+            $target = $mentoringRequest->getTargetMentor();
+            if (!$target || $target->getId() !== $profile->getId()) {
+                return $this->json(['error' => 'Accès refusé.'], 403);
+            }
+        }
+
         // Vérifier qu'aucun pin actif n'existe déjà sur cette demande (par n'importe quel mentor)
         $existingPin = $this->pinRepo->findOneBy([
             'request'  => $mentoringRequest,
@@ -76,8 +89,15 @@ class MentoringPinController extends AbstractController
         $pin->setMentor($profile);
         $pin->setRequest($mentoringRequest);
 
-        $this->em->persist($pin);
-        $this->em->flush();
+        try {
+            $this->em->persist($pin);
+            $this->em->flush();
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+            return $this->json([
+                'error' => 'Vous avez déjà épinglé cette demande.',
+                'code'  => 'REQUEST_ALREADY_PINNED',
+            ], 409);
+        }
 
         return $this->json([
             'id'        => $pin->getId(),

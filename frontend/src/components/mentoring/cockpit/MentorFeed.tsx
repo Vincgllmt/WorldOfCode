@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMentorFeed } from '@/hooks/useMentorFeed'
 import MentoringRequestCard from '../feed/MentoringRequestCard'
 import FeedFilters from '../feed/FeedFilters'
@@ -18,11 +18,14 @@ export default function MentorFeed({ onSelectRequest, selectedRequestId, onPinne
   const [techFilter, setTechFilter] = useState<string | undefined>(undefined)
   const { data, isLoading, error, refetch } = useMentorFeed(techFilter)
 
-  const handleRefetch = async () => {
-    await refetch()
+  useEffect(() => {
     if (onPinnedChange) {
       onPinnedChange(data.filter(r => r.pin?.isActive))
     }
+  }, [data, onPinnedChange])
+
+  const handleRefetch = async () => {
+    await refetch()
   }
 
   if (isLoading) {
