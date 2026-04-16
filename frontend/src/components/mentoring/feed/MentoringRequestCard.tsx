@@ -19,10 +19,12 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
   const [pinning, setPinning] = useState(false)
   const [localPin, setLocalPin] = useState(request.pin ?? null)
   const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const [pinError, setPinError] = useState<string | null>(null)
 
   const handlePin = async (e: React.MouseEvent) => {
     e.stopPropagation()
     setPinning(true)
+    setPinError(null)
     try {
       const pin = await pinRequest(request.id)
       setLocalPin({ expiresAt: pin.expiresAt, isActive: true })
@@ -30,7 +32,7 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === 'REQUEST_ALREADY_PINNED') {
-        alert('Cette demande est déjà réservée par un autre mentor.')
+        setPinError('Déjà réservée par un autre mentor.')
       }
     } finally {
       setPinning(false)
@@ -44,6 +46,8 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
       await unpinRequest(request.id)
       setLocalPin(null)
       onRefetch()
+    } catch {
+      // ne pas vider localPin si le dépingage échoue
     } finally {
       setPinning(false)
     }
@@ -82,7 +86,12 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="px-2 py-0.5 bg-muted text-xs rounded-full">{request.techStack}</span>
 
-        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+          {pinError && (
+            <span role="alert" className="text-xs text-destructive flex items-center gap-1">
+              <span aria-hidden="true">⚠</span> {pinError}
+            </span>
+          )}
           {localPin?.isActive ? (
             <>
               <PinTimer expiresAt={localPin.expiresAt} onExpired={() => setLocalPin(null)} />

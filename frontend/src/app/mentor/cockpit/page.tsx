@@ -12,18 +12,23 @@ export default function CockpitPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     getMyMentorProfile()
-      .then(setProfile)
+      .then(data => { if (!cancelled) setProfile(data) })
       .catch((err: unknown) => {
+        if (cancelled) return
         const status = (err as { status?: number }).status
-        if (status === 404 || status === 403) {
+        if (status === 404) {
           router.replace('/mentor/onboarding')
         } else {
           router.replace('/login')
         }
       })
-      .finally(() => setLoading(false))
-  }, [router])
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [])
 
   if (loading) {
     return (
