@@ -95,6 +95,14 @@ class MentorCockpitController extends AbstractController
             return $this->json(['error' => 'Demande non trouvée.'], 404);
         }
 
+        // Demande privée : seul le mentor ciblé peut y accéder
+        if (!$mentoringRequest->isPublic()) {
+            $target = $mentoringRequest->getTargetMentor();
+            if (!$target || $target->getId() !== $profile->getId()) {
+                return $this->json(['error' => 'Accès refusé.'], 403);
+            }
+        }
+
         return $this->json($this->serializeRequestFull($mentoringRequest, $profile));
     }
 
