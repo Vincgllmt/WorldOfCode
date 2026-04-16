@@ -60,6 +60,7 @@ class MentoringRequestRepository extends ServiceEntityRepository
         }
 
         $qb = $this->createQueryBuilder('r')
+            ->innerJoin('r.junior', 'j')->addSelect('j')
             ->where('r.isPublic = true')
             ->andWhere('r.status = :status')
             ->setParameter('status', MentoringRequestStatus::PENDING);
@@ -69,11 +70,19 @@ class MentoringRequestRepository extends ServiceEntityRepository
                ->setParameter('techStack', $filters['techStack']);
         }
 
-        return $qb
+        $total = (int) (clone $qb)
+            ->select('COUNT(r.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $requests = $qb
+            ->select('r', 'j')
             ->orderBy('r.createdAt', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+
+        return ['data' => $requests, 'total' => $total];
     }
 }

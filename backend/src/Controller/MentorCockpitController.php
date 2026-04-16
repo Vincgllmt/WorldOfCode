@@ -51,7 +51,11 @@ class MentorCockpitController extends AbstractController
         $limit     = min(50, max(1, (int) $request->query->get('limit', 20)));
         $techStack = $request->query->get('techStack') ?: null;
 
-        $result = $this->requestRepo->findPublicFeed($profile, $page, $limit, $techStack);
+        $result = $this->requestRepo->findPublicFeed(
+            $techStack ? ['techStack' => $techStack] : [],
+            $page,
+            $limit
+        );
 
         return $this->json([
             'data' => array_map(
