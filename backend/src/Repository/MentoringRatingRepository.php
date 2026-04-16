@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\MentoringRating;
+use App\Entity\MentoringSession;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -32,8 +33,8 @@ class MentoringRatingRepository extends ServiceEntityRepository
     public function findBySession(int $sessionId): array
     {
         return $this->createQueryBuilder('r')
-            ->where('r.session = :sessionId')
-            ->setParameter('sessionId', $sessionId)
+            ->where('r.session = :session')
+            ->setParameter('session', $this->getEntityManager()->getReference(MentoringSession::class, $sessionId))
             ->getQuery()
             ->getResult();
     }

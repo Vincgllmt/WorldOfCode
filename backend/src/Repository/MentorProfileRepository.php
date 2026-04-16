@@ -50,7 +50,6 @@ class MentorProfileRepository extends ServiceEntityRepository
     public function getStats(MentorProfile $profile): array
     {
         $em = $this->getEntityManager();
-        $mentorUser = $profile->getUser();
 
         $totalSessions = (int) $em
             ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :completed')
@@ -70,36 +69,12 @@ class MentorProfileRepository extends ServiceEntityRepository
             ->setParameter('completed', MentoringSessionStatus::COMPLETED)
             ->getSingleScalarResult();
 
-        $threeMonthsAgo = (new \DateTime())->modify('-3 months');
-
-        $completedRecent = (int) $em
-            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :completed AND s.createdAt >= :from')
-            ->setParameter('mentor', $profile)
-            ->setParameter('completed', MentoringSessionStatus::COMPLETED)
-            ->setParameter('from', $threeMonthsAgo)
-            ->getSingleScalarResult();
-
-        $cancelledRecent = (int) $em
-            ->createQuery('SELECT COUNT(s.id) FROM App\Entity\MentoringSession s WHERE s.mentor = :mentor AND s.status = :cancelled AND s.createdAt >= :from')
-            ->setParameter('mentor', $profile)
-            ->setParameter('cancelled', MentoringSessionStatus::CANCELLED)
-            ->setParameter('from', $threeMonthsAgo)
-            ->getSingleScalarResult();
-
-        $totalRecent = $completedRecent + $cancelledRecent;
-        $reliabilityRate = $totalRecent > 0 ? round($completedRecent / $totalRecent, 2) : null;
-
-        $avgRating = $em
-            ->createQuery('SELECT AVG(r.score) FROM App\Entity\MentoringRating r WHERE r.ratee = :user AND r.isVisible = true')
-            ->setParameter('user', $mentorUser)
-            ->getSingleScalarResult();
-
         return [
             'totalSessions'   => $totalSessions,
             'activeSessions'  => $activeSessions,
-            'averageRating'   => $avgRating !== null ? round((float) $avgRating, 1) : null,
             'totalMentees'    => $totalMentees,
-            'reliabilityRate' => $reliabilityRate,
+            'averageRating'   => $profile->getAverageRating(),
+            'reliabilityRate' => $profile->getReliabilityRate(),
         ];
     }
 }

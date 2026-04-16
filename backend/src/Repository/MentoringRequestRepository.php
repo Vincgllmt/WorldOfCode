@@ -2,7 +2,6 @@
 
 namespace App\Repository;
 
-use App\Entity\MentorProfile;
 use App\Entity\MentoringRequest;
 use App\Entity\Notification;
 use App\Enum\MentoringRequestStatus;
@@ -33,26 +32,23 @@ class MentoringRequestRepository extends ServiceEntityRepository
         }
     }
 
-    public function findPublicFeed(
-        MentorProfile $mentor,
-        int $page = 1,
-        int $limit = 20,
-        ?string $techStack = null
-    ): array {
+    public function findPublicFeed(array $filters = [], int $page = 1, int $limit = 20): array
+    {
         $em  = $this->getEntityManager();
         $now = new \DateTime();
 
-        // Lazy expiry : trouver les pins expirés, les désactiver et notifier les mentors
+        // Lazy expiry : désactiver les pins expirés et notifier les mentors (eager load pour éviter N+1)
         $expiredPins = $em->createQuery(
-            'SELECT p FROM App\Entity\MentoringPin p WHERE p.expiresAt < :now AND p.isActive = true'
+            'SELECT p, m, mu, r FROM App\Entity\MentoringPin p
+             JOIN p.mentor m JOIN m.user mu JOIN p.request r
+             WHERE p.expiresAt < :now AND p.isActive = true'
         )->setParameter('now', $now)->getResult();
 
         foreach ($expiredPins as $pin) {
             $pin->setIsActive(false);
-            $mentorUser = $pin->getMentor()->getUser();
             $notif = new Notification();
-            $notif->setRecipient($mentorUser)
-                ->setSender($mentorUser)
+            $notif->setRecipient($pin->getMentor()->getUser())
+                ->setSender($pin->getRequest()->getJunior())
                 ->setType(NotificationType::MENTORING_PIN_EXPIRED)
                 ->setRelatedEntityId($pin->getId())
                 ->setMessage('Votre réservation sur "' . $pin->getRequest()->getTitle() . '" a expiré.');
@@ -65,26 +61,19 @@ class MentoringRequestRepository extends ServiceEntityRepository
 
         $qb = $this->createQueryBuilder('r')
             ->where('r.isPublic = true')
-            ->andWhere('r.status IN (:statuses)')
-            ->setParameter('statuses', [MentoringRequestStatus::PENDING, MentoringRequestStatus::PINNED]);
+            ->andWhere('r.status = :status')
+            ->setParameter('status', MentoringRequestStatus::PENDING);
 
-        if ($techStack !== null) {
+        if (!empty($filters['techStack'])) {
             $qb->andWhere('r.techStack = :techStack')
-               ->setParameter('techStack', $techStack);
+               ->setParameter('techStack', $filters['techStack']);
         }
 
-        $total = (int) (clone $qb)
-            ->select('COUNT(r.id)')
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        $requests = $qb
+        return $qb
             ->orderBy('r.createdAt', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
-
-        return ['data' => $requests, 'total' => $total];
     }
 }

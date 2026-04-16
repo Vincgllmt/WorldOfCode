@@ -16,6 +16,10 @@ class MentoringRatingService
 
     public function submit(MentoringSession $session, User $rater, int $score, ?string $comment): void
     {
+        if ($score < 1 || $score > 5) {
+            throw new \InvalidArgumentException('Score must be between 1 and 5');
+        }
+
         // Vérifier que la session est terminée et dans la deadline de 48h
         $completedAt = $session->getCompletedAt();
         if ($completedAt === null) {
