@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-auto-unseal
+  namespace: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-auto-unseal
+  template:
+    metadata:
+      labels:
+        app: vault-auto-unseal
+    spec:
+      serviceAccountName: default
+      containers:
+        - name: unsealer
+          image: hashicorp/vault:1.21.2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "→ Vault auto-unseal démarré"
+              while true; do
+                SEALED=$(vault status -format=json 2>/dev/null | grep -o '"sealed":[^,}]*' | grep -o 'true\|false')
+                if [ "$SEALED" = "true" ]; then
+                  echo "$(date) — Vault est scellé, unseal en cours..."
+                  vault operator unseal "$UNSEAL_KEY_1"
+                  echo "$(date) — Unseal effectué."
+                elif [ "$SEALED" = "false" ]; then
+                  : # silencieux si déjà unsealed
+                else
+                  echo "$(date) — Vault inaccessible, nouvelle tentative dans 5s..."
+                fi
+                sleep 5
+              done
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault.vault.svc:8200"
+            - name: UNSEAL_KEY_1
+              valueFrom:
+                secretKeyRef:
+                  name: vault-unseal-keys
+                  key: unseal-key-1
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
