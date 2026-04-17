@@ -1,5 +1,8 @@
 replicaCount: 1
 
+migrations:
+  enabled: false
+
 vault:
   secretPath: "secret/data/production/backend"
 

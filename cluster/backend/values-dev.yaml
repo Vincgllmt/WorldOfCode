@@ -1,11 +1,14 @@
 replicaCount: 1
 
+migrations:
+  enabled: true
+
 vault:
   secretPath: "secret/data/backend"
 
 image:
   repository: registry.woc:32000/backend
-  tag: 7b8fe86c
+  tag: ada1bd67
   pullPolicy: IfNotPresent
 
 registry:
