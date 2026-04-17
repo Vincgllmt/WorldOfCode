@@ -27,7 +27,7 @@ spec:
           image: registry.woc:32000/backend:faker
           imagePullPolicy: Always
           command: ["/bin/sh", "-c"]
-          args: [". /vault/secrets/config && php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction --env=dev"]
+          args: [". /vault/secrets/config && php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction --append --env=dev"]
           env:
             - name: APP_ENV
               value: "dev"
