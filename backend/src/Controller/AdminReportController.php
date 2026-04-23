@@ -227,20 +227,21 @@ final class AdminReportController extends AbstractController
 
             // Récupérer tous les reports du même post AVANT suppression
             // (après, post_id sera NULL via ON DELETE SET NULL)
-            $siblingReports = $post
+            $allReports = $post
                 ? $this->reportRepo->findByPostId($post->getId())
-                : [];
+                : [$report];
 
             if ($post) {
                 $this->postRepo->remove($post, flush: true);
-                $this->reportRepo->getEntityManager()->refresh($report);
+                // Refresh chaque report pour refléter le post_id = NULL en base
+                foreach ($allReports as $r) {
+                    $this->reportRepo->getEntityManager()->refresh($r);
+                }
             }
 
             $now = new \DateTime();
-            $allReports = array_unique(array_merge([$report], $siblingReports), SORT_REGULAR);
-
             foreach ($allReports as $r) {
-                if (in_array($r->getStatus(), [ReportStatus::RESOLVED, ReportStatus::REJECTED], true)) {
+                if ($r->getStatus() === ReportStatus::RESOLVED || $r->getStatus() === ReportStatus::REJECTED) {
                     continue;
                 }
                 $r->setStatus(ReportStatus::RESOLVED);
