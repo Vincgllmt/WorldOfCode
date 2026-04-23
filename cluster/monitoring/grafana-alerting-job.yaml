@@ -1,0 +1,128 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-alerting-setup
+  namespace: monitoring
+  annotations:
+    # Changer cette valeur pour forcer un re-run du job
+    job-version: "1"
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup
+          image: alpine/curl:latest
+          env:
+            - name: GRAFANA_URL
+              value: "http://vm-stack-grafana.monitoring.svc:80"
+            - name: GRAFANA_USER
+              value: "admin"
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vm-stack-grafana
+                  key: admin-password
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              AUTH="${GRAFANA_USER}:${GRAFANA_PASSWORD}"
+              BASE="${GRAFANA_URL}"
+
+              echo "=== 1. Création du dossier WOC Alerting ==="
+              FOLDER=$(curl -sf -u "$AUTH" -X POST "$BASE/api/folders" \
+                -H "Content-Type: application/json" \
+                -d '{"uid":"woc-alerting","title":"WOC Alerting"}' 2>&1 || true)
+              echo "$FOLDER"
+
+              echo "=== 2. Contact Point Google Chat ==="
+              curl -sf -u "$AUTH" -X DELETE "$BASE/api/v1/provisioning/contact-points/google-chat-woc" 2>/dev/null || true
+              curl -f -u "$AUTH" -X POST "$BASE/api/v1/provisioning/contact-points" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "uid": "google-chat-woc",
+                  "name": "Google Chat WOC",
+                  "type": "googlechat",
+                  "settings": {
+                    "url": "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4"
+                  },
+                  "disableResolveMessage": false
+                }'
+              echo ""
+
+              echo "=== 3. Politique de notification ==="
+              curl -f -u "$AUTH" -X PUT "$BASE/api/v1/provisioning/policies" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "receiver": "Google Chat WOC",
+                  "group_by": ["alertname"],
+                  "routes": []
+                }'
+              echo ""
+
+              echo "=== 4. Règle d alerte (suppression + création) ==="
+              curl -sf -u "$AUTH" -X DELETE "$BASE/api/v1/provisioning/alert-rules/woc-user-errors-loki" 2>/dev/null || true
+              sleep 1
+              curl -f -u "$AUTH" -X POST "$BASE/api/v1/provisioning/alert-rules" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "uid": "woc-user-errors-loki",
+                  "title": "Erreurs utilisateurs WOC",
+                  "ruleGroup": "woc-user-errors",
+                  "folderUID": "woc-alerting",
+                  "condition": "B",
+                  "data": [
+                    {
+                      "refId": "A",
+                      "queryType": "range",
+                      "relativeTimeRange": {"from": 60, "to": 0},
+                      "datasourceUid": "loki-datasource",
+                      "model": {
+                        "datasource": {"type": "loki", "uid": "loki-datasource"},
+                        "editorMode": "code",
+                        "expr": "sum(count_over_time({app=\"backend\"} | json | channel=`user_error` [1m]))",
+                        "instant": false,
+                        "queryType": "range",
+                        "range": true,
+                        "refId": "A"
+                      }
+                    },
+                    {
+                      "refId": "B",
+                      "datasourceUid": "-100",
+                      "model": {
+                        "conditions": [
+                          {
+                            "evaluator": {"params": [0], "type": "gt"},
+                            "operator": {"type": "and"},
+                            "query": {"params": ["A"]},
+                            "reducer": {"params": [], "type": "last"},
+                            "type": "query"
+                          }
+                        ],
+                        "datasource": {"type": "__expr__", "uid": "-100"},
+                        "expression": "A",
+                        "hide": false,
+                        "refId": "B",
+                        "type": "threshold"
+                      }
+                    }
+                  ],
+                  "noDataState": "NoData",
+                  "execErrState": "Error",
+                  "for": "0s",
+                  "annotations": {
+                    "description": "Une erreur utilisateur a ete detectee sur le site WOC (HTTP 400/401/403/422/429).",
+                    "summary": "Erreur utilisateur detectee sur WOC"
+                  },
+                  "labels": {"severity": "warning", "team": "woc"},
+                  "isPaused": false,
+                  "notification_settings": {
+                    "receiver": "Google Chat WOC"
+                  }
+                }'
+              echo ""
+              echo "=== Configuration alerting Grafana terminee ==="
