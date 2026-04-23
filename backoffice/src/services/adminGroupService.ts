@@ -7,9 +7,31 @@ function getToken() {
   return getCookie('token') as string | undefined
 }
 
+export interface AdminGroupsParams {
+  page: number
+  limit: number
+  search?: string
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface AdminGroupsPaginatedResponse {
+  items: AdminGroupListItem[]
+  total: number
+  page: number
+  limit: number
+}
+
 export const adminGroupService = {
-  getGroups: async (): Promise<AdminGroupListItem[]> => {
-    const res = await fetch(`${API_URL}/api/admin/groups`, {
+  getGroupsPaginated: async (params: AdminGroupsParams): Promise<AdminGroupsPaginatedResponse> => {
+    const query = new URLSearchParams()
+    query.set('page', String(params.page))
+    query.set('limit', String(params.limit))
+    if (params.search)    query.set('search', params.search)
+    if (params.sortField) query.set('sortField', params.sortField)
+    if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+
+    const res = await fetch(`${API_URL}/api/admin/groups?${query.toString()}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
     if (!res.ok) throw new Error('Erreur chargement groupes')

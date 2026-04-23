@@ -110,4 +110,60 @@ class TechGroupRepository extends ServiceEntityRepository
             postCountThisMonth: (int) $r['postCountThisMonth'],
         ), $results);
     }
+
+    /**
+     * Retourne une page de groupes avec compteurs, filtre de recherche et tri.
+     *
+     * @return array{items: array<int, array{id:int, name:string, description:?string, createdAt:mixed, creatorUsername:?string, memberCount:int, postCount:int, rssFeedUrl:?string}>, total: int}
+     */
+    public function findPaginatedWithCounts(
+        int $page,
+        int $limit,
+        ?string $search = null,
+        string $sortField = 'createdAt',
+        string $sortDir = 'DESC'
+    ): array {
+        $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $base = $this->createQueryBuilder('g')
+            ->leftJoin('g.creator', 'creator')
+            ->leftJoin('g.users', 'm')
+            ->leftJoin('g.posts', 'p')
+            ->leftJoin('App\Entity\TechWatchSource', 'tws', 'WITH', 'tws.techGroup = g');
+
+        if ($search !== null && $search !== '') {
+            $base->andWhere('LOWER(g.name) LIKE :search')
+                 ->setParameter('search', '%' . mb_strtolower(trim($search)) . '%');
+        }
+
+        $total = (int) (clone $base)
+            ->select('COUNT(DISTINCT g.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $itemsQb = (clone $base)
+            ->select(
+                'g.id',
+                'g.name',
+                'g.description',
+                'g.createdAt',
+                'creator.username AS creatorUsername',
+                'COUNT(DISTINCT m.id) AS memberCount',
+                'COUNT(DISTINCT p.id) AS postCount',
+                'tws.feedUrl AS rssFeedUrl'
+            )
+            ->groupBy('g.id')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        match ($sortField) {
+            'memberCount'      => $itemsQb->orderBy('memberCount', $sortDir),
+            'postCount'        => $itemsQb->orderBy('postCount', $sortDir),
+            'creatorUsername'  => $itemsQb->orderBy('creator.username', $sortDir),
+            'name'             => $itemsQb->orderBy('g.name', $sortDir),
+            default            => $itemsQb->orderBy('g.createdAt', $sortDir),
+        };
+
+        return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
+    }
 }

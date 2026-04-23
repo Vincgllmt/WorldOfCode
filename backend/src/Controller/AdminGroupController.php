@@ -25,37 +25,56 @@ final class AdminGroupController extends AbstractController
 
     #[Route('/groups', name: 'admin_groups_list', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Liste enrichie des groupes pour l\'administration',
+        summary: 'Liste paginée des groupes pour l\'administration',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'search',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des groupes avec métriques'),
+            new OA\Response(response: 200, description: 'Liste paginée des groupes avec métriques'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $rows = $this->groupRepo->findAllWithCounts();
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $search    = $request->query->get('search') ?: null;
+        $sortField = $request->query->get('sortField', 'createdAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
 
-        $dtos = array_map(function ($row) {
-            $group = $this->groupRepo->find($row['id']);
-            $source = $group ? $this->techWatchSourceRepo->findOneBy(['techGroup' => $group]) : null;
+        $result = $this->groupRepo->findPaginatedWithCounts(
+            page: $page,
+            limit: $limit,
+            search: $search,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
 
-            return new AdminGroupListItemDto(
-                id: $row['id'],
-                name: $row['name'],
-                description: $row['description'] ?? null,
-                memberCount: (int) $row['memberCount'],
-                postCount: (int) $row['postCount'],
-                creatorUsername: $row['creatorUsername'] ?? null,
-                createdAt: $row['createdAt'] instanceof \DateTimeInterface
-                    ? $row['createdAt']->format(\DateTimeInterface::ATOM)
-                    : (string) $row['createdAt'],
-                rssFeedUrl: $source?->getFeedUrl(),
-            );
-        }, $rows);
+        $items = array_map(fn($row) => new AdminGroupListItemDto(
+            id: $row['id'],
+            name: $row['name'],
+            description: $row['description'] ?? null,
+            memberCount: (int) $row['memberCount'],
+            postCount: (int) $row['postCount'],
+            creatorUsername: $row['creatorUsername'] ?? null,
+            createdAt: $row['createdAt'] instanceof \DateTimeInterface
+                ? $row['createdAt']->format(\DateTimeInterface::ATOM)
+                : (string) $row['createdAt'],
+            rssFeedUrl: $row['rssFeedUrl'] ?? null,
+        ), $result['items']);
 
-        return $this->json($dtos);
+        return $this->json([
+            'items' => $items,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
     }
 
     #[Route('/groups', name: 'admin_groups_create', methods: ['POST'])]

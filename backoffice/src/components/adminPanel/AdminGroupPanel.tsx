@@ -27,22 +27,34 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Plus, Search, Rss, MoreVertical, ArrowUp, ArrowDown, Layers } from 'lucide-react'
 
-type SortKey = 'name' | 'memberCount' | 'postCount' | 'createdAt'
+type SortKey = 'name' | 'memberCount' | 'postCount' | 'createdAt' | 'creatorUsername'
+
+const ITEMS_PER_PAGE = 20
 
 export default function AdminGroupPanel() {
-  const { groups, isLoading } = useAdminGroups()
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
+
+  const { groups, total, isLoading, isFetching } = useAdminGroups({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search:    search || undefined,
+    sortField: sortKey,
+    sortDir,
+  })
+
   const createGroup = useCreateAdminGroup()
   const updateGroup = useUpdateAdminGroup()
   const deleteGroup = useDeleteAdminGroup()
 
-  const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [createOpen, setCreateOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<AdminGroupListItem | null>(null)
   const [groupToDelete, setGroupToDelete] = useState<{ id: number; name: string } | null>(null)
 
   const handleSort = (key: SortKey) => {
+    setPage(1)
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
@@ -59,14 +71,6 @@ export default function AdminGroupPanel() {
   }
 
   const filtered = groups
-    .filter((g) => !search || g.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const mul = sortDir === 'asc' ? 1 : -1
-      if (sortKey === 'name') return mul * a.name.localeCompare(b.name)
-      if (sortKey === 'memberCount') return mul * (a.memberCount - b.memberCount)
-      if (sortKey === 'postCount') return mul * (a.postCount - b.postCount)
-      return mul * a.createdAt.localeCompare(b.createdAt)
-    })
 
   if (isLoading) {
     return (
@@ -101,10 +105,13 @@ export default function AdminGroupPanel() {
           <Input
             placeholder="Rechercher par nom..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8 h-9 text-sm"
           />
         </div>
+        <span className={`text-xs text-muted-foreground transition-opacity ${isFetching ? 'opacity-50' : 'opacity-100'}`}>
+          {total} groupe{total !== 1 ? 's' : ''}
+        </span>
         <Button size="sm" className="ml-auto gap-1.5" onClick={() => setCreateOpen(true)}>
           <Plus className="h-3.5 w-3.5" />
           Nouveau groupe
@@ -113,6 +120,9 @@ export default function AdminGroupPanel() {
 
       <PaginatedTable
         data={filtered}
+        totalItems={total}
+        currentPage={page}
+        onPageChange={setPage}
         emptyState={
           <div className="flex flex-col items-center gap-2 py-8">
             <Layers className="h-8 w-8 text-muted-foreground/40" />
@@ -141,7 +151,12 @@ export default function AdminGroupPanel() {
             >
               Posts <SortIcon col="postCount" />
             </TableHead>
-            <TableHead>Créateur</TableHead>
+            <TableHead
+              className="cursor-pointer select-none"
+              onClick={() => handleSort('creatorUsername')}
+            >
+              Créateur <SortIcon col="creatorUsername" />
+            </TableHead>
             <TableHead
               className="cursor-pointer select-none whitespace-nowrap"
               onClick={() => handleSort('createdAt')}
