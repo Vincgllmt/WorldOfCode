@@ -72,6 +72,22 @@ export const getAdminReportedPosts = async (params: AdminReportedPostsParams): P
   return res.json()
 }
 
+export const claimReportsByPost = async (postId: number): Promise<{ claimed: number }> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/reports/posts/${postId}/claim`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? 'Erreur lors de la prise en charge')
+  }
+  return res.json()
+}
+
 export const claimReport = async (id: number): Promise<AdminReport> => {
   const token = getCookie('token')
   const res = await fetch(`${API_URL}/api/admin/reports/${id}/claim`, {

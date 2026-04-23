@@ -7,6 +7,7 @@ import {
   useAdminReportedPosts,
   useAdminReports,
   useClaimReport,
+  useClaimReportsByPost,
   useResolveReport,
   useRejectReport,
 } from '@/hooks/useAdminReports'
@@ -18,7 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowUp, ArrowDown, FileText, CheckCircle2, XCircle, ClipboardList } from 'lucide-react'
+import { ArrowUp, ArrowDown, FileText, CheckCircle2, XCircle, ClipboardList, UserCheck } from 'lucide-react'
 import { PaginatedTable } from '@/components/shared/PaginationTable'
 import {
   Sheet,
@@ -65,9 +66,10 @@ function PostReportsSheet({
   const { reports, total, isLoading } = useAdminReports({
     page, limit: 10, postId: reportedPost.postId,
   })
-  const claimMutation   = useClaimReport()
-  const resolveMutation = useResolveReport()
-  const rejectMutation  = useRejectReport()
+  const claimMutation         = useClaimReport()
+  const claimAllMutation      = useClaimReportsByPost()
+  const resolveMutation       = useResolveReport()
+  const rejectMutation        = useRejectReport()
 
   const [resolveTarget, setResolveTarget] = useState<{ id: number } | null>(null)
   const [resolveNote, setResolveNote]     = useState('')
@@ -90,12 +92,32 @@ function PostReportsSheet({
             ) : (
               <p className="text-sm text-muted-foreground italic">Post supprimé</p>
             )}
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-              {reportedPost.postAuthorUsername && (
-                <span>par <strong className="text-foreground">{reportedPost.postAuthorUsername}</strong></span>
-              )}
-              {reportedPost.postTechGroupName && (
-                <span>· {reportedPost.postTechGroupName}</span>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                {reportedPost.postAuthorUsername && (
+                  <span>par <strong className="text-foreground">{reportedPost.postAuthorUsername}</strong></span>
+                )}
+                {reportedPost.postTechGroupName && (
+                  <span>· {reportedPost.postTechGroupName}</span>
+                )}
+              </div>
+              {reportedPost.pendingCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs h-7"
+                  disabled={claimAllMutation.isPending}
+                  onClick={() =>
+                    claimAllMutation.mutate(reportedPost.postId, {
+                      onSuccess: ({ claimed }) =>
+                        toast.success(`${claimed} report${claimed > 1 ? 's' : ''} pris en charge`),
+                      onError: (err) => toast.error(err.message),
+                    })
+                  }
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Tout prendre en charge ({reportedPost.pendingCount})
+                </Button>
               )}
             </div>
           </div>
@@ -310,6 +332,7 @@ export default function AdminReportedPostsPanel() {
   const [sortKey, setSortKey] = useState<SortKey>('latestReportAt')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [selectedPost, setSelectedPost] = useState<AdminReportedPost | null>(null)
+  const claimAllMutation = useClaimReportsByPost()
 
   const { reportedPosts, total, isLoading, isFetching } = useAdminReportedPosts({
     page,
@@ -393,6 +416,7 @@ export default function AdminReportedPostsPanel() {
             >
               Dernier signalement <SortIcon col="latestReportAt" />
             </TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground text-right">Actions</TableHead>
           </>
         }
         renderRow={(post) => (
@@ -441,6 +465,26 @@ export default function AdminReportedPostsPanel() {
             </TableCell>
             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
               {new Date(post.latestReportAt).toLocaleDateString('fr-FR')}
+            </TableCell>
+            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+              {post.pendingCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1.5"
+                  disabled={claimAllMutation.isPending}
+                  onClick={() =>
+                    claimAllMutation.mutate(post.postId, {
+                      onSuccess: ({ claimed }) =>
+                        toast.success(`${claimed} report${claimed > 1 ? 's' : ''} pris en charge`),
+                      onError: (err) => toast.error(err.message),
+                    })
+                  }
+                >
+                  <UserCheck className="h-3 w-3" />
+                  Prendre en charge ({post.pendingCount})
+                </Button>
+              )}
             </TableCell>
           </TableRow>
         )}

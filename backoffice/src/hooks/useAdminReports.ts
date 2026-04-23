@@ -5,6 +5,7 @@ import {
   getAdminReportedPosts,
   AdminReportedPostsParams,
   claimReport,
+  claimReportsByPost,
   resolveReport,
   rejectReport,
 } from '@/services/reportService'
@@ -34,6 +35,17 @@ export const useClaimReport = () => {
   return useMutation({
     mutationFn: (id: number) => claimReport(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminReports'] }),
+  })
+}
+
+export const useClaimReportsByPost = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (postId: number) => claimReportsByPost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReports'] })
+      queryClient.invalidateQueries({ queryKey: ['adminReportedPosts'] })
+    },
   })
 }
 

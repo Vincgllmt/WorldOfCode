@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Report;
+use App\Enum\ReportStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -166,6 +167,20 @@ class ReportRepository extends ServiceEntityRepository
         };
 
         return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
+    }
+
+    /**
+     * @return Report[]
+     */
+    public function findPendingByPostId(int $postId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.post = :postId')
+            ->andWhere('r.status = :status')
+            ->setParameter('postId', $postId)
+            ->setParameter('status', ReportStatus::PENDING)
+            ->getQuery()
+            ->getResult();
     }
 
     /**

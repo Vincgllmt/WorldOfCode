@@ -119,6 +119,39 @@ final class AdminReportController extends AbstractController
         ]);
     }
 
+    #[Route('/posts/{postId}/claim', name: 'admin_report_claim_by_post', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Prendre en charge tous les reports PENDING d\'un post',
+        responses: [
+            new OA\Response(response: 200, description: 'Reports pris en charge'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Aucun report PENDING pour ce post'),
+        ]
+    )]
+    public function claimByPost(int $postId): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $reports = $this->reportRepo->findPendingByPostId($postId);
+
+        if (empty($reports)) {
+            return $this->json(['error' => 'Aucun report PENDING pour ce post'], 404);
+        }
+
+        $currentUser = $this->getUser();
+        $now = new \DateTime();
+
+        foreach ($reports as $report) {
+            $report->setStatus(ReportStatus::IN_PROGRESS);
+            $report->setClaimedBy($currentUser);
+            $report->setClaimedAt($now);
+            $this->reportRepo->save($report, flush: false);
+        }
+        $this->reportRepo->getEntityManager()->flush();
+
+        return $this->json(['claimed' => count($reports)]);
+    }
+
     #[Route('/{id}/claim', name: 'admin_report_claim', methods: ['PATCH'])]
     #[OA\Patch(
         summary: 'Prendre en charge un report (PENDING → IN_PROGRESS)',
