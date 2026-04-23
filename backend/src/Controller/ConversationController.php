@@ -60,7 +60,6 @@ class ConversationController extends AbstractController
             return $this->json(['error' => 'Missing targetUserId'], 400);
         }
 
-        $currentUser = $this->getUser();
         $targetUser = $this->userRepo->find($targetUserId);
 
         if (!$targetUser) {

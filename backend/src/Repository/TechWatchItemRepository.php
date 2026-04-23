@@ -78,6 +78,26 @@ class TechWatchItemRepository extends ServiceEntityRepository
         return ['items' => $items, 'totalItems' => $total];
     }
 
+    /**
+     * Items RSS des groupes rejoints par l'utilisateur, triés par date de publication.
+     *
+     * @return TechWatchItem[]
+     */
+    public function findForUserGroups(\App\Entity\User $user, int $limit, int $offset = 0): array
+    {
+        return $this->createQueryBuilder('i')
+            ->join('i.source', 's')
+            ->join('s.techGroup', 'g')
+            ->join('g.users', 'u')
+            ->where('u = :user')
+            ->setParameter('user', $user)
+            ->orderBy('i.publishedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function existsByUrl(string $url): bool
     {
         return (bool) $this->findOneBy(['url' => $url]);

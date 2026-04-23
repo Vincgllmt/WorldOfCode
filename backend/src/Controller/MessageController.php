@@ -13,8 +13,6 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Repository\Messaging\MessageReadRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
-
 
 #[Route('/api/messaging')]
 #[OA\Tag(name: 'Messaging')]

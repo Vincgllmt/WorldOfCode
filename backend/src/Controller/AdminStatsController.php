@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Dto\AdminActivityPointDto;
 use App\Dto\AdminRecentEventDto;
 use App\Dto\AdminStatsResponse;
+use App\Enum\ReportStatus;
 use App\Enum\SuggestionStatus;
 use App\Repository\GroupSuggestionRepository;
 use App\Repository\PostRepository;
@@ -43,12 +44,11 @@ final class AdminStatsController extends AbstractController
 
         $oneWeekAgo = new \DateTime('-7 days');
 
-        // TODO Epic 4.1: filter pendingReportsCount by status = PENDING
         return $this->json(new AdminStatsResponse(
             totalUsers: $this->userRepo->count([]),
             totalPosts: $this->postRepo->count([]),
             totalGroups: $this->groupRepo->count([]),
-            pendingReportsCount: $this->reportRepo->count([]),
+            pendingReportsCount: $this->reportRepo->count(['status' => ReportStatus::PENDING]),
             pendingGroupSuggestionsCount: $this->groupSuggestionRepo->count(['status' => SuggestionStatus::PENDING]),
             newUsersThisWeek: $this->userRepo->countSince($oneWeekAgo),
             newPostsThisWeek: $this->postRepo->countSince($oneWeekAgo),

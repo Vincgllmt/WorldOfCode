@@ -20,7 +20,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use App\Service\LoginNotificationService;
 use App\Service\TwoFactorService;
+use App\Service\TrustedDeviceService;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 /**
@@ -306,7 +308,7 @@ class AuthenticationControllerTest extends TestCase
             ->getMockForAbstractClass();
         $jwt->method('createFromPayload')->willReturn('aperture.jwt.temptoken');
 
-        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class));
+        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class), $this->createMock(TrustedDeviceService::class), $this->createMock(LoginNotificationService::class));
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -322,7 +324,7 @@ class AuthenticationControllerTest extends TestCase
         $repo   = $this->createMock(UserRepository::class);
         $jwt    = $this->createMock(JWTTokenManagerInterface::class);
 
-        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class));
+        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class), $this->createMock(TrustedDeviceService::class), $this->createMock(LoginNotificationService::class));
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -338,7 +340,7 @@ class AuthenticationControllerTest extends TestCase
         $repo   = $this->createMock(UserRepository::class);
         $jwt    = $this->createMock(JWTTokenManagerInterface::class);
 
-        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(false), $this->createMock(TwoFactorService::class));
+        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(false), $this->createMock(TwoFactorService::class), $this->createMock(TrustedDeviceService::class), $this->createMock(LoginNotificationService::class));
 
         $this->assertSame(429, $response->getStatusCode());
     }
@@ -358,7 +360,7 @@ class AuthenticationControllerTest extends TestCase
 
         $jwt = $this->createMock(JWTTokenManagerInterface::class);
 
-        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class));
+        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class), $this->createMock(TrustedDeviceService::class), $this->createMock(LoginNotificationService::class));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -375,7 +377,7 @@ class AuthenticationControllerTest extends TestCase
         $repo->method('findOneBy')->willReturn(null);
         $jwt = $this->createMock(JWTTokenManagerInterface::class);
 
-        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class));
+        $response = $this->controller->authenticate($request, $hasher, $jwt, $repo, $this->makeRateLimiter(), $this->createMock(TwoFactorService::class), $this->createMock(TrustedDeviceService::class), $this->createMock(LoginNotificationService::class));
 
         $this->assertSame(401, $response->getStatusCode());
     }
@@ -551,6 +553,285 @@ class AuthenticationControllerTest extends TestCase
         $response = $this->controller->confirmPasswordReset($request, $resetService, $hasher);
 
         $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    // ======================================================================
+    //  verify2FA()
+    // ======================================================================
+
+    private function makeVerify2FARequest(array $overrides = []): Request
+    {
+        $data = array_merge([
+            'tempToken'      => 'valid.temp.token',
+            'code'           => '123456',
+            'rememberDevice' => false,
+        ], $overrides);
+
+        return new Request(content: json_encode($data, JSON_THROW_ON_ERROR));
+    }
+
+    private function makeRateLimiterFor2FA(int $userId, bool $accepted = true): RateLimiterFactory
+    {
+        $storage = new InMemoryStorage();
+        $limit   = $accepted ? 100000 : 1;
+
+        $factory = new RateLimiterFactory([
+            'id'     => '2fa_attempts',
+            'policy' => 'token_bucket',
+            'limit'  => $limit,
+            'rate'   => ['interval' => '1 minute'],
+        ], $storage);
+
+        if (!$accepted) {
+            $factory->create(sprintf('2fa_%d', $userId))->consume(1);
+        }
+
+        return $factory;
+    }
+
+    public function testVerify2FAFailsWhenFieldsAreMissing(): void
+    {
+        $request = new Request(content: json_encode(['tempToken' => 'some.token'], JSON_THROW_ON_ERROR));
+
+        $response = $this->controller->verify2FA(
+            $request,
+            $this->createMock(JWTTokenManagerInterface::class),
+            $this->createMock(UserRepository::class),
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA(1),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenTokenIsInvalid(): void
+    {
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willThrowException(new \Exception('Invalid token'));
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(),
+            $jwt,
+            $this->createMock(UserRepository::class),
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA(1),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenTokenHasNo2FAPendingFlag(): void
+    {
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['username' => self::CHELL_USERNAME]); // pas de 2fa_pending
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(),
+            $jwt,
+            $this->createMock(UserRepository::class),
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA(1),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenUsernameIsMissingFromToken(): void
+    {
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true]); // pas de username
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(),
+            $jwt,
+            $this->createMock(UserRepository::class),
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA(1),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenUserNotFound(): void
+    {
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true, 'username' => 'GLaDOS']);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(),
+            $jwt,
+            $repo,
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA(1),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenRateLimitIsExceeded(): void
+    {
+        $user = $this->buildUserWithId(1);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true, 'username' => self::CHELL_USERNAME]);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(),
+            $jwt,
+            $repo,
+            $this->createMock(TwoFactorService::class),
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA($user->getId(), false),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(429, $response->getStatusCode());
+    }
+
+    public function testVerify2FAFailsWhenCodeIsInvalid(): void
+    {
+        $user = $this->buildUserWithId(1);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true, 'username' => self::CHELL_USERNAME]);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $twoFactorService = $this->createMock(TwoFactorService::class);
+        $twoFactorService->method('verifyCode')->willReturn(false);
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(['code' => '000000']),
+            $jwt,
+            $repo,
+            $twoFactorService,
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA($user->getId()),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testVerify2FASuccessWithoutRememberDevice(): void
+    {
+        $user = $this->buildUserWithId(1);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true, 'username' => self::CHELL_USERNAME]);
+        $jwt->method('create')->willReturn('final.aperture.token');
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $twoFactorService = $this->createMock(TwoFactorService::class);
+        $twoFactorService->method('verifyCode')->willReturn(true);
+
+        $loginNotificationService = $this->createMock(LoginNotificationService::class);
+        $loginNotificationService->expects($this->once())->method('recordLogin');
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(['rememberDevice' => false]),
+            $jwt,
+            $repo,
+            $twoFactorService,
+            $this->createMock(TrustedDeviceService::class),
+            $this->makeRateLimiterFor2FA($user->getId()),
+            $loginNotificationService
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('final.aperture.token', $payload['token']);
+        $this->assertEmpty($response->headers->getCookies());
+    }
+
+    public function testVerify2FASuccessWithRememberDeviceSetsCookie(): void
+    {
+        $user = $this->buildUserWithId(1);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('parse')->willReturn(['2fa_pending' => true, 'username' => self::CHELL_USERNAME]);
+        $jwt->method('create')->willReturn('final.aperture.token');
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $twoFactorService = $this->createMock(TwoFactorService::class);
+        $twoFactorService->method('verifyCode')->willReturn(true);
+
+        $trustedDeviceService = $this->createMock(TrustedDeviceService::class);
+        $trustedDeviceService->method('generateToken')->willReturn('raw-device-token-aperture');
+        $trustedDeviceService->method('getTrustDays')->willReturn(90);
+
+        $response = $this->controller->verify2FA(
+            $this->makeVerify2FARequest(['rememberDevice' => true]),
+            $jwt,
+            $repo,
+            $twoFactorService,
+            $trustedDeviceService,
+            $this->makeRateLimiterFor2FA($user->getId()),
+            $this->createMock(LoginNotificationService::class)
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('final.aperture.token', $payload['token']);
+
+        $cookies = $response->headers->getCookies();
+        $this->assertNotEmpty($cookies);
+        $this->assertSame(TrustedDeviceService::getCookieName(), $cookies[0]->getName());
+        $this->assertSame('raw-device-token-aperture', $cookies[0]->getValue());
+    }
+
+    // ======================================================================
+    //  refresh()
+    // ======================================================================
+
+    public function testRefreshReturnsNewTokenForAuthenticatedUser(): void
+    {
+        $user = $this->buildUserWithId(42);
+
+        $controller = new AuthenticationController($this->userMapper);
+        $controller->setContainer($this->makeContainerWithUser($user));
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('create')->willReturn('refreshed.aperture.token');
+
+        $response = $controller->refresh($jwt);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('refreshed.aperture.token', $payload['token']);
+    }
+
+    public function testRefreshFailsWhenUserIsNotAuthenticated(): void
+    {
+        $controller = new AuthenticationController($this->userMapper);
+        $controller->setContainer($this->makeContainerWithNullToken());
+
+        $response = $controller->refresh($this->createMock(JWTTokenManagerInterface::class));
+
+        $this->assertSame(401, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('error', $payload);
     }

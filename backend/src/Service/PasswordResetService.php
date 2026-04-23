@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\User;
+use App\Repository\TrustedDeviceRepository;
 use App\Repository\UserRepository;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
@@ -17,6 +18,7 @@ class PasswordResetService
     public function __construct(
         private MailerInterface $mailer,
         private UserRepository $userRepository,
+        private TrustedDeviceRepository $trustedDeviceRepository,
         #[Autowire(env: 'RESET_PASSWORD_URL')] string $frontendUrl
     ) {
         $this->frontendUrl = rtrim($frontendUrl, '/');
@@ -78,6 +80,9 @@ class PasswordResetService
         $user->setPassword($hasher->hashPassword($user, $newPassword));
         $user->setResetToken(null);
         $this->userRepository->save($user);
+
+        // Révoquer tous les appareils de confiance après reset de mot de passe
+        $this->trustedDeviceRepository->deleteAllForUser($user);
 
         return true;
     }
