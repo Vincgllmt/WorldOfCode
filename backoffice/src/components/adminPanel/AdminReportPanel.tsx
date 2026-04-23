@@ -7,14 +7,14 @@ import { useAdminReports, useClaimReport, useResolveReport, useRejectReport } fr
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminReport, ReportStatus } from '@/interfaces/adminReport'
 
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
+import { TableCell, TableHead, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { X, Flag } from 'lucide-react'
+import { PaginatedTable } from '@/components/shared/PaginationTable'
 import {
   Select,
   SelectContent,
@@ -195,26 +195,38 @@ export default function AdminReportPanel() {
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
-        ))}
+      <div className="space-y-4">
+        <div className="flex gap-3">
+          <Skeleton className="h-9 w-[160px]" />
+          <Skeleton className="h-9 w-[180px]" />
+          <Skeleton className="h-9 w-[300px]" />
+        </div>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="bg-muted/40 border-b border-border px-4 py-3 flex gap-6">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-3.5 w-20" />
+            ))}
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="border-b border-border/50 last:border-0 px-4 py-3.5 flex items-center gap-6">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-7 w-28 ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
-  if (reports.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
-        Aucun signalement pour le moment.
-      </p>
-    )
-  }
-
   return (
-    <>
+    <div className="space-y-4">
       {/* Filtres */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={filterStatus || 'ALL'} onValueChange={(val) => setFilterStatus(val === 'ALL' ? '' : val as ReportStatus)}>
           <SelectTrigger className="h-9 w-[160px] text-sm">
             <SelectValue placeholder="Tous les statuts" />
@@ -268,81 +280,87 @@ export default function AdminReportPanel() {
             onClick={resetFilters}
             className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
           >
+            <X className="h-3.5 w-3.5 mr-1.5" />
             Effacer
           </Button>
         )}
 
-        {hasActiveFilter && (
-          <span className="ml-auto text-xs text-muted-foreground font-mono">
-            {filteredReports.length} résultat{filteredReports.length !== 1 ? 's' : ''} sur {reports.length}
-          </span>
-        )}
+        <span className="ml-auto text-xs text-muted-foreground font-mono">
+          {filteredReports.length} résultat{filteredReports.length !== 1 ? 's' : ''}
+          {hasActiveFilter && ` sur ${reports.length}`}
+        </span>
       </div>
 
-      {/* Tableau (Stories 4.3) */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[200px]">Post signalé</TableHead>
-            <TableHead>Signalé par</TableHead>
-            <TableHead>Raison</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Pris en charge par</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+      {/* Tableau */}
+      <PaginatedTable
+        data={filteredReports}
+        itemsPerPage={10}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-2">
+            <Flag className="h-8 w-8 text-muted-foreground/30" />
+            <p>{reports.length === 0 ? 'Aucun signalement pour le moment.' : 'Aucun résultat pour ces filtres.'}</p>
+          </div>
+        }
+        headers={
+          <>
+            <TableHead className="text-xs font-semibold text-muted-foreground w-[200px]">Post signalé</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Signalé par</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Raison</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Date</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Statut</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Pris en charge par</TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground text-right">Actions</TableHead>
+          </>
+        }
+        renderRow={(report) => (
+          <TableRow
+            key={report.id}
+            className="cursor-pointer hover:bg-muted/40 transition-colors border-border/50"
+            onClick={() => setSelectedReportId(report.id)}
+          >
+            <TableCell>
+              {report.postExcerpt ? (
+                <div>
+                  <p className="text-sm truncate max-w-[180px]">{report.postExcerpt}</p>
+                  {report.postAuthorUsername && (
+                    <p className="text-xs text-muted-foreground">par {report.postAuthorUsername}</p>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">(post supprimé)</span>
+              )}
+            </TableCell>
+
+            <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
+
+            <TableCell className="text-sm text-muted-foreground">
+              {report.reason ?? '—'}
+            </TableCell>
+
+            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+              {new Date(report.createdAt).toLocaleDateString('fr-FR')}
+            </TableCell>
+
+            <TableCell>
+              <StatusBadge status={report.status} />
+            </TableCell>
+
+            <TableCell className="text-sm text-muted-foreground">
+              {report.claimedByUsername ?? '—'}
+            </TableCell>
+
+            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+              <ActionCell
+                report={report}
+                currentUsername={currentUsername}
+                onClaim={handleClaim}
+                onResolve={handleResolve}
+                onReject={handleReject}
+              />
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredReports.map((report) => (
-            <TableRow
-              key={report.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => setSelectedReportId(report.id)}
-            >
-              <TableCell>
-                {report.postExcerpt ? (
-                  <div>
-                    <p className="text-sm truncate max-w-[180px]">{report.postExcerpt}</p>
-                    {report.postAuthorUsername && (
-                      <p className="text-xs text-muted-foreground">par {report.postAuthorUsername}</p>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground italic">(post supprimé)</span>
-                )}
-              </TableCell>
-
-              <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
-
-              <TableCell className="text-sm text-muted-foreground">
-                {report.reason ?? '—'}
-              </TableCell>
-
-              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                {new Date(report.createdAt).toLocaleDateString('fr-FR')}
-              </TableCell>
-
-              <TableCell>
-                <StatusBadge status={report.status} />
-              </TableCell>
-
-              <TableCell className="text-sm text-muted-foreground">
-                {report.claimedByUsername ?? '—'}
-              </TableCell>
-
-              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <ActionCell
-                  report={report}
-                  currentUsername={currentUsername}
-                  onClaim={handleClaim}
-                  onResolve={handleResolve}
-                  onReject={handleReject}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+        )}
+      />
 
       {/* Sheet détail (Story 4.5) */}
       <Dialog
@@ -557,6 +575,6 @@ export default function AdminReportPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }
