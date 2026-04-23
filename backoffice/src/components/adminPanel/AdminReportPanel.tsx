@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { X, Flag, ArrowUp, ArrowDown } from 'lucide-react'
 import { PaginatedTable } from '@/components/shared/PaginationTable'
+import { parseReportReason } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -38,6 +39,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+// ─── Raisons prédéfinies (alignées avec ReportPostDialog frontend) ────────────
+
+export const REPORT_REASONS = [
+  { value: 'Spam ou publicité indésirable',      label: 'Spam ou publicité indésirable' },
+  { value: 'Contenu inapproprié ou offensant',   label: 'Contenu inapproprié ou offensant' },
+  { value: 'Harcèlement ou intimidation',        label: 'Harcèlement ou intimidation' },
+  { value: 'Désinformation',                     label: 'Désinformation' },
+  { value: 'Contenu illégal',                    label: 'Contenu illégal' },
+  { value: 'Discours haineux',                   label: 'Discours haineux' },
+  { value: 'Autre',                              label: 'Autre' },
+]
+
+// ─── Affichage raison splitté ─────────────────────────────────────────────────
+
+export function ReasonDisplay({ reason, compact = false }: { reason: string | null | undefined; compact?: boolean }) {
+  const { label, details } = parseReportReason(reason)
+  if (!label) return <span className="text-muted-foreground">—</span>
+  return (
+    <div>
+      <span className={compact ? 'text-xs' : 'text-sm'}>{label}</span>
+      {details && (
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1" title={details}>{details}</p>
+      )}
+    </div>
+  )
+}
 
 // ─── Badge de statut ──────────────────────────────────────────────────────────
 
@@ -245,12 +273,17 @@ export default function AdminReportPanel() {
           </SelectContent>
         </Select>
 
-        <Input
-          placeholder="Raison..."
-          value={filterReason}
-          onChange={(e) => handleFilterChange(() => setFilterReason(e.target.value))}
-          className="h-9 w-[160px] text-sm"
-        />
+        <Select value={filterReason || 'ALL'} onValueChange={(val) => handleFilterChange(() => setFilterReason(val === 'ALL' ? '' : val))}>
+          <SelectTrigger className="h-9 w-[220px] text-sm">
+            <SelectValue placeholder="Toutes les raisons" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Toutes les raisons</SelectItem>
+            {REPORT_REASONS.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>Depuis</span>
@@ -348,7 +381,7 @@ export default function AdminReportPanel() {
               )}
             </TableCell>
             <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
-            <TableCell className="text-sm text-muted-foreground">{report.reason ?? '—'}</TableCell>
+            <TableCell><ReasonDisplay reason={report.reason} /></TableCell>
             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
               {new Date(report.createdAt).toLocaleDateString('fr-FR')}
             </TableCell>
@@ -430,9 +463,11 @@ export default function AdminReportPanel() {
                   <span className="text-muted-foreground">Signalé par</span>
                   <strong>{selectedReport.reportedByUsername}</strong>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Raison</span>
-                  <span className="font-medium">{selectedReport.reason ?? '—'}</span>
+                <div className="flex items-start justify-between text-sm gap-4">
+                  <span className="text-muted-foreground shrink-0">Raison</span>
+                  <div className="text-right">
+                    <ReasonDisplay reason={selectedReport.reason} />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Date</span>

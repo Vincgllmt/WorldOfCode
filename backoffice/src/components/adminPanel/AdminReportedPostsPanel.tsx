@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowUp, ArrowDown, FileText, CheckCircle2, XCircle, ClipboardList, UserCheck } from 'lucide-react'
+import { ReasonDisplay } from '@/components/adminPanel/AdminReportPanel'
 import { PaginatedTable } from '@/components/shared/PaginationTable'
 import {
   Sheet,
@@ -282,7 +283,9 @@ function ReportCard({
             {new Date(report.createdAt).toLocaleDateString('fr-FR')}
           </p>
           {report.reason && (
-            <p className="text-xs text-muted-foreground">Raison : {report.reason}</p>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Raison : <ReasonDisplay reason={report.reason} compact />
+            </div>
           )}
           {report.claimedByUsername && (
             <p className="text-xs text-muted-foreground">

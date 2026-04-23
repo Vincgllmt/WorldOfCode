@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowUp, ArrowDown, CheckCircle2, XCircle, Inbox } from 'lucide-react'
+import { ReasonDisplay } from '@/components/adminPanel/AdminReportPanel'
 import { PaginatedTable } from '@/components/shared/PaginationTable'
 import {
   AlertDialog,
@@ -174,7 +175,7 @@ export default function AdminMyModerationPanel() {
               )}
             </TableCell>
             <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
-            <TableCell className="text-sm text-muted-foreground">{report.reason ?? '—'}</TableCell>
+            <TableCell><ReasonDisplay reason={report.reason} compact /></TableCell>
             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
               {new Date(report.createdAt).toLocaleDateString('fr-FR')}
             </TableCell>
@@ -264,9 +265,11 @@ export default function AdminMyModerationPanel() {
                   <span className="text-muted-foreground">Signalé par</span>
                   <strong>{selectedReport.reportedByUsername}</strong>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Raison</span>
-                  <span className="font-medium">{selectedReport.reason ?? '—'}</span>
+                <div className="flex items-start justify-between text-sm gap-4">
+                  <span className="text-muted-foreground shrink-0">Raison</span>
+                  <div className="text-right">
+                    <ReasonDisplay reason={selectedReport.reason} />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Date</span>
