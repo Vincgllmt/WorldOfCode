@@ -30,19 +30,47 @@ final class AdminUserController extends AbstractController
 
     #[Route('/users', name: 'admin_users_list', methods: ['GET'])]
     #[OA\Get(
-        summary: "Liste enrichie des utilisateurs pour l'administration",
+        summary: "Liste paginée des utilisateurs pour l'administration",
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'search',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'role',      in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateFrom',  in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateTo',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des utilisateurs avec compteurs'),
+            new OA\Response(response: 200, description: 'Liste paginée des utilisateurs avec compteurs'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $rows = $this->userRepo->findAllWithCounts();
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $search    = $request->query->get('search') ?: null;
+        $role      = $request->query->get('role') ?: null;
+        $dateFrom  = $request->query->get('dateFrom') ?: null;
+        $dateTo    = $request->query->get('dateTo') ?: null;
+        $sortField = $request->query->get('sortField', 'creationDate');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
 
-        $dtos = array_map(fn($row) => new AdminUserListItemDto(
+        $result = $this->userRepo->findPaginatedWithCounts(
+            page: $page,
+            limit: $limit,
+            search: $search,
+            role: $role,
+            dateFrom: $dateFrom,
+            dateTo: $dateTo,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
+
+        $items = array_map(fn($row) => new AdminUserListItemDto(
             id: $row['id'],
             username: $row['username'],
             email: $row['email'],
@@ -55,9 +83,14 @@ final class AdminUserController extends AbstractController
             postCount: (int) $row['postCount'],
             followerCount: (int) $row['followerCount'],
             avatarUrl: $row['avatarUrl'] ?? null,
-        ), $rows);
+        ), $result['items']);
 
-        return $this->json($dtos);
+        return $this->json([
+            'items' => $items,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
     }
 
     #[Route('/users/{id}', name: 'admin_user_detail', methods: ['GET'])]

@@ -43,9 +43,37 @@ export const getAdminRecentActivity = async (): Promise<AdminRecentEvent[]> => {
   return res.json()
 }
 
-export const getAllAdminUsers = async (): Promise<AdminUserListItem[]> => {
+export interface AdminUsersParams {
+  page: number
+  limit: number
+  search?: string
+  role?: string
+  dateFrom?: string
+  dateTo?: string
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface AdminUsersPaginatedResponse {
+  items: AdminUserListItem[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const getAdminUsersPaginated = async (params: AdminUsersParams): Promise<AdminUsersPaginatedResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/admin/users`, {
+  const query = new URLSearchParams()
+  query.set('page', String(params.page))
+  query.set('limit', String(params.limit))
+  if (params.search)    query.set('search', params.search)
+  if (params.role)      query.set('role', params.role)
+  if (params.dateFrom)  query.set('dateFrom', params.dateFrom)
+  if (params.dateTo)    query.set('dateTo', params.dateTo)
+  if (params.sortField) query.set('sortField', params.sortField)
+  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+
+  const res = await fetch(`${API_URL}/api/admin/users?${query.toString()}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
