@@ -128,8 +128,7 @@ class TechGroupRepository extends ServiceEntityRepository
         $base = $this->createQueryBuilder('g')
             ->leftJoin('g.creator', 'creator')
             ->leftJoin('g.users', 'm')
-            ->leftJoin('g.posts', 'p')
-            ->leftJoin('App\Entity\TechWatchSource', 'tws', 'WITH', 'tws.techGroup = g');
+            ->leftJoin('g.posts', 'p');
 
         if ($search !== null && $search !== '') {
             $base->andWhere('LOWER(g.name) LIKE :search')
@@ -149,8 +148,7 @@ class TechGroupRepository extends ServiceEntityRepository
                 'g.createdAt',
                 'creator.username AS creatorUsername',
                 'COUNT(DISTINCT m.id) AS memberCount',
-                'COUNT(DISTINCT p.id) AS postCount',
-                'tws.feedUrl AS rssFeedUrl'
+                'COUNT(DISTINCT p.id) AS postCount'
             )
             ->groupBy('g.id')
             ->setFirstResult(($page - 1) * $limit)
@@ -164,6 +162,28 @@ class TechGroupRepository extends ServiceEntityRepository
             default            => $itemsQb->orderBy('g.createdAt', $sortDir),
         };
 
-        return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
+        $items = $itemsQb->getQuery()->getResult();
+
+        // Fetch RSS URLs in one query for all returned group IDs
+        $rssByGroupId = [];
+        if (!empty($items)) {
+            $groupIds = array_column($items, 'id');
+            $rssRows = $this->getEntityManager()->createQueryBuilder()
+                ->select('IDENTITY(tws.techGroup) AS groupId', 'tws.feedUrl')
+                ->from(\App\Entity\TechWatchSource::class, 'tws')
+                ->where('tws.techGroup IN (:ids)')
+                ->setParameter('ids', $groupIds)
+                ->getQuery()
+                ->getResult();
+            foreach ($rssRows as $row) {
+                $rssByGroupId[(int) $row['groupId']] = $row['feedUrl'];
+            }
+        }
+
+        $items = array_map(fn($item) => array_merge($item, [
+            'rssFeedUrl' => $rssByGroupId[$item['id']] ?? null,
+        ]), $items);
+
+        return ['items' => $items, 'total' => $total];
     }
 }
