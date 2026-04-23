@@ -1,0 +1,21 @@
+monolog:
+    channels:
+        - user_error
+
+    handlers:
+        # Logs applicatifs standard vers stdout (JSON pour Loki)
+        main:
+            type:      stream
+            path:      php://stdout
+            level:     debug
+            channels:  ['!user_error']
+            formatter: monolog.formatter.json
+
+        # Channel dédié aux erreurs provoquées par les utilisateurs
+        # Toujours actif (pas de fingers_crossed) pour garantir l'acheminement vers Loki
+        user_error_handler:
+            type:      stream
+            path:      php://stdout
+            level:     warning
+            channels:  [user_error]
+            formatter: monolog.formatter.json

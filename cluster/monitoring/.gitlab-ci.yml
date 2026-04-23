@@ -33,6 +33,28 @@ deploy:vm-stack:
         --values cluster/monitoring/vm-stack-values.yaml
     
 
+# --- Job 3 : Alerting Grafana (contact point Google Chat + règles Loki) ---
+deploy:monitoring:alerting:
+  stage: deploy-monitoring
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      changes:
+        - cluster/monitoring/grafana-alerting.yaml
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+  script:
+    - helm repo add vm $VM_CHART_REPO
+    - helm repo update vm
+    - kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Application de la configuration d'alerting Grafana..."
+    - |
+      helm upgrade --install "$VM_RELEASE_NAME" "$VM_CHART_NAME" \
+        --namespace "$MONITORING_NAMESPACE" \
+        --version "$VM_CHART_VERSION" \
+        --reuse-values \
+        --values cluster/monitoring/grafana-alerting.yaml
+
 # --- Job 2 : Loki & Promtail ---
 deploy:loki-stack:
   stage: deploy-monitoring
