@@ -48,7 +48,7 @@ import { PaginatedTable } from '../shared/PaginationTable'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SortKey = 'postCount' | 'followerCount' | 'creationDate' | null
+type SortKey = 'postCount' | 'followerCount' | 'creationDate' | 'username' | 'email' | 'role' | null
 
 // ─── Composant skeleton de chargement ─────────────────────────────────────────
 
@@ -250,9 +250,24 @@ export default function AdminUserPanel() {
           headers={
             <>
               <TableHead className="w-10 pl-4"></TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Username</TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Email</TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Rôle</TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('username')}
+              >
+                Username{sortIndicator('username')}
+              </TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('email')}
+              >
+                Email{sortIndicator('email')}
+              </TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('role')}
+              >
+                Rôle{sortIndicator('role')}
+              </TableHead>
               <TableHead
                 className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
                 onClick={() => toggleSort('creationDate')}

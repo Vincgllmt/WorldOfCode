@@ -204,6 +204,9 @@ class UserRepository extends ServiceEntityRepository
         match ($sortField) {
             'postCount'     => $itemsQb->orderBy('postCount', $sortDir),
             'followerCount' => $itemsQb->orderBy('followerCount', $sortDir),
+            'username'      => $itemsQb->orderBy('u.username', $sortDir),
+            'email'         => $itemsQb->orderBy('u.email', $sortDir),
+            'role'          => $itemsQb->orderBy('u.role', $sortDir),
             default         => $itemsQb->orderBy('u.creationDate', $sortDir),
         };
 
