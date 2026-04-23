@@ -4,6 +4,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\AdminReportController;
 use App\Dto\AdminReportDto;
+use App\Entity\Post;
 use App\Entity\Report;
 use App\Entity\User;
 use App\Enum\ReportStatus;
@@ -118,6 +119,17 @@ class AdminReportControllerTest extends TestCase
         return $report;
     }
 
+    private function buildPost(int $id): Post
+    {
+        $post = new Post();
+        $post->onCreate();
+
+        $idProp = new \ReflectionProperty(Post::class, 'id');
+        $idProp->setValue($post, $id);
+
+        return $post;
+    }
+
     private function buildDto(int $id): AdminReportDto
     {
         return new AdminReportDto(
@@ -133,6 +145,61 @@ class AdminReportControllerTest extends TestCase
     }
 
     // ======================================================================
+    //  listGroupedByPost()
+    // ======================================================================
+
+    public function testListGroupedByPostReturnsData(): void
+    {
+        $admin      = $this->buildAdmin();
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('findGroupedByPost')->willReturn([
+            'items' => [
+                [
+                    'postId'          => 42,
+                    'postContent'     => 'Contenu du post signalé',
+                    'reportCount'     => 3,
+                    'pendingCount'    => 2,
+                    'inProgressCount' => 1,
+                    'resolvedCount'   => 0,
+                    'rejectedCount'   => 0,
+                    'latestReportAt'  => '2024-06-01T10:00:00+00:00',
+                ],
+            ],
+            'total' => 1,
+        ]);
+
+        $response = $this->makeController($admin, $reportRepo)->listGroupedByPost(new Request());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame(42, $payload['items'][0]['postId']);
+        $this->assertSame(3, $payload['items'][0]['reportCount']);
+    }
+
+    public function testListGroupedByPostReturnsEmptyWhenNone(): void
+    {
+        $admin      = $this->buildAdmin();
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('findGroupedByPost')->willReturn(['items' => [], 'total' => 0]);
+
+        $response = $this->makeController($admin, $reportRepo)->listGroupedByPost(new Request());
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(0, $payload['total']);
+        $this->assertSame([], $payload['items']);
+    }
+
+    public function testListGroupedByPostDeniesNonAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+        $this->expectException(AccessDeniedException::class);
+        $this->makeController($admin, isAdmin: false)->listGroupedByPost(new Request());
+    }
+
+    // ======================================================================
     //  list()
     // ======================================================================
 
@@ -143,21 +210,133 @@ class AdminReportControllerTest extends TestCase
         $mapper     = $this->createMock(AdminReportMapper::class);
 
         $report = $this->buildReport(1);
-        $reportRepo->method('findBy')->willReturn([$report]);
+        $reportRepo->method('findPaginatedWithFilters')->willReturn(['items' => [$report], 'total' => 1]);
         $mapper->method('toDto')->willReturn($this->buildDto(1));
 
-        $response = $this->makeController($admin, $reportRepo, mapper: $mapper)->list();
+        $response = $this->makeController($admin, $reportRepo, mapper: $mapper)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+    }
+
+    public function testListPassesStatusFilterToRepo(): void
+    {
+        $admin      = $this->buildAdmin();
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $mapper     = $this->createMock(AdminReportMapper::class);
+        $mapper->method('toDto')->willReturn($this->buildDto(1));
+
+        $reportRepo->expects($this->once())
+            ->method('findPaginatedWithFilters')
+            ->with(
+                $this->equalTo(1),
+                $this->equalTo(20),
+                $this->equalTo('PENDING'),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+            )
+            ->willReturn(['items' => [], 'total' => 0]);
+
+        $request = new Request(['status' => 'PENDING']);
+        $this->makeController($admin, $reportRepo, mapper: $mapper)->list($request);
+    }
+
+    public function testListPassesPostIdFilterToRepo(): void
+    {
+        $admin      = $this->buildAdmin();
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $mapper     = $this->createMock(AdminReportMapper::class);
+        $mapper->method('toDto')->willReturn($this->buildDto(1));
+
+        $captured = null;
+        $reportRepo->method('findPaginatedWithFilters')
+            ->willReturnCallback(function () use (&$captured) {
+                $captured = func_get_args();
+                return ['items' => [], 'total' => 0];
+            });
+
+        $request = new Request(['postId' => '99']);
+        $this->makeController($admin, $reportRepo, mapper: $mapper)->list($request);
+
+        // postId is the last named param — verify it was passed as int 99
+        $this->assertSame(99, $captured[9] ?? null);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
+    }
+
+    // ======================================================================
+    //  claimByPost()
+    // ======================================================================
+
+    public function testClaimByPostSucceeds(): void
+    {
+        $admin   = $this->buildAdmin(1);
+        $report1 = $this->buildReport(10, ReportStatus::PENDING);
+        $report2 = $this->buildReport(11, ReportStatus::PENDING);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())->method('flush');
+
+        $reportRepo = new class($em, $report1, $report2) extends ReportRepository {
+            public function __construct(
+                private EntityManagerInterface $testEm,
+                private Report $r1,
+                private Report $r2,
+            ) {}
+
+            public function findPendingByPostId(int $postId): array
+            {
+                return [$this->r1, $this->r2];
+            }
+
+            public function save(Report $r, bool $flush = true): void {}
+
+            public function getEntityManager(): EntityManagerInterface
+            {
+                return $this->testEm;
+            }
+        };
+
+        $response = $this->makeController($admin, $reportRepo)->claimByPost(42);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(2, $payload['claimed']);
+
+        $this->assertSame(ReportStatus::IN_PROGRESS, $report1->getStatus());
+        $this->assertSame(1, $report1->getClaimedBy()?->getId());
+        $this->assertSame(ReportStatus::IN_PROGRESS, $report2->getStatus());
+        $this->assertSame(1, $report2->getClaimedBy()?->getId());
+    }
+
+    public function testClaimByPostReturns404WhenNoPending(): void
+    {
+        $admin      = $this->buildAdmin();
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('findPendingByPostId')->willReturn([]);
+
+        $response = $this->makeController($admin, $reportRepo)->claimByPost(99);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testClaimByPostDeniesNonAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+        $this->expectException(AccessDeniedException::class);
+        $this->makeController($admin, isAdmin: false)->claimByPost(1);
     }
 
     // ======================================================================
@@ -235,7 +414,6 @@ class AdminReportControllerTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('wrapInTransaction')->willReturnCallback(fn(callable $cb) => $cb());
 
-        // Anonymous subclass to bypass ServiceEntityRepositoryProxy
         $reportRepo = new class($em, $report) extends ReportRepository {
             public function __construct(
                 private EntityManagerInterface $testEm,
@@ -247,7 +425,7 @@ class AdminReportControllerTest extends TestCase
                 return $this->testReport;
             }
 
-            public function save(Report $r, bool $flush = true): void { /* no-op */ }
+            public function save(Report $r, bool $flush = true): void {}
 
             public function getEntityManager(): EntityManagerInterface
             {
@@ -260,6 +438,107 @@ class AdminReportControllerTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(ReportStatus::RESOLVED, $report->getStatus());
+    }
+
+    public function testResolveAutoResolvesSiblingReports(): void
+    {
+        $admin         = $this->buildAdmin(1);
+        $post          = $this->buildPost(42);
+        $report        = $this->buildReport(7, ReportStatus::IN_PROGRESS, $admin);
+        $siblingReport = $this->buildReport(8, ReportStatus::PENDING);
+        $report->setPost($post);
+
+        $mapper = $this->createMock(AdminReportMapper::class);
+        $mapper->method('toDto')->willReturn($this->buildDto(7));
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('wrapInTransaction')->willReturnCallback(fn(callable $cb) => $cb());
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->expects($this->once())->method('remove')->with($post);
+
+        $reportRepo = new class($em, $report, $siblingReport) extends ReportRepository {
+            public function __construct(
+                private EntityManagerInterface $testEm,
+                private Report $testReport,
+                private Report $testSibling,
+            ) {}
+
+            public function find(mixed $id, mixed $lockMode = null, mixed $lockVersion = null): ?object
+            {
+                return $this->testReport;
+            }
+
+            public function findByPostId(int $postId): array
+            {
+                return [$this->testReport, $this->testSibling];
+            }
+
+            public function save(Report $r, bool $flush = true): void {}
+
+            public function getEntityManager(): EntityManagerInterface
+            {
+                return $this->testEm;
+            }
+        };
+
+        $request  = new Request(content: json_encode(['resolutionNote' => 'Contenu supprimé']));
+        $response = $this->makeController($admin, $reportRepo, $postRepo, $mapper)->resolve(7, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(ReportStatus::RESOLVED, $report->getStatus());
+        $this->assertSame(ReportStatus::RESOLVED, $siblingReport->getStatus());
+    }
+
+    public function testResolveSkipsAlreadyResolvedOrRejectedSiblings(): void
+    {
+        $admin           = $this->buildAdmin(1);
+        $post            = $this->buildPost(42);
+        $report          = $this->buildReport(7, ReportStatus::IN_PROGRESS, $admin);
+        $alreadyResolved = $this->buildReport(8, ReportStatus::RESOLVED);
+        $alreadyRejected = $this->buildReport(9, ReportStatus::REJECTED);
+        $report->setPost($post);
+
+        $mapper = $this->createMock(AdminReportMapper::class);
+        $mapper->method('toDto')->willReturn($this->buildDto(7));
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('wrapInTransaction')->willReturnCallback(fn(callable $cb) => $cb());
+
+        $postRepo = $this->createMock(PostRepository::class);
+
+        $reportRepo = new class($em, $report, $alreadyResolved, $alreadyRejected) extends ReportRepository {
+            public function __construct(
+                private EntityManagerInterface $testEm,
+                private Report $testReport,
+                private Report $testResolved,
+                private Report $testRejected,
+            ) {}
+
+            public function find(mixed $id, mixed $lockMode = null, mixed $lockVersion = null): ?object
+            {
+                return $this->testReport;
+            }
+
+            public function findByPostId(int $postId): array
+            {
+                return [$this->testReport, $this->testResolved, $this->testRejected];
+            }
+
+            public function save(Report $r, bool $flush = true): void {}
+
+            public function getEntityManager(): EntityManagerInterface
+            {
+                return $this->testEm;
+            }
+        };
+
+        $request = new Request(content: json_encode(['resolutionNote' => 'ok']));
+        $this->makeController($admin, $reportRepo, $postRepo, $mapper)->resolve(7, $request);
+
+        // Already-settled reports must not change status
+        $this->assertSame(ReportStatus::RESOLVED, $alreadyResolved->getStatus());
+        $this->assertSame(ReportStatus::REJECTED, $alreadyRejected->getStatus());
     }
 
     public function testResolveReturns403WhenNotClaimer(): void

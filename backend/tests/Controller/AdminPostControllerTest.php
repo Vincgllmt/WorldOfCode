@@ -6,8 +6,10 @@ use App\Controller\AdminPostController;
 use App\Entity\User;
 use App\Enum\UserRole;
 use App\Repository\PostRepository;
+use App\Repository\ReportRepository;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
@@ -73,10 +75,15 @@ class AdminPostControllerTest extends TestCase
         return $container;
     }
 
-    private function makeController(User $currentUser, ?PostRepository $repo = null, bool $isAdmin = true): AdminPostController
-    {
+    private function makeController(
+        User $currentUser,
+        ?PostRepository $repo = null,
+        ?ReportRepository $reportRepo = null,
+        bool $isAdmin = true,
+    ): AdminPostController {
         $controller = new AdminPostController(
-            $repo ?? $this->createMock(PostRepository::class),
+            $repo       ?? $this->createMock(PostRepository::class),
+            $reportRepo ?? $this->createMock(ReportRepository::class),
         );
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
 
@@ -91,8 +98,8 @@ class AdminPostControllerTest extends TestCase
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(PostRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([
-            [
+        $repo->method('findPaginatedWithCounts')->willReturn([
+            'items' => [[
                 'id'             => 1,
                 'content'        => 'Hello Aperture world post content here',
                 'authorUsername' => 'GLaDOS',
@@ -101,16 +108,18 @@ class AdminPostControllerTest extends TestCase
                 'commentsCount'  => 2,
                 'reportsCount'   => 0,
                 'createdAt'      => new \DateTime('2024-06-01'),
-            ],
+            ]],
+            'total' => 1,
         ]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
-        $this->assertSame('GLaDOS', $payload[0]['authorUsername']);
-        $this->assertSame(4, $payload[0]['likesCount']);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame('GLaDOS', $payload['items'][0]['authorUsername']);
+        $this->assertSame(4, $payload['items'][0]['likesCount']);
     }
 
     public function testListTruncatesExcerptAt100Chars(): void
@@ -118,40 +127,44 @@ class AdminPostControllerTest extends TestCase
         $admin   = $this->buildAdmin();
         $longStr = str_repeat('A', 150);
         $repo    = $this->createMock(PostRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([[
-            'id'             => 1,
-            'content'        => $longStr,
-            'authorUsername' => 'GLaDOS',
-            'techGroupName'  => null,
-            'likesCount'     => 0,
-            'commentsCount'  => 0,
-            'reportsCount'   => 0,
-            'createdAt'      => new \DateTime(),
-        ]]);
+        $repo->method('findPaginatedWithCounts')->willReturn([
+            'items' => [[
+                'id'             => 1,
+                'content'        => $longStr,
+                'authorUsername' => 'GLaDOS',
+                'techGroupName'  => null,
+                'likesCount'     => 0,
+                'commentsCount'  => 0,
+                'reportsCount'   => 0,
+                'createdAt'      => new \DateTime(),
+            ]],
+            'total' => 1,
+        ]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
         $payload  = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
 
-        $this->assertStringEndsWith('…', $payload[0]['excerpt']);
-        $this->assertSame(101, mb_strlen($payload[0]['excerpt'])); // 100 chars + '…'
+        $this->assertStringEndsWith('…', $payload['items'][0]['excerpt']);
+        $this->assertSame(101, mb_strlen($payload['items'][0]['excerpt'])); // 100 chars + '…'
     }
 
     public function testListReturnsEmptyWhenNoPosts(): void
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(PostRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([]);
+        $repo->method('findPaginatedWithCounts')->willReturn(['items' => [], 'total' => 0]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame([], $payload);
+        $this->assertSame(0, $payload['total']);
+        $this->assertSame([], $payload['items']);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
     }
 }

@@ -117,32 +117,35 @@ class AdminGroupControllerTest extends TestCase
         $watchRepo = $this->createMock(TechWatchSourceRepository::class);
         $group     = $this->buildGroup(1, 'ElysiFields');
 
-        $groupRepo->method('findAllWithCounts')->willReturn([[
-            'id'             => 1,
-            'name'           => 'ElysiFields',
-            'description'    => 'Fields of Elysium',
-            'memberCount'    => 10,
-            'postCount'      => 5,
-            'creatorUsername'=> 'Zagreus',
-            'createdAt'      => new \DateTime('2024-01-01'),
-        ]]);
-        $groupRepo->method('find')->with(1)->willReturn($group);
-        $watchRepo->method('findOneBy')->willReturn(null);
+        $groupRepo->method('findPaginatedWithCounts')->willReturn([
+            'items' => [[
+                'id'             => 1,
+                'name'           => 'ElysiFields',
+                'description'    => 'Fields of Elysium',
+                'memberCount'    => 10,
+                'postCount'      => 5,
+                'creatorUsername'=> 'Zagreus',
+                'createdAt'      => new \DateTime('2024-01-01'),
+                'rssFeedUrl'     => null,
+            ]],
+            'total' => 1,
+        ]);
 
-        $response = $this->makeController($admin, $groupRepo, $watchRepo)->list();
+        $response = $this->makeController($admin, $groupRepo, $watchRepo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
-        $this->assertSame('ElysiFields', $payload[0]['name']);
-        $this->assertSame(10, $payload[0]['memberCount']);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame('ElysiFields', $payload['items'][0]['name']);
+        $this->assertSame(10, $payload['items'][0]['memberCount']);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
     }
 
     // ======================================================================
