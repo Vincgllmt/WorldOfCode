@@ -5,6 +5,7 @@ namespace App\Tests\Controller;
 use App\Controller\MessageController;
 use App\Dto\MessageResponse;
 use App\Entity\Messaging\Conversation;
+use App\Entity\Messaging\ConversationParticipant;
 use App\Entity\Messaging\Message;
 use App\Entity\User;
 use App\Enum\UserRole;
@@ -12,9 +13,11 @@ use App\Mapper\MessageMapper;
 use App\Repository\Messaging\ConversationRepository;
 use App\Repository\Messaging\MessageReadRepository;
 use App\Repository\Messaging\MessageRepository;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
@@ -215,5 +218,76 @@ class MessageControllerTest extends TestCase
             ->markConversationAsRead('conv-uuid-1', $messageRepo, $messageReadRepo, $em);
 
         $this->assertSame(200, $response->getStatusCode());
+    }
+
+    // ======================================================================
+    //  search()
+    // ======================================================================
+
+    public function testSearchFailsWhenQueryIsTooShort(): void
+    {
+        $kiryu    = $this->buildUser(1);
+        $request  = Request::create('/api/messaging/messages/search', 'GET', ['q' => 'x']);
+        $response = $this->makeController($kiryu)->search($request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testSearchReturnsEmptyArrayWhenNoResults(): void
+    {
+        $kiryu = $this->buildUser(1);
+
+        $messageRepo = $this->createMock(MessageRepository::class);
+        $messageRepo->method('searchByUserAndQuery')->willReturn([]);
+
+        $request  = Request::create('/api/messaging/messages/search', 'GET', ['q' => 'nothingfound']);
+        $response = $this->makeController($kiryu, $messageRepo)->search($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame([], $payload);
+    }
+
+    public function testSearchReturnsResultsWithConversationInfo(): void
+    {
+        $kiryu  = $this->buildUser(1);
+        $majima = $this->buildUser(2, 'MajimaGoro');
+
+        $participant = $this->createMock(ConversationParticipant::class);
+        $participant->method('getUser')->willReturn($majima);
+
+        $conv = $this->createMock(Conversation::class);
+        $conv->method('getType')->willReturn('private');
+        $conv->method('getParticipants')->willReturn(new ArrayCollection([$participant]));
+
+        $convRepo = $this->createMock(ConversationRepository::class);
+        $convRepo->method('find')->with('conv-uuid-1')->willReturn($conv);
+
+        $messageRepo = $this->createMock(MessageRepository::class);
+        $messageRepo->method('searchByUserAndQuery')->with(1, 'yakuza')->willReturn([
+            [
+                'id'              => 'msg-uuid-1',
+                'body'            => 'Yakuza nante ni naritakunakatta.',
+                'type'            => 'text',
+                'created_at'      => '2024-01-01 12:00:00',
+                'conversation_id' => 'conv-uuid-1',
+                'sender_id'       => 1,
+                'sender_username' => 'KiryuKazuma',
+            ],
+        ]);
+
+        $request  = Request::create('/api/messaging/messages/search', 'GET', ['q' => 'yakuza']);
+        $response = $this->makeController($kiryu, $messageRepo, $convRepo)->search($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(1, $payload);
+        $this->assertSame('msg-uuid-1', $payload[0]['id']);
+        $this->assertSame('Yakuza nante ni naritakunakatta.', $payload[0]['body']);
+        $this->assertSame('conv-uuid-1', $payload[0]['conversationId']);
+        $this->assertSame('KiryuKazuma', $payload[0]['sender']['username']);
+        $this->assertSame('private', $payload[0]['conversation']['type']);
     }
 }

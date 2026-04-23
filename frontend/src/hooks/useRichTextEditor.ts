@@ -31,8 +31,8 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
 
   const editorInit = useMemo<TinyMCEEditorProps['init']>(() => {
     const baseSettings: EditorInit = {
-      skin: false,
-      content_css: false,
+      skin_url: '/tinymce/skins/ui/oxide',
+      content_css: '/tinymce/skins/ui/oxide/content.min.css',
       menubar: false,
       statusbar: false,
       height: 320,

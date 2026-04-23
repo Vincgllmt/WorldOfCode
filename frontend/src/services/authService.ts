@@ -17,6 +17,7 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
     const res = await fetch(`${API_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // envoie le cookie trusted_device si présent
         body: JSON.stringify(credentials),
     })
 
@@ -38,11 +39,12 @@ export const isTwoFactorRequired = (response: LoginResponse): response is TwoFac
 /**
  * Étape 2 : vérifie le code 2FA et retourne le JWT final + user data
  */
-export const verify2FA = async (tempToken: string, code: string): Promise<AuthenticatedUser> => {
+export const verify2FA = async (tempToken: string, code: string, rememberDevice = false): Promise<AuthenticatedUser> => {
     const res = await fetch(`${API_URL}/2fa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tempToken, code }),
+        credentials: 'include', // reçoit et stocke le cookie trusted_device si rememberDevice
+        body: JSON.stringify({ tempToken, code, rememberDevice }),
     })
 
     if (!res.ok) {
@@ -53,7 +55,7 @@ export const verify2FA = async (tempToken: string, code: string): Promise<Authen
     const { token }: TokenResponse = await res.json()
 
     // Stocker le vrai JWT
-    setCookie('token', token, { path: '/', maxAge: 3600 })
+    setCookie('token', token, { path: '/', maxAge: 14400 })
 
     // Récupérer le profil utilisateur
     const meRes = await fetch(`${API_URL}/me`, {
@@ -82,6 +84,17 @@ export const getMe = async (): Promise<AuthenticatedUser> => {
         ...userData,
         token: token as string,
     }
+}
+
+/**
+ * Renouvelle le token JWT silencieusement (utilisateur toujours connecté)
+ */
+export const refreshToken = async (): Promise<string> => {
+    const res = await fetchWithAuth('/auth/refresh', { method: 'POST' })
+    if (!res.ok) throw new Error('Refresh failed')
+    const { token }: TokenResponse = await res.json()
+    setCookie('token', token, { path: '/', maxAge: 14400 })
+    return token
 }
 
 /**

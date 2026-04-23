@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import PostContent from '@/components/post/PostContent'
 import type { Post } from '@/interfaces/post'
@@ -14,8 +17,15 @@ function getInitials(username: string): string {
 }
 
 export default function SharedPostCard({ post }: SharedPostCardProps) {
+  const router = useRouter()
   return (
-    <Link href={`/post/${post.id}`} className="block no-underline">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/post/${post.id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && router.push(`/post/${post.id}`)}
+      className="block cursor-pointer"
+    >
       <article className="rounded-xl border border-border bg-card p-4 shadow-sm hover:bg-muted/50 transition-colors">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -68,6 +78,6 @@ export default function SharedPostCard({ post }: SharedPostCardProps) {
           </p>
         ) : null}
       </article>
-    </Link>
+    </div>
   )
 }

@@ -10,6 +10,7 @@ use App\Repository\PaymentRepository;
 use App\Service\StripeService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Stripe\Exception\SignatureVerificationException;
 
 /**
  * 🎮 Factorio - Tests unitaires du StripeService
@@ -179,5 +180,20 @@ class StripeServiceTest extends TestCase
         ]);
 
         $this->makeService($em, $repo)->handleEvent($event);
+    }
+
+    // ======================================================================
+    //  constructWebhookEvent()
+    // ======================================================================
+
+    public function testConstructWebhookEventThrowsWithInvalidSignature(): void
+    {
+        $this->expectException(SignatureVerificationException::class);
+
+        // Signature au bon format mais hash invalide → signature mismatch
+        $this->makeService()->constructWebhookEvent(
+            '{"id":"evt_test","type":"payment_intent.succeeded"}',
+            't=' . time() . ',v1=' . str_repeat('0', 64)
+        );
     }
 }
