@@ -1,3 +1,34 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-auto-unseal
+  namespace: vault
+---
+# Role dans le namespace dev pour restart les StatefulSets dépendants de Vault
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-auto-unseal-dev
+  namespace: dev
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-auto-unseal-dev
+  namespace: dev
+subjects:
+  - kind: ServiceAccount
+    name: vault-auto-unseal
+    namespace: vault
+roleRef:
+  kind: Role
+  name: vault-auto-unseal-dev
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,30 +44,44 @@ spec:
       labels:
         app: vault-auto-unseal
     spec:
-      serviceAccountName: default
+      serviceAccountName: vault-auto-unseal
       containers:
         - name: unsealer
-          image: hashicorp/vault:1.21.2
+          image: alpine/k8s:1.30.13
           command: ["/bin/sh", "-c"]
           args:
             - |
               echo "→ Vault auto-unseal démarré"
+              JUST_UNSEALED=false
               while true; do
-                SEALED=$(vault status -format=json 2>/dev/null | grep -o '"sealed":[^,}]*' | grep -o 'true\|false')
+                HEALTH=$(curl -s http://vault.vault.svc:8200/v1/sys/health 2>/dev/null)
+                SEALED=$(echo "$HEALTH" | grep -o '"sealed":[^,}]*' | grep -o 'true\|false')
+
                 if [ "$SEALED" = "true" ]; then
                   echo "$(date) — Vault est scellé, unseal en cours..."
-                  vault operator unseal "$UNSEAL_KEY_1"
+                  curl -sf --request PUT \
+                    --data "{\"key\": \"$UNSEAL_KEY_1\"}" \
+                    http://vault.vault.svc:8200/v1/sys/unseal > /dev/null
                   echo "$(date) — Unseal effectué."
+                  JUST_UNSEALED=true
+
                 elif [ "$SEALED" = "false" ]; then
-                  : # silencieux si déjà unsealed
+                  if [ "$JUST_UNSEALED" = "true" ]; then
+                    echo "$(date) — Vault unsealed, redémarrage des pods dépendants dans dev..."
+                    kubectl rollout restart statefulset/minio -n dev 2>/dev/null \
+                      && echo "minio redémarré" || echo "minio: statefulset introuvable"
+                    kubectl rollout restart statefulset/mysql -n dev 2>/dev/null \
+                      && echo "mysql redémarré" || echo "mysql: statefulset introuvable"
+                    JUST_UNSEALED=false
+                  fi
+
                 else
                   echo "$(date) — Vault inaccessible, nouvelle tentative dans 5s..."
                 fi
+
                 sleep 5
               done
           env:
-            - name: VAULT_ADDR
-              value: "http://vault.vault.svc:8200"
             - name: UNSEAL_KEY_1
               valueFrom:
                 secretKeyRef:

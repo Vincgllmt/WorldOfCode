@@ -3,6 +3,9 @@ replicaCount: 1
 migrations:
   enabled: false
 
+server:
+  type: fpm
+
 vault:
   secretPath: "secret/data/production/backend"
 

@@ -53,7 +53,6 @@ build:faker:
 
 deploy:backend:dev:
   stage: deploy-apps
-  extends: .deploy_helm_template
   environment:
     name: dev
   variables:
@@ -62,12 +61,16 @@ deploy:backend:dev:
     CHART_PATH: "cluster/backend"
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/backend/values-dev.yaml"
-  before_script:
-    - set -e
-    - echo "Configuration de l'accès à Kubernetes..."
-    - cat $KUBECONFIG | base64 -d > /tmp/decoded_kubeconfig
-    - export KUBECONFIG=/tmp/decoded_kubeconfig
+  script:
     - export IMAGE_TAG="dev-${CI_COMMIT_SHORT_SHA}"
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - USER_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.username}')
+    - PASS_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.password}')
+    - REGISTRY_USER=$(echo -n "$USER_B64" | base64 -d)
+    - REGISTRY_PASSWORD=$(echo -n "$PASS_B64" | base64 -d)
+    - kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-server="$REGISTRY_HOST" --docker-username="$REGISTRY_USER" --docker-password="$REGISTRY_PASSWORD" -n "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec l'image tag $IMAGE_TAG"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$IMAGE_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:

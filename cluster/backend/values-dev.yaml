@@ -3,6 +3,9 @@ replicaCount: 1
 migrations:
   enabled: true
 
+server:
+  type: builtin
+
 vault:
   secretPath: "secret/data/backend"
 

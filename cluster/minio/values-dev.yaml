@@ -18,11 +18,25 @@ serviceAccount:
 podAnnotations:
   vault.hashicorp.com/agent-inject: "true"
   vault.hashicorp.com/role: "app"
+  vault.hashicorp.com/agent-init-first: "false"
   vault.hashicorp.com/agent-inject-secret-minio-root: "secret/data/minio"
   vault.hashicorp.com/agent-inject-template-minio-root: |
     {{ "{{- with secret \"secret/data/minio\" -}}" }}
     {{ "{{ .Data.data.rootPassword }}" }}
     {{ "{{- end -}}" }}
+
+initContainers:
+  - name: wait-for-vault
+    image: curlimages/curl:8.13.0
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "Attente de Vault unsealed..."
+        until curl -s http://vault.vault.svc:8200/v1/sys/health | grep -q '"sealed":false'; do
+          echo "Vault est scellé, nouvelle tentative dans 5s..."
+          sleep 5
+        done
+        echo "Vault prêt."
 extraEnvVars:
   - name: MINIO_ROOT_PASSWORD_FILE
     value: "/vault/secrets/minio-root"
