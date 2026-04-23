@@ -186,6 +186,7 @@ export default function AdminLoginPage() {
 
   const auth = useContext(AdminAuthContext)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberDevice, setRememberDevice] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { handleMouseMove, handleMouseLeave } = useNetworkEffect(canvasRef)
@@ -199,7 +200,7 @@ export default function AdminLoginPage() {
   }
 
   const onSubmit2FA = async ({ code }: { code: string }) => {
-    await auth?.verify2FA(code)
+    await auth?.verify2FA(code, rememberDevice)
   }
 
   // ── Vue 2FA ────────────────────────────────────────────────────────────────
@@ -247,6 +248,16 @@ export default function AdminLoginPage() {
                       <p className="text-xs text-red-500 mt-1">{errors2FA.code.message}</p>
                     )}
                   </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberDevice}
+                      onChange={(e) => setRememberDevice(e.target.checked)}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-sm text-muted-foreground">Se souvenir de cet appareil</span>
+                  </label>
 
                   <Button
                     type="submit"

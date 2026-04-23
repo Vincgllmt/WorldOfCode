@@ -2,29 +2,31 @@ import { setCookie, getCookie, deleteCookie } from 'cookies-next'
 import type {
   LoginCredentials,
   AuthenticatedUser,
+  AuthenticateResponse,
   TokenResponse,
-  TwoFAResponse,
   Verify2FAPayload,
 } from '@/interfaces/Authentification'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
-export const login = async (credentials: LoginCredentials): Promise<TwoFAResponse> => {
+export const login = async (credentials: LoginCredentials): Promise<AuthenticateResponse> => {
   const res = await fetch(`${API_URL}/api/authenticate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(credentials),
   })
 
   if (!res.ok) throw new Error('Identifiants invalides')
 
-  return res.json() as Promise<TwoFAResponse>
+  return res.json() as Promise<AuthenticateResponse>
 }
 
 export const verify2FA = async (payload: Verify2FAPayload): Promise<AuthenticatedUser> => {
   const res = await fetch(`${API_URL}/api/2fa/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(payload),
   })
 
