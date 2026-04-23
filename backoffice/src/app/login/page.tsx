@@ -298,7 +298,7 @@ export default function AdminLoginPage() {
             <CardContent>
               <form onSubmit={handleCredSubmit(onSubmitCredentials)} className="space-y-4">
                 {/* Identifiant */}
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="username">Identifiant</Label>
                   <Input
                     id="username"
@@ -313,7 +313,7 @@ export default function AdminLoginPage() {
                 </div>
 
                 {/* Mot de passe */}
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="password">Mot de passe</Label>
                   <div className="relative">
                     <Input
