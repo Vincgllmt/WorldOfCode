@@ -23,6 +23,44 @@ final class AdminReportController extends AbstractController
         private AdminReportMapper $mapper,
     ) {}
 
+    #[Route('/posts', name: 'admin_reports_grouped_by_post', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Reports groupés par post (un item = un post signalé)',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Posts signalés avec compteurs agrégés'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+        ]
+    )]
+    public function listGroupedByPost(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $sortField = $request->query->get('sortField', 'latestReportAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
+
+        $result = $this->reportRepo->findGroupedByPost(
+            page: $page,
+            limit: $limit,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
+
+        return $this->json([
+            'items' => $result['items'],
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
+    }
+
     #[Route('', name: 'admin_reports_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste paginée des reports pour la modération admin',
@@ -36,6 +74,7 @@ final class AdminReportController extends AbstractController
             new OA\Parameter(name: 'sortField',   in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'sortDir',     in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'claimedByMe', in: 'query', schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'postId',      in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Liste paginée des reports'),
@@ -55,6 +94,7 @@ final class AdminReportController extends AbstractController
         $sortField   = $request->query->get('sortField', 'createdAt');
         $sortDir     = $request->query->get('sortDir', 'DESC');
         $claimedByMe = filter_var($request->query->get('claimedByMe', false), FILTER_VALIDATE_BOOLEAN);
+        $postId      = $request->query->get('postId') ? (int) $request->query->get('postId') : null;
 
         $result = $this->reportRepo->findPaginatedWithFilters(
             page: $page,
@@ -66,6 +106,7 @@ final class AdminReportController extends AbstractController
             sortField: $sortField,
             sortDir: $sortDir,
             claimedByUser: $claimedByMe ? $this->getUser() : null,
+            postId: $postId,
         );
 
         $dtos = array_map([$this->mapper, 'toDto'], $result['items']);

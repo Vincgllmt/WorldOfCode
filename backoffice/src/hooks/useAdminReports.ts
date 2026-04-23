@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getAdminReportsPaginated,
   AdminReportsParams,
+  getAdminReportedPosts,
+  AdminReportedPostsParams,
   claimReport,
   resolveReport,
   rejectReport,
@@ -17,6 +19,16 @@ export const useAdminReports = (params: AdminReportsParams) => {
   return { reports: data?.items ?? [], total: data?.total ?? 0, isLoading, isFetching, error }
 }
 
+export const useAdminReportedPosts = (params: AdminReportedPostsParams) => {
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['adminReportedPosts', params],
+    queryFn: () => getAdminReportedPosts(params),
+    placeholderData: (prev) => prev,
+    refetchInterval: 30000,
+  })
+  return { reportedPosts: data?.items ?? [], total: data?.total ?? 0, isLoading, isFetching }
+}
+
 export const useClaimReport = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -30,7 +42,10 @@ export const useResolveReport = () => {
   return useMutation({
     mutationFn: ({ id, resolutionNote }: { id: number; resolutionNote?: string }) =>
       resolveReport(id, resolutionNote),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminReports'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReports'] })
+      queryClient.invalidateQueries({ queryKey: ['adminReportedPosts'] })
+    },
   })
 }
 
@@ -39,6 +54,9 @@ export const useRejectReport = () => {
   return useMutation({
     mutationFn: ({ id, resolutionNote }: { id: number; resolutionNote: string }) =>
       rejectReport(id, resolutionNote),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminReports'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReports'] })
+      queryClient.invalidateQueries({ queryKey: ['adminReportedPosts'] })
+    },
   })
 }

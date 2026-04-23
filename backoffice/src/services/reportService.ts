@@ -1,5 +1,6 @@
 import { getCookie } from 'cookies-next'
 import { AdminReport } from '@/interfaces/adminReport'
+import { AdminReportedPost } from '@/interfaces/adminReportedPost'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -13,6 +14,21 @@ export interface AdminReportsParams {
   sortField?: string
   sortDir?: 'asc' | 'desc'
   claimedByMe?: boolean
+  postId?: number
+}
+
+export interface AdminReportedPostsParams {
+  page: number
+  limit: number
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface AdminReportedPostsPaginatedResponse {
+  items: AdminReportedPost[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface AdminReportsPaginatedResponse {
@@ -34,10 +50,25 @@ export const getAdminReportsPaginated = async (params: AdminReportsParams): Prom
   if (params.sortField) query.set('sortField', params.sortField)
   if (params.sortDir)    query.set('sortDir', params.sortDir.toUpperCase())
   if (params.claimedByMe) query.set('claimedByMe', 'true')
+  if (params.postId != null) query.set('postId', String(params.postId))
   const res = await fetch(`${API_URL}/api/admin/reports?${query.toString()}`, {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error('Erreur lors du chargement des reports')
+  return res.json()
+}
+
+export const getAdminReportedPosts = async (params: AdminReportedPostsParams): Promise<AdminReportedPostsPaginatedResponse> => {
+  const token = getCookie('token')
+  const query = new URLSearchParams()
+  query.set('page', String(params.page))
+  query.set('limit', String(params.limit))
+  if (params.sortField) query.set('sortField', params.sortField)
+  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+  const res = await fetch(`${API_URL}/api/admin/reports/posts?${query.toString()}`, {
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Erreur lors du chargement des posts signalés')
   return res.json()
 }
 

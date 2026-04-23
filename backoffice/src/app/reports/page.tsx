@@ -6,6 +6,11 @@ import dynamic from 'next/dynamic'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useAdminReports } from '@/hooks/useAdminReports'
 
+const AdminReportedPostsPanel = dynamic(
+  () => import('@/components/adminPanel/AdminReportedPostsPanel'),
+  { ssr: false, loading: () => <p className="text-muted-foreground">Chargement…</p> }
+)
+
 const AdminReportPanel = dynamic(
   () => import('@/components/adminPanel/AdminReportPanel'),
   { ssr: false, loading: () => <p className="text-muted-foreground">Chargement…</p> }
@@ -19,7 +24,7 @@ const AdminMyModerationPanel = dynamic(
 function ReportsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const tab = searchParams.get('tab') ?? 'reports'
+  const tab = searchParams.get('tab') ?? 'posts'
 
   const { total: myCount } = useAdminReports({
     page: 1, limit: 1, status: 'IN_PROGRESS', claimedByMe: true,
@@ -36,7 +41,8 @@ function ReportsPageContent() {
 
       <Tabs value={tab} onValueChange={(val) => router.push(`/reports?tab=${val}`)}>
         <TabsList>
-          <TabsTrigger value="reports">Signalements</TabsTrigger>
+          <TabsTrigger value="posts">Posts signalés</TabsTrigger>
+          <TabsTrigger value="reports">Tous les signalements</TabsTrigger>
           <TabsTrigger value="mine" className="gap-2">
             Mes modérations
             {myCount > 0 && (
@@ -46,6 +52,10 @@ function ReportsPageContent() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="posts" className="mt-4">
+          <AdminReportedPostsPanel />
+        </TabsContent>
 
         <TabsContent value="reports" className="mt-4">
           <AdminReportPanel />
