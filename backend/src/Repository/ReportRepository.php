@@ -30,9 +30,6 @@ class ReportRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return array{items: Report[], total: int}
-     */
-    /**
      * @return array{items: array<array<string, mixed>>, total: int}
      */
     public function findGroupedByPost(
@@ -62,6 +59,7 @@ class ReportRepository extends ServiceEntityRepository
         ';
         $total = (int) $conn->executeQuery($countSql)->fetchOne();
 
+        $offset = ($page - 1) * $limit;
         $sql = "
             SELECT
                 p.id            AS post_id,
@@ -82,13 +80,10 @@ class ReportRepository extends ServiceEntityRepository
             WHERE r.post_id IS NOT NULL
             GROUP BY p.id, p.content, u.username, u.avatar_url, tg.name
             ORDER BY {$orderCol} {$sortDir}
-            LIMIT :limit OFFSET :offset
+            LIMIT {$limit} OFFSET {$offset}
         ";
 
-        $rows = $conn->executeQuery($sql, [
-            'limit'  => $limit,
-            'offset' => ($page - 1) * $limit,
-        ])->fetchAllAssociative();
+        $rows = $conn->executeQuery($sql)->fetchAllAssociative();
 
         $items = array_map(static function (array $row): array {
             return [
