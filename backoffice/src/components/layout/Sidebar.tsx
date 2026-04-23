@@ -25,6 +25,7 @@ export function AdminSidebar() {
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => setMounted(true), [])
@@ -34,10 +35,11 @@ export function AdminSidebar() {
 
   const handleMouseEnter = () => {
     if (leaveTimer.current) clearTimeout(leaveTimer.current)
-    setExpanded(true)
+    enterTimer.current = setTimeout(() => setExpanded(true), 250)
   }
   const handleMouseLeave = () => {
-    leaveTimer.current = setTimeout(() => setExpanded(false), 120)
+    if (enterTimer.current) clearTimeout(enterTimer.current)
+    leaveTimer.current = setTimeout(() => setExpanded(false), 350)
   }
 
   return (
