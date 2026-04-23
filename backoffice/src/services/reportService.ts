@@ -3,13 +3,37 @@ import { AdminReport } from '@/interfaces/adminReport'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export const getAdminReports = async (): Promise<AdminReport[]> => {
+export interface AdminReportsParams {
+  page: number
+  limit: number
+  status?: string
+  reason?: string
+  dateFrom?: string
+  dateTo?: string
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface AdminReportsPaginatedResponse {
+  items: AdminReport[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const getAdminReportsPaginated = async (params: AdminReportsParams): Promise<AdminReportsPaginatedResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/admin/reports`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const query = new URLSearchParams()
+  query.set('page', String(params.page))
+  query.set('limit', String(params.limit))
+  if (params.status)    query.set('status', params.status)
+  if (params.reason)    query.set('reason', params.reason)
+  if (params.dateFrom)  query.set('dateFrom', params.dateFrom)
+  if (params.dateTo)    query.set('dateTo', params.dateTo)
+  if (params.sortField) query.set('sortField', params.sortField)
+  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+  const res = await fetch(`${API_URL}/api/admin/reports?${query.toString()}`, {
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error('Erreur lors du chargement des reports')
   return res.json()

@@ -25,20 +25,54 @@ final class AdminReportController extends AbstractController
 
     #[Route('', name: 'admin_reports_list', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Liste tous les reports pour la modération admin',
+        summary: 'Liste paginée des reports pour la modération admin',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'status',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'reason',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateFrom',  in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateTo',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des reports'),
+            new OA\Response(response: 200, description: 'Liste paginée des reports'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $reports = $this->reportRepo->findBy([], ['createdAt' => 'DESC']);
-        $dtos = array_map([$this->mapper, 'toDto'], $reports);
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $status    = $request->query->get('status') ?: null;
+        $reason    = $request->query->get('reason') ?: null;
+        $dateFrom  = $request->query->get('dateFrom') ?: null;
+        $dateTo    = $request->query->get('dateTo') ?: null;
+        $sortField = $request->query->get('sortField', 'createdAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
 
-        return $this->json($dtos);
+        $result = $this->reportRepo->findPaginatedWithFilters(
+            page: $page,
+            limit: $limit,
+            status: $status,
+            dateFrom: $dateFrom,
+            dateTo: $dateTo,
+            reason: $reason,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
+
+        $dtos = array_map([$this->mapper, 'toDto'], $result['items']);
+
+        return $this->json([
+            'items' => $dtos,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
     }
 
     #[Route('/{id}/claim', name: 'admin_report_claim', methods: ['PATCH'])]
