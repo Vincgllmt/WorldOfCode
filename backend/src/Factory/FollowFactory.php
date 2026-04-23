@@ -46,7 +46,6 @@ final class FollowFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Follow $follow): void {})
         ;
     }
 }

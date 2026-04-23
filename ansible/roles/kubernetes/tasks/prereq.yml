@@ -4,14 +4,17 @@
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
 
-- name: Append cluster hosts entries to /etc/hosts
-  ansible.builtin.lineinfile:
+- name: Configure cluster hosts in /etc/hosts
+  ansible.builtin.blockinfile:
     path: /etc/hosts
-    line: "{{ hostvars[item].ansible_host }} {{ hostvars[item].ansible_hostname }}"
-    insertafter: EOF
     state: present
-  loop: "{{ kube_cluster }}"
-  when: hostvars[item].ansible_host is defined
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - K3S INFRASTRUCTURE"
+    block: |
+      {% for host in groups['kubernetes'] %}
+      {% if hostvars[host].ansible_host is defined %}
+      {{ hostvars[host].ansible_host }} {{ host }}
+      {% endif %}
+      {% endfor %}
 
 - name: Update cache
   ansible.builtin.apt:
@@ -24,3 +27,37 @@
     state: present
     install_recommends: false
 
+- name: Ensure iscsid is started and enabled
+  ansible.builtin.service:
+    name: iscsid
+    state: started
+    enabled: true
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Deploy Flannel network configuration
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/flannel.json
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      {
+        "Network": "10.42.0.0/16",
+        "SubnetLen": 24,
+        "Backend": {
+          "Type": "vxlan",
+          "MTU": 1200
+        }
+      }
+
+- name: Release existing Longhorn mpath devices
+  shell: |
+    multipath -ll 2>/dev/null | grep -oE "mpath[a-z]+" | while read DEV; do
+      multipath -f $DEV 2>/dev/null || true
+    done
+  ignore_errors: true

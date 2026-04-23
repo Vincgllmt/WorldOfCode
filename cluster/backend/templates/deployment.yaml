@@ -14,22 +14,38 @@ spec:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "app"
-        vault.hashicorp.com/agent-inject-secret-config: "secret/data/backend"
+        vault.hashicorp.com/agent-inject-secret-config: "{{ .Values.vault.secretPath }}"
         vault.hashicorp.com/agent-inject-template-config: |
-          {{ "{{- with secret \"secret/data/backend\" -}}" }}
+          {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
           export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
           {{ "{{- end -}}" }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
-      
+
       containers:
         # --- Conteneur PHP-FPM ---
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/sh", "-c"]
-          args: [". /vault/secrets/config && exec php-fpm"]
+          {{- if .Values.migrations.enabled }}
+          args:
+            - |
+              . /vault/secrets/config
+              echo "→ Attente de la base de données..."
+              until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
+              echo "→ Exécution des migrations..."
+              php bin/console doctrine:migrations:migrate --no-interaction
+              echo "→ Migrations terminées. Démarrage du serveur..."
+              {{- if eq .Values.server.type "builtin" }}
+              exec php -S 0.0.0.0:9001 -t public
+              {{- else }}
+              exec /usr/local/bin/entrypoint-prod.sh php-fpm
+              {{- end }}
+          {{- else }}
+          args: [". /vault/secrets/config && exec /usr/local/bin/entrypoint-prod.sh php-fpm"]
+          {{- end }}
           ports:
             - containerPort: 9000
           env:

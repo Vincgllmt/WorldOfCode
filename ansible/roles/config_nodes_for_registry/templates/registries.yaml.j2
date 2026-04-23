@@ -1,0 +1,12 @@
+mirrors:
+  "registry.woc:32000":
+    endpoint:
+      - "http://registry.woc:32000"
+
+configs:
+  "registry.woc:32000":
+    auth:
+      username: "{{ registry_username }}"
+      password: "{{ registry_password }}"
+    tls:
+      insecure_skip_verify: true

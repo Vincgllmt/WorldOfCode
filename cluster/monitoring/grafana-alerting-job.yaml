@@ -1,0 +1,200 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-alerting-setup
+  namespace: monitoring
+  annotations:
+    job-version: "3"
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup
+          image: alpine/curl:latest
+          env:
+            - name: GRAFANA_URL
+              value: "http://vm-stack-grafana.monitoring.svc:80"
+            - name: GRAFANA_USER
+              value: "admin"
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vm-stack-grafana
+                  key: admin-password
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              AUTH="${GRAFANA_USER}:${GRAFANA_PASSWORD}"
+              BASE="${GRAFANA_URL}"
+
+              echo "=== 1. Dossier WOC Alerting ==="
+              curl -sf -u "$AUTH" -X POST "$BASE/api/folders" \
+                -H "Content-Type: application/json" \
+                -d '{"uid":"woc-alerting","title":"WOC Alerting"}' 2>&1 || true
+
+              echo ""
+              echo "=== 2. Template de notification ==="
+              curl -f -u "$AUTH" -X PUT "$BASE/api/v1/provisioning/templates/woc-alert-template" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "woc-alert-template",
+                  "template": "{{ define \"woc-alert-template\" -}}\n{{ if eq .Status \"firing\" }}🔴 *[FIRING] Alerte WOC*{{ else }}✅ *[RESOLVED] Alerte WOC*{{ end }}\n\n{{ range .Alerts -}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*{{ .Annotations.summary }}*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📊 *Contexte*\n• *Namespace :* `{{ index .Labels \"namespace\" }}`\n• *Sévérité :* `{{ index .Labels \"severity\" }}`\n• *Alerte :* `{{ index .Labels \"alertname\" }}`\n• *Occurrences (1 min) :* `{{ .ValueString }}`\n\n📝 *Description*\n{{ .Annotations.description }}\n\n⏱ *Déclenché le* {{ .StartsAt.Format \"02/01/2006 à 15:04:05\" }}\n{{ end -}}\n{{- end }}"
+                }'
+              echo ""
+
+              echo "=== 3. Contact Point Google Chat ==="
+              curl -sf -u "$AUTH" -X DELETE "$BASE/api/v1/provisioning/contact-points/google-chat-woc" 2>/dev/null || true
+              curl -f -u "$AUTH" -X POST "$BASE/api/v1/provisioning/contact-points" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "uid": "google-chat-woc",
+                  "name": "Google Chat WOC",
+                  "type": "googlechat",
+                  "settings": {
+                    "url": "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4",
+                    "message": "{{ template \"woc-alert-template\" . }}"
+                  },
+                  "disableResolveMessage": false
+                }'
+              echo ""
+
+              echo "=== 4. Politique de notification ==="
+              curl -f -u "$AUTH" -X PUT "$BASE/api/v1/provisioning/policies" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "receiver": "Google Chat WOC",
+                  "group_by": ["alertname", "namespace"],
+                  "routes": []
+                }'
+              echo ""
+
+              echo "=== 5. Règle : Erreurs utilisateurs (4xx) ==="
+              curl -sf -u "$AUTH" -X DELETE "$BASE/api/v1/provisioning/alert-rules/woc-user-errors-loki" 2>/dev/null || true
+              sleep 1
+              curl -f -u "$AUTH" -X POST "$BASE/api/v1/provisioning/alert-rules" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "uid": "woc-user-errors-loki",
+                  "title": "Erreurs utilisateurs WOC (4xx)",
+                  "ruleGroup": "woc-errors",
+                  "folderUID": "woc-alerting",
+                  "condition": "B",
+                  "data": [
+                    {
+                      "refId": "A",
+                      "queryType": "range",
+                      "relativeTimeRange": {"from": 60, "to": 0},
+                      "datasourceUid": "loki-datasource",
+                      "model": {
+                        "datasource": {"type": "loki", "uid": "loki-datasource"},
+                        "editorMode": "code",
+                        "expr": "sum by (namespace)(count_over_time({app=\"backend\"} | json | channel=`user_error` [1m]))",
+                        "instant": false,
+                        "queryType": "range",
+                        "range": true,
+                        "refId": "A"
+                      }
+                    },
+                    {
+                      "refId": "B",
+                      "datasourceUid": "-100",
+                      "model": {
+                        "conditions": [
+                          {
+                            "evaluator": {"params": [0], "type": "gt"},
+                            "operator": {"type": "and"},
+                            "query": {"params": ["A"]},
+                            "reducer": {"params": [], "type": "last"},
+                            "type": "query"
+                          }
+                        ],
+                        "datasource": {"type": "__expr__", "uid": "-100"},
+                        "expression": "A",
+                        "hide": false,
+                        "refId": "B",
+                        "type": "threshold"
+                      }
+                    }
+                  ],
+                  "noDataState": "NoData",
+                  "execErrState": "Error",
+                  "for": "0s",
+                  "annotations": {
+                    "summary": "Erreur utilisateur detectee sur WOC",
+                    "description": "Une erreur 4xx a ete generee par un utilisateur (HTTP 400/401/403/422/429). Namespace : {{ index $labels \"namespace\" }}."
+                  },
+                  "labels": {"severity": "warning", "team": "woc"},
+                  "isPaused": false,
+                  "notification_settings": {
+                    "receiver": "Google Chat WOC"
+                  }
+                }'
+              echo ""
+
+              echo "=== 6. Règle : Erreurs serveur (5xx) ==="
+              curl -sf -u "$AUTH" -X DELETE "$BASE/api/v1/provisioning/alert-rules/woc-server-errors-loki" 2>/dev/null || true
+              sleep 1
+              curl -f -u "$AUTH" -X POST "$BASE/api/v1/provisioning/alert-rules" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "uid": "woc-server-errors-loki",
+                  "title": "Erreurs serveur WOC (5xx)",
+                  "ruleGroup": "woc-errors",
+                  "folderUID": "woc-alerting",
+                  "condition": "B",
+                  "data": [
+                    {
+                      "refId": "A",
+                      "queryType": "range",
+                      "relativeTimeRange": {"from": 60, "to": 0},
+                      "datasourceUid": "loki-datasource",
+                      "model": {
+                        "datasource": {"type": "loki", "uid": "loki-datasource"},
+                        "editorMode": "code",
+                        "expr": "sum by (namespace)(count_over_time({app=\"backend\"} | json | channel=`server_error` [1m]))",
+                        "instant": false,
+                        "queryType": "range",
+                        "range": true,
+                        "refId": "A"
+                      }
+                    },
+                    {
+                      "refId": "B",
+                      "datasourceUid": "-100",
+                      "model": {
+                        "conditions": [
+                          {
+                            "evaluator": {"params": [0], "type": "gt"},
+                            "operator": {"type": "and"},
+                            "query": {"params": ["A"]},
+                            "reducer": {"params": [], "type": "last"},
+                            "type": "last"
+                          }
+                        ],
+                        "datasource": {"type": "__expr__", "uid": "-100"},
+                        "expression": "A",
+                        "hide": false,
+                        "refId": "B",
+                        "type": "threshold"
+                      }
+                    }
+                  ],
+                  "noDataState": "NoData",
+                  "execErrState": "Alerting",
+                  "for": "0s",
+                  "annotations": {
+                    "summary": "🚨 Erreur serveur critique sur WOC",
+                    "description": "Une exception non geree a provoque une erreur 5xx. Intervention requise. Namespace : {{ index $labels \"namespace\" }}."
+                  },
+                  "labels": {"severity": "critical", "team": "woc"},
+                  "isPaused": false,
+                  "notification_settings": {
+                    "receiver": "Google Chat WOC"
+                  }
+                }'
+              echo ""
+              echo "=== Configuration alerting Grafana terminee ==="

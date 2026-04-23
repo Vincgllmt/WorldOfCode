@@ -1,48 +1,40 @@
-deploy:vault:dev:
+deploy:vault:
   stage: deploy-services
-  environment:
-    name: dev
   variables:
     APP_NAMESPACE: "vault"
     RELEASE_NAME: "vault"
     VAULT_CHART: "hashicorp/vault"
     VAULT_CHART_VERSION: "0.32.0"
-    VALUES_FILE: "cluster/vault/values-dev.yaml"
+    VALUES_FILE: "cluster/vault/values.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       when: manual
       allow_failure: true
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - helm repo add hashicorp https://helm.releases.hashicorp.com
     - helm repo update
-    - echo "Déploiement de Vault sur la DEV"
+    - echo "Déploiement de Vault"
     - |
       helm upgrade --install "$RELEASE_NAME" "$VAULT_CHART" \
         --namespace "$APP_NAMESPACE" \
         --version "$VAULT_CHART_VERSION" \
         --values "$VALUES_FILE"
 
-deploy:vault:prod:
+deploy:vault:auto-unseal:
   stage: deploy-services
-  environment:
-    name: production
-  variables:
-    APP_NAMESPACE: "vault"
-    RELEASE_NAME: "vault"
-    VAULT_CHART: "hashicorp/vault"
-    VAULT_CHART_VERSION: "0.32.0"
-    VALUES_FILE: "cluster/vault/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       when: manual
+      allow_failure: true
   script:
-    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-    - helm repo add hashicorp https://helm.releases.hashicorp.com
-    - helm repo update
-    - echo "Déploiement de Vault sur la PRODUCTION"
+    - kubectl create namespace vault --dry-run=client -o yaml | kubectl apply -f -
+    - echo "--- Création du secret vault-unseal-keys ---"
     - |
-      helm upgrade --install "$RELEASE_NAME" "$VAULT_CHART" \
-        --namespace "$APP_NAMESPACE" \
-        --version "$VAULT_CHART_VERSION" \
-        --values "$VALUES_FILE"
+      kubectl create secret generic vault-unseal-keys \
+        --namespace vault \
+        --from-literal=unseal-key-1="$VAULT_UNSEAL_KEY" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - echo "--- Déploiement du vault-auto-unseal ---"
+    - kubectl apply -f cluster/vault/auto-unseal.yaml
+    - echo "vault-auto-unseal déployé."

@@ -1,15 +1,27 @@
-#SPDX-License-Identifier: MIT-0
 ---
 # tasks file for config_nodes_for_registry
+
+- name: Préparer un environnement virtuel local avec la librairie kubernetes
+  pip:
+    name: kubernetes
+    virtualenv: /tmp/ansible-k8s-venv
+    virtualenv_command: python3 -m venv
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  become: false
+  vars:
+    ansible_become: false
+
 - name: Appliquer la configuration de CoreDNS pour ajouter registry.woc
   k8s:
-    state: patched
-    api_version: v1
-    kind: ConfigMap
-    name: coredns
-    namespace: kube-system
-    patch: |
+    state: present
+    definition:
       apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: coredns
+        namespace: kube-system
       data:
         Corefile: |
           .:53 {
@@ -39,11 +51,29 @@
               reload
               loadbalance
           }
-      kind: ConfigMap
-      metadata:
-        name: coredns
-        namespace: kube-system
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  become: false
+  vars:
+    ansible_become: false
+    ansible_python_interpreter: /tmp/ansible-k8s-venv/bin/python
 
+- name: Ajouter registry.woc au fichier /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ registry_ip }} registry.woc"
+    regexp: '^.*registry\.woc$'
+    state: present
+  become: true
+
+# --- NOUVELLE TÂCHE : Création du dossier ---
+- name: S'assurer que le répertoire /etc/containerd existe sur les nœuds
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+  become: true
 
 - name: Copier le fichier config.toml sur chaque nœud
   copy:
@@ -51,30 +81,20 @@
     dest: /etc/containerd/config.toml
     mode: '0644'
   become: true
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['all'] }}"
 
-- name: Configurer containerd pour accepter registry.woc en HTTP
-  blockinfile:
-    path: /etc/containerd/config.toml
-    marker: "# Ansible Block: Configuration pour registry.woc"
-    block: |
-      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.woc"]
-        endpoint = ["http://registry.woc"]
-        insecure_skip_verify = true
+- name: S'assurer que le répertoire /etc/rancher/k3s existe sur les nœuds
+  file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
   become: true
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['all'] }}"
 
-- name: Créer un secret Docker pour registry.woc dans le namespace backend
-  k8s:
-    state: present
-    api_version: v1
-    kind: Secret
-    name: registry-woc-secret
-    namespace: backend
-    data:
-      .dockerconfigjson: "{{ lookup('file', docker_config_path) | b64encode }}"
-    type: kubernetes.io/dockerconfigjson
+- name: Copier le fichier registries.yaml pour k3s
+  template:
+    src: registries.yaml.j2
+    dest: /etc/rancher/k3s/registries.yaml
+    mode: '0644'
   become: true
-  delegate_to: localhost
+  notify:
+    - Redémarrer k3s
+    - Redémarrer k3s-agent

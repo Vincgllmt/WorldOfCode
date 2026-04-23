@@ -27,6 +27,7 @@ use App\Mapper\UserLinkMapper;
 use App\Dto\TechGroupResponse;
 use App\Mapper\TechGroupMapper;
 use App\Service\PasswordValidator;
+use App\Repository\TrustedDeviceRepository;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use App\Dto\UserUpdateRequest;
@@ -224,7 +225,8 @@ final class UserController extends AbstractController
     public function changePassword(
         int $id,
         Request $request,
-        UserPasswordHasherInterface $passwordHasher
+        UserPasswordHasherInterface $passwordHasher,
+        TrustedDeviceRepository $trustedDeviceRepository
     ): JsonResponse {
         $currentUser = $this->getUser();
         $user = $this->repo->find($id);
@@ -263,6 +265,9 @@ final class UserController extends AbstractController
 
         $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
         $this->repo->save($user, true);
+
+        // Révoquer tous les appareils de confiance : nouveau mot de passe = sessions précédentes non fiables
+        $trustedDeviceRepository->deleteAllForUser($user);
 
         return $this->json(['message' => 'Password updated successfully']);
     }

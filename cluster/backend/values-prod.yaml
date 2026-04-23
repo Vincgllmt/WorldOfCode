@@ -1,5 +1,14 @@
 replicaCount: 1
 
+migrations:
+  enabled: false
+
+server:
+  type: fpm
+
+vault:
+  secretPath: "secret/data/production/backend"
+
 image:
   repository: registry.woc:32000/backend
   pullPolicy: IfNotPresent

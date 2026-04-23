@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Post;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
@@ -136,6 +137,75 @@ class PostRepository extends ServiceEntityRepository
             'items' => $items,
             'totalItems' => count($paginator),
         ];
+    }
+
+    /**
+     * Feed scoré : (likes×3 + comments×2 + shares×4 + 1) / (âge_heures + 2)^1.5
+     *
+     * @return array{items: Post[], totalItems: int}
+     */
+    public function findScoredFeedForUser(User $user, int $page, int $limit): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $userId = $user->getId();
+        $offset = ($page - 1) * $limit;
+
+        $scoreSql = <<<SQL
+            SELECT p.id,
+                   (COUNT(DISTINCT l.id) * 3 + COUNT(DISTINCT c.id) * 2 + COUNT(DISTINCT s.id) * 4 + 1)
+                   / POW(TIMESTAMPDIFF(HOUR, p.created_at, NOW()) + 2, 1.5) AS score
+            FROM post p
+            LEFT JOIN likes l ON l.post_id = p.id
+            LEFT JOIN `comment` c ON c.post_id = p.id
+            LEFT JOIN post s ON s.shared_from_id = p.id
+            WHERE (
+                p.author_id = :userId
+                OR p.author_id IN (SELECT f.followed_id FROM follows f WHERE f.follower_id = :userId)
+                OR p.tech_group_id IN (SELECT tu.tech_group_id FROM techgroup_user tu WHERE tu.user_id = :userId)
+            )
+            GROUP BY p.id
+            ORDER BY score DESC
+            LIMIT :limit OFFSET :offset
+        SQL;
+
+        $rows = $conn->executeQuery($scoreSql, [
+            'userId' => $userId,
+            'limit' => $limit,
+            'offset' => $offset,
+        ], [
+            'userId' => ParameterType::INTEGER,
+            'limit' => ParameterType::INTEGER,
+            'offset' => ParameterType::INTEGER,
+        ])->fetchAllAssociative();
+
+        if (empty($rows)) {
+            return ['items' => [], 'totalItems' => 0];
+        }
+
+        $ids = array_column($rows, 'id');
+        $scoreMap = array_column($rows, 'score', 'id');
+
+        $posts = $this->createBaseQueryBuilder()
+            ->where('p.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        usort($posts, fn(Post $a, Post $b) => $scoreMap[$b->getId()] <=> $scoreMap[$a->getId()]);
+
+        $countSql = <<<SQL
+            SELECT COUNT(DISTINCT p.id)
+            FROM post p
+            WHERE (
+                p.author_id = :userId
+                OR p.author_id IN (SELECT f.followed_id FROM follows f WHERE f.follower_id = :userId)
+                OR p.tech_group_id IN (SELECT tu.tech_group_id FROM techgroup_user tu WHERE tu.user_id = :userId)
+            )
+        SQL;
+
+        $totalItems = (int) $conn->executeQuery($countSql, ['userId' => $userId])->fetchOne();
+
+        return ['items' => $posts, 'totalItems' => $totalItems];
     }
 
     public function countSince(\DateTime $since): int

@@ -11,11 +11,49 @@
   ansible.builtin.set_fact:
     k3s_token: "{{ controller_token.content | b64decode | trim }}"
 
-- name: Install K3s agent
-  ansible.builtin.shell: "curl -sfL https://get.k3s.io | sh -"
-  environment:
-    K3S_URL: "https://{{ hostvars[groups['k8s_controllers'][0]].ansible_host }}:6443"
-    K3S_TOKEN: "{{ k3s_token }}"
+- name: Fetch Master Tailscale IP (Safe for --limit)
+  ansible.builtin.command: "tailscale ip -4"
+  delegate_to: "{{ groups['k8s_controllers'][0] }}"
+  register: master_ts_ip_cmd
   become: true
+  run_once: true
+  changed_when: false
+
+- name: Set master tailscale IP fact
+  ansible.builtin.set_fact:
+    master_tailscale_ip: "{{ master_ts_ip_cmd.stdout | trim }}"
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Deploy K3s agent configuration
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      server: "https://{{ master_tailscale_ip }}:6443"
+      token: "{{ k3s_token }}"
+      node-ip: "{{ tailscale_ip }}"
+      node-external-ip: "{{ tailscale_ip }}"
+      flannel-iface: "tailscale0"
+  register: k3s_agent_config
+
+- name: Install K3s agent
+  ansible.builtin.shell: "curl -sfL https://get.k3s.io | sh -s - agent"
+  become: true
+  changed_when: false
+
+- name: Restart K3s agent
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  when: k3s_agent_config.changed
 
 

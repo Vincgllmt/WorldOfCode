@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import toast from 'react-hot-toast'
 import LandingNavbar from '@/components/landing/LandingNavbar'
@@ -14,6 +15,7 @@ export default function TwoFactorPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isReady, setIsReady] = useState(false)
     const [maskedEmail, setMaskedEmail] = useState<string>('')
+    const [rememberDevice, setRememberDevice] = useState(false)
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
     const router = useRouter()
     const { verify2FA } = useAuth()
@@ -78,7 +80,7 @@ export default function TwoFactorPage() {
         if (isSubmitting) return
         setIsSubmitting(true)
         try {
-            await verify2FA(fullCode)
+            await verify2FA(fullCode, rememberDevice)
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Code invalide ou expiré'
             toast.error(message)
@@ -145,6 +147,20 @@ export default function TwoFactorPage() {
                                         disabled={isSubmitting}
                                     />
                                 ))}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="rememberDevice"
+                                    checked={rememberDevice}
+                                    onChange={(e) => setRememberDevice(e.target.checked)}
+                                    disabled={isSubmitting}
+                                    className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                                />
+                                <Label htmlFor="rememberDevice" className="text-sm text-muted-foreground cursor-pointer select-none">
+                                    Faire confiance à cet appareil pendant 90 jours
+                                </Label>
                             </div>
 
                             <Button type="submit" disabled={isSubmitting} className="w-full">

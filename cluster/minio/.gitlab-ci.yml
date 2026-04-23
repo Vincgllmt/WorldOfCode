@@ -34,7 +34,7 @@ deploy:minio:prod:
     MINIO_CHART_VERSION: "17.0.21"
     VALUES_FILE: "cluster/minio/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -

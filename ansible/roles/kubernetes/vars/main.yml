@@ -11,4 +11,5 @@ dependencies_packages:
   - python3-pip
   - python3-kubernetes
   - open-iscsi
+  - nfs-common
 
