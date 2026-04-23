@@ -40,7 +40,8 @@ class ReportRepository extends ServiceEntityRepository
         ?string $dateTo = null,
         ?string $reason = null,
         string $sortField = 'createdAt',
-        string $sortDir = 'DESC'
+        string $sortDir = 'DESC',
+        mixed $claimedByUser = null,
     ): array {
         $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
 
@@ -64,6 +65,10 @@ class ReportRepository extends ServiceEntityRepository
             $base->andWhere('r.createdAt <= :dateTo')
                  ->setParameter('dateTo', new \DateTime($dateTo . ' 23:59:59'));
         }
+        if ($claimedByUser !== null) {
+            $base->andWhere('r.claimedBy = :claimedByUser')
+                 ->setParameter('claimedByUser', $claimedByUser);
+        }
 
         $total = (int) (clone $base)
             ->select('COUNT(r.id)')
@@ -79,6 +84,7 @@ class ReportRepository extends ServiceEntityRepository
             'status'             => $itemsQb->orderBy('r.status', $sortDir),
             'reportedByUsername' => $itemsQb->orderBy('reporter.username', $sortDir),
             'claimedByUsername'  => $itemsQb->orderBy('claimed.username', $sortDir),
+            'claimedAt'          => $itemsQb->orderBy('r.claimedAt', $sortDir),
             default              => $itemsQb->orderBy('r.createdAt', $sortDir),
         };
 

@@ -33,8 +33,9 @@ final class AdminReportController extends AbstractController
             new OA\Parameter(name: 'reason',    in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'dateFrom',  in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'dateTo',    in: 'query', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField',   in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',     in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'claimedByMe', in: 'query', schema: new OA\Schema(type: 'boolean')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Liste paginée des reports'),
@@ -51,8 +52,9 @@ final class AdminReportController extends AbstractController
         $reason    = $request->query->get('reason') ?: null;
         $dateFrom  = $request->query->get('dateFrom') ?: null;
         $dateTo    = $request->query->get('dateTo') ?: null;
-        $sortField = $request->query->get('sortField', 'createdAt');
-        $sortDir   = $request->query->get('sortDir', 'DESC');
+        $sortField   = $request->query->get('sortField', 'createdAt');
+        $sortDir     = $request->query->get('sortDir', 'DESC');
+        $claimedByMe = filter_var($request->query->get('claimedByMe', false), FILTER_VALIDATE_BOOLEAN);
 
         $result = $this->reportRepo->findPaginatedWithFilters(
             page: $page,
@@ -63,6 +65,7 @@ final class AdminReportController extends AbstractController
             reason: $reason,
             sortField: $sortField,
             sortDir: $sortDir,
+            claimedByUser: $claimedByMe ? $this->getUser() : null,
         );
 
         $dtos = array_map([$this->mapper, 'toDto'], $result['items']);

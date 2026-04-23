@@ -12,6 +12,7 @@ export interface AdminReportsParams {
   dateTo?: string
   sortField?: string
   sortDir?: 'asc' | 'desc'
+  claimedByMe?: boolean
 }
 
 export interface AdminReportsPaginatedResponse {
@@ -31,7 +32,8 @@ export const getAdminReportsPaginated = async (params: AdminReportsParams): Prom
   if (params.dateFrom)  query.set('dateFrom', params.dateFrom)
   if (params.dateTo)    query.set('dateTo', params.dateTo)
   if (params.sortField) query.set('sortField', params.sortField)
-  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+  if (params.sortDir)    query.set('sortDir', params.sortDir.toUpperCase())
+  if (params.claimedByMe) query.set('claimedByMe', 'true')
   const res = await fetch(`${API_URL}/api/admin/reports?${query.toString()}`, {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   })
