@@ -15,34 +15,46 @@ class UserErrorSubscriber
 {
     public function __construct(
         #[Autowire(service: 'monolog.logger.user_error')]
-        private LoggerInterface $logger,
+        private LoggerInterface $userErrorLogger,
+        #[Autowire(service: 'monolog.logger.server_error')]
+        private LoggerInterface $serverErrorLogger,
         private TokenStorageInterface $tokenStorage,
     ) {}
 
     public function __invoke(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
+        $request   = $event->getRequest();
+        $token     = $this->tokenStorage->getToken();
 
-        if (!$exception instanceof HttpExceptionInterface) {
-            return;
+        $context = [
+            'route'  => $request->attributes->get('_route', 'unknown'),
+            'method' => $request->getMethod(),
+            'ip'     => $request->getClientIp(),
+            'user'   => $token?->getUser()?->getUserIdentifier() ?? 'anonymous',
+        ];
+
+        if ($exception instanceof HttpExceptionInterface) {
+            $statusCode = $exception->getStatusCode();
+
+            if ($statusCode >= 500) {
+                $this->serverErrorLogger->critical($exception->getMessage(), array_merge($context, [
+                    'status_code'     => $statusCode,
+                    'exception_class' => $exception::class,
+                ]));
+            } elseif ($statusCode >= 400 && $statusCode !== 404) {
+                $this->userErrorLogger->warning($exception->getMessage(), array_merge($context, [
+                    'status_code' => $statusCode,
+                ]));
+            }
+        } else {
+            // Exception non-HTTP → rendue en 500 par Symfony
+            $this->serverErrorLogger->critical($exception->getMessage(), array_merge($context, [
+                'status_code'     => 500,
+                'exception_class' => $exception::class,
+                'file'            => $exception->getFile(),
+                'line'            => $exception->getLine(),
+            ]));
         }
-
-        $statusCode = $exception->getStatusCode();
-
-        // 4xx uniquement, sauf 404 (trop de bruit bots/crawlers)
-        if ($statusCode < 400 || $statusCode >= 500 || $statusCode === 404) {
-            return;
-        }
-
-        $request = $event->getRequest();
-        $token = $this->tokenStorage->getToken();
-
-        $this->logger->warning($exception->getMessage(), [
-            'status_code' => $statusCode,
-            'route'       => $request->attributes->get('_route', 'unknown'),
-            'method'      => $request->getMethod(),
-            'ip'          => $request->getClientIp(),
-            'user'        => $token?->getUser()?->getUserIdentifier() ?? 'anonymous',
-        ]);
     }
 }
