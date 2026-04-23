@@ -8,7 +8,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: vault-auto-unseal-dev
+  name: vault-auto-unseal
   namespace: dev
 rules:
   - apiGroups: ["apps"]
@@ -18,7 +18,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: vault-auto-unseal-dev
+  name: vault-auto-unseal
   namespace: dev
 subjects:
   - kind: ServiceAccount
@@ -26,7 +26,32 @@ subjects:
     namespace: vault
 roleRef:
   kind: Role
-  name: vault-auto-unseal-dev
+  name: vault-auto-unseal
+  apiGroup: rbac.authorization.k8s.io
+---
+# Même Role pour le namespace production
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-auto-unseal
+  namespace: production
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-auto-unseal
+  namespace: production
+subjects:
+  - kind: ServiceAccount
+    name: vault-auto-unseal
+    namespace: vault
+roleRef:
+  kind: Role
+  name: vault-auto-unseal
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -67,11 +92,13 @@ spec:
 
                 elif [ "$SEALED" = "false" ]; then
                   if [ "$JUST_UNSEALED" = "true" ]; then
-                    echo "$(date) — Vault unsealed, redémarrage des pods dépendants dans dev..."
-                    kubectl rollout restart statefulset/minio -n dev 2>/dev/null \
-                      && echo "minio redémarré" || echo "minio: statefulset introuvable"
-                    kubectl rollout restart statefulset/mysql -n dev 2>/dev/null \
-                      && echo "mysql redémarré" || echo "mysql: statefulset introuvable"
+                    echo "$(date) — Vault unsealed, redémarrage des pods dépendants..."
+                    for NS in dev production; do
+                      kubectl rollout restart statefulset/minio -n "$NS" 2>/dev/null \
+                        && echo "[$NS] minio redémarré" || echo "[$NS] minio: statefulset introuvable"
+                      kubectl rollout restart statefulset/mysql -n "$NS" 2>/dev/null \
+                        && echo "[$NS] mysql redémarré" || echo "[$NS] mysql: statefulset introuvable"
+                    done
                     JUST_UNSEALED=false
                   fi
 
