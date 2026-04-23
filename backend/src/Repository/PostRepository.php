@@ -199,6 +199,72 @@ class PostRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Retourne une page de posts avec compteurs, filtres et tri.
+     *
+     * @return array{items: array<int, array{id:int, content:?string, createdAt:mixed, authorUsername:string, techGroupName:?string, likesCount:int, commentsCount:int, reportsCount:int}>, total: int}
+     */
+    public function findPaginatedWithCounts(
+        int $page,
+        int $limit,
+        ?string $search = null,
+        int $minReports = 0,
+        string $sortField = 'createdAt',
+        string $sortDir = 'DESC'
+    ): array {
+        $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $base = $this->createQueryBuilder('p')
+            ->innerJoin('p.author', 'u')
+            ->leftJoin('p.techGroup', 'g')
+            ->leftJoin('p.likes', 'l')
+            ->leftJoin('p.comments', 'c')
+            ->leftJoin('App\Entity\Report', 'r', 'WITH', 'r.post = p');
+
+        if ($search !== null && $search !== '') {
+            $base->andWhere('LOWER(p.content) LIKE :search OR LOWER(u.username) LIKE :search')
+                 ->setParameter('search', '%' . mb_strtolower(trim($search)) . '%');
+        }
+
+        $countQb = (clone $base)->select('p.id')->groupBy('p.id');
+        if ($minReports > 0) {
+            $countQb->having('COUNT(DISTINCT r.id) >= :minReports')
+                    ->setParameter('minReports', $minReports);
+        }
+        $total = count($countQb->getQuery()->getScalarResult());
+
+        $itemsQb = (clone $base)
+            ->select(
+                'p.id',
+                'p.content',
+                'p.createdAt',
+                'u.username AS authorUsername',
+                'g.name AS techGroupName',
+                'COUNT(DISTINCT l.id) AS likesCount',
+                'COUNT(DISTINCT c.id) AS commentsCount',
+                'COUNT(DISTINCT r.id) AS reportsCount'
+            )
+            ->groupBy('p.id')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        if ($minReports > 0) {
+            $itemsQb->having('COUNT(DISTINCT r.id) >= :minReports')
+                    ->setParameter('minReports', $minReports);
+        }
+
+        match ($sortField) {
+            'likesCount'     => $itemsQb->orderBy('likesCount', $sortDir),
+            'commentsCount'  => $itemsQb->orderBy('commentsCount', $sortDir),
+            'reportsCount'   => $itemsQb->orderBy('reportsCount', $sortDir),
+            'authorUsername' => $itemsQb->orderBy('u.username', $sortDir),
+            'techGroupName'  => $itemsQb->orderBy('g.name', $sortDir),
+            default          => $itemsQb->orderBy('p.createdAt', $sortDir),
+        };
+
+        return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
+    }
+
     private function createBaseQueryBuilder(): QueryBuilder
     {
         return $this->createQueryBuilder('p')

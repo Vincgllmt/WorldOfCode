@@ -108,9 +108,33 @@ export const updateAdminUserRole = async (id: number, role: 'ROLE_USER' | 'ROLE_
   if (!res.ok) throw new Error('Erreur lors de la mise à jour du rôle')
 }
 
-export const getAllAdminPosts = async (): Promise<AdminPostListItem[]> => {
+export interface AdminPostsParams {
+  page: number
+  limit: number
+  search?: string
+  minReports?: number
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface AdminPostsPaginatedResponse {
+  items: AdminPostListItem[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const getAdminPostsPaginated = async (params: AdminPostsParams): Promise<AdminPostsPaginatedResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/admin/posts`, {
+  const query = new URLSearchParams()
+  query.set('page', String(params.page))
+  query.set('limit', String(params.limit))
+  if (params.search)                    query.set('search', params.search)
+  if (params.minReports && params.minReports > 0) query.set('minReports', String(params.minReports))
+  if (params.sortField)                 query.set('sortField', params.sortField)
+  if (params.sortDir)                   query.set('sortDir', params.sortDir.toUpperCase())
+
+  const res = await fetch(`${API_URL}/api/admin/posts?${query.toString()}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
