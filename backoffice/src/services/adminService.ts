@@ -5,6 +5,7 @@ import { AdminRecentEvent } from '@/interfaces/adminRecentEvent'
 import { AdminUserListItem } from '@/interfaces/adminUser'
 import { AdminUserDetail } from '@/interfaces/adminUserDetail'
 import { AdminPostListItem } from '@/interfaces/adminPost'
+import { AdminPostDetail } from '@/interfaces/adminPostDetail'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const getAdminStats = async (): Promise<AdminStats> => {
@@ -141,6 +142,18 @@ export const getAdminPostsPaginated = async (params: AdminPostsParams): Promise<
     },
   })
   if (!res.ok) throw new Error('Erreur lors du chargement des posts')
+  return res.json()
+}
+
+export const getAdminPostDetail = async (id: number): Promise<AdminPostDetail> => {
+  const token = getCookie('token')
+  const res = await fetch(`${API_URL}/api/admin/posts/${id}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) throw new Error('Erreur lors du chargement du post')
   return res.json()
 }
 
