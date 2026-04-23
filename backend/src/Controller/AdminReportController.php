@@ -224,18 +224,34 @@ final class AdminReportController extends AbstractController
         $em = $this->reportRepo->getEntityManager();
         $em->wrapInTransaction(function () use ($report, $currentUser, $resolutionNote) {
             $post = $report->getPost();
+
+            // Récupérer tous les reports du même post AVANT suppression
+            // (après, post_id sera NULL via ON DELETE SET NULL)
+            $siblingReports = $post
+                ? $this->reportRepo->findByPostId($post->getId())
+                : [];
+
             if ($post) {
                 $this->postRepo->remove($post, flush: true);
                 $this->reportRepo->getEntityManager()->refresh($report);
             }
 
-            $report->setStatus(ReportStatus::RESOLVED);
-            $report->setResolvedBy($currentUser);
-            $report->setResolvedAt(new \DateTime());
-            if ($resolutionNote) {
-                $report->setResolutionNote($resolutionNote);
+            $now = new \DateTime();
+            $allReports = array_unique(array_merge([$report], $siblingReports), SORT_REGULAR);
+
+            foreach ($allReports as $r) {
+                if (in_array($r->getStatus(), [ReportStatus::RESOLVED, ReportStatus::REJECTED], true)) {
+                    continue;
+                }
+                $r->setStatus(ReportStatus::RESOLVED);
+                $r->setResolvedBy($currentUser);
+                $r->setResolvedAt($now);
+                if ($resolutionNote) {
+                    $r->setResolutionNote($resolutionNote);
+                }
+                $this->reportRepo->save($r, flush: false);
             }
-            $this->reportRepo->save($report);
+            $this->reportRepo->getEntityManager()->flush();
         });
 
         return $this->json($this->mapper->toDto($report));

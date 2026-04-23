@@ -172,6 +172,18 @@ class ReportRepository extends ServiceEntityRepository
     /**
      * @return Report[]
      */
+    public function findByPostId(int $postId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.post = :postId')
+            ->setParameter('postId', $postId)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return Report[]
+     */
     public function findPendingByPostId(int $postId): array
     {
         return $this->createQueryBuilder('r')
