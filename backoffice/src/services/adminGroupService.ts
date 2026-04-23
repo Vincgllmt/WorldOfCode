@@ -1,5 +1,6 @@
 import { getCookie } from 'cookies-next'
 import { AdminGroupListItem } from '@/interfaces/adminGroup'
+import { AdminGroupDetail } from '@/interfaces/adminGroupDetail'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -78,6 +79,14 @@ export const adminGroupService = {
       body: JSON.stringify(payload),
     })
     if (!res.ok) throw new Error('Mise à jour échouée')
+    return res.json()
+  },
+
+  getGroupDetail: async (id: number): Promise<AdminGroupDetail> => {
+    const res = await fetch(`${API_URL}/api/admin/groups/${id}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+    if (!res.ok) throw new Error('Chargement détail groupe échoué')
     return res.json()
   },
 
