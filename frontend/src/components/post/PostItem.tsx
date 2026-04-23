@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from '@/components/ui/alert-dialog'
-import { MoreHorizontal, Flag, Pencil, Trash2, Save } from 'lucide-react'
+import { MoreVertical, Flag, Pencil, Trash2, Save } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '../ui/badge'
 import { Skeleton } from '../ui/skeleton'
@@ -27,6 +27,8 @@ import CommentSection from '../comment/commentSection'
 import PostHeader from './PostHeader'
 import PostContent from './PostContent'
 import SharedPostCard from './SharedPostCard'
+import ReportPostDialog from './ReportPostDialog'
+import { useState } from 'react'
 import type { Post } from '@/interfaces/post'
 import { usePostItem } from '@/hooks/usePostItem'
 import { useUserGroups } from '@/hooks/useUsers'
@@ -65,34 +67,40 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
 
   const { user } = useAuth()
   const { data: myGroups, isLoading: loadingGroups } = useUserGroups(user?.id)
+  const [showReportDialog, setShowReportDialog] = useState(false)
 
   return (
     <div className="bg-card rounded-xl shadow p-4 space-y-2 relative">
-      {/* Dropdown menu auteur */}
-      {isAuthor && !isEditing && (
+      {/* Dropdown menu */}
+      {!isEditing && currentUserId > 0 && (
         <div className="absolute top-2 right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                <Pencil className="mr-2 h-4 w-4" /> Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setShowDialog(true)}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => toast('Signalement envoyé')}
-                className="text-red-600"
-              >
-                <Flag className="mr-2 h-4 w-4" /> Signaler
-              </DropdownMenuItem>
+              {isAuthor ? (
+                <>
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Pencil className="mr-2 h-4 w-4" /> Modifier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowDialog(true)}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => setShowReportDialog(true)}
+                  className="text-red-600"
+                >
+                  <Flag className="mr-2 h-4 w-4" /> Signaler
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -115,6 +123,13 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de signalement */}
+      <ReportPostDialog
+        postId={post.id}
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+      />
 
       {/* --- Header auteur (avatar + username + Follow toggle) --- */}
       {authorLoading ? (
