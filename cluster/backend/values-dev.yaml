@@ -1,11 +1,17 @@
 replicaCount: 1
 
+migrations:
+  enabled: true
+
+server:
+  type: builtin
+
 vault:
   secretPath: "secret/data/backend"
 
 image:
   repository: registry.woc:32000/backend
-  tag: 7b8fe86c
+  tag: ada1bd67
   pullPolicy: IfNotPresent
 
 registry:
@@ -22,7 +28,7 @@ database:
   url: "mysql://application:password@mysql:3306/projet_web"
 
 env:
-  APP_ENV: "prod"
+  APP_ENV: "dev"
   CORS_ALLOW_ORIGIN: "^https?://(woc-dev\\.duckdns\\.org|api-woc-dev\\.duckdns\\.org|backoffice-woc-dev\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.dev.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"

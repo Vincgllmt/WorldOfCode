@@ -20,3 +20,21 @@ deploy:vault:
         --namespace "$APP_NAMESPACE" \
         --version "$VAULT_CHART_VERSION" \
         --values "$VALUES_FILE"
+
+deploy:vault:auto-unseal:
+  stage: deploy-services
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+  script:
+    - kubectl create namespace vault --dry-run=client -o yaml | kubectl apply -f -
+    - echo "--- Création du secret vault-unseal-keys ---"
+    - |
+      kubectl create secret generic vault-unseal-keys \
+        --namespace vault \
+        --from-literal=unseal-key-1="$VAULT_UNSEAL_KEY" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - echo "--- Déploiement du vault-auto-unseal ---"
+    - kubectl apply -f cluster/vault/auto-unseal.yaml
+    - echo "vault-auto-unseal déployé."

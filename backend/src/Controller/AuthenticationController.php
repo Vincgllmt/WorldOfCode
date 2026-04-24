@@ -17,9 +17,12 @@ use App\Dto\UserResponse;
 use App\Mapper\UserMapper;
 use App\Service\PasswordValidator;
 use App\Service\TwoFactorService;
+use App\Service\TrustedDeviceService;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
+use App\Service\LoginNotificationService;
 use App\Service\PasswordResetService;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\HttpFoundation\Cookie;
 
 
 class AuthenticationController extends AbstractController
@@ -150,7 +153,9 @@ class AuthenticationController extends AbstractController
         JWTTokenManagerInterface $jwtManager,
         UserRepository $userRepository,
         RateLimiterFactory $loginAttemptsLimiter,
-        TwoFactorService $twoFactorService
+        TwoFactorService $twoFactorService,
+        TrustedDeviceService $trustedDeviceService,
+        LoginNotificationService $loginNotificationService
     ): JsonResponse {
 
         $data = json_decode($request->getContent(), true);
@@ -173,6 +178,14 @@ class AuthenticationController extends AbstractController
 
         if (!$user || !$passwordHasher->isPasswordValid($user, $plainPassword)) {
             return $this->json(['error' => 'Invalid credentials'], 401);
+        }
+
+        // Appareil de confiance → pas besoin de 2FA, JWT direct
+        $deviceToken = $request->cookies->get(TrustedDeviceService::getCookieName());
+        if ($deviceToken && $trustedDeviceService->isDeviceTrusted($user, $deviceToken)) {
+            $token = $jwtManager->create($user);
+            $loginNotificationService->recordLogin($user, $request->getClientIp());
+            return $this->json(['token' => $token]);
         }
 
         // Générer et envoyer le code 2FA par email
@@ -238,12 +251,15 @@ class AuthenticationController extends AbstractController
         JWTTokenManagerInterface $jwtManager,
         UserRepository $userRepository,
         TwoFactorService $twoFactorService,
-        RateLimiterFactory $loginAttemptsLimiter
+        TrustedDeviceService $trustedDeviceService,
+        RateLimiterFactory $loginAttemptsLimiter,
+        LoginNotificationService $loginNotificationService
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        $tempToken = $data['tempToken'] ?? null;
-        $code = $data['code'] ?? null;
+        $tempToken      = $data['tempToken'] ?? null;
+        $code           = $data['code'] ?? null;
+        $rememberDevice = (bool) ($data['rememberDevice'] ?? false);
 
         if (!$tempToken || !$code) {
             return $this->json(['error' => 'Missing tempToken or code'], 400);
@@ -280,7 +296,52 @@ class AuthenticationController extends AbstractController
             return $this->json(['error' => 'Invalid or expired code'], 401);
         }
 
-        // Code valide → vrai JWT final
+        // Code valide → JWT final
+        $token    = $jwtManager->create($user);
+        $response = $this->json(['token' => $token]);
+
+        // Enregistrer le contexte de connexion et notifier si nouveau pays
+        $loginNotificationService->recordLogin($user, $request->getClientIp());
+
+        // Si l'utilisateur veut faire confiance à cet appareil, on pose le cookie
+        if ($rememberDevice) {
+            $rawToken   = $trustedDeviceService->generateToken($user, $request->headers->get('User-Agent'));
+            $cookie = Cookie::create(TrustedDeviceService::getCookieName())
+                ->withValue($rawToken)
+                ->withExpires(new \DateTimeImmutable(sprintf('+%d days', $trustedDeviceService->getTrustDays())))
+                ->withSecure(true)
+                ->withHttpOnly(true)
+                ->withSameSite(Cookie::SAMESITE_STRICT);
+            $response->headers->setCookie($cookie);
+        }
+
+        return $response;
+    }
+
+    #[Route('/api/auth/refresh', name: 'auth_refresh', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Renouvelle le token JWT sans deconnecter l\'utilisateur',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Nouveau token JWT',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJK...')],
+                    type: 'object'
+                )
+            ),
+            new OA\Response(response: 401, description: 'Token invalide ou expiré')
+        ]
+    )]
+    #[OA\Tag(name: 'Authentication')]
+    public function refresh(JWTTokenManagerInterface $jwtManager): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Unauthenticated'], 401);
+        }
+
         $token = $jwtManager->create($user);
 
         return $this->json(['token' => $token]);
@@ -307,7 +368,7 @@ class AuthenticationController extends AbstractController
         if ($user && !$user instanceof User) {
             return $this->json(['error' => 'Unexpected user type'], 400);
         }
-        if (!$user && !$user instanceof User) {
+        if (!$user) {
             return $this->json(['error' => 'Invalid request or unauthenticated'], 401);
         }
 

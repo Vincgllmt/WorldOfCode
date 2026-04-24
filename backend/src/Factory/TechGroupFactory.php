@@ -71,7 +71,6 @@ final class TechGroupFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(TechGroup $techGroup): void {})
         ;
     }
 }

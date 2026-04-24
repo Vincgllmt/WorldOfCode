@@ -38,12 +38,8 @@ prometheus-node-exporter:
   # 2. On configure le conteneur
   containerPort: 9110
   hostPort: 9110
-  
-  # 3. On force l'argument de démarrage
-  extraArgs:
-    - --web.listen-address=:9110
 
-  # 4. On met à jour les sondes de vie (TRES IMPORTANT)
+  # 3. On met à jour les sondes de vie (TRES IMPORTANT)
   livenessProbe:
     httpGet:
       port: 9110

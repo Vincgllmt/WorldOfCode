@@ -13,6 +13,7 @@ use App\Mapper\TechGroupMapper;
 use App\Mapper\UserLinkMapper;
 use App\Mapper\UserMapper;
 use App\Repository\SkillRepository;
+use App\Repository\TrustedDeviceRepository;
 use App\Repository\UserLinkRepository;
 use App\Repository\UserRepository;
 use PHPUnit\Framework\TestCase;
@@ -447,7 +448,7 @@ class UserControllerTest extends TestCase
             'newPassword'     => 'Ap3rtur3Sc!ence',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -466,7 +467,7 @@ class UserControllerTest extends TestCase
             'currentPassword' => 'N7Comm4nd3r!', 'newPassword' => 'New!',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(99, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(99, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(404, $response->getStatusCode());
     }
@@ -484,7 +485,7 @@ class UserControllerTest extends TestCase
             'currentPassword' => 'N7Comm4nd3r!', 'newPassword' => 'New!Pass1!',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo, isAdmin: false)->changePassword(2, $request, $hasher);
+        $response = $this->makeController($shepard, $repo, isAdmin: false)->changePassword(2, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(403, $response->getStatusCode());
     }
@@ -499,7 +500,7 @@ class UserControllerTest extends TestCase
         $hasher  = $this->createMock(UserPasswordHasherInterface::class);
         $request = new Request(content: json_encode(['currentPassword' => 'N7Comm4nd3r!'], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -519,7 +520,7 @@ class UserControllerTest extends TestCase
             'newPassword'     => 'Ap3rtur3Sc!ence',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(403, $response->getStatusCode());
     }
