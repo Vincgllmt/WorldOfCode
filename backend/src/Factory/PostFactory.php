@@ -65,7 +65,6 @@ final class PostFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Post $post): void {})
         ;
     }
 }
