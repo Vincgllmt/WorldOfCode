@@ -1,3 +1,29 @@
+# Override Loki datasource pour forcer l'UID stable "loki-datasource".
+# woc-loki-datasource.yaml sort après loki-stack-datasource.yaml (w > l),
+# donc il est chargé en dernier. deleteDatasources supprime d'abord l'entrée
+# sans UID créée par loki-stack, puis on recrée avec l'UID stable.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: woc-loki-datasource-override
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  woc-loki-datasource.yaml: |
+    apiVersion: 1
+    deleteDatasources:
+      - name: Loki
+        orgId: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki-datasource
+        access: proxy
+        url: "http://loki.monitoring.svc:3100"
+        isDefault: false
+        jsonData: {}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
