@@ -346,7 +346,6 @@ class AuthenticationController extends AbstractController
 
         return $this->json(['token' => $token]);
     }
-
     #[Route('api/me', name: 'me', methods: ['GET'])]
     #[OA\Get(
         summary: 'Renvoie les informations de l’utilisateur connecté',

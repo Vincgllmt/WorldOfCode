@@ -1,7 +1,7 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,8 @@ import type { Post } from '@/interfaces/post'
 import { usePostItem } from '@/hooks/usePostItem'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
-import toast from 'react-hot-toast'
+
+const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false })
 
 type PostItemProps = {
   readonly post: Post
@@ -52,14 +53,14 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
     setIsEditing,
     editGroupId,
     setEditGroupId,
+    editContent,
+    setEditContent,
     showDialog,
     setShowDialog,
     showComments,
-    editableRef,
     commentRef,
     currentUserId,
     isAuthor,
-    sanitizedContent,
     handleSave,
     handleDelete,
     openCommentsAndFocus,
@@ -165,16 +166,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
 
       {/* Contenu (éditable si auteur) */}
       {isEditing ? (
-        <div
-          ref={editableRef}
-          contentEditable
-          suppressContentEditableWarning
-          className={cn(
-            'text-base p-3 rounded-lg border border-yellow-300 bg-yellow-50',
-            'leading-relaxed focus:outline-none focus:ring-2 focus:ring-yellow-400'
-          )}
-          dangerouslySetInnerHTML={{ __html: sanitizedContent || '<p></p>' }}
-        />
+        <RichTextEditor value={editContent} onChange={setEditContent} />
       ) : post.content ? (
         <PostContent content={post.content} />
       ) : isShare ? (
