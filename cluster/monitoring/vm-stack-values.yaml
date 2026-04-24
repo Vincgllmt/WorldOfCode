@@ -52,7 +52,14 @@ prometheus-node-exporter:
 
 grafana:
   enabled: true
-  
+
+  sidecar:
+    alerts:
+      enabled: true
+      label: grafana_alert
+      labelValue: "1"
+      searchNamespace: monitoring
+
   persistence:
     enabled: true
     storageClassName: "longhorn"

@@ -1,88 +1,187 @@
-grafana:
-  alerting:
-    contactpoints.yaml:
-      apiVersion: 1
-      contactPoints:
-        - orgId: 1
-          name: Google Chat WOC
-          receivers:
-            - uid: google-chat-woc
-              type: googlechat
-              settings:
-                url: "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4"
-              disableResolveMessage: false
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-provisioning
+  namespace: monitoring
+  labels:
+    grafana_alert: "1"
+data:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Template de notification (format Google Chat markdown)
+  # ──────────────────────────────────────────────────────────────────────────
+  templates.yaml: |
+    apiVersion: 1
+    templates:
+      - orgId: 1
+        name: woc-alert-template
+        template: |
+          {{ define "woc-alert-template" -}}
+          {{ if eq .Status "firing" }}🔴 *[FIRING] Alerte WOC*{{ else }}✅ *[RÉSOLU] Alerte WOC*{{ end }}
 
-    policies.yaml:
-      apiVersion: 1
-      policies:
-        - orgId: 1
-          receiver: Google Chat WOC
-          matchers:
-            - label: alertname
-              match_type: =~
-              value: ".*"
+          {{ range .Alerts -}}
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━
+          *{{ .Annotations.summary }}*
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    rules.yaml:
-      apiVersion: 1
-      groups:
-        - orgId: 1
-          name: woc-user-errors
-          folder: WOC Alerting
-          interval: 1m
-          rules:
-            - uid: woc-user-errors-loki
-              title: "Erreurs utilisateurs WOC"
-              condition: B
-              data:
-                - refId: A
+          📊 *Contexte*
+          • *Namespace :* `{{ index .Labels "namespace" }}`
+          • *Sévérité :* `{{ index .Labels "severity" }}`
+          • *Occurrences (1 min) :* {{ .ValueString }}
+
+          📝 *Description*
+          {{ .Annotations.description }}
+
+          ⏱ *Déclenché le* {{ .StartsAt.Format "02/01/2006 à 15:04:05" }}
+          {{ end -}}
+          {{- end }}
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Contact Point : Google Chat WOC
+  # ──────────────────────────────────────────────────────────────────────────
+  contactpoints.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: Google Chat WOC
+        receivers:
+          - uid: google-chat-woc
+            type: googlechat
+            settings:
+              url: "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4"
+              message: '{{ template "woc-alert-template" . }}'
+            disableResolveMessage: false
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Politique de notification
+  # ──────────────────────────────────────────────────────────────────────────
+  notificationpolicies.yaml: |
+    apiVersion: 1
+    policies:
+      - orgId: 1
+        receiver: Google Chat WOC
+        group_by: ["alertname", "namespace"]
+        routes: []
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Règles d'alerte
+  # ──────────────────────────────────────────────────────────────────────────
+  rules.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: woc-errors
+        folder: WOC Alerting
+        interval: 1m
+        rules:
+
+          # --- 4xx : erreurs utilisateurs (auth, validation, accès refusé) ---
+          - uid: woc-user-errors-loki
+            title: "Erreurs utilisateurs WOC (4xx)"
+            condition: B
+            data:
+              - refId: A
+                queryType: range
+                relativeTimeRange:
+                  from: 60
+                  to: 0
+                datasourceUid: loki-datasource
+                model:
+                  datasource:
+                    type: loki
+                    uid: loki-datasource
+                  editorMode: code
+                  expr: 'sum by (namespace)(count_over_time({app="backend"} | json | channel=`user_error` [1m]))'
+                  instant: false
                   queryType: range
-                  relativeTimeRange:
-                    from: 60
-                    to: 0
-                  datasourceUid: loki-datasource
-                  model:
-                    datasource:
-                      type: loki
-                      uid: loki-datasource
-                    editorMode: code
-                    expr: 'sum(count_over_time({app="backend"} | json | channel=`user_error` [1m]))'
-                    instant: false
-                    queryType: range
-                    range: true
-                    refId: A
-                - refId: B
-                  datasourceUid: "-100"
-                  model:
-                    conditions:
-                      - evaluator:
-                          params:
-                            - 0
-                          type: gt
-                        operator:
-                          type: and
-                        query:
-                          params:
-                            - A
-                        reducer:
-                          params: []
-                          type: last
-                        type: query
-                    datasource:
-                      type: __expr__
-                      uid: "-100"
-                    expression: A
-                    hide: false
-                    refId: B
-                    type: threshold
-              noDataState: NoData
-              execErrState: Error
-              for: 0s
-              annotations:
-                description: "Une erreur utilisateur a été détectée sur le site WOC (codes HTTP 400/401/403/422/429)."
-                summary: "Erreurs utilisateurs détectées sur WOC"
-              labels:
-                severity: warning
-                team: woc
-              isPaused: false
-              notification_settings:
-                receiver: Google Chat WOC
+                  range: true
+                  refId: A
+              - refId: B
+                datasourceUid: "-100"
+                model:
+                  conditions:
+                    - evaluator:
+                        params: [0]
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params: [A]
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: "-100"
+                  expression: A
+                  hide: false
+                  refId: B
+                  type: threshold
+            noDataState: NoData
+            execErrState: Error
+            for: 0s
+            annotations:
+              summary: "Erreur utilisateur détectée sur WOC"
+              description: "Une erreur 4xx a été générée (HTTP 400/401/403/422/429). Vérifier les logs Loki pour le détail (route, IP, user)."
+            labels:
+              severity: warning
+              team: woc
+            isPaused: false
+            notification_settings:
+              receiver: Google Chat WOC
+
+          # --- 5xx : erreurs serveur (exceptions non gérées) ---
+          - uid: woc-server-errors-loki
+            title: "Erreurs serveur WOC (5xx)"
+            condition: B
+            data:
+              - refId: A
+                queryType: range
+                relativeTimeRange:
+                  from: 60
+                  to: 0
+                datasourceUid: loki-datasource
+                model:
+                  datasource:
+                    type: loki
+                    uid: loki-datasource
+                  editorMode: code
+                  expr: 'sum by (namespace)(count_over_time({app="backend"} | json | channel=`server_error` [1m]))'
+                  instant: false
+                  queryType: range
+                  range: true
+                  refId: A
+              - refId: B
+                datasourceUid: "-100"
+                model:
+                  conditions:
+                    - evaluator:
+                        params: [0]
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params: [A]
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                  datasource:
+                    type: __expr__
+                    uid: "-100"
+                  expression: A
+                  hide: false
+                  refId: B
+                  type: threshold
+            noDataState: NoData
+            execErrState: Alerting
+            for: 0s
+            annotations:
+              summary: "🚨 Erreur serveur critique sur WOC"
+              description: "Une exception non gérée a provoqué une erreur 5xx. Intervention requise. Consulter les logs Loki (exception_class, file, line)."
+            labels:
+              severity: critical
+              team: woc
+            isPaused: false
+            notification_settings:
+              receiver: Google Chat WOC
