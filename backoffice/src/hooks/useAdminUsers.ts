@@ -1,13 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAllAdminUsers, updateAdminUserRole } from '@/services/adminService'
+import { getAdminUsersPaginated, AdminUsersParams } from '@/services/adminService'
+import { updateAdminUserRole } from '@/services/adminService'
 import { deleteUser } from '@/services/userService'
 
-export const useAdminUsers = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['adminUsers'],
-    queryFn: getAllAdminUsers,
+export const useAdminUsers = (params: AdminUsersParams) => {
+  const { data, isLoading, error, isFetching } = useQuery({
+    queryKey: ['adminUsers', params],
+    queryFn: () => getAdminUsersPaginated(params),
+    placeholderData: (prev) => prev,
   })
-  return { users: data, isLoading, error }
+  return {
+    users: data?.items ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    isFetching,
+    error,
+  }
 }
 
 export const useAdminUpdateUserRole = () => {

@@ -106,8 +106,8 @@ class AdminUserControllerTest extends TestCase
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(UserRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([
-            [
+        $repo->method('findPaginatedWithCounts')->willReturn([
+            'items' => [[
                 'id'           => 2,
                 'username'     => 'GarrusVakarian',
                 'email'        => 'garrus@citadel.net',
@@ -116,36 +116,39 @@ class AdminUserControllerTest extends TestCase
                 'postCount'    => 5,
                 'followerCount'=> 10,
                 'avatarUrl'    => null,
-            ],
+            ]],
+            'total' => 1,
         ]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
-        $this->assertSame('GarrusVakarian', $payload[0]['username']);
-        $this->assertSame(5, $payload[0]['postCount']);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame('GarrusVakarian', $payload['items'][0]['username']);
+        $this->assertSame(5, $payload['items'][0]['postCount']);
     }
 
     public function testListReturnsEmptyWhenNoUsers(): void
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(UserRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([]);
+        $repo->method('findPaginatedWithCounts')->willReturn(['items' => [], 'total' => 0]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame([], $payload);
+        $this->assertSame(0, $payload['total']);
+        $this->assertSame([], $payload['items']);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
     }
 
     // ======================================================================

@@ -1,13 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAllAdminPosts } from '@/services/adminService'
+import { getAdminPostsPaginated, AdminPostsParams } from '@/services/adminService'
 import { deletePost } from '@/services/postService'
 
-export const useAdminPosts = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['adminPosts'],
-    queryFn: getAllAdminPosts,
+export const useAdminPosts = (params: AdminPostsParams) => {
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['adminPosts', params],
+    queryFn: () => getAdminPostsPaginated(params),
+    placeholderData: (prev) => prev,
   })
-  return { posts: data ?? [], isLoading, error }
+  return {
+    posts: data?.items ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    isFetching,
+    error,
+  }
 }
 
 export const useAdminDeletePost = () => {

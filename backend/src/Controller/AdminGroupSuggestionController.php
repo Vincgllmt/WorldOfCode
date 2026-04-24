@@ -26,17 +26,36 @@ class AdminGroupSuggestionController extends AbstractController
 
     #[Route('', name: 'admin_group_suggestion_list', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Liste toutes les suggestions de groupes (admin)',
+        summary: 'Liste paginée des suggestions de groupes (admin)',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'status',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des suggestions'),
+            new OA\Response(response: 200, description: 'Liste paginée des suggestions'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $suggestions = $this->suggestionRepo->findAll();
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $status    = $request->query->get('status') ?: null;
+        $sortField = $request->query->get('sortField', 'createdAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
+
+        $result = $this->suggestionRepo->findPaginated(
+            page: $page,
+            limit: $limit,
+            status: $status,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
 
         $data = array_map(function ($s) {
             return [
@@ -67,9 +86,14 @@ class AdminGroupSuggestionController extends AbstractController
                 'resolutionNote' => $s->getResolutionNote(),
                 'createdAt'      => $s->getCreatedAt()->format(\DateTime::ATOM),
             ];
-        }, $suggestions);
+        }, $result['items']);
 
-        return $this->json($data, 200);
+        return $this->json([
+            'items' => $data,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
     }
 
     #[Route('/{id}/claim', name: 'admin_group_suggestion_claim', methods: ['PATCH'])]

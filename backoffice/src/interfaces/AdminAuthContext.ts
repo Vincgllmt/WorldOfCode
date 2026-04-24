@@ -11,6 +11,6 @@ export interface AdminAuthContextType {
   isLoading: boolean
   twoFAPending: TwoFAPendingState | null
   login: (credentials: LoginCredentials) => Promise<void>
-  verify2FA: (code: string) => Promise<void>
+  verify2FA: (code: string, rememberDevice?: boolean) => Promise<void>
   logout: () => void
 }
