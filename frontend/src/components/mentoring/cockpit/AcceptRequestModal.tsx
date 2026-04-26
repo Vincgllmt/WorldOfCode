@@ -84,7 +84,7 @@ export default function AcceptRequestModal({ requestId, requestTitle, onClose, o
           {/* Conversation ID optionnel */}
           <div className="mb-6">
             <label htmlFor="conversationId" className="block text-sm font-medium mb-1">
-              ID de conversation <span className="text-muted-foreground font-normal">(optionnel)</span>
+              Conversation associée <span className="text-muted-foreground font-normal">(optionnel)</span>
             </label>
             <input
               id="conversationId"
