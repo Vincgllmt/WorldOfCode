@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CloseSessionModal from './CloseSessionModal'
+import ProposeDateModal from './ProposeDateModal'
 import type { MentoringSession } from '@/types/mentoring'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: string; className: string }> = {
@@ -17,6 +18,7 @@ interface Props {
 
 export default function SessionMiniCard({ session, onStart, onComplete }: Props) {
   const [showCloseModal, setShowCloseModal] = useState(false)
+  const [showProposeDateModal, setShowProposeDateModal] = useState(false)
   const config = STATUS_CONFIG[session.status] ?? { label: session.status, icon: '●', className: 'text-muted-foreground' }
 
   return (
@@ -48,13 +50,22 @@ export default function SessionMiniCard({ session, onStart, onComplete }: Props)
       {session.status === 'in_progress' && (
         <>
           {session.conversationId && (
-            <a
-              href={`/message/${session.conversationId}`}
-              className="text-xs px-2 py-0.5 bg-muted rounded hover:bg-muted/70 transition-colors"
-              aria-label={`Ouvrir le chat avec ${session.junior.username}`}
-            >
-              Chat
-            </a>
+            <>
+              <button
+                onClick={() => setShowProposeDateModal(true)}
+                className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                aria-label={`Proposer une date à ${session.junior.username}`}
+              >
+                📅
+              </button>
+              <a
+                href={`/message/${session.conversationId}`}
+                className="text-xs px-2 py-0.5 bg-muted rounded hover:bg-muted/70 transition-colors"
+                aria-label={`Ouvrir le chat avec ${session.junior.username}`}
+              >
+                Chat
+              </a>
+            </>
           )}
           {onComplete && (
             <button
@@ -77,6 +88,14 @@ export default function SessionMiniCard({ session, onStart, onComplete }: Props)
             setShowCloseModal(false)
             onComplete?.(session.id)
           }}
+        />
+      )}
+
+      {showProposeDateModal && session.conversationId && (
+        <ProposeDateModal
+          conversationId={session.conversationId}
+          juniorUsername={session.junior.username}
+          onClose={() => setShowProposeDateModal(false)}
         />
       )}
     </div>
