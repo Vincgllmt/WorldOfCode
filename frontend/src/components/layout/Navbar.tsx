@@ -1,11 +1,13 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { getMyMentorProfile } from "@/lib/api/mentoring/profile"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -54,6 +56,14 @@ export default function Navbar() {
             c.lastMessage.sender?.id !== user?.id &&
             c.id !== currentConversationId // Ne pas compter la conversation actuellement ouverte
     )
+
+    const { data: mentorProfile } = useQuery({
+        queryKey: ['mentorProfile', 'me'],
+        queryFn: getMyMentorProfile,
+        retry: false,
+        enabled: !!user,
+        throwOnError: false,
+    })
 
     const navRef = useRef<HTMLElement>(null)
 
@@ -148,6 +158,17 @@ export default function Navbar() {
                                         {user.username}
                                     </Link>
                                 </DropdownMenuItem>
+                                {mentorProfile && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/mentor/cockpit" className="cursor-pointer flex items-center gap-2">
+                                                <GraduationCap className="h-4 w-4 text-primary" />
+                                                Mon espace mentor
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={logout}>
                                     Déconnexion
