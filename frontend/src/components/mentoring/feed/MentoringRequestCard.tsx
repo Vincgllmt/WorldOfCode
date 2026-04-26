@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { Star } from 'lucide-react'
 import RequestTypeBadge from './RequestTypeBadge'
 import PinTimer from '../cockpit/PinTimer'
 import AcceptRequestModal from '../cockpit/AcceptRequestModal'
 import { pinRequest, unpinRequest } from '@/lib/api/mentoring/requests'
-import type { MentoringRequest, MentoringSession } from '@/types/mentoring'
+import type { MentoringRequest, MentoringSession, Skill } from '@/types/mentoring'
 
 interface Props {
   request: MentoringRequest
@@ -13,10 +14,16 @@ interface Props {
   onClick: () => void
   onRefetch: () => void
   onSessionAccepted?: () => void
+  mentorSpecialties?: Skill[]
 }
 
-export default function MentoringRequestCard({ request, isSelected, onClick, onRefetch, onSessionAccepted }: Props) {
+export default function MentoringRequestCard({ request, isSelected, onClick, onRefetch, onSessionAccepted, mentorSpecialties = [] }: Props) {
   const [pinning, setPinning] = useState(false)
+
+  const isInSpecialty = mentorSpecialties.some(s =>
+    request.techStack.toLowerCase().includes(s.name.toLowerCase()) ||
+    s.name.toLowerCase().includes(request.techStack.toLowerCase())
+  )
   const [localPin, setLocalPin] = useState(request.pin ?? null)
   const [showAcceptModal, setShowAcceptModal] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
@@ -85,7 +92,17 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
 
       {/* Tags + actions */}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="px-2 py-0.5 bg-muted text-xs rounded-full">{request.techStack}</span>
+        <div className="flex items-center gap-1.5">
+          <span className={`px-2 py-0.5 text-xs rounded-full ${isInSpecialty ? 'bg-primary/10 text-primary font-medium' : 'bg-muted'}`}>
+            {request.techStack}
+          </span>
+          {isInSpecialty && (
+            <span className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+              <Star className="h-3 w-3 fill-primary" />
+              Ma spécialité
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
           {pinError && (

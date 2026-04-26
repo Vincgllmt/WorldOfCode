@@ -14,7 +14,7 @@ interface Props {
   onSessionAccepted?: () => void
 }
 
-export default function MentorFeed({ onSelectRequest, selectedRequestId, onPinnedChange, onSessionAccepted }: Props) {
+export default function MentorFeed({ mentorProfile, onSelectRequest, selectedRequestId, onPinnedChange, onSessionAccepted }: Props) {
   const [techFilter, setTechFilter] = useState<string | undefined>(undefined)
   const { data, isLoading, error, refetch } = useMentorFeed(techFilter)
 
@@ -69,6 +69,7 @@ export default function MentorFeed({ onSelectRequest, selectedRequestId, onPinne
             onClick={() => onSelectRequest(r)}
             onRefetch={handleRefetch}
             onSessionAccepted={onSessionAccepted}
+            mentorSpecialties={mentorProfile.specialties}
           />
         ))}
       </div>
