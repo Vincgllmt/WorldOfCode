@@ -32,7 +32,7 @@ export async function unpinRequest(id: number) {
 }
 
 export async function createOrGetConversation(targetUserId: number): Promise<string> {
-  const res = await fetchWithAuth('/api/messaging/conversations', {
+  const res = await fetchWithAuth('/messaging/conversations', {
     method: 'POST',
     body: JSON.stringify({ targetUserId }),
   })
