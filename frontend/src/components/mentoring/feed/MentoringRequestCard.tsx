@@ -144,6 +144,7 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
       <AcceptRequestModal
         requestId={request.id}
         requestTitle={request.title}
+        juniorId={request.junior.id}
         onClose={() => setShowAcceptModal(false)}
         onAccepted={(_session: MentoringSession) => {
           setShowAcceptModal(false)

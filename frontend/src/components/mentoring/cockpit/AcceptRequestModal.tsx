@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { acceptRequest } from '@/lib/api/mentoring/requests'
+import { acceptRequest, createOrGetConversation } from '@/lib/api/mentoring/requests'
 import type { MentoringSession } from '@/types/mentoring'
 
 const FORMAT_OPTIONS = [
@@ -13,13 +13,13 @@ const FORMAT_OPTIONS = [
 interface Props {
   requestId: number
   requestTitle: string
+  juniorId: number
   onClose: () => void
   onAccepted: (session: MentoringSession) => void
 }
 
-export default function AcceptRequestModal({ requestId, requestTitle, onClose, onAccepted }: Props) {
+export default function AcceptRequestModal({ requestId, requestTitle, juniorId, onClose, onAccepted }: Props) {
   const [format, setFormat] = useState('text')
-  const [conversationId, setConversationId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,9 +27,10 @@ export default function AcceptRequestModal({ requestId, requestTitle, onClose, o
     setLoading(true)
     setError(null)
     try {
+      const conversationId = await createOrGetConversation(juniorId)
       const session = await acceptRequest(requestId, {
         format,
-        conversationId: conversationId.trim() || undefined,
+        conversationId,
       })
       onAccepted(session as unknown as MentoringSession)
       onClose()
@@ -79,24 +80,6 @@ export default function AcceptRequestModal({ requestId, requestTitle, onClose, o
                 </label>
               ))}
             </div>
-          </div>
-
-          {/* Conversation ID optionnel */}
-          <div className="mb-6">
-            <label htmlFor="conversationId" className="block text-sm font-medium mb-1">
-              Conversation associée <span className="text-muted-foreground font-normal">(optionnel)</span>
-            </label>
-            <input
-              id="conversationId"
-              type="text"
-              value={conversationId}
-              onChange={e => setConversationId(e.target.value)}
-              placeholder="ex: conv_abc123"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Si vous avez déjà créé une conversation dans la messagerie, collez son ID ici.
-            </p>
           </div>
 
           {error && (

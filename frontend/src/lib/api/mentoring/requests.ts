@@ -31,6 +31,16 @@ export async function unpinRequest(id: number) {
   if (!res.ok) throw new Error('Erreur désépinglage')
 }
 
+export async function createOrGetConversation(targetUserId: number): Promise<string> {
+  const res = await fetchWithAuth('/api/messaging/conversations', {
+    method: 'POST',
+    body: JSON.stringify({ targetUserId }),
+  })
+  if (!res.ok) throw new Error('Impossible de créer la conversation')
+  const data = await res.json()
+  return data.id as string
+}
+
 export async function acceptRequest(id: number, body: { format: string; conversationId?: string }) {
   const res = await fetchWithAuth(`/mentor/requests/${id}/accept`, {
     method: 'POST',
