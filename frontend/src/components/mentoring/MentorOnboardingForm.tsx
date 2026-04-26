@@ -30,7 +30,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   const [maxError, setMaxError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchWithAuth('/api/skills')
+    fetchWithAuth('/skills')
       .then(r => r.json())
       .then((data: Skill[]) => {
         setSkills(data)

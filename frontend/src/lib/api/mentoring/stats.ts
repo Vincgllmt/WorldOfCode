@@ -9,7 +9,7 @@ export interface MentorStats {
 }
 
 export async function getMentorStats(): Promise<MentorStats> {
-  const res = await fetchWithAuth('/api/mentor/stats')
+  const res = await fetchWithAuth('/mentor/stats')
   if (!res.ok) throw new Error('Impossible de charger les stats')
   return res.json()
 }

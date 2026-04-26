@@ -6,19 +6,19 @@ export async function getMentorFeed(params: { page?: number; limit?: number; tec
   if (params.limit) qs.set('limit', String(params.limit))
   if (params.techStack) qs.set('techStack', params.techStack)
 
-  const res = await fetchWithAuth(`/api/mentor/requests?${qs}`)
+  const res = await fetchWithAuth(`/mentor/requests?${qs}`)
   if (!res.ok) throw new Error('Erreur feed')
   return res.json() as Promise<{ data: import('@/types/mentoring').MentoringRequest[]; meta: { page: number; limit: number; total: number } }>
 }
 
 export async function getMentorRequestDetail(id: number) {
-  const res = await fetchWithAuth(`/api/mentor/requests/${id}`)
+  const res = await fetchWithAuth(`/mentor/requests/${id}`)
   if (!res.ok) throw new Error('Demande non trouvée')
   return res.json()
 }
 
 export async function pinRequest(id: number) {
-  const res = await fetchWithAuth(`/api/mentor/requests/${id}/pin`, { method: 'POST' })
+  const res = await fetchWithAuth(`/mentor/requests/${id}/pin`, { method: 'POST' })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw Object.assign(new Error((err as { error?: string }).error ?? 'Erreur'), { status: res.status, code: (err as { code?: string }).code })
@@ -27,12 +27,12 @@ export async function pinRequest(id: number) {
 }
 
 export async function unpinRequest(id: number) {
-  const res = await fetchWithAuth(`/api/mentor/requests/${id}/pin`, { method: 'DELETE' })
+  const res = await fetchWithAuth(`/mentor/requests/${id}/pin`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Erreur désépinglage')
 }
 
 export async function acceptRequest(id: number, body: { format: string; conversationId?: string }) {
-  const res = await fetchWithAuth(`/api/mentor/requests/${id}/accept`, {
+  const res = await fetchWithAuth(`/mentor/requests/${id}/accept`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -44,13 +44,13 @@ export async function acceptRequest(id: number, body: { format: string; conversa
 }
 
 export async function getMentoringRequestsMine(): Promise<import('@/types/mentoring').MentoringRequest[]> {
-  const res = await fetchWithAuth('/api/mentoring/requests/mine')
+  const res = await fetchWithAuth('/mentoring/requests/mine')
   if (!res.ok) throw new Error('Erreur chargement demandes')
   return res.json()
 }
 
 export async function makeRequestPublic(id: number): Promise<import('@/types/mentoring').MentoringRequest> {
-  const res = await fetchWithAuth(`/api/mentoring/requests/${id}/make-public`, { method: 'PATCH' })
+  const res = await fetchWithAuth(`/mentoring/requests/${id}/make-public`, { method: 'PATCH' })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw Object.assign(new Error((err as { error?: string }).error ?? 'Erreur escalade'), { status: res.status })
@@ -70,7 +70,7 @@ export async function createMentoringRequest(data: {
   isPublic?: boolean
   targetMentorId?: number
 }): Promise<import('@/types/mentoring').MentoringRequest> {
-  const res = await fetchWithAuth('/api/mentoring/requests', {
+  const res = await fetchWithAuth('/mentoring/requests', {
     method: 'POST',
     body: JSON.stringify(data),
   })

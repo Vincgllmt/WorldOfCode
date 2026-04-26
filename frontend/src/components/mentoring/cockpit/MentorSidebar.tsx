@@ -24,7 +24,7 @@ export default function MentorSidebar({ pinnedRequests = [], activeSessions = []
   const [followers, setFollowers] = useState<Follower[]>([])
 
   useEffect(() => {
-    fetchWithAuth('/api/mentor/followers')
+    fetchWithAuth('/mentor/followers')
       .then(r => r.ok ? r.json() : [])
       .then((data: Follower[]) => setFollowers(data))
       .catch(() => {})
