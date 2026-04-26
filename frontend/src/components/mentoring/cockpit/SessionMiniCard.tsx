@@ -22,45 +22,45 @@ export default function SessionMiniCard({ session, onStart, onComplete }: Props)
   const config = STATUS_CONFIG[session.status] ?? { label: session.status, icon: '●', className: 'text-muted-foreground' }
 
   return (
-    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-      {/* Avatar junior */}
-      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-        {session.junior.username[0]?.toUpperCase()}
+    <div className="p-2 rounded-lg hover:bg-muted/50 transition-colors space-y-2">
+      {/* Ligne 1 : avatar + nom + statut */}
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+          {session.junior.username[0]?.toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">{session.junior.username}</p>
+          <p className={`text-xs flex items-center gap-0.5 ${config.className}`}>
+            <span aria-hidden="true">{config.icon}</span>
+            <span>{config.label}</span>
+          </p>
+        </div>
       </div>
 
-      {/* Infos */}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{session.junior.username}</p>
-        <p className={`text-xs flex items-center gap-0.5 ${config.className}`}>
-          <span aria-hidden="true">{config.icon}</span>
-          <span>{config.label}</span>
-        </p>
-      </div>
-
-      {/* Action contextuelle */}
+      {/* Ligne 2 : actions */}
       {session.status === 'scheduled' && onStart && (
         <button
           onClick={() => onStart(session.id)}
-          className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+          className="w-full text-xs px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
           aria-label={`Démarrer la session avec ${session.junior.username}`}
         >
           Démarrer
         </button>
       )}
       {session.status === 'in_progress' && (
-        <>
+        <div className="flex items-center gap-1.5 flex-wrap">
           {session.conversationId && (
             <>
               <button
                 onClick={() => setShowProposeDateModal(true)}
-                className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                className="text-xs px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
                 aria-label={`Proposer une date à ${session.junior.username}`}
               >
-                📅
+                📅 Planifier
               </button>
               <a
                 href={`/message/${session.conversationId}`}
-                className="text-xs px-2 py-0.5 bg-muted rounded hover:bg-muted/70 transition-colors"
+                className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/70 transition-colors"
                 aria-label={`Ouvrir le chat avec ${session.junior.username}`}
               >
                 Chat
@@ -70,13 +70,13 @@ export default function SessionMiniCard({ session, onStart, onComplete }: Props)
           {onComplete && (
             <button
               onClick={() => setShowCloseModal(true)}
-              className="text-xs px-2 py-0.5 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
+              className="text-xs px-2 py-1 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
               aria-label={`Clôturer la session avec ${session.junior.username}`}
             >
               Clôturer
             </button>
           )}
-        </>
+        </div>
       )}
 
       {showCloseModal && (
