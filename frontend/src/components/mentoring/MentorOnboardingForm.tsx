@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Search, X } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { createMentorProfile } from '@/lib/api/mentoring/profile'
 import type { Skill } from '@/types/mentoring'
+
+const SUGGESTIONS_COUNT = 8
 
 const TEACHING_STYLES = [
   { value: 'guided', label: 'Guide sans donner les réponses' },
@@ -22,6 +25,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   const [skillsError, setSkillsError] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<number[]>([])
   const [specialtiesError, setSpecialtiesError] = useState<string | null>(null)
+  const [skillSearch, setSkillSearch] = useState('')
   const [teachingStyle, setTeachingStyle] = useState('')
   const [maxActiveMentees, setMaxActiveMentees] = useState(3)
   const [mentorBio, setMentorBio] = useState('')
@@ -41,6 +45,22 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
         setSkillsError(true)
       })
   }, [])
+
+  const unselectedSkills = useMemo(
+    () => skills.filter(s => !selectedSkills.includes(s.id)),
+    [skills, selectedSkills]
+  )
+
+  const visibleSkills = useMemo(() => {
+    const term = skillSearch.trim().toLowerCase()
+    if (!term) return unselectedSkills.slice(0, SUGGESTIONS_COUNT)
+    return unselectedSkills.filter(s => s.name.toLowerCase().includes(term))
+  }, [unselectedSkills, skillSearch])
+
+  const selectedSkillObjects = useMemo(
+    () => skills.filter(s => selectedSkills.includes(s.id)),
+    [skills, selectedSkills]
+  )
 
   const toggleSkill = (id: number) => {
     setSelectedSkills(prev =>
@@ -95,6 +115,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
         <label className="block text-sm font-medium mb-2">
           Spécialités technologiques
         </label>
+
         {skillsLoading ? (
           <p className="text-sm text-muted-foreground">Chargement des compétences...</p>
         ) : skillsError ? (
@@ -102,24 +123,67 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
             <span aria-hidden="true">⚠</span> Impossible de charger les compétences. Rechargez la page.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {skills.map(skill => (
-              <button
-                key={skill.id}
-                type="button"
-                onClick={() => toggleSkill(skill.id)}
-                aria-pressed={selectedSkills.includes(skill.id)}
-                className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                  selectedSkills.includes(skill.id)
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border hover:border-primary'
-                }`}
-              >
-                {selectedSkills.includes(skill.id) ? '✓ ' : ''}{skill.name}
-              </button>
-            ))}
+          <div className="space-y-3">
+            {/* Chips des sélectionnés */}
+            {selectedSkillObjects.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedSkillObjects.map(skill => (
+                  <span
+                    key={skill.id}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-primary text-primary-foreground"
+                  >
+                    {skill.name}
+                    <button
+                      type="button"
+                      onClick={() => toggleSkill(skill.id)}
+                      aria-label={`Retirer ${skill.name}`}
+                      className="ml-0.5 hover:opacity-70 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Barre de recherche */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Rechercher une technologie..."
+                value={skillSearch}
+                onChange={e => setSkillSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+            </div>
+
+            {/* Suggestions / résultats de recherche */}
+            <div className="flex flex-wrap gap-2">
+              {visibleSkills.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Aucune technologie trouvée.</p>
+              ) : (
+                visibleSkills.map(skill => (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    onClick={() => { toggleSkill(skill.id); setSkillSearch('') }}
+                    className="px-3 py-1 rounded-full text-sm border border-border hover:border-primary hover:text-primary transition-colors"
+                  >
+                    {skill.name}
+                  </button>
+                ))
+              )}
+            </div>
+
+            {!skillSearch && unselectedSkills.length > SUGGESTIONS_COUNT && (
+              <p className="text-xs text-muted-foreground">
+                +{unselectedSkills.length - SUGGESTIONS_COUNT} autres — utilisez la recherche pour les trouver.
+              </p>
+            )}
           </div>
         )}
+
         {specialtiesError && (
           <p role="alert" className="text-destructive text-sm flex items-center gap-1 mt-1">
             <span aria-hidden="true">⚠</span> {specialtiesError}
