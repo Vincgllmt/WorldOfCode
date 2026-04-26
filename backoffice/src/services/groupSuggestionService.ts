@@ -3,13 +3,31 @@ import { GroupSuggestion, ApproveSuggestionPayload, RejectSuggestionPayload } fr
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export const getGroupSuggestions = async (): Promise<GroupSuggestion[]> => {
+export interface GroupSuggestionsParams {
+  page: number
+  limit: number
+  status?: string
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface GroupSuggestionsPaginatedResponse {
+  items: GroupSuggestion[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const getGroupSuggestionsPaginated = async (params: GroupSuggestionsParams): Promise<GroupSuggestionsPaginatedResponse> => {
   const token = getCookie('token')
-  const res = await fetch(`${API_URL}/api/admin/group-suggestions`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const query = new URLSearchParams()
+  query.set('page', String(params.page))
+  query.set('limit', String(params.limit))
+  if (params.status)    query.set('status', params.status)
+  if (params.sortField) query.set('sortField', params.sortField)
+  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+  const res = await fetch(`${API_URL}/api/admin/group-suggestions?${query.toString()}`, {
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error('Erreur lors du chargement des suggestions')
   return res.json()

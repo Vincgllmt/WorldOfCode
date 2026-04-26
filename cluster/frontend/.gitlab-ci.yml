@@ -1,4 +1,3 @@
-# 1. Build avec Kaniko (sans Docker-in-Docker)
 build:frontend:
   stage: build
   image:
@@ -6,30 +5,29 @@ build:frontend:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_TAG =~ /^frontend-v.*$/'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - frontend/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
-  variables:
-    API_DOMAIN: "api-woc-dev.duckdns.org"
-    WOC_DOMAIN: "woc-dev.duckdns.org"
   script:
-    - echo "Configuration de l'authentification Kaniko..."
+    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - |
-      if [ "$CI_COMMIT_BRANCH" = "production" ]; then
+      if [ -n "$CI_COMMIT_TAG" ]; then
         export API_DOMAIN="api-woc-prod.duckdns.org"
         export WOC_DOMAIN="woc-prod.duckdns.org"
+      else
+        export API_DOMAIN="api-woc-dev.duckdns.org"
+        export WOC_DOMAIN="woc-dev.duckdns.org"
       fi
-    - |
-      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    
+    - echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/frontend" \
         --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile.prod" \
-        --destination "${REGISTRY_HOST}/frontend:${CI_COMMIT_SHORT_SHA}" \
+        --destination "${REGISTRY_HOST}/frontend:${IMAGE_TAG}" \
         --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api" \
         --build-arg NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}" \
         --build-arg NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}" \
@@ -44,17 +42,16 @@ build:frontend:
 #   variables:
 #     APP_NAME: "frontend"
 #   rules:
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       changes:
 #         - frontend/**/*
 
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       when: manual
 #       allow_failure: true
     
 
 
-# 2. Déploiement en DEV
 deploy:frontend:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -69,14 +66,11 @@ deploy:frontend:dev:
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
-        - frontend/**/* 
-      when: on_success
-
+        - frontend/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
-# 3. Déploiement en PRODUCTION
 deploy:frontend:prod:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -89,11 +83,4 @@ deploy:frontend:prod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/frontend/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      changes:
-        - frontend/**/*
-      when: manual
-
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      when: manual
-      allow_failure: true
+    - if: '$CI_COMMIT_TAG =~ /^frontend-v.*$/'

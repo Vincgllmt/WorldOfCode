@@ -1,6 +1,4 @@
-#SPDX-License-Identifier: MIT-0
----
 # defaults file for config_nodes_for_registry
 ---
-registry_ip: "192.168.1.100"
+registry_ip: "51.178.136.131"
 docker_config_path: "/path/to/.docker/config.json"  # Chemin vers le fichier Docker config.json

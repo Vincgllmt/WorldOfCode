@@ -5,5 +5,5 @@
   become: true
   roles:
     - kubernetes
-    - runner-gitlab
+    #- runner-gitlab
   tags: [kubernetes]

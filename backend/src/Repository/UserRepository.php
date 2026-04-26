@@ -139,4 +139,77 @@ class UserRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Retourne une page d'utilisateurs avec compteurs, filtres et tri.
+     *
+     * @return array{items: array<int, array{id: int, username: string, email: string, role: mixed, creationDate: mixed, avatarUrl: ?string, postCount: int, followerCount: int}>, total: int}
+     */
+    public function findPaginatedWithCounts(
+        int $page,
+        int $limit,
+        ?string $search = null,
+        ?string $role = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        string $sortField = 'creationDate',
+        string $sortDir = 'DESC'
+    ): array {
+        $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $base = $this->createQueryBuilder('u')
+            ->leftJoin('u.posts', 'p')
+            ->leftJoin('App\Entity\Follow', 'f', 'WITH', 'f.followed = u');
+
+        if ($search !== null && $search !== '') {
+            $base->andWhere('LOWER(u.username) LIKE :search OR LOWER(u.email) LIKE :search')
+                 ->setParameter('search', '%' . mb_strtolower(trim($search)) . '%');
+        }
+
+        if ($role !== null && $role !== '') {
+            $base->andWhere('u.role = :role')
+                 ->setParameter('role', \App\Enum\UserRole::from($role));
+        }
+
+        if ($dateFrom !== null && $dateFrom !== '') {
+            $base->andWhere('u.creationDate >= :dateFrom')
+                 ->setParameter('dateFrom', new \DateTime($dateFrom . ' 00:00:00'));
+        }
+
+        if ($dateTo !== null && $dateTo !== '') {
+            $base->andWhere('u.creationDate <= :dateTo')
+                 ->setParameter('dateTo', new \DateTime($dateTo . ' 23:59:59'));
+        }
+
+        $total = (int) (clone $base)
+            ->select('COUNT(DISTINCT u.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $itemsQb = (clone $base)
+            ->select(
+                'u.id',
+                'u.username',
+                'u.email',
+                'u.role',
+                'u.creationDate',
+                'u.avatarUrl',
+                'COUNT(DISTINCT p.id) AS postCount',
+                'COUNT(DISTINCT f.id) AS followerCount'
+            )
+            ->groupBy('u.id')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        match ($sortField) {
+            'postCount'     => $itemsQb->orderBy('postCount', $sortDir),
+            'followerCount' => $itemsQb->orderBy('followerCount', $sortDir),
+            'username'      => $itemsQb->orderBy('u.username', $sortDir),
+            'email'         => $itemsQb->orderBy('u.email', $sortDir),
+            'role'          => $itemsQb->orderBy('u.role', $sortDir),
+            default         => $itemsQb->orderBy('u.creationDate', $sortDir),
+        };
+
+        return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
+    }
 }

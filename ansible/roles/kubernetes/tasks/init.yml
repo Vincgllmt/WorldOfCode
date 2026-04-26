@@ -1,11 +1,36 @@
 ---
 # MASTEER
+- name: Deploy K3s server configuration
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      node-ip: "{{ tailscale_ip }}"
+      node-external-ip: "{{ tailscale_ip }}"
+      bind-address: "0.0.0.0"
+      flannel-iface: "tailscale0"
+      flannel-conf: "/etc/rancher/k3s/flannel.json"
+      tls-san:
+        - "{{ ansible_host }}"
+        - "{{ tailscale_ip }}"
+  register: k3s_server_config
+
 - name: Install K3s server
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | \
-    INSTALL_K3S_EXEC="--tls-san {{ ansible_host }}" sh -
-  args:
-    creates: /usr/local/bin/k3s
+    curl -sfL https://get.k3s.io | sh -
+  environment:
+    INSTALL_K3S_SKIP_ENABLE: "true"
+  changed_when: false
+
+- name: Restart K3s server
+  ansible.builtin.systemd:
+    name: k3s
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  when: k3s_server_config.changed or flannel_config.changed
 
 - name: Wait for server ready
   ansible.builtin.wait_for:
@@ -28,26 +53,25 @@
     state: directory
     mode: '0700'
 
-- name: Copier le fichier de configuration K3s
-  copy:
+- name: Read internal K3s kubeconfig
+  ansible.builtin.slurp:
     src: /etc/rancher/k3s/k3s.yaml
+  register: internal_kubeconfig
+
+- name: Deploy tailored kubeconfig for root
+  copy:
     dest: /root/.kube/config
+    content: "{{ internal_kubeconfig['content'] | b64decode | replace('127.0.0.1', ansible_host) }}"
     owner: root
     group: root
     mode: '0600'
-    remote_src: true
-
-- name: Remplacer l’adresse du serveur API par l’adresse publique du master
-  replace:
-    path: /root/.kube/config
-    regexp: 'https://127\.0\.0\.1:6443'
-    replace: 'https://{{ ansible_host }}:6443'
   when: ansible_host is defined
 
 - name: Vérifier l’accès au cluster
   command: kubectl get nodes
   register: kubectl_check
   ignore_errors: true
+  changed_when: false
 
 - name: Afficher le résultat
   debug:

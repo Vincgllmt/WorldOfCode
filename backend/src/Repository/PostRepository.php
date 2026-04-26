@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Post;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
@@ -138,6 +139,75 @@ class PostRepository extends ServiceEntityRepository
         ];
     }
 
+    /**
+     * Feed scoré : (likes×3 + comments×2 + shares×4 + 1) / (âge_heures + 2)^1.5
+     *
+     * @return array{items: Post[], totalItems: int}
+     */
+    public function findScoredFeedForUser(User $user, int $page, int $limit): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $userId = $user->getId();
+        $offset = ($page - 1) * $limit;
+
+        $scoreSql = <<<SQL
+            SELECT p.id,
+                   (COUNT(DISTINCT l.id) * 3 + COUNT(DISTINCT c.id) * 2 + COUNT(DISTINCT s.id) * 4 + 1)
+                   / POW(TIMESTAMPDIFF(HOUR, p.created_at, NOW()) + 2, 1.5) AS score
+            FROM post p
+            LEFT JOIN likes l ON l.post_id = p.id
+            LEFT JOIN `comment` c ON c.post_id = p.id
+            LEFT JOIN post s ON s.shared_from_id = p.id
+            WHERE (
+                p.author_id = :userId
+                OR p.author_id IN (SELECT f.followed_id FROM follows f WHERE f.follower_id = :userId)
+                OR p.tech_group_id IN (SELECT tu.tech_group_id FROM techgroup_user tu WHERE tu.user_id = :userId)
+            )
+            GROUP BY p.id
+            ORDER BY score DESC
+            LIMIT :limit OFFSET :offset
+        SQL;
+
+        $rows = $conn->executeQuery($scoreSql, [
+            'userId' => $userId,
+            'limit' => $limit,
+            'offset' => $offset,
+        ], [
+            'userId' => ParameterType::INTEGER,
+            'limit' => ParameterType::INTEGER,
+            'offset' => ParameterType::INTEGER,
+        ])->fetchAllAssociative();
+
+        if (empty($rows)) {
+            return ['items' => [], 'totalItems' => 0];
+        }
+
+        $ids = array_column($rows, 'id');
+        $scoreMap = array_column($rows, 'score', 'id');
+
+        $posts = $this->createBaseQueryBuilder()
+            ->where('p.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        usort($posts, fn(Post $a, Post $b) => $scoreMap[$b->getId()] <=> $scoreMap[$a->getId()]);
+
+        $countSql = <<<SQL
+            SELECT COUNT(DISTINCT p.id)
+            FROM post p
+            WHERE (
+                p.author_id = :userId
+                OR p.author_id IN (SELECT f.followed_id FROM follows f WHERE f.follower_id = :userId)
+                OR p.tech_group_id IN (SELECT tu.tech_group_id FROM techgroup_user tu WHERE tu.user_id = :userId)
+            )
+        SQL;
+
+        $totalItems = (int) $conn->executeQuery($countSql, ['userId' => $userId])->fetchOne();
+
+        return ['items' => $posts, 'totalItems' => $totalItems];
+    }
+
     public function countSince(\DateTime $since): int
     {
         return (int) $this->createQueryBuilder('p')
@@ -197,6 +267,72 @@ class PostRepository extends ServiceEntityRepository
             ->orderBy('p.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Retourne une page de posts avec compteurs, filtres et tri.
+     *
+     * @return array{items: array<int, array{id:int, content:?string, createdAt:mixed, authorUsername:string, techGroupName:?string, likesCount:int, commentsCount:int, reportsCount:int}>, total: int}
+     */
+    public function findPaginatedWithCounts(
+        int $page,
+        int $limit,
+        ?string $search = null,
+        int $minReports = 0,
+        string $sortField = 'createdAt',
+        string $sortDir = 'DESC'
+    ): array {
+        $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $base = $this->createQueryBuilder('p')
+            ->innerJoin('p.author', 'u')
+            ->leftJoin('p.techGroup', 'g')
+            ->leftJoin('p.likes', 'l')
+            ->leftJoin('p.comments', 'c')
+            ->leftJoin('App\Entity\Report', 'r', 'WITH', 'r.post = p');
+
+        if ($search !== null && $search !== '') {
+            $base->andWhere('LOWER(p.content) LIKE :search OR LOWER(u.username) LIKE :search')
+                 ->setParameter('search', '%' . mb_strtolower(trim($search)) . '%');
+        }
+
+        $countQb = (clone $base)->select('p.id')->groupBy('p.id');
+        if ($minReports > 0) {
+            $countQb->having('COUNT(DISTINCT r.id) >= :minReports')
+                    ->setParameter('minReports', $minReports);
+        }
+        $total = count($countQb->getQuery()->getScalarResult());
+
+        $itemsQb = (clone $base)
+            ->select(
+                'p.id',
+                'p.content',
+                'p.createdAt',
+                'u.username AS authorUsername',
+                'g.name AS techGroupName',
+                'COUNT(DISTINCT l.id) AS likesCount',
+                'COUNT(DISTINCT c.id) AS commentsCount',
+                'COUNT(DISTINCT r.id) AS reportsCount'
+            )
+            ->groupBy('p.id')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        if ($minReports > 0) {
+            $itemsQb->having('COUNT(DISTINCT r.id) >= :minReports')
+                    ->setParameter('minReports', $minReports);
+        }
+
+        match ($sortField) {
+            'likesCount'     => $itemsQb->orderBy('likesCount', $sortDir),
+            'commentsCount'  => $itemsQb->orderBy('commentsCount', $sortDir),
+            'reportsCount'   => $itemsQb->orderBy('reportsCount', $sortDir),
+            'authorUsername' => $itemsQb->orderBy('u.username', $sortDir),
+            'techGroupName'  => $itemsQb->orderBy('g.name', $sortDir),
+            default          => $itemsQb->orderBy('p.createdAt', $sortDir),
+        };
+
+        return ['items' => $itemsQb->getQuery()->getResult(), 'total' => $total];
     }
 
     private function createBaseQueryBuilder(): QueryBuilder

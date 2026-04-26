@@ -7,14 +7,15 @@ import { useAdminReports, useClaimReport, useResolveReport, useRejectReport } fr
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminReport, ReportStatus } from '@/interfaces/adminReport'
 
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
+import { TableCell, TableHead, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { X, Flag, ArrowUp, ArrowDown } from 'lucide-react'
+import { PaginatedTable } from '@/components/shared/PaginationTable'
+import { parseReportReason } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -38,6 +39,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+// ─── Raisons prédéfinies (alignées avec ReportPostDialog frontend) ────────────
+
+export const REPORT_REASONS = [
+  { value: 'Spam ou publicité indésirable',      label: 'Spam ou publicité indésirable' },
+  { value: 'Contenu inapproprié ou offensant',   label: 'Contenu inapproprié ou offensant' },
+  { value: 'Harcèlement ou intimidation',        label: 'Harcèlement ou intimidation' },
+  { value: 'Désinformation',                     label: 'Désinformation' },
+  { value: 'Contenu illégal',                    label: 'Contenu illégal' },
+  { value: 'Discours haineux',                   label: 'Discours haineux' },
+  { value: 'Autre',                              label: 'Autre' },
+]
+
+// ─── Affichage raison splitté ─────────────────────────────────────────────────
+
+export function ReasonDisplay({ reason, compact = false }: { reason: string | null | undefined; compact?: boolean }) {
+  const { label, details } = parseReportReason(reason)
+  if (!label) return <span className="text-muted-foreground">—</span>
+  return (
+    <div>
+      <span className={compact ? 'text-xs' : 'text-sm'}>{label}</span>
+      {details && (
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1" title={details}>{details}</p>
+      )}
+    </div>
+  )
+}
 
 // ─── Badge de statut ──────────────────────────────────────────────────────────
 
@@ -74,7 +102,7 @@ function ActionCell({
   if (status === 'RESOLVED' || status === 'REJECTED') {
     return (
       <span className="text-xs text-muted-foreground">
-        {status === 'RESOLVED' ? 'Post supprimé' : `Rejeté`}
+        {status === 'RESOLVED' ? 'Post supprimé' : 'Rejeté'}
       </span>
     )
   }
@@ -87,7 +115,6 @@ function ActionCell({
     )
   }
 
-  // IN_PROGRESS
   if (isMyReport) {
     return (
       <div className="flex gap-2">
@@ -118,47 +145,46 @@ function ActionCell({
   )
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type SortKey = 'createdAt' | 'status' | 'reportedByUsername' | 'claimedByUsername'
+
+const ITEMS_PER_PAGE = 20
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function AdminReportPanel() {
-  const { reports, isLoading } = useAdminReports()
   const { user } = useAdminAuth()
   const currentUsername = user?.username ?? ''
+
+  const [page, setPage] = useState(1)
+  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterReason, setFilterReason] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+
+  const { reports, total, isLoading, isFetching } = useAdminReports({
+    page,
+    limit: ITEMS_PER_PAGE,
+    status:    filterStatus   || undefined,
+    reason:    filterReason   || undefined,
+    dateFrom:  filterDateFrom || undefined,
+    dateTo:    filterDateTo   || undefined,
+    sortField: sortKey,
+    sortDir,
+  })
 
   const claimMutation = useClaimReport()
   const resolveMutation = useResolveReport()
   const rejectMutation = useRejectReport()
 
-  // Filtres (Story 4.5)
-  const [filterStatus, setFilterStatus] = useState<ReportStatus | ''>('')
-  const [filterReason, setFilterReason] = useState<string>('')
-  const [filterDateFrom, setFilterDateFrom] = useState<string>('')
-  const [filterDateTo, setFilterDateTo] = useState<string>('')
-
-  // Sheet détail (Story 4.5)
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null)
-
-  // AlertDialog résolution (Story 4.4)
   const [resolveTarget, setResolveTarget] = useState<{ id: number } | null>(null)
   const [resolveNote, setResolveNote] = useState('')
-
-  // AlertDialog rejet (Story 4.4)
   const [rejectTarget, setRejectTarget] = useState<{ id: number } | null>(null)
   const [rejectNote, setRejectNote] = useState('')
-
-  // ─── Filtrage ───────────────────────────────────────────────────────────────
-
-  const uniqueReasons = Array.from(
-    new Set(reports.map((r) => r.reason).filter(Boolean) as string[])
-  ).sort()
-
-  const filteredReports = reports.filter((r) => {
-    const matchesStatus = !filterStatus || r.status === filterStatus
-    const matchesReason = !filterReason || r.reason === filterReason
-    const matchesDateFrom = !filterDateFrom || r.createdAt.slice(0, 10) >= filterDateFrom
-    const matchesDateTo = !filterDateTo || r.createdAt.slice(0, 10) <= filterDateTo
-    return matchesStatus && matchesReason && matchesDateFrom && matchesDateTo
-  })
 
   const selectedReport = selectedReportId
     ? reports.find((r) => r.id === selectedReportId) ?? null
@@ -166,56 +192,75 @@ export default function AdminReportPanel() {
 
   const hasActiveFilter = filterStatus || filterReason || filterDateFrom || filterDateTo
 
+  const handleFilterChange = (fn: () => void) => { fn(); setPage(1) }
+
   const resetFilters = () => {
     setFilterStatus('')
     setFilterReason('')
     setFilterDateFrom('')
     setFilterDateTo('')
+    setPage(1)
   }
 
-  // ─── Handlers mutations ──────────────────────────────────────────────────────
+  const handleSort = (key: SortKey) => {
+    setPage(1)
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return null
+    return sortDir === 'asc'
+      ? <ArrowUp className="inline h-3 w-3 ml-1" />
+      : <ArrowDown className="inline h-3 w-3 ml-1" />
+  }
 
   const handleClaim = (id: number) => {
-    claimMutation.mutate(id, {
-      onError: (err) => toast.error(err.message),
-    })
+    claimMutation.mutate(id, { onError: (err) => toast.error(err.message) })
   }
 
-  const handleResolve = (id: number) => {
-    setResolveNote('')
-    setResolveTarget({ id })
-  }
-
-  const handleReject = (id: number) => {
-    setRejectNote('')
-    setRejectTarget({ id })
-  }
-
-  // ─── Loading ─────────────────────────────────────────────────────────────────
+  const handleResolve = (id: number) => { setResolveNote(''); setResolveTarget({ id }) }
+  const handleReject  = (id: number) => { setRejectNote('');  setRejectTarget({ id })  }
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
-        ))}
+      <div className="space-y-4">
+        <div className="flex gap-3">
+          <Skeleton className="h-9 w-[160px]" />
+          <Skeleton className="h-9 w-[180px]" />
+          <Skeleton className="h-9 w-[300px]" />
+        </div>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="bg-muted/40 border-b border-border px-4 py-3 flex gap-6">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-3.5 w-20" />
+            ))}
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="border-b border-border/50 last:border-0 px-4 py-3.5 flex items-center gap-6">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-7 w-28 ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
-  if (reports.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
-        Aucun signalement pour le moment.
-      </p>
-    )
-  }
-
   return (
-    <>
+    <div className="space-y-4">
       {/* Filtres */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Select value={filterStatus || 'ALL'} onValueChange={(val) => setFilterStatus(val === 'ALL' ? '' : val as ReportStatus)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={filterStatus || 'ALL'} onValueChange={(val) => handleFilterChange(() => setFilterStatus(val === 'ALL' ? '' : val))}>
           <SelectTrigger className="h-9 w-[160px] text-sm">
             <SelectValue placeholder="Tous les statuts" />
           </SelectTrigger>
@@ -228,18 +273,14 @@ export default function AdminReportPanel() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={filterReason || 'ALL'}
-          onValueChange={(val) => setFilterReason(val === 'ALL' ? '' : val)}
-          disabled={uniqueReasons.length === 0}
-        >
-          <SelectTrigger className="h-9 w-[180px] text-sm">
+        <Select value={filterReason || 'ALL'} onValueChange={(val) => handleFilterChange(() => setFilterReason(val === 'ALL' ? '' : val))}>
+          <SelectTrigger className="h-9 w-[220px] text-sm">
             <SelectValue placeholder="Toutes les raisons" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Toutes les raisons</SelectItem>
-            {uniqueReasons.map((r) => (
-              <SelectItem key={r} value={r}>{r}</SelectItem>
+            {REPORT_REASONS.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -249,14 +290,14 @@ export default function AdminReportPanel() {
           <Input
             type="date"
             value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setFilterDateFrom(e.target.value))}
             className="h-9 w-[140px] text-sm"
           />
           <span>jusqu&apos;au</span>
           <Input
             type="date"
             value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setFilterDateTo(e.target.value))}
             className="h-9 w-[140px] text-sm"
           />
         </div>
@@ -268,83 +309,98 @@ export default function AdminReportPanel() {
             onClick={resetFilters}
             className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
           >
+            <X className="h-3.5 w-3.5 mr-1.5" />
             Effacer
           </Button>
         )}
 
-        {hasActiveFilter && (
-          <span className="ml-auto text-xs text-muted-foreground font-mono">
-            {filteredReports.length} résultat{filteredReports.length !== 1 ? 's' : ''} sur {reports.length}
-          </span>
-        )}
+        <span className={`ml-auto text-xs text-muted-foreground font-mono transition-opacity ${isFetching ? 'opacity-50' : 'opacity-100'}`}>
+          {total} résultat{total !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      {/* Tableau (Stories 4.3) */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[200px]">Post signalé</TableHead>
-            <TableHead>Signalé par</TableHead>
-            <TableHead>Raison</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Pris en charge par</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredReports.map((report) => (
-            <TableRow
-              key={report.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => setSelectedReportId(report.id)}
+      {/* Tableau */}
+      <PaginatedTable
+        data={reports}
+        totalItems={total}
+        currentPage={page}
+        onPageChange={setPage}
+        emptyState={
+          <div className="flex flex-col items-center gap-2 py-2">
+            <Flag className="h-8 w-8 text-muted-foreground/30" />
+            <p>{hasActiveFilter ? 'Aucun résultat pour ces filtres.' : 'Aucun signalement pour le moment.'}</p>
+          </div>
+        }
+        headers={
+          <>
+            <TableHead className="text-xs font-semibold text-muted-foreground w-[200px]">Post signalé</TableHead>
+            <TableHead
+              className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+              onClick={() => handleSort('reportedByUsername')}
             >
-              <TableCell>
-                {report.postExcerpt ? (
-                  <div>
-                    <p className="text-sm truncate max-w-[180px]">{report.postExcerpt}</p>
-                    {report.postAuthorUsername && (
-                      <p className="text-xs text-muted-foreground">par {report.postAuthorUsername}</p>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground italic">(post supprimé)</span>
-                )}
-              </TableCell>
+              Signalé par <SortIcon col="reportedByUsername" />
+            </TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground">Raison</TableHead>
+            <TableHead
+              className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+              onClick={() => handleSort('createdAt')}
+            >
+              Date <SortIcon col="createdAt" />
+            </TableHead>
+            <TableHead
+              className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+              onClick={() => handleSort('status')}
+            >
+              Statut <SortIcon col="status" />
+            </TableHead>
+            <TableHead
+              className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+              onClick={() => handleSort('claimedByUsername')}
+            >
+              Pris en charge par <SortIcon col="claimedByUsername" />
+            </TableHead>
+            <TableHead className="text-xs font-semibold text-muted-foreground text-right">Actions</TableHead>
+          </>
+        }
+        renderRow={(report) => (
+          <TableRow
+            key={report.id}
+            className="cursor-pointer hover:bg-muted/40 transition-colors border-border/50"
+            onClick={() => setSelectedReportId(report.id)}
+          >
+            <TableCell>
+              {report.postExcerpt ? (
+                <div>
+                  <p className="text-sm truncate max-w-[180px]">{report.postExcerpt}</p>
+                  {report.postAuthorUsername && (
+                    <p className="text-xs text-muted-foreground">par {report.postAuthorUsername}</p>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">(post supprimé)</span>
+              )}
+            </TableCell>
+            <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
+            <TableCell><ReasonDisplay reason={report.reason} /></TableCell>
+            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+              {new Date(report.createdAt).toLocaleDateString('fr-FR')}
+            </TableCell>
+            <TableCell><StatusBadge status={report.status} /></TableCell>
+            <TableCell className="text-sm text-muted-foreground">{report.claimedByUsername ?? '—'}</TableCell>
+            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+              <ActionCell
+                report={report}
+                currentUsername={currentUsername}
+                onClaim={handleClaim}
+                onResolve={handleResolve}
+                onReject={handleReject}
+              />
+            </TableCell>
+          </TableRow>
+        )}
+      />
 
-              <TableCell className="text-sm">{report.reportedByUsername}</TableCell>
-
-              <TableCell className="text-sm text-muted-foreground">
-                {report.reason ?? '—'}
-              </TableCell>
-
-              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                {new Date(report.createdAt).toLocaleDateString('fr-FR')}
-              </TableCell>
-
-              <TableCell>
-                <StatusBadge status={report.status} />
-              </TableCell>
-
-              <TableCell className="text-sm text-muted-foreground">
-                {report.claimedByUsername ?? '—'}
-              </TableCell>
-
-              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                <ActionCell
-                  report={report}
-                  currentUsername={currentUsername}
-                  onClaim={handleClaim}
-                  onResolve={handleResolve}
-                  onReject={handleReject}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      {/* Sheet détail (Story 4.5) */}
+      {/* Dialog détail report */}
       <Dialog
         open={selectedReportId !== null}
         onOpenChange={(open) => { if (!open) setSelectedReportId(null) }}
@@ -358,8 +414,6 @@ export default function AdminReportPanel() {
 
           {selectedReport && (
             <div className="space-y-5">
-
-              {/* Statut */}
               <div className="flex items-center gap-2">
                 <StatusBadge status={selectedReport.status} />
                 {selectedReport.claimedByUsername && (
@@ -369,11 +423,8 @@ export default function AdminReportPanel() {
                 )}
               </div>
 
-              {/* Contenu du post */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  Contenu du post
-                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Contenu du post</p>
                 {selectedReport.postContent ? (
                   <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedReport.postContent}
@@ -383,17 +434,11 @@ export default function AdminReportPanel() {
                 )}
               </div>
 
-              {/* Infos post */}
               {selectedReport.postAuthorId && (
                 <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 space-y-1.5 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-xs">Auteur</span>
-                    <a
-                      href={`/utilisateurs?search=${selectedReport.postAuthorUsername ?? ''}`}
-                      className="text-primary hover:underline font-medium text-xs"
-                    >
-                      {selectedReport.postAuthorUsername}
-                    </a>
+                    <span className="font-medium text-xs">{selectedReport.postAuthorUsername}</span>
                   </div>
                   {selectedReport.postTechGroupName && (
                     <div className="flex items-center justify-between">
@@ -412,18 +457,17 @@ export default function AdminReportPanel() {
                 </div>
               )}
 
-              {/* Signalement */}
               <div className="border-t border-border pt-4 space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                  Signalement
-                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Signalement</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Signalé par</span>
                   <strong>{selectedReport.reportedByUsername}</strong>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Raison</span>
-                  <span className="font-medium">{selectedReport.reason ?? '—'}</span>
+                <div className="flex items-start justify-between text-sm gap-4">
+                  <span className="text-muted-foreground shrink-0">Raison</span>
+                  <div className="text-right">
+                    <ReasonDisplay reason={selectedReport.reason} />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Date</span>
@@ -431,12 +475,9 @@ export default function AdminReportPanel() {
                 </div>
               </div>
 
-              {/* Note de résolution */}
               {selectedReport.resolutionNote && (
                 <div className="border-t border-border pt-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Note de résolution
-                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Note de résolution</p>
                   <p className="text-sm border-l-2 border-primary/40 pl-3 py-0.5 text-muted-foreground bg-muted/30 rounded-r-md">
                     {selectedReport.resolutionNote}
                   </p>
@@ -455,11 +496,8 @@ export default function AdminReportPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* AlertDialog résolution (Story 4.4) */}
-      <AlertDialog
-        open={resolveTarget !== null}
-        onOpenChange={(open) => { if (!open) setResolveTarget(null) }}
-      >
+      {/* AlertDialog résolution */}
+      <AlertDialog open={resolveTarget !== null} onOpenChange={(open) => { if (!open) setResolveTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Résoudre ce report ?</AlertDialogTitle>
@@ -486,14 +524,8 @@ export default function AdminReportPanel() {
                 resolveMutation.mutate(
                   { id: resolveTarget.id, resolutionNote: resolveNote || undefined },
                   {
-                    onSuccess: () => {
-                      setResolveTarget(null)
-                      toast.success('Report résolu — post supprimé')
-                    },
-                    onError: (err) => {
-                      setResolveTarget(null)
-                      toast.error(err.message)
-                    },
+                    onSuccess: () => { setResolveTarget(null); toast.success('Report résolu — post supprimé') },
+                    onError: (err) => { setResolveTarget(null); toast.error(err.message) },
                   }
                 )
               }}
@@ -504,11 +536,8 @@ export default function AdminReportPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog rejet (Story 4.4) */}
-      <AlertDialog
-        open={rejectTarget !== null}
-        onOpenChange={(open) => { if (!open) setRejectTarget(null) }}
-      >
+      {/* AlertDialog rejet */}
+      <AlertDialog open={rejectTarget !== null} onOpenChange={(open) => { if (!open) setRejectTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Rejeter ce report ?</AlertDialogTitle>
@@ -540,14 +569,8 @@ export default function AdminReportPanel() {
                 rejectMutation.mutate(
                   { id: rejectTarget.id, resolutionNote: rejectNote.trim() },
                   {
-                    onSuccess: () => {
-                      setRejectTarget(null)
-                      toast.success('Report rejeté — post conservé')
-                    },
-                    onError: (err) => {
-                      setRejectTarget(null)
-                      toast.error(err.message)
-                    },
+                    onSuccess: () => { setRejectTarget(null); toast.success('Report rejeté — post conservé') },
+                    onError: (err) => { setRejectTarget(null); toast.error(err.message) },
                   }
                 )
               }}
@@ -557,6 +580,6 @@ export default function AdminReportPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }

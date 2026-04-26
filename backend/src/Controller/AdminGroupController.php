@@ -1,6 +1,7 @@
 <?php
 namespace App\Controller;
 
+use App\Dto\AdminGroupDetailDto;
 use App\Dto\AdminGroupListItemDto;
 use App\Entity\TechGroup;
 use App\Entity\TechWatchSource;
@@ -25,37 +26,56 @@ final class AdminGroupController extends AbstractController
 
     #[Route('/groups', name: 'admin_groups_list', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Liste enrichie des groupes pour l\'administration',
+        summary: 'Liste paginée des groupes pour l\'administration',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'search',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des groupes avec métriques'),
+            new OA\Response(response: 200, description: 'Liste paginée des groupes avec métriques'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $rows = $this->groupRepo->findAllWithCounts();
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $search    = $request->query->get('search') ?: null;
+        $sortField = $request->query->get('sortField', 'createdAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
 
-        $dtos = array_map(function ($row) {
-            $group = $this->groupRepo->find($row['id']);
-            $source = $group ? $this->techWatchSourceRepo->findOneBy(['techGroup' => $group]) : null;
+        $result = $this->groupRepo->findPaginatedWithCounts(
+            page: $page,
+            limit: $limit,
+            search: $search,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
 
-            return new AdminGroupListItemDto(
-                id: $row['id'],
-                name: $row['name'],
-                description: $row['description'] ?? null,
-                memberCount: (int) $row['memberCount'],
-                postCount: (int) $row['postCount'],
-                creatorUsername: $row['creatorUsername'] ?? null,
-                createdAt: $row['createdAt'] instanceof \DateTimeInterface
-                    ? $row['createdAt']->format(\DateTimeInterface::ATOM)
-                    : (string) $row['createdAt'],
-                rssFeedUrl: $source?->getFeedUrl(),
-            );
-        }, $rows);
+        $items = array_map(fn($row) => new AdminGroupListItemDto(
+            id: $row['id'],
+            name: $row['name'],
+            description: $row['description'] ?? null,
+            memberCount: (int) $row['memberCount'],
+            postCount: (int) $row['postCount'],
+            creatorUsername: $row['creatorUsername'] ?? null,
+            createdAt: $row['createdAt'] instanceof \DateTimeInterface
+                ? $row['createdAt']->format(\DateTimeInterface::ATOM)
+                : (string) $row['createdAt'],
+            rssFeedUrl: $row['rssFeedUrl'] ?? null,
+        ), $result['items']);
 
-        return $this->json($dtos);
+        return $this->json([
+            'items' => $items,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
     }
 
     #[Route('/groups', name: 'admin_groups_create', methods: ['POST'])]
@@ -110,6 +130,76 @@ final class AdminGroupController extends AbstractController
             createdAt: $group->getCreatedAt()->format(\DateTimeInterface::ATOM),
             rssFeedUrl: $rssFeedUrl,
         ), 201);
+    }
+
+    #[Route('/groups/{id}', name: 'admin_groups_detail', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Détail d\'un groupe',
+        responses: [
+            new OA\Response(response: 200, description: 'Détail du groupe'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Groupe non trouvé'),
+        ]
+    )]
+    public function detail(int $id): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $group = $this->groupRepo->find($id);
+        if (!$group) {
+            return $this->json(['error' => 'Groupe non trouvé'], 404);
+        }
+
+        $rssSource = $this->techWatchSourceRepo->findOneBy(['techGroup' => $group]);
+
+        $memberCount = $group->getUsers()->count();
+        $postCount   = $group->getPosts()->count();
+
+        $members = array_map(fn($u) => [
+            'id'        => $u->getId(),
+            'username'  => $u->getUsername(),
+            'avatarUrl' => $u->getAvatarUrl(),
+        ], $group->getUsers()->slice(0, 20));
+
+        $recentPosts = $this->em->createQueryBuilder()
+            ->select('p.id', 'p.content', 'p.createdAt', 'u.username AS authorUsername',
+                     'COUNT(DISTINCT l.id) AS likesCount', 'COUNT(DISTINCT c.id) AS commentsCount')
+            ->from(\App\Entity\Post::class, 'p')
+            ->leftJoin('p.author', 'u')
+            ->leftJoin('p.likes', 'l')
+            ->leftJoin('p.comments', 'c')
+            ->where('p.techGroup = :group')
+            ->setParameter('group', $group)
+            ->groupBy('p.id, u.id')
+            ->orderBy('p.createdAt', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getResult();
+
+        $recentPostsMapped = array_map(fn($row) => [
+            'id'             => $row['id'],
+            'excerpt'        => $row['content'] ? mb_substr($row['content'], 0, 80) . (mb_strlen($row['content']) > 80 ? '…' : '') : null,
+            'authorUsername' => $row['authorUsername'],
+            'createdAt'      => $row['createdAt'] instanceof \DateTimeInterface
+                                    ? $row['createdAt']->format(\DateTimeInterface::ATOM)
+                                    : (string) $row['createdAt'],
+            'likesCount'    => (int) $row['likesCount'],
+            'commentsCount' => (int) $row['commentsCount'],
+        ], $recentPosts);
+
+        return $this->json(new AdminGroupDetailDto(
+            id:               $group->getId(),
+            name:             $group->getName(),
+            description:      $group->getDescription(),
+            createdAt:        $group->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            creatorUsername:  $group->getCreator()?->getUsername(),
+            creatorAvatarUrl: $group->getCreator()?->getAvatarUrl(),
+            rssFeedUrl:       $rssSource?->getFeedUrl(),
+            memberCount:      $memberCount,
+            postCount:        $postCount,
+            members:          $members,
+            recentPosts:      $recentPostsMapped,
+        ));
     }
 
     #[Route('/groups/{id}', name: 'admin_groups_update', methods: ['PATCH'])]

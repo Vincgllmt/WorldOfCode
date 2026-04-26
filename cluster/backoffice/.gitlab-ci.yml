@@ -1,4 +1,3 @@
-# 1. Build avec Kaniko (sans Docker-in-Docker)
 build:backoffice:
   stage: build
   image:
@@ -6,35 +5,33 @@ build:backoffice:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_TAG =~ /^backoffice-v.*$/'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - backoffice/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
-  variables:
-    API_DOMAIN: "api-woc-dev.duckdns.org"
   script:
-    - echo "Configuration de l'authentification Kaniko..."
+    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - |
-      if [ "$CI_COMMIT_BRANCH" = "production" ]; then
+      if [ -n "$CI_COMMIT_TAG" ]; then
         export API_DOMAIN="api-woc-prod.duckdns.org"
+      else
+        export API_DOMAIN="api-woc-dev.duckdns.org"
       fi
-    - |
-      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}"> /kaniko/.docker/config.json
-
+    - echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}"> /kaniko/.docker/config.json
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/backoffice" \
         --dockerfile "${CI_PROJECT_DIR}/backoffice/Dockerfile.prod" \
-        --destination "${REGISTRY_HOST}/backoffice:${CI_COMMIT_SHORT_SHA}" \
+        --destination "${REGISTRY_HOST}/backoffice:${IMAGE_TAG}" \
         --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}" \
         --insecure \
         --skip-tls-verify \
         --cache=true
 
 
-# 2. Déploiement en DEV
 deploy:backoffice:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -50,13 +47,10 @@ deploy:backoffice:dev:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - backoffice/**/*
-      when: on_success
-
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
-# 3. Déploiement en PRODUCTION
 deploy:backoffice:prod:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -69,11 +63,4 @@ deploy:backoffice:prod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/backoffice/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      changes:
-        - backoffice/**/*
-      when: manual
-
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      when: manual
-      allow_failure: true
+    - if: '$CI_COMMIT_TAG =~ /^backoffice-v.*$/'

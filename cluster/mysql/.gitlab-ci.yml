@@ -15,7 +15,7 @@ deploy:mysql:dev:
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - kubectl apply -f cluster/mysql/templates/storageclass.yaml
-    - kubectl apply -f cluster/mysql/templates/cronjob-backups.yaml
+    - kubectl apply -n "$APP_NAMESPACE" -f cluster/mysql/templates/cronjob-backups.yaml
     - helm repo add bitnami https://charts.bitnami.com/bitnami
     - helm repo update
     - echo "Déploiement de MySQL sur la DEV"
@@ -40,12 +40,12 @@ deploy:mysql:prod:
     MYSQL_CHART_VERSION: "12.2.2"
     VALUES_FILE: "cluster/mysql/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - kubectl apply -f cluster/mysql/templates/storageclass.yaml
-    - kubectl apply -f cluster/mysql/templates/cronjob-backups.yaml
+    - kubectl apply -n "$APP_NAMESPACE" -f cluster/mysql/templates/cronjob-backups.yaml
     - helm repo add bitnami https://charts.bitnami.com/bitnami
     - helm repo update
     - echo "Déploiement de MySQL sur la PRODUCTION"

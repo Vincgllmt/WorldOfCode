@@ -23,14 +23,15 @@ before_script:
 
 .deploy_helm_template:
   script:
+    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - USER_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.username}')
     - PASS_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.password}')
     - REGISTRY_USER=$(echo -n "$USER_B64" | base64 -d)
     - REGISTRY_PASSWORD=$(echo -n "$PASS_B64" | base64 -d)
     - kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-server="$REGISTRY_HOST" --docker-username="$REGISTRY_USER" --docker-password="$REGISTRY_PASSWORD" -n "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-    - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec les valeurs $VALUES_FILE"
-    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$CI_COMMIT_SHORT_SHA
+    - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec l'image tag $IMAGE_TAG"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$IMAGE_TAG
 
 # .trivy_scan_template:
 #   stage: scan
@@ -136,7 +137,13 @@ lint:frontend-backoffice:
       fi
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - frontend/**/*
+        - backoffice/**/*
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      changes:
+        - frontend/**/*
+        - backoffice/**/*
   allow_failure: false
 
 # ===================================
@@ -213,5 +220,9 @@ coverage:backend:
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/**/*
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - backend/**/*
   allow_failure: false

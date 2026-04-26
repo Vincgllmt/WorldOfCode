@@ -1,4 +1,3 @@
-# 1. Build avec Kaniko
 build:messagerie:
   stage: build
   image:
@@ -6,23 +5,22 @@ build:messagerie:
     entrypoint: [""]
   before_script: []
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_COMMIT_TAG =~ /^messagerie-v.*$/'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
         - messagerie/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
   script:
-    - echo "Configuration de l'authentification Kaniko..."
-    - |
-      echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    
-    - echo "Build et Push vers ${REGISTRY_HOST}/messagerie:${CI_COMMIT_SHORT_SHA}"
+    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
+    - echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - echo "Build et Push vers ${REGISTRY_HOST}/messagerie:${IMAGE_TAG}"
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/messagerie" \
         --dockerfile "${CI_PROJECT_DIR}/messagerie/Dockerfile.prod" \
-        --destination "${REGISTRY_HOST}/messagerie:${CI_COMMIT_SHORT_SHA}" \
+        --destination "${REGISTRY_HOST}/messagerie:${IMAGE_TAG}" \
         --insecure \
         --skip-tls-verify \
         --cache=true
@@ -33,15 +31,14 @@ build:messagerie:
 #   variables:
 #     APP_NAME: "messagerie"
 #   rules:
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       changes:
 #         - messagerie/**/*
 
-#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "production"'
+#     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
 #       when: manual
 #       allow_failure: true
 
-# 2. Déploiement en DEV
 deploy:messagerie:dev:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -56,14 +53,11 @@ deploy:messagerie:dev:
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
       changes:
-        - messagerie/**/* 
-      when: on_success
-    
+        - messagerie/**/*
     - if: '$CI_COMMIT_BRANCH == "dev"'
       when: manual
       allow_failure: true
 
-# 3. Déploiement en PRODUCTION
 deploy:messagerie:prod:
   stage: deploy-apps
   extends: .deploy_helm_template
@@ -76,11 +70,4 @@ deploy:messagerie:prod:
     IMAGE_PULL_SECRET: "woc-regcred"
     VALUES_FILE: "cluster/messagerie/values-prod.yaml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      changes:
-        - messagerie/**/*
-      when: manual
-
-    - if: '$CI_COMMIT_BRANCH == "production"'
-      when: manual
-      allow_failure: true
+    - if: '$CI_COMMIT_TAG =~ /^messagerie-v.*$/'

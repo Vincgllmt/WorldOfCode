@@ -1,0 +1,88 @@
+grafana:
+  alerting:
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        - orgId: 1
+          name: Google Chat WOC
+          receivers:
+            - uid: google-chat-woc
+              type: googlechat
+              settings:
+                url: "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4"
+              disableResolveMessage: false
+
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: Google Chat WOC
+          matchers:
+            - label: alertname
+              match_type: =~
+              value: ".*"
+
+    rules.yaml:
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: woc-user-errors
+          folder: WOC Alerting
+          interval: 1m
+          rules:
+            - uid: woc-user-errors-loki
+              title: "Erreurs utilisateurs WOC"
+              condition: B
+              data:
+                - refId: A
+                  queryType: range
+                  relativeTimeRange:
+                    from: 60
+                    to: 0
+                  datasourceUid: loki-datasource
+                  model:
+                    datasource:
+                      type: loki
+                      uid: loki-datasource
+                    editorMode: code
+                    expr: 'sum(count_over_time({app="backend"} | json | channel=`user_error` [1m]))'
+                    instant: false
+                    queryType: range
+                    range: true
+                    refId: A
+                - refId: B
+                  datasourceUid: "-100"
+                  model:
+                    conditions:
+                      - evaluator:
+                          params:
+                            - 0
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params:
+                            - A
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                    datasource:
+                      type: __expr__
+                      uid: "-100"
+                    expression: A
+                    hide: false
+                    refId: B
+                    type: threshold
+              noDataState: NoData
+              execErrState: Error
+              for: 0s
+              annotations:
+                description: "Une erreur utilisateur a été détectée sur le site WOC (codes HTTP 400/401/403/422/429)."
+                summary: "Erreurs utilisateurs détectées sur WOC"
+              labels:
+                severity: warning
+                team: woc
+              isPaused: false
+              notification_settings:
+                receiver: Google Chat WOC

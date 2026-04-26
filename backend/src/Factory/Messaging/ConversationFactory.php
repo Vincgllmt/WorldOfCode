@@ -45,7 +45,6 @@ final class ConversationFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Conversation $conversation): void {})
         ;
     }
 }
