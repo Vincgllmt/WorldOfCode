@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { PenSquare, Newspaper } from 'lucide-react'
+import { PenSquare, Newspaper, HandHelping } from 'lucide-react'
+import Link from 'next/link'
 import PostForm from '@/components/post/postForm'
 import PostList from '@/components/post/PostList'
 import TechWatchFeedList from '@/components/techwatch/TechWatchFeedList'
@@ -80,8 +81,23 @@ export default function HomePage() {
 
         {/* Sidebar droite — sticky sous la navbar */}
         <aside className="hidden xl:block w-[300px] shrink-0">
-          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
+          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4 space-y-4">
             <SuggestionsSidebar />
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">
+                <HandHelping className="h-4 w-4 text-violet-500" />
+                Besoin d&apos;un coup de pouce ?
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Trouve un mentor parmi tes pairs et progresse plus vite sur tes projets.
+              </p>
+              <Link
+                href="/mentoring/new"
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+              >
+                Demander de l&apos;aide
+              </Link>
+            </div>
           </div>
         </aside>
 
