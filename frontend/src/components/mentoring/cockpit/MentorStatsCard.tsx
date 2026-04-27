@@ -3,16 +3,14 @@
 import { useEffect, useState } from 'react'
 import { getMentorStats, type MentorStats } from '@/lib/api/mentoring/stats'
 
-function StarRating({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-muted-foreground text-lg">—</span>
-
+function Stars({ value }: { value: number }) {
   return (
-    <span className="flex items-center gap-1 whitespace-nowrap" aria-label={`${value.toFixed(1)} étoiles sur 5`}>
+    <span className="flex items-center gap-0.5" aria-hidden="true">
       {[1, 2, 3, 4, 5].map(i => {
         const filled = value >= i
         const half = !filled && value >= i - 0.5
         return (
-          <span key={i} className="relative inline-block leading-none text-base" aria-hidden="true">
+          <span key={i} className="relative inline-block leading-none text-base">
             <span className="text-muted-foreground/30">★</span>
             {(filled || half) && (
               <span
@@ -25,7 +23,6 @@ function StarRating({ value }: { value: number | null }) {
           </span>
         )
       })}
-      <span className="text-sm font-semibold tabular-nums ml-0.5">{value.toFixed(1)}</span>
     </span>
   )
 }
@@ -53,7 +50,6 @@ export default function MentorStatsCard() {
   const metrics: { label: string; value: React.ReactNode }[] = [
     { label: 'Sessions totales', value: stats.totalSessions },
     { label: 'Sessions actives', value: stats.activeSessions },
-    { label: 'Note moyenne', value: <StarRating value={stats.averageRating} /> },
     { label: 'Juniors aidés', value: stats.totalMentees },
     {
       label: 'Fiabilité',
@@ -69,6 +65,19 @@ export default function MentorStatsCard() {
         Mes stats
       </h3>
       <div className="grid grid-cols-2 gap-2">
+        {/* Carte Note moyenne : label + chiffre sur la même ligne, étoiles en dessous */}
+        <div className="bg-muted/40 rounded-lg p-2.5 col-span-2" aria-label={`Note moyenne : ${stats.averageRating?.toFixed(1) ?? '—'} étoiles sur 5`}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Note moyenne</p>
+            <p className="text-sm font-semibold tabular-nums">
+              {stats.averageRating !== null ? stats.averageRating.toFixed(1) : '—'}
+            </p>
+          </div>
+          {stats.averageRating !== null
+            ? <Stars value={stats.averageRating} />
+            : <span className="text-lg font-semibold text-muted-foreground">—</span>
+          }
+        </div>
         {metrics.map(m => (
           <div key={m.label} className="bg-muted/40 rounded-lg p-2.5">
             <p className="text-xs text-muted-foreground">{m.label}</p>
