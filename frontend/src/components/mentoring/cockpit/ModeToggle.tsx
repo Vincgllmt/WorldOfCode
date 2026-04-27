@@ -36,7 +36,7 @@ export default function ModeToggle({ isAvailable, onToggle }: Props) {
     >
       {/* Icône + texte — jamais uniquement la couleur (NFR11) */}
       <span aria-hidden="true">{isAvailable ? '✓' : '○'}</span>
-      <span>{loading ? 'Mise à jour...' : isAvailable ? 'Disponible' : 'Mode Lecture'}</span>
+      <span>{loading ? 'Mise à jour...' : isAvailable ? 'Disponible' : 'Mode Invisible'}</span>
     </button>
   )
 }
