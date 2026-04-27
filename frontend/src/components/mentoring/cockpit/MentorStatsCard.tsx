@@ -7,29 +7,25 @@ function StarRating({ value }: { value: number | null }) {
   if (value === null) return <span className="text-muted-foreground text-lg">—</span>
 
   return (
-    <span className="flex items-center gap-1.5 flex-wrap">
-      <span className="flex items-center gap-0.5" aria-label={`${value.toFixed(1)} étoiles sur 5`}>
-        {[1, 2, 3, 4, 5].map(i => {
-          const filled = value >= i
-          const half = !filled && value >= i - 0.5
-          return (
-            <span key={i} className="relative inline-block leading-none text-xl" aria-hidden="true">
-              {/* étoile vide (fond) */}
-              <span className="text-muted-foreground/30">★</span>
-              {/* étoile pleine ou demi par-dessus */}
-              {(filled || half) && (
-                <span
-                  className="absolute inset-0 overflow-hidden text-yellow-400"
-                  style={{ width: filled ? '100%' : '50%' }}
-                >
-                  ★
-                </span>
-              )}
-            </span>
-          )
-        })}
-      </span>
-      <span className="text-sm font-semibold tabular-nums">{value.toFixed(1)}</span>
+    <span className="flex items-center gap-1 whitespace-nowrap" aria-label={`${value.toFixed(1)} étoiles sur 5`}>
+      {[1, 2, 3, 4, 5].map(i => {
+        const filled = value >= i
+        const half = !filled && value >= i - 0.5
+        return (
+          <span key={i} className="relative inline-block leading-none text-base" aria-hidden="true">
+            <span className="text-muted-foreground/30">★</span>
+            {(filled || half) && (
+              <span
+                className="absolute inset-0 overflow-hidden text-yellow-400"
+                style={{ width: filled ? '100%' : '50%' }}
+              >
+                ★
+              </span>
+            )}
+          </span>
+        )
+      })}
+      <span className="text-sm font-semibold tabular-nums ml-0.5">{value.toFixed(1)}</span>
     </span>
   )
 }
