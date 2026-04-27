@@ -104,5 +104,35 @@ class MentoringSessionService
         }
 
         $this->em->flush();
+
+        // Message système dans la conversation pour inviter à noter
+        if ($conversationId = $session->getConversationId()) {
+            $conn = $this->em->getConnection();
+            $now  = (new \DateTime())->format('Y-m-d H:i:s');
+            $body = json_encode([
+                'sessionId'      => $session->getId(),
+                'mentorId'       => $session->getMentor()->getUser()->getId(),
+                'mentorUsername' => $session->getMentor()->getUser()->getUsername(),
+                'juniorId'       => $session->getJunior()->getId(),
+                'juniorUsername' => $session->getJunior()->getUsername(),
+            ]);
+            $conn->executeStatement(
+                'INSERT INTO msg_messages (id, conversation_id, sender_id, body, type, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                [$this->generateUuid(), $conversationId, $session->getMentor()->getUser()->getId(), $body, 'session_closed', $now]
+            );
+            $conn->executeStatement(
+                'UPDATE msg_conversations SET last_message_at = ? WHERE id = ?',
+                [$now, $conversationId]
+            );
+        }
+    }
+
+    private function generateUuid(): string
+    {
+        $data = random_bytes(16);
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }

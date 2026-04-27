@@ -4,9 +4,10 @@ import { useEffect, useRef, useMemo, useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2 } from "lucide-react"
+import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 import { confirmSessionSchedule } from "@/lib/api/mentoring/sessions"
+import RatingModal from "@/components/mentoring/session/RatingModal"
 
 type Props = {
     messages: Message[]
@@ -167,6 +168,79 @@ async function downloadFile(url: string, filename: string) {
     }
 }
 
+interface SessionClosedPayload {
+    sessionId: number
+    mentorId: number
+    mentorUsername: string
+    juniorId: number
+    juniorUsername: string
+}
+
+function parseSessionClosed(body: string): SessionClosedPayload | null {
+    try {
+        const data = JSON.parse(body)
+        if (data.sessionId && data.mentorId && data.juniorId) return data
+    } catch { /* not JSON */ }
+    return null
+}
+
+function SessionClosedCard({
+    payload,
+    userId,
+    createdAt,
+}: {
+    payload: SessionClosedPayload
+    userId?: string
+    createdAt: string
+}) {
+    const [showModal, setShowModal] = useState(false)
+    const [rated, setRated] = useState(false)
+
+    const isMe = userId === String(payload.mentorId)
+    const partnerUsername = isMe ? payload.juniorUsername : payload.mentorUsername
+
+    return (
+        <>
+            <div className="flex justify-center py-2">
+                <div className="w-full max-w-[320px] rounded-xl border border-border bg-card shadow-sm px-4 py-3 space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <span className="text-base" aria-hidden="true">✅</span>
+                        <span className="text-xs font-semibold">Session terminée</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Pensez à noter votre session avec{" "}
+                        <span className="font-medium text-foreground">{partnerUsername}</span>.
+                    </p>
+                    {rated ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <Star className="h-3.5 w-3.5 fill-current" />
+                            Note envoyée
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                            <Star className="h-3 w-3" />
+                            Noter
+                        </button>
+                    )}
+                    <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
+                </div>
+            </div>
+            {showModal && (
+                <RatingModal
+                    sessionId={payload.sessionId}
+                    partnerUsername={partnerUsername}
+                    onClose={() => setShowModal(false)}
+                    onSubmitted={() => { setRated(true); setShowModal(false) }}
+                />
+            )}
+        </>
+    )
+}
+
 export function MessageList({
     messages,
     userId,
@@ -289,8 +363,10 @@ export function MessageList({
                     const isImage = m.type === 'image'
                     const isFile = m.type === 'file'
                     const isSessionProposal = m.type === 'session_proposal'
+                    const isSessionClosed = m.type === 'session_closed'
                     const fileData = isFile ? parseFileBody(m.body) : null
                     const sessionProposalData = isSessionProposal ? parseSessionProposal(m.body) : null
+                    const sessionClosedData = isSessionClosed ? parseSessionClosed(m.body) : null
                     const isHighlighted = m.id === highlightedId
 
                     return (
@@ -315,7 +391,13 @@ export function MessageList({
                                 </div>
                             )}
 
-                            {isSessionProposal && sessionProposalData ? (
+                            {isSessionClosed && sessionClosedData ? (
+                                <SessionClosedCard
+                                    payload={sessionClosedData}
+                                    userId={userId}
+                                    createdAt={m.createdAt}
+                                />
+                            ) : isSessionProposal && sessionProposalData ? (
                                 <SessionProposalCard
                                     payload={sessionProposalData}
                                     isMe={isMe}
