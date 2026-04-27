@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { PenSquare, Newspaper, HandHelping } from 'lucide-react'
+import { PenSquare, Newspaper, HandHelping, BookOpen, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import PostForm from '@/components/post/postForm'
 import PostList from '@/components/post/PostList'
 import TechWatchFeedList from '@/components/techwatch/TechWatchFeedList'
 import SuggestionsSidebar from '@/components/suggestions/SuggestionsSidebar'
 import MyGroupsSidebar from '@/components/group/MyGroupsSidebar'
+import { getMentoringRequestsMine } from '@/lib/api/mentoring/requests'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -18,6 +20,13 @@ const tabs = [
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('publications')
   const scrollPositions = useRef<Record<string, number>>({})
+
+  const { data: myRequests } = useQuery({
+    queryKey: ['mentoringRequestsMine'],
+    queryFn: getMentoringRequestsMine,
+    retry: false,
+  })
+  const activeCount = myRequests?.filter(r => r.status === 'pending' || r.status === 'pinned').length ?? 0
 
   const handleTabChange = useCallback((newTab: string) => {
     scrollPositions.current[activeTab] = window.scrollY
@@ -96,6 +105,33 @@ export default function HomePage() {
                 className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
               >
                 Demander de l&apos;aide
+              </Link>
+            </div>
+
+            {/* Mes demandes de mentorat */}
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  Mes demandes
+                </div>
+                {activeCount > 0 && (
+                  <span className="text-xs font-medium bg-violet-500/10 text-violet-500 px-2 py-0.5 rounded-full">
+                    {activeCount} en cours
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                {activeCount > 0
+                  ? `Tu as ${activeCount} demande${activeCount > 1 ? 's' : ''} en attente d'un mentor.`
+                  : 'Retrouve l\'historique de toutes tes demandes de mentorat.'}
+              </p>
+              <Link
+                href="/mentoring/my-requests"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium border border-border hover:bg-muted transition-colors"
+              >
+                Voir mes demandes
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               </Link>
             </div>
           </div>

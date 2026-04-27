@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react"
-import { MessageCircle, GraduationCap } from "lucide-react"
+import { MessageCircle, GraduationCap, BookOpen } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
@@ -170,6 +170,13 @@ export default function Navbar() {
                                         </DropdownMenuItem>
                                     </>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/mentoring/my-requests" className="cursor-pointer flex items-center gap-2">
+                                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                        Mes demandes de mentorat
+                                    </Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={logout}>
                                     Déconnexion
