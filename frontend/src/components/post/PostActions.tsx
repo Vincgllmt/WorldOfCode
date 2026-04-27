@@ -199,9 +199,7 @@ export default function PostActions({
       {/* Compteurs likes + commentaires */}
       <div className=”mt-2 flex items-center gap-4 text-sm”>
         {likesCount > 0 && (
-          <span className=”font-medium”>
-            {likesCount} {likesCount === 1 ? `J’aime` : `J’aime`}
-          </span>
+          <span className=”font-medium”>{likesCount} J&apos;aime</span>
         )}
         {post.commentsCount > 0 && (
           <button
@@ -209,7 +207,7 @@ export default function PostActions({
             onClick={onCommentClick}
             className=”text-muted-foreground hover:text-foreground transition-colors”
           >
-            {post.commentsCount} commentaire{post.commentsCount > 1 ? ‘s’ : ‘’}
+            {post.commentsCount} commentaire{post.commentsCount > 1 ? “s” : “”}
           </button>
         )}
         {likesCount === 0 && post.commentsCount === 0 && (
