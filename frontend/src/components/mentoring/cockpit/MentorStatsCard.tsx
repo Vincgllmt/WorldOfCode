@@ -10,7 +10,7 @@ function Stars({ value }: { value: number }) {
         const filled = value >= i
         const half = !filled && value >= i - 0.5
         return (
-          <span key={i} className="relative inline-block leading-none text-base">
+          <span key={i} className="relative inline-block leading-none text-2xl">
             <span className="text-muted-foreground/30">★</span>
             {(filled || half) && (
               <span
