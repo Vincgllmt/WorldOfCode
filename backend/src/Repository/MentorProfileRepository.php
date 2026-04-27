@@ -36,11 +36,10 @@ class MentorProfileRepository extends ServiceEntityRepository
     public function searchMentors(string $query, int $limit = 10): array
     {
         $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.user', 'u')
-            ->where('p.isAvailable = true');
+            ->leftJoin('p.user', 'u');
 
         if ($query !== '') {
-            $qb->andWhere('u.username LIKE :q')
+            $qb->where('u.username LIKE :q')
                ->setParameter('q', '%' . $query . '%');
         }
 

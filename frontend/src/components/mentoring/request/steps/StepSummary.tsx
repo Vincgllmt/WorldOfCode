@@ -50,7 +50,7 @@ export default function StepSummary({ data, onChange, onPrev, onSubmit, submitti
     abortRef.current = new AbortController()
     try {
       const res = await fetchWithAuth(
-        `/api/users?isMentor=true&q=${encodeURIComponent(q)}`,
+        `/users?isMentor=true&q=${encodeURIComponent(q)}`,
         { signal: abortRef.current.signal }
       )
       if (res.ok) setMentorResults(await res.json() as MentorResult[])
