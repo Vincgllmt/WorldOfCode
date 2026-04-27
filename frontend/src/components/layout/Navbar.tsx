@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { getMyMentorProfile } from "@/lib/api/mentoring/profile"
+import { getMentoringRequestsMine } from "@/lib/api/mentoring/requests"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -81,6 +82,14 @@ export default function Navbar() {
         enabled: !!user,
         throwOnError: false,
     })
+
+    const { data: myRequests } = useQuery({
+        queryKey: ['mentoringRequestsMine'],
+        queryFn: getMentoringRequestsMine,
+        retry: false,
+        enabled: !!user,
+    })
+    const hasMentoringRequests = !!myRequests && myRequests.length > 0
 
     const navRef = useRef<HTMLElement>(null)
 
@@ -185,13 +194,17 @@ export default function Navbar() {
                                         </DropdownMenuItem>
                                     </>
                                 )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href="/mentoring/my-requests" className="cursor-pointer flex items-center gap-2">
-                                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                                        Mes demandes de mentorat
-                                    </Link>
-                                </DropdownMenuItem>
+                                {hasMentoringRequests && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/mentoring/my-requests" className="cursor-pointer flex items-center gap-2">
+                                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                                Mes demandes de mentorat
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuSub>
                                     <DropdownMenuSubTrigger className="flex items-center gap-2">
