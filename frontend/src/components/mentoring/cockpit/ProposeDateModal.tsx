@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { CalendarClock, X } from 'lucide-react'
+import { useState } from 'react'
+import { CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { socket } from '@/lib/socket'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -13,17 +13,24 @@ interface Props {
   onClose: () => void
 }
 
-// Génère les 7 prochains jours (aujourd'hui inclus)
-function getNextDays(count = 7): Date[] {
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    d.setDate(d.getDate() + i)
-    return d
-  })
+const DAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+const MONTHS_FR = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+]
+
+function getCalendarDays(year: number, month: number): (Date | null)[] {
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const startOffset = (firstDay.getDay() + 6) % 7 // lundi = 0
+  const days: (Date | null)[] = []
+  for (let i = 0; i < startOffset; i++) days.push(null)
+  for (let d = 1; d <= lastDay.getDate(); d++) days.push(new Date(year, month, d))
+  while (days.length % 7 !== 0) days.push(null)
+  return days
 }
 
-// Génère les créneaux de 08:00 à 20:00 toutes les 30 min
 function getTimeSlots(): string[] {
   const slots: string[] = []
   for (let h = 8; h <= 20; h++) {
@@ -31,13 +38,6 @@ function getTimeSlots(): string[] {
     if (h < 20) slots.push(`${String(h).padStart(2, '0')}:30`)
   }
   return slots
-}
-
-function formatDayChip(d: Date, isToday: boolean): { short: string; num: string } {
-  return {
-    short: isToday ? "Aujourd'hui" : new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(d),
-    num: isToday ? '' : new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(d),
-  }
 }
 
 function formatDateFr(date: Date, time: string): string {
@@ -60,7 +60,6 @@ function sendViaSocket(conversationId: string, body: string, type: string, user:
       type,
     })
   }
-
   if (socket.connected) {
     emit()
   } else {
@@ -74,14 +73,32 @@ const TIME_SLOTS = getTimeSlots()
 
 export default function ProposeDateModal({ conversationId, sessionId, juniorUsername, onClose }: Props) {
   const { user } = useAuth()
-  const days = useMemo(() => getNextDays(7), [])
 
+  const now = new Date()
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  const [viewYear, setViewYear] = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
 
   const canSend = !!selectedDay && !!selectedTime && !sending
+
+  const calendarDays = getCalendarDays(viewYear, viewMonth)
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+
+  // Empêche de naviguer avant le mois courant
+  const canGoPrev = viewYear > now.getFullYear() || (viewYear === now.getFullYear() && viewMonth > now.getMonth())
 
   const handleSend = () => {
     if (!canSend || !user) return
@@ -103,8 +120,6 @@ export default function ProposeDateModal({ conversationId, sessionId, juniorUser
     onClose()
   }
 
-  const today = days[0]
-
   return (
     <div
       className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
@@ -125,33 +140,70 @@ export default function ProposeDateModal({ conversationId, sessionId, juniorUser
           </button>
         </div>
 
-        <div className="px-5 pb-5 space-y-5">
+        <div className="px-5 pb-5 space-y-4">
           <p className="text-sm text-muted-foreground">
             Envoyé à <span className="font-medium text-foreground">{juniorUsername}</span> dans votre conversation.
           </p>
 
-          {/* Sélection du jour */}
-          <div>
-            <p className="text-sm font-medium mb-2">Jour</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {days.map((d, i) => {
-                const isToday = i === 0
-                const chip = formatDayChip(d, isToday)
+          {/* Calendrier */}
+          <div className="border border-border rounded-xl p-3">
+            {/* Navigation mois */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={prevMonth}
+                disabled={!canGoPrev}
+                className="p-1 rounded-lg hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Mois précédent"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-semibold">
+                {MONTHS_FR[viewMonth]} {viewYear}
+              </span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="p-1 rounded-lg hover:bg-muted transition-colors"
+                aria-label="Mois suivant"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* En-têtes jours */}
+            <div className="grid grid-cols-7 mb-1">
+              {DAYS_SHORT.map((d, i) => (
+                <div key={i} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Grille de jours */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+              {calendarDays.map((d, i) => {
+                if (!d) return <div key={i} />
+
+                const isPast = d < todayMidnight
+                const isToday = d.toDateString() === todayMidnight.toDateString()
                 const isSelected = selectedDay?.toDateString() === d.toDateString()
+
                 return (
                   <button
-                    key={d.toISOString()}
+                    key={i}
                     type="button"
+                    disabled={isPast}
                     onClick={() => setSelectedDay(d)}
                     className={cn(
-                      'flex flex-col items-center shrink-0 px-3 py-2 rounded-xl text-xs border transition-colors min-w-[56px]',
-                      isSelected
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      'h-8 w-full rounded-lg text-xs font-medium transition-colors',
+                      isPast && 'text-muted-foreground/40 cursor-not-allowed',
+                      !isPast && !isSelected && 'hover:bg-muted',
+                      isToday && !isSelected && 'border border-primary/40 text-primary',
+                      isSelected && 'bg-primary text-primary-foreground',
                     )}
                   >
-                    <span className="font-medium capitalize">{chip.short}</span>
-                    {chip.num && <span className="opacity-80 mt-0.5">{chip.num}</span>}
+                    {d.getDate()}
                   </button>
                 )
               })}
@@ -188,7 +240,6 @@ export default function ProposeDateModal({ conversationId, sessionId, juniorUser
               <p className="text-sm text-center font-medium text-primary bg-primary/5 rounded-lg py-2 px-3">
                 {formatDateFr(selectedDay, selectedTime)}
               </p>
-
               <div>
                 <label htmlFor="propose-note" className="block text-sm font-medium mb-1">
                   Message complémentaire <span className="text-muted-foreground font-normal">(optionnel)</span>
