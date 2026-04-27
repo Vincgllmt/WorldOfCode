@@ -9,7 +9,7 @@ import StepBehavior from './steps/StepBehavior'
 import StepSummary from './steps/StepSummary'
 
 interface FormData {
-  techStack: string
+  techStack: string[]
   blockedSince: string
   alreadyTried: string
   expectedBehavior: string
@@ -22,7 +22,7 @@ interface FormData {
 }
 
 const INITIAL_DATA: FormData = {
-  techStack: '', blockedSince: '', alreadyTried: '',
+  techStack: [], blockedSince: '', alreadyTried: '',
   expectedBehavior: '', observedBehavior: '',
   title: '', description: '', type: 'debug', isPublic: true,
 }
@@ -47,7 +47,7 @@ export default function RequestFormWizard({ onSuccess }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      await createMentoringRequest(data)
+      await createMentoringRequest({ ...data, techStack: data.techStack.join(', ') })
       onSuccess()
     } catch {
       setError('Une erreur est survenue. Veuillez réessayer.')
