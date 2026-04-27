@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react"
-import { MessageCircle, GraduationCap, BookOpen } from "lucide-react"
+import { MessageCircle, GraduationCap, BookOpen, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
@@ -155,8 +155,9 @@ export default function Navbar() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href="/profile" className="cursor-pointer font-medium">
-                                        {user.username}
+                                    <Link href="/profile" className="cursor-pointer flex items-center gap-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span className="font-medium">{user.username}</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 {mentorProfile && (
@@ -178,7 +179,8 @@ export default function Navbar() {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={logout}>
+                                <DropdownMenuItem onClick={logout} className="flex items-center gap-2 text-destructive focus:text-destructive">
+                                    <LogOut className="h-4 w-4" />
                                     Déconnexion
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
