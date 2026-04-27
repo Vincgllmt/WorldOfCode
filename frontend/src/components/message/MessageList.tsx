@@ -6,7 +6,7 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
 import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
-import { confirmSessionSchedule } from "@/lib/api/mentoring/sessions"
+import { confirmSessionSchedule, getSession } from "@/lib/api/mentoring/sessions"
 import RatingModal from "@/components/mentoring/session/RatingModal"
 
 type Props = {
@@ -93,6 +93,13 @@ function SessionProposalCard({
 }) {
     const [accepted, setAccepted] = useState(false)
     const [loading, setLoading] = useState(false)
+
+    // Initialise l'état depuis la base au montage
+    useEffect(() => {
+        getSession(payload.sessionId)
+            .then(s => { if (s.scheduledAt) setAccepted(true) })
+            .catch(() => { /* session inaccessible, on laisse le bouton */ })
+    }, [payload.sessionId])
 
     const handleAccept = async () => {
         setLoading(true)

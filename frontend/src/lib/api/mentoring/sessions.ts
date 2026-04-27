@@ -13,6 +13,12 @@ export async function getJuniorSessions(): Promise<MentoringSession[]> {
   return res.json()
 }
 
+export async function getSession(id: number): Promise<MentoringSession> {
+  const res = await fetchWithAuth(`/mentoring/sessions/${id}`)
+  if (!res.ok) throw new Error('Session introuvable')
+  return res.json()
+}
+
 export async function startSession(id: number): Promise<MentoringSession> {
   const res = await fetchWithAuth(`/mentoring/sessions/${id}/start`, { method: 'PATCH' })
   if (!res.ok) throw new Error('Erreur démarrage session')
