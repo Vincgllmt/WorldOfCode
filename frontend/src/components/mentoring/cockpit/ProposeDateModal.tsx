@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   conversationId: string
+  sessionId: number
   juniorUsername: string
   onClose: () => void
 }
@@ -49,14 +50,14 @@ function formatDateFr(date: Date, time: string): string {
   }).format(d)
 }
 
-function sendViaSocket(conversationId: string, body: string, user: { token: string; id: number | string }) {
+function sendViaSocket(conversationId: string, body: string, type: string, user: { token: string; id: number | string }) {
   const emit = () => {
     socket.emit('join_conversation', { conversation_id: conversationId })
     socket.emit('send_message', {
       conversation_id: conversationId,
       temp_id: Date.now().toString(),
       body,
-      type: 'text',
+      type,
     })
   }
 
@@ -71,7 +72,7 @@ function sendViaSocket(conversationId: string, body: string, user: { token: stri
 
 const TIME_SLOTS = getTimeSlots()
 
-export default function ProposeDateModal({ conversationId, juniorUsername, onClose }: Props) {
+export default function ProposeDateModal({ conversationId, sessionId, juniorUsername, onClose }: Props) {
   const { user } = useAuth()
   const days = useMemo(() => getNextDays(7), [])
 
@@ -86,12 +87,19 @@ export default function ProposeDateModal({ conversationId, juniorUsername, onClo
     if (!canSend || !user) return
     setSending(true)
 
-    const formatted = formatDateFr(selectedDay!, selectedTime!)
-    const body = note.trim()
-      ? `📅 Proposition de session\nJe vous propose le ${formatted}.\n${note.trim()}`
-      : `📅 Proposition de session\nJe vous propose le ${formatted}.\nMerci de confirmer votre disponibilité.`
+    const [h, m] = selectedTime!.split(':').map(Number)
+    const proposedDate = new Date(selectedDay!)
+    proposedDate.setHours(h, m, 0, 0)
+    const display = formatDateFr(selectedDay!, selectedTime!)
 
-    sendViaSocket(conversationId, body, { token: user.token as string, id: user.id })
+    const body = JSON.stringify({
+      sessionId,
+      proposedAt: proposedDate.toISOString(),
+      display,
+      note: note.trim() || null,
+    })
+
+    sendViaSocket(conversationId, body, 'session_proposal', { token: user.token as string, id: user.id })
     onClose()
   }
 

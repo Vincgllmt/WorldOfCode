@@ -24,3 +24,12 @@ export async function completeSession(id: number): Promise<MentoringSession> {
   if (!res.ok) throw new Error('Erreur clôture session')
   return res.json()
 }
+
+export async function confirmSessionSchedule(id: number, scheduledAt: string): Promise<MentoringSession> {
+  const res = await fetchWithAuth(`/mentoring/sessions/${id}/schedule`, {
+    method: 'PATCH',
+    body: JSON.stringify({ scheduledAt }),
+  })
+  if (!res.ok) throw new Error('Erreur confirmation de date')
+  return res.json()
+}

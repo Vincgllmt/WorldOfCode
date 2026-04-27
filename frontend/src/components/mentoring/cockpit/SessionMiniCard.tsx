@@ -94,6 +94,7 @@ export default function SessionMiniCard({ session, onStart, onComplete }: Props)
       {showProposeDateModal && session.conversationId && (
         <ProposeDateModal
           conversationId={session.conversationId}
+          sessionId={session.id}
           juniorUsername={session.junior.username}
           onClose={() => setShowProposeDateModal(false)}
         />

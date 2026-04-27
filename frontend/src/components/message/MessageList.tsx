@@ -1,9 +1,12 @@
+'use client'
+
 import { useEffect, useRef, useMemo, useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone, PhoneMissed, X, Download, FileArchive } from "lucide-react"
+import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2 } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
+import { confirmSessionSchedule } from "@/lib/api/mentoring/sessions"
 
 type Props = {
     messages: Message[]
@@ -61,6 +64,86 @@ function parseFileBody(body: string): { url: string; name: string; size: number 
         if (data.url && data.name) return data
     } catch { /* not JSON, fallback */ }
     return null
+}
+
+interface SessionProposalPayload {
+    sessionId: number
+    proposedAt: string
+    display: string
+    note: string | null
+}
+
+function parseSessionProposal(body: string): SessionProposalPayload | null {
+    try {
+        const data = JSON.parse(body)
+        if (data.sessionId && data.proposedAt && data.display) return data
+    } catch { /* not JSON */ }
+    return null
+}
+
+function SessionProposalCard({
+    payload,
+    isMe,
+    createdAt,
+}: {
+    payload: SessionProposalPayload
+    isMe: boolean
+    createdAt: string
+}) {
+    const [accepted, setAccepted] = useState(false)
+    const [loading, setLoading] = useState(false)
+
+    const handleAccept = async () => {
+        setLoading(true)
+        try {
+            await confirmSessionSchedule(payload.sessionId, payload.proposedAt)
+            setAccepted(true)
+        } catch {
+            // silently ignore, button stays available
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="flex justify-center py-2">
+            <div className="w-full max-w-[320px] rounded-xl border border-border bg-card shadow-sm px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2 text-primary">
+                    <CalendarCheck className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-semibold">
+                        {isMe ? "Proposition de session envoyée" : "Proposition de session"}
+                    </span>
+                </div>
+                <p className="text-sm font-medium text-foreground">{payload.display}</p>
+                {payload.note && (
+                    <p className="text-xs text-muted-foreground">{payload.note}</p>
+                )}
+                {!isMe && (
+                    accepted ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CalendarCheck className="h-3.5 w-3.5" />
+                            Confirmé
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleAccept}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                        >
+                            {loading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <CalendarCheck className="h-3 w-3" />
+                            )}
+                            Accepter
+                        </button>
+                    )
+                )}
+                <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
+            </div>
+        </div>
+    )
 }
 
 function formatFileSize(bytes: number): string {
@@ -205,7 +288,9 @@ export function MessageList({
                     const isMissedCall = m.type === 'missed_call'
                     const isImage = m.type === 'image'
                     const isFile = m.type === 'file'
+                    const isSessionProposal = m.type === 'session_proposal'
                     const fileData = isFile ? parseFileBody(m.body) : null
+                    const sessionProposalData = isSessionProposal ? parseSessionProposal(m.body) : null
                     const isHighlighted = m.id === highlightedId
 
                     return (
@@ -230,7 +315,13 @@ export function MessageList({
                                 </div>
                             )}
 
-                            {isCallMessage ? (
+                            {isSessionProposal && sessionProposalData ? (
+                                <SessionProposalCard
+                                    payload={sessionProposalData}
+                                    isMe={isMe}
+                                    createdAt={m.createdAt}
+                                />
+                            ) : isCallMessage ? (
                                 <div className="flex justify-center pt-2 pb-1">
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${
                                         isMissedCall

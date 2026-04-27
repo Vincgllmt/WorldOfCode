@@ -11,6 +11,7 @@ use App\Service\Mentoring\MentoringSessionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use OpenApi\Attributes as OA;
 
@@ -141,6 +142,42 @@ class MentoringSessionController extends AbstractController
         }
 
         $this->sessionService->complete($session);
+        return $this->json($this->serializeSession($session));
+    }
+
+    #[Route('/api/mentoring/sessions/{id}/schedule', name: 'session_schedule', methods: ['PATCH'])]
+    #[OA\Patch(summary: 'Confirmer une proposition de date (junior)', responses: [
+        new OA\Response(response: 200, description: 'Date confirmée'),
+        new OA\Response(response: 403, description: 'Accès non autorisé'),
+        new OA\Response(response: 404, description: 'Session non trouvée'),
+        new OA\Response(response: 422, description: 'Date invalide'),
+    ])]
+    public function scheduleSession(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $user */
+        $user = $this->getUser();
+        $session = $this->sessionRepo->find($id);
+        if (!$session) {
+            return $this->json(['error' => 'Session non trouvée.'], 404);
+        }
+        if ($session->getJunior() !== $user) {
+            return $this->json(['error' => 'Seul le junior peut confirmer une date.'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (empty($data['scheduledAt'])) {
+            return $this->json(['error' => 'La date est requise.'], 422);
+        }
+        try {
+            $scheduledAt = new \DateTime($data['scheduledAt']);
+        } catch (\Exception) {
+            return $this->json(['error' => 'Format de date invalide.'], 422);
+        }
+
+        $session->setScheduledAt($scheduledAt);
+        $this->em->flush();
+
         return $this->json($this->serializeSession($session));
     }
 
