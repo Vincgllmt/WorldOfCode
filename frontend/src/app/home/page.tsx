@@ -108,8 +108,8 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Mes demandes de mentorat */}
-            <div className="rounded-2xl border border-border/60 bg-card p-4">
+            {/* Mes demandes de mentorat — affiché seulement si au moins une demande existe */}
+            {myRequests && myRequests.length > 0 && <div className="rounded-2xl border border-border/60 bg-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -133,7 +133,7 @@ export default function HomePage() {
                 Voir mes demandes
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               </Link>
-            </div>
+            </div>}
           </div>
         </aside>
 
