@@ -88,6 +88,8 @@ class MentoringRequestController extends AbstractController
         $mentoringRequest->setAlreadyTried($data['alreadyTried'] ?? null);
         $mentoringRequest->setExpectedBehavior($data['expectedBehavior'] ?? null);
         $mentoringRequest->setObservedBehavior($data['observedBehavior'] ?? null);
+        $mentoringRequest->setCodeSnippet($data['codeSnippet'] ?? null);
+        $mentoringRequest->setCodeLanguage($data['codeLanguage'] ?? null);
         $mentoringRequest->setIsPublic((bool) ($data['isPublic'] ?? true));
 
         if (!empty($data['targetMentorId'])) {
@@ -185,6 +187,8 @@ class MentoringRequestController extends AbstractController
         if (array_key_exists('alreadyTried', $data)) $mentoringRequest->setAlreadyTried($data['alreadyTried']);
         if (array_key_exists('expectedBehavior', $data)) $mentoringRequest->setExpectedBehavior($data['expectedBehavior']);
         if (array_key_exists('observedBehavior', $data)) $mentoringRequest->setObservedBehavior($data['observedBehavior']);
+        if (array_key_exists('codeSnippet', $data)) $mentoringRequest->setCodeSnippet($data['codeSnippet']);
+        if (array_key_exists('codeLanguage', $data)) $mentoringRequest->setCodeLanguage($data['codeLanguage']);
 
         $this->em->flush();
         return $this->json($this->serialize($mentoringRequest));
@@ -271,6 +275,8 @@ class MentoringRequestController extends AbstractController
             'alreadyTried'       => $r->getAlreadyTried(),
             'expectedBehavior'   => $r->getExpectedBehavior(),
             'observedBehavior'   => $r->getObservedBehavior(),
+            'codeSnippet'        => $r->getCodeSnippet(),
+            'codeLanguage'       => $r->getCodeLanguage(),
             'isPublic'           => $r->isPublic(),
             'compatibilityScore' => $r->getCompatibilityScore(),
             'targetMentorId'     => $r->getTargetMentor()?->getId(),

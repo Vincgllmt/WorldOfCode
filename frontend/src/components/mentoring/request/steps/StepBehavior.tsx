@@ -1,21 +1,41 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronDown, ChevronUp, Code2 } from 'lucide-react'
+
+const LANGUAGES = [
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'php', label: 'PHP' },
+  { value: 'java', label: 'Java' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'bash', label: 'Bash / Shell' },
+  { value: 'json', label: 'JSON' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'other', label: 'Autre' },
+]
 
 interface Props {
   expected: string
   observed: string
+  codeSnippet: string
+  codeLanguage: string
   onChangeExpected: (v: string) => void
   onChangeObserved: (v: string) => void
+  onChangeCodeSnippet: (v: string) => void
+  onChangeCodeLanguage: (v: string) => void
   onNext: () => void
   onPrev: () => void
 }
 
 export default function StepBehavior({
-  expected, observed,
-  onChangeExpected, onChangeObserved,
+  expected, observed, codeSnippet, codeLanguage,
+  onChangeExpected, onChangeObserved, onChangeCodeSnippet, onChangeCodeLanguage,
   onNext, onPrev,
 }: Props) {
+  const [showCode, setShowCode] = useState(!!codeSnippet)
   const [error, setError] = useState<string | null>(null)
 
   const handleNext = () => {
@@ -25,6 +45,13 @@ export default function StepBehavior({
     }
     setError(null)
     onNext()
+  }
+
+  const handleToggleCode = () => {
+    if (showCode && codeSnippet) {
+      onChangeCodeSnippet('')
+    }
+    setShowCode(v => !v)
   }
 
   return (
@@ -64,6 +91,51 @@ export default function StepBehavior({
             className="w-full rounded-md border border-border bg-background px-3 py-2 resize-none"
           />
         </div>
+      </div>
+
+      {/* Section code optionnelle */}
+      <div className="rounded-lg border border-border overflow-hidden">
+        <button
+          type="button"
+          onClick={handleToggleCode}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Code2 className="h-4 w-4 text-muted-foreground" />
+            Partager un extrait de code
+            <span className="text-xs text-muted-foreground font-normal">(optionnel)</span>
+          </span>
+          {showCode ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {showCode && (
+          <div className="border-t border-border">
+            {/* Sélecteur de langage */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-muted/30 border-b border-border">
+              <label htmlFor="code-lang" className="text-xs text-muted-foreground shrink-0">Langage :</label>
+              <select
+                id="code-lang"
+                value={codeLanguage}
+                onChange={e => onChangeCodeLanguage(e.target.value)}
+                className="text-xs bg-transparent border-none outline-none cursor-pointer"
+              >
+                {LANGUAGES.map(l => (
+                  <option key={l.value} value={l.value}>{l.label}</option>
+                ))}
+              </select>
+            </div>
+            {/* Éditeur monospace */}
+            <textarea
+              value={codeSnippet}
+              onChange={e => onChangeCodeSnippet(e.target.value)}
+              placeholder={`// Collez votre code ici...`}
+              rows={8}
+              spellCheck={false}
+              className="w-full bg-[#1e1e1e] text-[#d4d4d4] font-mono text-sm px-4 py-3 resize-y outline-none"
+              aria-label="Extrait de code"
+            />
+          </div>
+        )}
       </div>
 
       {error && (

@@ -42,6 +42,8 @@ export interface MentoringRequest {
   alreadyTried: string | null
   expectedBehavior: string | null
   observedBehavior: string | null
+  codeSnippet: string | null
+  codeLanguage: string | null
   descriptionExcerpt?: string
   isPublic: boolean
   compatibilityScore: number

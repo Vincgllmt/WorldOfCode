@@ -14,6 +14,8 @@ interface FormData {
   alreadyTried: string
   expectedBehavior: string
   observedBehavior: string
+  codeSnippet: string
+  codeLanguage: string
   title: string
   description: string
   type: string
@@ -24,6 +26,7 @@ interface FormData {
 const INITIAL_DATA: FormData = {
   techStack: [], blockedSince: '', alreadyTried: '',
   expectedBehavior: '', observedBehavior: '',
+  codeSnippet: '', codeLanguage: 'typescript',
   title: '', description: '', type: 'debug', isPublic: true,
 }
 
@@ -47,7 +50,12 @@ export default function RequestFormWizard({ onSuccess }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      await createMentoringRequest({ ...data, techStack: data.techStack.join(', ') })
+      await createMentoringRequest({
+        ...data,
+        techStack: data.techStack.join(', '),
+        codeSnippet: data.codeSnippet.trim() || undefined,
+        codeLanguage: data.codeSnippet.trim() ? data.codeLanguage : undefined,
+      })
       onSuccess()
     } catch {
       setError('Une erreur est survenue. Veuillez réessayer.')
@@ -101,8 +109,12 @@ export default function RequestFormWizard({ onSuccess }: Props) {
         <StepBehavior
           expected={data.expectedBehavior}
           observed={data.observedBehavior}
+          codeSnippet={data.codeSnippet}
+          codeLanguage={data.codeLanguage}
           onChangeExpected={v => update({ expectedBehavior: v })}
           onChangeObserved={v => update({ observedBehavior: v })}
+          onChangeCodeSnippet={v => update({ codeSnippet: v })}
+          onChangeCodeLanguage={v => update({ codeLanguage: v })}
           onNext={next}
           onPrev={prev}
         />

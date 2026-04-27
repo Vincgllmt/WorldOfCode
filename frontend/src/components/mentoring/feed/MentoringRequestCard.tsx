@@ -102,6 +102,11 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
               Ma spécialité
             </span>
           )}
+          {request.codeSnippet && (
+            <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground font-mono">
+              {'</>'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>

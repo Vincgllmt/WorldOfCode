@@ -48,6 +48,12 @@ class MentoringRequest
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $observedBehavior = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $codeSnippet = null;
+
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $codeLanguage = null;
+
     #[ORM\Column(type: 'text')]
     private string $description;
 
@@ -193,6 +199,28 @@ class MentoringRequest
     public function setObservedBehavior(?string $observedBehavior): self
     {
         $this->observedBehavior = $observedBehavior;
+        return $this;
+    }
+
+    public function getCodeSnippet(): ?string
+    {
+        return $this->codeSnippet;
+    }
+
+    public function setCodeSnippet(?string $codeSnippet): self
+    {
+        $this->codeSnippet = $codeSnippet;
+        return $this;
+    }
+
+    public function getCodeLanguage(): ?string
+    {
+        return $this->codeLanguage;
+    }
+
+    public function setCodeLanguage(?string $codeLanguage): self
+    {
+        $this->codeLanguage = $codeLanguage;
         return $this;
     }
 

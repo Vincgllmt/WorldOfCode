@@ -100,6 +100,21 @@ export default function MentorRightPanel({ request }: Props) {
             <p className="text-sm">{detail.observedBehavior}</p>
           </div>
         )}
+        {request.codeSnippet && (
+          <div className="mt-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">
+              Extrait de code
+              {request.codeLanguage && (
+                <span className="ml-1.5 font-mono bg-muted px-1.5 py-0.5 rounded text-[10px]">
+                  {request.codeLanguage}
+                </span>
+              )}
+            </p>
+            <pre className="text-xs font-mono bg-[#1e1e1e] text-[#d4d4d4] rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-48">
+              {request.codeSnippet}
+            </pre>
+          </div>
+        )}
       </div>
 
       {/* Sessions précédentes — skeleton pendant chargement */}
