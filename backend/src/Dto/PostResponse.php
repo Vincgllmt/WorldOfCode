@@ -100,4 +100,11 @@ class PostResponse
         example: 3
     )]
     public int $sharedCount = 0;
+
+    #[OA\Property(
+        description: "Nombre de commentaires sur ce post",
+        type: "integer",
+        example: 4
+    )]
+    public int $commentsCount = 0;
 }

@@ -29,6 +29,7 @@ class PostMapper
         }
 
         $dto->sharedCount = $post->getSharedPosts()->count();
+        $dto->commentsCount = $post->getComments()->count();
 
         return $dto;
     }
