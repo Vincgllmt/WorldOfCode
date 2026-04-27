@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useMemo, useCallback, useState } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
@@ -236,13 +237,14 @@ function SessionClosedCard({
                     <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
                 </div>
             </div>
-            {showModal && (
+            {showModal && createPortal(
                 <RatingModal
                     sessionId={payload.sessionId}
                     partnerUsername={partnerUsername}
                     onClose={() => setShowModal(false)}
                     onSubmitted={() => { setRated(true); setShowModal(false) }}
-                />
+                />,
+                document.body
             )}
         </>
     )
