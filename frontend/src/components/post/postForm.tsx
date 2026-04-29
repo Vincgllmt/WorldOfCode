@@ -9,7 +9,6 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 // 1. Importez dynamic de Next.js
 import dynamic from 'next/dynamic' 
@@ -120,7 +119,7 @@ export default function PostForm({
               key={selectKey}
               value={groupIdValue ? String(groupIdValue) : undefined}
               onValueChange={(value) =>
-                setGroupId(Number(value))
+                setGroupId(value === 'none' ? undefined : Number(value))
               }
               disabled={loadingGroups || isPending}
             >
@@ -133,11 +132,14 @@ export default function PostForm({
                     Chargement...
                   </p>
                 ) : (
-                  groups?.map((group) => (
-                    <SelectItem key={group.id} value={String(group.id)}>
-                      {group.name}
-                    </SelectItem>
-                  ))
+                  <>
+                    <SelectItem value="none">Sans groupe</SelectItem>
+                    {groups?.map((group) => (
+                      <SelectItem key={group.id} value={String(group.id)}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </>
                 )}
               </SelectContent>
             </Select>

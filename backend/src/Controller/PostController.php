@@ -154,13 +154,16 @@ class PostController extends AbstractController
             }
         }
 
-        if ($content === null || trim((string) $content) === '' || !$groupId) {
-            return $this->json(['error' => 'Missing content or groupId'], 400);
+        if ($content === null || trim((string) $content) === '') {
+            return $this->json(['error' => 'Missing content'], 400);
         }
 
-        $group = $this->groupRepo->find($groupId);
-        if (!$group) {
-            return $this->json(['error' => 'Group not found'], 404);
+        $group = null;
+        if ($groupId) {
+            $group = $this->groupRepo->find($groupId);
+            if (!$group) {
+                return $this->json(['error' => 'Group not found'], 404);
+            }
         }
 
         $post = new Post();

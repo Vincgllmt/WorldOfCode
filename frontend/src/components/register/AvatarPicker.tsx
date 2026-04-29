@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Upload } from 'lucide-react'
+import { ALLOWED_AVATAR_TYPES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
@@ -36,13 +37,12 @@ export default function AvatarPicker({ value, onChange, username = '' }: AvatarP
         const file = e.target.files?.[0]
         if (!file) return
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-        if (!allowedTypes.includes(file.type)) {
-            setUploadError('Format non supporté. Utilisez JPG, PNG, WEBP ou GIF.')
+        if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+            setUploadError('Format non supporté. Utilisez JPG, PNG, WEBP, GIF ou SVG.')
             return
         }
-        if (file.size > 5 * 1024 * 1024) {
-            setUploadError('Image trop lourde (max 5 Mo).')
+        if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+            setUploadError(`Image trop lourde (max ${MAX_IMAGE_SIZE_MB} Mo).`)
             return
         }
 
@@ -55,11 +55,14 @@ export default function AvatarPicker({ value, onChange, username = '' }: AvatarP
                 method: 'POST',
                 body: formData,
             })
-            if (!res.ok) throw new Error('Erreur lors de l\'upload')
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}))
+                throw new Error(body?.error ?? "Impossible d'uploader l'image.")
+            }
             const data = await res.json()
             onChange(data.url)
-        } catch {
-            setUploadError('Impossible d\'uploader l\'image.')
+        } catch (err) {
+            setUploadError(err instanceof Error ? err.message : "Impossible d'uploader l'image.")
         } finally {
             setUploading(false)
             // reset input so the same file can be re-selected
@@ -122,7 +125,7 @@ export default function AvatarPicker({ value, onChange, username = '' }: AvatarP
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept={[...ALLOWED_AVATAR_TYPES, '.svg'].join(',')}
                     className="hidden"
                     onChange={handleFileChange}
                 />

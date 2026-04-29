@@ -5,23 +5,41 @@ import type { IAllProps as TinyMCEEditorProps } from '@tinymce/tinymce-react'
 import type { Editor as TinyMCEEditor } from 'tinymce'
 import toast from 'react-hot-toast'
 import { uploadImage } from '@/services/uploadService'
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
 
 type EditorInit = NonNullable<TinyMCEEditorProps['init']>
 type UploadHandler = NonNullable<EditorInit['images_upload_handler']>
 type EditorChangeHandler = NonNullable<TinyMCEEditorProps['onEditorChange']>
 
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  png: 'image/png', gif: 'image/gif',
+  webp: 'image/webp',
+}
+
 export const useRichTextEditor = (onChange: (value: string) => void) => {
   const handleImageUpload: UploadHandler = useCallback(async (blobInfo) => {
+    const blob = blobInfo.blob()
+    const fileName = typeof blobInfo.filename === 'function' ? blobInfo.filename() : 'upload'
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
+    const mimeType = blob.type || EXT_TO_MIME[ext] || ''
+    const file = new File([blob], fileName, { type: mimeType })
+
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+      throw new Error('Format non support\u00e9')
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`L'image ne doit pas d\u00e9passer ${MAX_IMAGE_SIZE_MB} Mo.`)
+    }
+
     try {
-      const blob = blobInfo.blob()
-      const fileName = typeof blobInfo.filename === 'function' ? blobInfo.filename() : 'upload'
-      const file = new File([blob], fileName, { type: blob.type })
       const { url } = await uploadImage(file)
       return url
     } catch (error) {
-      console.error('Erreur lors du téléversement de l’image', error)
-      toast.error("Impossible de téléverser l'image")
-      throw error instanceof Error ? error : new Error("Échec du téléversement")
+      console.error("Erreur lors du t\u00e9l\u00e9versement de l'image", error)
+      toast.error("Impossible de t\u00e9l\u00e9verser l'image")
+      throw error instanceof Error ? error : new Error("\u00c9chec du t\u00e9l\u00e9versement")
     }
   }, [])
 
@@ -39,7 +57,7 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
       plugins: 'advlist autolink autoresize codesample link image lists',
       toolbar: 'undo redo | bold italic | bullist numlist | link image codesample',
       toolbar_mode: 'sliding',
-      placeholder: 'Partage ton idée… Tu peux ajouter du code, une image ou un lien.',
+      placeholder: 'Partage ton id\u00e9e\u2026 Tu peux ajouter du code, une image ou un lien.',
       branding: false,
       content_style:
         'body { font-family: var(--font-geist-sans, system-ui); font-size: 14px; line-height: 1.6; } pre, code { font-family: var(--font-geist-mono, ui-monospace); } img { max-width: 100%; height: auto; }',
@@ -66,10 +84,9 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
           }
         })
 
-        // Thème dynamique pour le contenu de l'iframe (dark, cyberpunk-dark, etc.)
         editor.on('init', () => {
           const themeMap: Record<string, { bg: string; fg: string }> = {
-            dark:            { bg: '#1f2937', fg: '#f9fafb' },
+            dark: { bg: '#1f2937', fg: '#f9fafb' },
             'cyberpunk-dark': { bg: '#12121c', fg: '#e0f2fe' },
             'cyberpunk-light': { bg: '#f0f9ff', fg: '#0c1222' },
           }

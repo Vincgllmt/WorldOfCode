@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Config\UploadConfig;
 use App\Service\Storage\S3Storage;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,12 +44,19 @@ class UploadController extends AbstractController
     )]
     public function upload(Request $request, S3Storage $s3): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
         $file = $request->files->get('file');
 
         if (!$file) {
             return $this->json(['error' => 'Aucun fichier envoyé'], 400);
+        }
+
+        if (!in_array($file->getMimeType(), UploadConfig::ALLOWED_MIME_TYPES, true)) {
+            $allowed = UploadConfig::allowedFormatsLabel();
+            return $this->json(['error' => "Format non supporté. Utilisez $allowed."], 415);
+        }
+
+        if ($file->getSize() > UploadConfig::MAX_SIZE_BYTES) {
+            return $this->json(['error' => "L'image ne doit pas dépasser " . UploadConfig::MAX_SIZE_MB . " Mo."], 413);
         }
 
         $key = time() . '-' . $file->getClientOriginalName();
