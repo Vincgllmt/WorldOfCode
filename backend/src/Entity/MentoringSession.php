@@ -26,7 +26,7 @@ class MentoringSession
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $junior;
 
-    #[ORM\OneToOne(targetEntity: MentoringRequest::class)]
+    #[ORM\ManyToOne(targetEntity: MentoringRequest::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?MentoringRequest $request = null;
 
@@ -51,6 +51,10 @@ class MentoringSession
     #[ORM\OneToMany(targetEntity: MentoringRating::class, mappedBy: 'session')]
     private Collection $ratings;
 
+    #[ORM\OneToMany(targetEntity: SessionAppointment::class, mappedBy: 'session', cascade: ['persist', 'remove'])]
+    #[ORM\OrderBy(['scheduledAt' => 'ASC'])]
+    private Collection $appointments;
+
     #[ORM\Column(name: 'created_at', type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -60,6 +64,7 @@ class MentoringSession
     public function __construct()
     {
         $this->ratings = new ArrayCollection();
+        $this->appointments = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -181,6 +186,11 @@ class MentoringSession
     public function getRatings(): Collection
     {
         return $this->ratings;
+    }
+
+    public function getAppointments(): Collection
+    {
+        return $this->appointments;
     }
 
     public function getCreatedAt(): \DateTime
