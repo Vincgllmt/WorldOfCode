@@ -149,6 +149,7 @@ export default function PostItem({ post, defaultShowComments = false }: PostItem
             authorUsername={author.username}
             authorAvatarUrl={post.authorAvatarUrl ?? null}
             isAuthorFollowedByMe={post.isAuthorFollowedByMe}
+            createdAt={post.createdAt}
             className="mb-1"
           />
           {/* Badge du groupe sous le header */}

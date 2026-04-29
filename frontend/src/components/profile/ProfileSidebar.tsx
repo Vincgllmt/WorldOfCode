@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import FollowToggleButton from '@/components/follow/FollowToggleButton'
-import UserSettingsModal from '@/components/profile/UserSettingsModal'
+import { useSettingsModal } from '@/contexts/SettingsModalContext'
 import UserFollowCounts from '@/components/account/UserFollowCounts'
 import AvailabilityBadge from '@/components/profile/AvailabilityBadge'
 import ProfileLinksSection from '@/components/profile/ProfileLinksSection'
@@ -49,7 +49,7 @@ export default function ProfileSidebar({
   groupsLoading,
   groupsError,
 }: ProfileSidebarProps) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const { openSettings } = useSettingsModal()
   const [editLinksOpen, setEditLinksOpen] = useState(false)
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false)
   const [pickerAvatar, setPickerAvatar] = useState<string | null>(null)
@@ -132,7 +132,7 @@ export default function ProfileSidebar({
               variant="outline"
               size="sm"
               className="w-full gap-2"
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={() => openSettings('profile')}
             >
               <Settings className="h-4 w-4" />
               Modifier le profil
@@ -237,14 +237,9 @@ export default function ProfileSidebar({
         )}
       </div>
 
-      {/* Settings modal */}
+      {/* Dialogs propres au profil (la modale de settings est globale via SettingsModalProvider) */}
       {isOwnProfile && (
         <>
-          <UserSettingsModal
-            userId={user.id}
-            open={isSettingsOpen}
-            onOpenChange={setIsSettingsOpen}
-          />
           <EditLinksDialog
             open={editLinksOpen}
             onOpenChange={setEditLinksOpen}

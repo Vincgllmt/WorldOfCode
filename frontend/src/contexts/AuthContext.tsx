@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import * as authService from '@/services/authService'
 import { AuthContextType } from '@/interfaces/AuthContext'
 import { AuthenticatedUser, LoginCredentials } from '@/interfaces/Authentification'
+import { parseAuthErrorResponse, parseNetworkError } from '@/lib/authErrors'
 import toast from 'react-hot-toast'
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -70,17 +71,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Appareil de confiance : le backend renvoie directement le JWT sans 2FA
       const { token } = result
       setCookie('token', token, { path: '/', maxAge: 14400 })
-      const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (meRes.ok) {
-        const userData = await meRes.json()
-        setUser({ ...userData, token })
-        scheduleTokenRefresh(token)
-        router.push('/home')
+
+      let meRes: Response
+      try {
+        meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch (err) {
+        throw new Error(parseNetworkError(err, 'Impossible de récupérer votre profil.'))
       }
+
+      if (!meRes.ok) {
+        throw new Error(await parseAuthErrorResponse(meRes, 'Impossible de récupérer votre profil.'))
+      }
+
+      const userData = await meRes.json()
+      setUser({ ...userData, token })
+      scheduleTokenRefresh(token)
+      router.push('/home')
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Identifiants invalides'
+      const message = error instanceof Error ? error.message : 'Identifiants invalides.'
       toast.error(message)
       throw error
     }
@@ -97,9 +107,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { token } = result
-    const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    let meRes: Response
+    try {
+      meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch (err) {
+      throw new Error(parseNetworkError(err, 'Impossible de récupérer votre profil.'))
+    }
+    if (!meRes.ok) {
+      throw new Error(await parseAuthErrorResponse(meRes, 'Impossible de récupérer votre profil.'))
+    }
     const userData = await meRes.json()
     const authenticatedUser = { ...userData, token }
     setUser(authenticatedUser)

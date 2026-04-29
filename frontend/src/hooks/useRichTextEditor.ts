@@ -53,7 +53,7 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
       content_css: '/tinymce/skins/ui/oxide/content.min.css',
       menubar: false,
       statusbar: false,
-      height: 320,
+      height: 200,
       plugins: 'advlist autolink autoresize codesample link image lists',
       toolbar: 'undo redo | bold italic | bullist numlist | link image codesample',
       toolbar_mode: 'sliding',

@@ -97,7 +97,18 @@ export function registerMessageHandlers(socket, io, conversations) {
             socket.emit("ack", { temp_id, ...payload });
             console.log("📨 [8] Emitting message_created to room:", conversation_id);
             io.to(conversation_id).emit("message_created", payload);
-            console.log("📨 [9] Done!");
+
+            // Diffuser aussi aux rooms personnelles de chaque participant
+            // pour qu'ils reçoivent l'event même hors de la conversation (notifs).
+            const [participants] = await pool.execute(
+                "SELECT user_id FROM msg_conversation_participants WHERE conversation_id = ?",
+                [conversation_id]
+            );
+            for (const p of participants) {
+                if (Number(p.user_id) === senderId) continue; // pas pour l'expéditeur
+                io.to(`user:${p.user_id}`).emit("message_created", payload);
+            }
+            console.log("📨 [9] Done! Notified", participants.length - 1, "users via personal rooms");
         } catch (err) {
             console.error("📨 [ERROR] send_message error:", err);
             socket.emit("ack", { temp_id, error: "db_insert_failed" });

@@ -20,8 +20,8 @@ import { Check } from 'lucide-react'
 
 // 3. Créez l'import dynamique avec ssr: false
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
-  ssr: false, // Ceci empêche le serveur de toucher à ce composant
-  loading: () => <div className="h-64 border rounded-md bg-muted animate-pulse" /> // Optionnel: un placeholder pendant le chargement
+  ssr: false,
+  loading: () => <div style={{ height: 200 }} className="border rounded-md bg-muted animate-pulse" />,
 })
 
 type PostFormProps = {

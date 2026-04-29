@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Check, MessageCircle, UserPlus, Heart } from 'lucide-react'
+import { Bell, Check, MessageCircle, UserPlus, Heart, Settings } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import {
     useUnreadCount,
@@ -11,6 +11,7 @@ import {
     useMarkAllRead,
 } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
+import { useSettingsModal } from '@/contexts/SettingsModalContext'
 import type { Notification } from '@/interfaces/notification'
 
 function timeAgo(dateStr: string): string {
@@ -51,6 +52,7 @@ function getNotificationUrl(notif: Notification): string | null {
 
 export default function NotificationBell() {
     const router = useRouter()
+    const { openSettings } = useSettingsModal()
     const [open, setOpen] = useState(false)
     const { data: unreadData } = useUnreadCount()
     const { data: notifData, isLoading } = useNotificationList(1, 15)
@@ -93,9 +95,16 @@ export default function NotificationBell() {
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-hidden">
-                <div className="px-4 py-3 border-b">
+            <PopoverContent align="end" className="w-80 p-0 max-h-[28rem] overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b flex items-center justify-between">
                     <h3 className="text-sm font-semibold">Notifications</h3>
+                    <button
+                        onClick={() => { setOpen(false); openSettings('notifications') }}
+                        className="text-muted-foreground hover:text-foreground transition"
+                        title="Paramètres des notifications"
+                    >
+                        <Settings className="h-4 w-4" />
+                    </button>
                 </div>
                 <div className="overflow-y-auto max-h-72">
                     {isLoading && <p className="p-4 text-sm text-muted-foreground">Chargement...</p>}
@@ -130,6 +139,13 @@ export default function NotificationBell() {
                         </button>
                     ))}
                 </div>
+                <button
+                    onClick={() => { setOpen(false); openSettings('notifications') }}
+                    className="border-t px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition flex items-center justify-center gap-2"
+                >
+                    <Settings className="h-3.5 w-3.5" />
+                    Accéder aux paramètres
+                </button>
             </PopoverContent>
         </Popover>
     )

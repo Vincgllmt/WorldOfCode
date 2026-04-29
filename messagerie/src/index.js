@@ -114,6 +114,10 @@ io.on("connection", (socket) => {
         onlineUsers.get(userId).add(socket.id);
         // Broadcast à tous que cet utilisateur est en ligne
         io.emit("user_online", { userId });
+
+        // Rejoindre une room personnelle pour recevoir les notifications
+        // (messages, etc.) même quand on n'est pas dans la conversation
+        socket.join(`user:${userId}`);
     }
 
     // Quand un client demande la liste des utilisateurs en ligne
