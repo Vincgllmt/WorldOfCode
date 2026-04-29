@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\MentoringRequest;
+use App\Entity\MentorProfile;
 use App\Entity\Notification;
 use App\Enum\MentoringRequestStatus;
 use App\Enum\NotificationType;
@@ -32,7 +33,7 @@ class MentoringRequestRepository extends ServiceEntityRepository
         }
     }
 
-    public function findPublicFeed(array $filters = [], int $page = 1, int $limit = 20): array
+    public function findPublicFeed(array $filters = [], int $page = 1, int $limit = 20, ?MentorProfile $mentorProfile = null): array
     {
         $em  = $this->getEntityManager();
         $now = new \DateTime();
@@ -61,9 +62,15 @@ class MentoringRequestRepository extends ServiceEntityRepository
 
         $qb = $this->createQueryBuilder('r')
             ->innerJoin('r.junior', 'j')->addSelect('j')
-            ->where('r.isPublic = true')
             ->andWhere('r.status = :status')
             ->setParameter('status', MentoringRequestStatus::PENDING);
+
+        if ($mentorProfile !== null) {
+            $qb->andWhere('r.isPublic = true OR r.targetMentor = :mentorProfile')
+               ->setParameter('mentorProfile', $mentorProfile);
+        } else {
+            $qb->andWhere('r.isPublic = true');
+        }
 
         if (!empty($filters['techStack'])) {
             $qb->andWhere('r.techStack = :techStack')
@@ -77,7 +84,8 @@ class MentoringRequestRepository extends ServiceEntityRepository
 
         $requests = $qb
             ->select('r', 'j')
-            ->orderBy('r.createdAt', 'DESC')
+            ->orderBy('r.isPublic', 'ASC')
+            ->addOrderBy('r.createdAt', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit)
             ->getQuery()

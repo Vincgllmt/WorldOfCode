@@ -106,6 +106,7 @@ class MentoringRatingController extends AbstractController
 
         $ratings = $this->ratingRepo->findBy(['session' => $session]);
         $submitted = array_filter($ratings, fn($r) => $r->getSubmittedAt() !== null);
+        $hasRated  = !empty(array_filter($submitted, fn($r) => $r->getRater() === $user));
 
         // Logique aveugle : ne révéler les scores que si les 2 ont soumis
         if (count($submitted) < 2) {
@@ -113,10 +114,14 @@ class MentoringRatingController extends AbstractController
                 'status'    => 'pending',
                 'submitted' => count($submitted),
                 'total'     => 2,
+                'hasRated'  => $hasRated,
             ]);
         }
 
-        return $this->json(array_map(fn($r) => [
+        return $this->json([
+            'status'   => 'complete',
+            'hasRated' => $hasRated,
+            'ratings'  => array_map(fn($r) => [
             'id'          => $r->getId(),
             'score'       => $r->isVisible() ? $r->getScore() : null,
             'comment'     => $r->isVisible() ? $r->getComment() : null,
@@ -124,6 +129,7 @@ class MentoringRatingController extends AbstractController
             'submittedAt' => $r->getSubmittedAt()?->format('c'),
             'rater'       => ['id' => $r->getRater()->getId(), 'username' => $r->getRater()->getUsername()],
             'ratee'       => ['id' => $r->getRatee()->getId(), 'username' => $r->getRatee()->getUsername()],
-        ], $ratings));
+        ], $ratings)],
+        );
     }
 }

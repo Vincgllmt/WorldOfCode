@@ -54,7 +54,8 @@ class MentorCockpitController extends AbstractController
         $result = $this->requestRepo->findPublicFeed(
             $techStack ? ['techStack' => $techStack] : [],
             $page,
-            $limit
+            $limit,
+            $profile
         );
 
         return $this->json([
@@ -128,6 +129,7 @@ class MentorCockpitController extends AbstractController
             'descriptionExcerpt' => $excerpt,
             'compatibilityScore' => $r->getCompatibilityScore(),
             'isPublic'           => $r->isPublic(),
+            'isTargeted'         => !$r->isPublic(),
             'junior'             => [
                 'id'       => $r->getJunior()->getId(),
                 'username' => $r->getJunior()->getUsername(),

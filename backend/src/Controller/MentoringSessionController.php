@@ -8,6 +8,8 @@ use App\Enum\MentoringSessionStatus;
 use App\Repository\MentoringSessionRepository;
 use App\Repository\MentorProfileRepository;
 use App\Service\Mentoring\MentoringSessionService;
+use App\Service\NotificationService;
+use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,6 +25,7 @@ class MentoringSessionController extends AbstractController
         private MentorProfileRepository $mentorProfileRepo,
         private MentoringSessionService $sessionService,
         private EntityManagerInterface $em,
+        private NotificationService $notificationService,
     ) {}
 
     // ──────────────────────────────────────────────
@@ -49,6 +52,30 @@ class MentoringSessionController extends AbstractController
 
         return $this->json(array_map([$this, 'serializeSession'], $sessions));
     }
+
+    // ──────────────────────────────────────────────
+    // Toutes les sessions du mentor (historique complet)
+    // ──────────────────────────────────────────────
+
+    #[Route('/api/mentor/sessions/all', name: 'mentor_sessions_all', methods: ['GET'])]
+    #[OA\Get(summary: 'Historique complet des sessions du mentor', responses: [new OA\Response(response: 200, description: 'OK')])]
+    public function mentorAllSessions(): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_MENTOR');
+        /** @var User $user */
+        $user = $this->getUser();
+        $profile = $this->mentorProfileRepo->findOneBy(['user' => $user]);
+
+        $sessions = $this->sessionRepo->createQueryBuilder('s')
+            ->where('s.mentor = :profile')
+            ->setParameter('profile', $profile)
+            ->orderBy('s.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->json(array_map([$this, 'serializeSession'], $sessions));
+    }
+
 
     // ──────────────────────────────────────────────
     // Tâche 5 — Sessions du junior (route /mine AVANT /{id})
@@ -146,7 +173,7 @@ class MentoringSessionController extends AbstractController
     }
 
     #[Route('/api/mentoring/sessions/{id}/schedule', name: 'session_schedule', methods: ['PATCH'])]
-    #[OA\Patch(summary: 'Confirmer une proposition de date (junior)', responses: [
+    #[OA\Patch(summary: 'Confirmer une proposition de date (junior ou mentor)', responses: [
         new OA\Response(response: 200, description: 'Date confirmée'),
         new OA\Response(response: 403, description: 'Accès non autorisé'),
         new OA\Response(response: 404, description: 'Session non trouvée'),
@@ -161,8 +188,9 @@ class MentoringSessionController extends AbstractController
         if (!$session) {
             return $this->json(['error' => 'Session non trouvée.'], 404);
         }
-        if ($session->getJunior() !== $user) {
-            return $this->json(['error' => 'Seul le junior peut confirmer une date.'], 403);
+        $isParticipant = $session->getJunior() === $user || $session->getMentor()->getUser() === $user;
+        if (!$isParticipant) {
+            return $this->json(['error' => 'Accès non autorisé.'], 403);
         }
 
         $data = json_decode($request->getContent(), true) ?? [];
@@ -177,6 +205,18 @@ class MentoringSessionController extends AbstractController
 
         $session->setScheduledAt($scheduledAt);
         $this->em->flush();
+
+        $isMentor = $session->getMentor()->getUser() === $user;
+        $recipient = $isMentor ? $session->getJunior() : $session->getMentor()->getUser();
+        $formattedDate = $scheduledAt->format('d/m/Y à H\hi');
+
+        $this->notificationService->createAndPush(
+            $recipient,
+            $user,
+            NotificationType::MENTORING_SESSION_SCHEDULED,
+            $user->getUsername() . ' a confirmé la session du ' . $formattedDate . '.',
+            $session->getId()
+        );
 
         return $this->json($this->serializeSession($session));
     }
@@ -212,6 +252,7 @@ class MentoringSessionController extends AbstractController
 
     private function serializeSession(MentoringSession $s): array
     {
+        $req = $s->getRequest();
         return [
             'id'             => $s->getId(),
             'status'         => $s->getStatus()->value,
@@ -228,6 +269,12 @@ class MentoringSessionController extends AbstractController
                 'id'       => $s->getJunior()->getId(),
                 'username' => $s->getJunior()->getUsername(),
             ],
+            'request'        => $req ? [
+                'id'        => $req->getId(),
+                'title'     => $req->getTitle(),
+                'techStack' => $req->getTechStack(),
+                'isPublic'  => $req->isPublic(),
+            ] : null,
             'createdAt'      => $s->getCreatedAt()->format('c'),
         ];
     }
