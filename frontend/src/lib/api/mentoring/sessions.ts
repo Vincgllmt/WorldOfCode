@@ -7,6 +7,12 @@ export async function getMentorActiveSessions(): Promise<MentoringSession[]> {
   return res.json()
 }
 
+export async function getMentorAllSessions(): Promise<MentoringSession[]> {
+  const res = await fetchWithAuth('/mentor/sessions/all')
+  if (!res.ok) throw new Error('Erreur sessions mentor')
+  return res.json()
+}
+
 export async function getJuniorSessions(): Promise<MentoringSession[]> {
   const res = await fetchWithAuth('/mentoring/sessions/mine')
   if (!res.ok) throw new Error('Erreur sessions junior')
@@ -39,3 +45,4 @@ export async function confirmSessionSchedule(id: number, scheduledAt: string): P
   if (!res.ok) throw new Error('Erreur confirmation de date')
   return res.json()
 }
+

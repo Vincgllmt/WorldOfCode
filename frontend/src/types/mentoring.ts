@@ -46,6 +46,7 @@ export interface MentoringRequest {
   codeLanguage: string | null
   descriptionExcerpt?: string
   isPublic: boolean
+  isTargeted: boolean
   compatibilityScore: number
   junior: { id: number; username: string; avatar?: string }
   targetMentor?: { id: number; username: string }
@@ -64,7 +65,15 @@ export interface MentoringSession {
   conversationId: string | null
   mentor: { id: number; username: string; avatar?: string }
   junior: { id: number; username: string; avatar?: string }
-  request?: MentoringRequest
+  request?: { id: number; title: string; techStack: string; isPublic: boolean } | null
+  createdAt: string
+}
+
+export interface SessionAppointment {
+  id: number
+  scheduledAt: string
+  format: SessionFormat
+  status: 'pending' | 'confirmed'
   createdAt: string
 }
 
