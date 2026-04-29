@@ -8,7 +8,11 @@ import { Message } from "@/interfaces/message"
 import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 import { confirmSessionSchedule, getSession } from "@/lib/api/mentoring/sessions"
+import { confirmSessionAppointment, getSessionAppointment } from "@/lib/api/mentoring/appointments"
+import { getSessionRatings } from "@/lib/api/mentoring/ratings"
 import RatingModal from "@/components/mentoring/session/RatingModal"
+import CounterProposalModal from "@/components/mentoring/request/CounterProposalModal"
+import ProposeDateModal from "@/components/mentoring/cockpit/ProposeDateModal"
 
 type Props = {
     messages: Message[]
@@ -87,15 +91,17 @@ function SessionProposalCard({
     payload,
     isMe,
     createdAt,
+    conversationId,
 }: {
     payload: SessionProposalPayload
     isMe: boolean
     createdAt: string
+    conversationId?: string
 }) {
     const [accepted, setAccepted] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [showCounterModal, setShowCounterModal] = useState(false)
 
-    // Initialise l'état depuis la base au montage
     useEffect(() => {
         getSession(payload.sessionId)
             .then(s => { if (s.scheduledAt) setAccepted(true) })
@@ -115,6 +121,7 @@ function SessionProposalCard({
     }
 
     return (
+        <>
         <div className="flex justify-center py-2">
             <div className="w-full max-w-[320px] rounded-xl border border-border bg-card shadow-sm px-4 py-3 space-y-2">
                 <div className="flex items-center gap-2 text-primary">
@@ -129,6 +136,110 @@ function SessionProposalCard({
                 )}
                 {!isMe && (
                     accepted ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CalendarCheck className="h-3.5 w-3.5" />
+                            Confirmé
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleAccept}
+                                disabled={loading}
+                                className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                            >
+                                {loading ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                    <CalendarCheck className="h-3 w-3" />
+                                )}
+                                Accepter
+                            </button>
+                            {conversationId && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCounterModal(true)}
+                                    disabled={loading}
+                                    className="flex items-center gap-1.5 text-xs font-medium border border-amber-500/60 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-lg hover:bg-amber-500/10 transition-colors disabled:opacity-60"
+                                >
+                                    Autre date ?
+                                </button>
+                            )}
+                        </div>
+                    )
+                )}
+                <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
+            </div>
+        </div>
+        {showCounterModal && conversationId && createPortal(
+            <CounterProposalModal
+                conversationId={conversationId}
+                sessionId={payload.sessionId}
+                onClose={() => setShowCounterModal(false)}
+            />,
+            document.body
+        )}
+        </>
+    )
+}
+
+interface AppointmentProposalPayload {
+    sessionId: number
+    appointmentId: number
+    proposedAt: string
+    display: string
+}
+
+function parseAppointmentProposal(body: string): AppointmentProposalPayload | null {
+    try {
+        const data = JSON.parse(body)
+        if (data.sessionId && data.appointmentId && data.proposedAt && data.display) return data
+    } catch { /* not JSON */ }
+    return null
+}
+
+function AppointmentProposalCard({
+    payload,
+    isMe,
+    createdAt,
+}: {
+    payload: AppointmentProposalPayload
+    isMe: boolean
+    createdAt: string
+}) {
+    const [confirmed, setConfirmed] = useState(false)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        getSessionAppointment(payload.sessionId, payload.appointmentId)
+            .then(a => { if (a.status === 'confirmed') setConfirmed(true) })
+            .catch(() => {})
+    }, [payload.sessionId, payload.appointmentId])
+
+    const handleAccept = async () => {
+        setLoading(true)
+        try {
+            await confirmSessionAppointment(payload.sessionId, payload.appointmentId)
+            setConfirmed(true)
+        } catch {
+            // silently ignore
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="flex justify-center py-2">
+            <div className="w-full max-w-[320px] rounded-xl border border-border bg-card shadow-sm px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2 text-primary">
+                    <CalendarCheck className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-semibold">
+                        {isMe ? "Proposition de rendez-vous envoyée" : "Proposition de rendez-vous"}
+                    </span>
+                </div>
+                <p className="text-sm font-medium text-foreground">{payload.display}</p>
+                {!isMe && (
+                    confirmed ? (
                         <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <CalendarCheck className="h-3.5 w-3.5" />
                             Confirmé
@@ -149,9 +260,114 @@ function SessionProposalCard({
                         </button>
                     )
                 )}
+                {isMe && confirmed && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        Accepté par le junior
+                    </div>
+                )}
                 <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
             </div>
         </div>
+    )
+}
+
+function CounterProposalCard({
+    payload,
+    isMe,
+    createdAt,
+    conversationId,
+    otherUsername,
+}: {
+    payload: SessionProposalPayload
+    isMe: boolean
+    createdAt: string
+    conversationId?: string
+    otherUsername?: string
+}) {
+    const [confirmed, setConfirmed] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [showReProposalModal, setShowReProposalModal] = useState(false)
+
+    useEffect(() => {
+        getSession(payload.sessionId)
+            .then(s => { if (s.scheduledAt) setConfirmed(true) })
+            .catch(() => {})
+    }, [payload.sessionId])
+
+    const handleConfirm = async () => {
+        setLoading(true)
+        try {
+            await confirmSessionSchedule(payload.sessionId, payload.proposedAt)
+            setConfirmed(true)
+        } catch {
+            // silently ignore
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <>
+        <div className="flex justify-center py-2">
+            <div className="w-full max-w-[320px] rounded-xl border border-amber-500/40 bg-amber-500/5 shadow-sm px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <CalendarCheck className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-semibold">
+                        {isMe ? "Votre contre-proposition" : "Contre-proposition de date"}
+                    </span>
+                </div>
+                <p className="text-sm font-medium text-foreground">{payload.display}</p>
+                {payload.note && (
+                    <p className="text-xs text-muted-foreground">{payload.note}</p>
+                )}
+                {!isMe && (
+                    confirmed ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CalendarCheck className="h-3.5 w-3.5" />
+                            Confirmé
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleConfirm}
+                                disabled={loading}
+                                className="flex items-center gap-1.5 text-xs font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-500/90 transition-colors disabled:opacity-60"
+                            >
+                                {loading ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                    <CalendarCheck className="h-3 w-3" />
+                                )}
+                                Confirmer
+                            </button>
+                            {conversationId && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowReProposalModal(true)}
+                                    disabled={loading}
+                                    className="flex items-center gap-1.5 text-xs font-medium border border-primary/60 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-60"
+                                >
+                                    Autre date ?
+                                </button>
+                            )}
+                        </div>
+                    )
+                )}
+                <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
+            </div>
+        </div>
+        {showReProposalModal && conversationId && createPortal(
+            <ProposeDateModal
+                conversationId={conversationId}
+                sessionId={payload.sessionId}
+                juniorUsername={otherUsername ?? '…'}
+                onClose={() => setShowReProposalModal(false)}
+            />,
+            document.body
+        )}
+        </>
     )
 }
 
@@ -203,6 +419,12 @@ function SessionClosedCard({
 }) {
     const [showModal, setShowModal] = useState(false)
     const [rated, setRated] = useState(false)
+
+    useEffect(() => {
+        getSessionRatings(payload.sessionId)
+            .then((data: { hasRated?: boolean }) => { if (data.hasRated) setRated(true) })
+            .catch(() => { /* pas bloquant */ })
+    }, [payload.sessionId])
 
     const isMe = userId === String(payload.mentorId)
     const partnerUsername = isMe ? payload.juniorUsername : payload.mentorUsername
@@ -372,10 +594,13 @@ export function MessageList({
                     const isImage = m.type === 'image'
                     const isFile = m.type === 'file'
                     const isSessionProposal = m.type === 'session_proposal'
+                    const isCounterProposal = m.type === 'session_counter_proposal'
                     const isSessionClosed = m.type === 'session_closed'
+                    const isAppointmentProposal = m.type === 'appointment_proposal'
                     const fileData = isFile ? parseFileBody(m.body) : null
-                    const sessionProposalData = isSessionProposal ? parseSessionProposal(m.body) : null
+                    const sessionProposalData = (isSessionProposal || isCounterProposal) ? parseSessionProposal(m.body) : null
                     const sessionClosedData = isSessionClosed ? parseSessionClosed(m.body) : null
+                    const appointmentProposalData = isAppointmentProposal ? parseAppointmentProposal(m.body) : null
                     const isHighlighted = m.id === highlightedId
 
                     return (
@@ -400,17 +625,32 @@ export function MessageList({
                                 </div>
                             )}
 
-                            {isSessionClosed && sessionClosedData ? (
+                            {isAppointmentProposal && appointmentProposalData ? (
+                                <AppointmentProposalCard
+                                    payload={appointmentProposalData}
+                                    isMe={isMe}
+                                    createdAt={m.createdAt}
+                                />
+                            ) : isSessionClosed && sessionClosedData ? (
                                 <SessionClosedCard
                                     payload={sessionClosedData}
                                     userId={userId}
                                     createdAt={m.createdAt}
+                                />
+                            ) : isCounterProposal && sessionProposalData ? (
+                                <CounterProposalCard
+                                    payload={sessionProposalData}
+                                    isMe={isMe}
+                                    createdAt={m.createdAt}
+                                    conversationId={conversationId}
+                                    otherUsername={otherUsername}
                                 />
                             ) : isSessionProposal && sessionProposalData ? (
                                 <SessionProposalCard
                                     payload={sessionProposalData}
                                     isMe={isMe}
                                     createdAt={m.createdAt}
+                                    conversationId={conversationId}
                                 />
                             ) : isCallMessage ? (
                                 <div className="flex justify-center pt-2 pb-1">
