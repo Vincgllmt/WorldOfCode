@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { PenSquare, Newspaper } from 'lucide-react'
+import { PenSquare, Newspaper, Sparkles, Clock, Plus } from 'lucide-react'
 import PostForm from '@/components/post/postForm'
 import PostList from '@/components/post/PostList'
 import TechWatchFeedList from '@/components/techwatch/TechWatchFeedList'
 import SuggestionsSidebar from '@/components/suggestions/SuggestionsSidebar'
 import MyGroupsSidebar from '@/components/group/MyGroupsSidebar'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const tabs = [
@@ -14,8 +16,12 @@ const tabs = [
   { key: 'actualites', label: 'Actualités', icon: Newspaper },
 ]
 
+type FeedMode = 'feed' | 'chronological'
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('publications')
+  const [feedMode, setFeedMode] = useState<FeedMode>('chronological')
+  const [isNewPostOpen, setIsNewPostOpen] = useState(false)
   const scrollPositions = useRef<Record<string, number>>({})
 
   const handleTabChange = useCallback((newTab: string) => {
@@ -41,42 +47,91 @@ export default function HomePage() {
 
         {/* Colonne centrale : tabs + feed */}
         <div className="w-full max-w-[680px]">
-          {/* Barre de tabs sticky */}
+          {/* Barre sticky : tabs + toggle + bouton (bloc unifié) */}
           <div className="sticky top-[var(--navbar-height,64px)] z-30 bg-background/80 backdrop-blur-md py-2">
-            <div className="flex gap-1 bg-muted/50 border border-border/70 rounded-2xl p-1.5">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                const isActive = activeTab === tab.key
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => handleTabChange(tab.key)}
-                    className={cn(
-                      'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
+            <div className="bg-muted/50 border border-border/70 rounded-2xl overflow-hidden">
+              {/* Tabs Publications / Actualités */}
+              <div className="flex gap-1 p-1.5">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = activeTab === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => handleTabChange(tab.key)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Sous-barre tri + bouton — visible seulement sur Publications */}
+              {activeTab === 'publications' && (
+                <div className="flex items-center justify-between gap-2 px-2 py-2 border-t border-border/50 bg-background/30">
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => setFeedMode('chronological')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        feedMode === 'chronological'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      Récent
+                    </button>
+                    <button
+                      onClick={() => setFeedMode('feed')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                        feedMode === 'feed'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Pertinent
+                    </button>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => setIsNewPostOpen(true)}
+                    className="gap-1.5 rounded-lg h-8"
                   >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                )
-              })}
+                    <Plus className="h-4 w-4" />
+                    Nouveau post
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Feed */}
           <div className="space-y-6 pb-8 pt-4">
-            {activeTab === 'publications' && (
-              <div className="space-y-6">
-                <PostForm />
-                <PostList />
-              </div>
-            )}
+            {activeTab === 'publications' && <PostList mode={feedMode} />}
             {activeTab === 'actualites' && <TechWatchFeedList />}
           </div>
         </div>
+
+        {/* Modale Nouveau post */}
+        <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Nouvelle publication</DialogTitle>
+            </DialogHeader>
+            <PostForm onSuccess={() => setIsNewPostOpen(false)} />
+          </DialogContent>
+        </Dialog>
 
         {/* Sidebar droite — sticky sous la navbar */}
         <aside className="hidden xl:block w-[300px] shrink-0">

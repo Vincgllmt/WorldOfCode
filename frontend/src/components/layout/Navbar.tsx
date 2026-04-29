@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, Settings } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
@@ -20,6 +20,7 @@ import { useConversations, useConversationRealtime } from "@/hooks/useConversati
 import NavbarSearch from "@/components/layout/NavbarSearch"
 import NotificationBell from "@/components/layout/NotificationBell"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
+import { useSettingsModal } from "@/contexts/SettingsModalContext"
 import { useNotificationRealtime } from "@/hooks/useNotifications"
 import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
@@ -27,6 +28,7 @@ import { motion } from "framer-motion"
 
 export default function Navbar() {
     const { user, logout } = useAuth()
+    const { openSettings } = useSettingsModal()
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const { resolvedTheme } = useTheme()
@@ -147,6 +149,10 @@ export default function Navbar() {
                                     <Link href="/profile" className="cursor-pointer font-medium">
                                         {user.username}
                                     </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openSettings('profile')} className="cursor-pointer">
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Paramètres
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={logout}>

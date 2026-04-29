@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { socket } from '@/lib/socket'
 import { useAuth } from '@/hooks/useAuth'
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
 import toast from 'react-hot-toast'
 import {
     getNotifications,
@@ -57,9 +58,20 @@ function getNotificationIcon(type: string): string {
     }
 }
 
+function getNotificationUrl(notification: Notification): string | null {
+    if (notification.type === 'follow' && notification.senderId) {
+        return `/user/${notification.senderId}`
+    }
+    if ((notification.type === 'comment' || notification.type === 'like') && notification.relatedEntityId) {
+        return `/post/${notification.relatedEntityId}`
+    }
+    return null
+}
+
 export const useNotificationRealtime = () => {
     const { user } = useAuth()
     const queryClient = useQueryClient()
+    const { showNotification } = useBrowserNotifications()
 
     useEffect(() => {
         if (!user) return
@@ -71,6 +83,15 @@ export const useNotificationRealtime = () => {
                 icon: getNotificationIcon(notification.type),
                 duration: 4000,
             })
+
+            // Notification navigateur (uniquement si onglet pas focus)
+            const url = getNotificationUrl(notification)
+            showNotification({
+                title: `${getNotificationIcon(notification.type)} ${notification.senderUsername}`,
+                body: notification.message,
+                tag: `notif-${notification.id}`,
+                onClick: url ? () => { window.location.href = url } : undefined,
+            })
         }
 
         socket.on('new_notification', onNewNotification)
@@ -78,5 +99,5 @@ export const useNotificationRealtime = () => {
         return () => {
             socket.off('new_notification', onNewNotification)
         }
-    }, [user, queryClient])
+    }, [user, queryClient, showNotification])
 }

@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser, useUpdateUser, useChangePassword, useDeleteUser } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
+import { BellRing, BellOff } from 'lucide-react'
+import toast from 'react-hot-toast'
 import {
   passwordChangeSchema,
   userProfileSchema,
@@ -33,10 +36,12 @@ type UserSettingsModalProps = {
   userId: number
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialTab?: 'profile' | 'password' | 'notifications'
 }
 
-export default function UserSettingsModal({ userId, open, onOpenChange }: UserSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile')
+export default function UserSettingsModal({ userId, open, onOpenChange, initialTab = 'profile' }: UserSettingsModalProps) {
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications'>(initialTab)
+  const browserNotifs = useBrowserNotifications()
   const { data: user, isLoading } = useUser(userId, { enabled: open })
   const updateUser = useUpdateUser()
   const changePassword = useChangePassword()
@@ -75,13 +80,14 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
   }, [user, open, profileForm])
 
   useEffect(() => {
-    if (!open) {
-      setActiveTab('profile')
+    if (open) {
+      setActiveTab(initialTab)
+    } else {
       profileForm.reset()
       passwordForm.reset()
       setDeleteDialogOpen(false)
     }
-  }, [open, profileForm, passwordForm])
+  }, [open, initialTab, profileForm, passwordForm])
 
   const isProfileSubmitting = profileForm.formState.isSubmitting || updateUser.isPending
   const isPasswordSubmitting = passwordForm.formState.isSubmitting || changePassword.isPending
@@ -156,6 +162,7 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
             <TabsList className="w-full justify-start">
               <TabsTrigger value="profile">Profil</TabsTrigger>
               <TabsTrigger value="password">Mot de passe</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
@@ -226,6 +233,59 @@ export default function UserSettingsModal({ userId, open, onOpenChange }: UserSe
                   </Button>
                 </div>
               </form>
+            </TabsContent>
+
+            <TabsContent value="notifications">
+              <div className="space-y-4 py-2">
+                <div>
+                  <h3 className="text-sm font-semibold">Notifications navigateur</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Recevez une notification système (en dehors du navigateur) quand vous n&apos;êtes pas sur l&apos;onglet.
+                    Utile pour être alerté des nouveaux messages, likes et abonnements.
+                  </p>
+                </div>
+
+                {!browserNotifs.isSupported ? (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                    Votre navigateur ne supporte pas les notifications.
+                  </div>
+                ) : browserNotifs.permission === 'denied' ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-muted-foreground">
+                    Les notifications sont bloquées par votre navigateur. Autorisez-les dans les paramètres
+                    du site (cadenas dans la barre d&apos;adresse), puis rechargez la page.
+                  </div>
+                ) : browserNotifs.enabled ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <BellRing className="h-4 w-4 text-primary" />
+                      <span>Notifications activées</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        browserNotifs.disable()
+                        toast.success('Notifications désactivées')
+                      }}
+                    >
+                      <BellOff className="h-4 w-4 mr-2" />
+                      Désactiver
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      const ok = await browserNotifs.requestPermission()
+                      if (ok) toast.success('Notifications activées')
+                      else toast.error('Permission refusée')
+                    }}
+                  >
+                    <BellRing className="h-4 w-4 mr-2" />
+                    Activer les notifications
+                  </Button>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="password">
