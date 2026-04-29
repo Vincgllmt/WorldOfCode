@@ -134,4 +134,65 @@ class UploadControllerTest extends TestCase
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('error', $payload);
     }
+
+    // ======================================================================
+    //  ZIP — support fichiers messagerie
+    // ======================================================================
+
+    public function testUploadZipSuccess(): void
+    {
+        $file = $this->buildUploadedFile('archive.zip', 'application/zip', 1024 * 1024);
+
+        $s3 = $this->createMock(S3Storage::class);
+        $s3->method('upload')->willReturn('http://minio.local/uploads/archive.zip');
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('url', $payload);
+    }
+
+    public function testUploadXZipCompressedSuccess(): void
+    {
+        $file = $this->buildUploadedFile('archive.zip', 'application/x-zip-compressed', 512 * 1024);
+
+        $s3 = $this->createMock(S3Storage::class);
+        $s3->method('upload')->willReturn('http://minio.local/uploads/archive.zip');
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUploadZipRejectsOversized(): void
+    {
+        $elevenMb = 11 * 1024 * 1024;
+        $file     = $this->buildUploadedFile('heavy.zip', 'application/zip', $elevenMb);
+        $s3       = $this->createMock(S3Storage::class);
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(413, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUploadZipUnderImageLimitButOverImageSizePassesWithFileSizeLimit(): void
+    {
+        // 7 Mo : dépasse la limite image (5 Mo) mais pas la limite fichier (10 Mo)
+        $sevenMb = 7 * 1024 * 1024;
+        $file    = $this->buildUploadedFile('medium.zip', 'application/zip', $sevenMb);
+
+        $s3 = $this->createMock(S3Storage::class);
+        $s3->method('upload')->willReturn('http://minio.local/uploads/medium.zip');
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
 }
