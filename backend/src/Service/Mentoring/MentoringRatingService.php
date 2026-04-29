@@ -60,6 +60,18 @@ class MentoringRatingService
                 $rating->setIsVisible(true);
             }
             $this->em->flush();
+
+            // Recalculer la note moyenne du mentor maintenant que les scores sont visibles
+            $profile = $session->getMentor();
+            $avg = $this->em->createQuery(
+                'SELECT AVG(r.score) FROM App\Entity\MentoringRating r
+                 WHERE r.ratee = :user AND r.isVisible = true AND r.score IS NOT NULL'
+            )->setParameter('user', $profile->getUser())->getSingleScalarResult();
+
+            if ($avg !== null) {
+                $profile->setAverageRating(round((float) $avg, 1));
+                $this->em->flush();
+            }
         }
     }
 }
