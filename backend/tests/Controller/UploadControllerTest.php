@@ -51,12 +51,16 @@ class UploadControllerTest extends TestCase
         return $controller;
     }
 
-    private function buildUploadedFile(string $name = 'lambda_photo.jpg', string $mime = 'image/jpeg'): UploadedFile
-    {
+    private function buildUploadedFile(
+        string $name = 'lambda_photo.jpg',
+        string $mime = 'image/jpeg',
+        int $sizeBytes = 1024,
+    ): UploadedFile {
         $file = $this->createMock(UploadedFile::class);
         $file->method('getClientOriginalName')->willReturn($name);
         $file->method('getPathname')->willReturn('/tmp/' . $name);
         $file->method('getMimeType')->willReturn($mime);
+        $file->method('getSize')->willReturn($sizeBytes);
 
         return $file;
     }
@@ -102,5 +106,32 @@ class UploadControllerTest extends TestCase
         $response = $this->makeController()->upload($request, $s3);
 
         $this->assertSame(500, $response->getStatusCode());
+    }
+
+    public function testUploadRejectsUnsupportedMimeType(): void
+    {
+        $file = $this->buildUploadedFile('malware.exe', 'application/octet-stream');
+        $s3   = $this->createMock(S3Storage::class);
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(415, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUploadRejectsOversizedFile(): void
+    {
+        $sixMb = 6 * 1024 * 1024;
+        $file  = $this->buildUploadedFile('heavy.jpg', 'image/jpeg', $sixMb);
+        $s3    = $this->createMock(S3Storage::class);
+
+        $request  = new Request([], [], [], [], ['file' => $file]);
+        $response = $this->makeController()->upload($request, $s3);
+
+        $this->assertSame(413, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
     }
 }

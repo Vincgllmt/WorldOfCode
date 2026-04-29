@@ -247,16 +247,25 @@ class PostControllerTest extends TestCase
         $this->assertSame(400, $response->getStatusCode());
     }
 
-    public function testCreatePostFailsWhenGroupIdIsMissing(): void
+    public function testCreatePostSuccessWithoutGroup(): void
     {
         $tarnished = $this->buildUser(1);
-        $postRepo  = $this->createMock(PostRepository::class);
 
-        $request = new Request(content: json_encode(['content' => 'Test post'], JSON_THROW_ON_ERROR));
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('save')->willReturnCallback(function (Post $post): void {
+            $post->onCreate();
+            $idProp = new \ReflectionProperty(Post::class, 'id');
+            $idProp->setValue($post, 2);
+        });
+
+        $request = new Request(content: json_encode(['content' => 'Post sans groupe'], JSON_THROW_ON_ERROR));
 
         $response = $this->makeController($tarnished, $postRepo)->create($request);
 
-        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame(201, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Post sans groupe', $payload['content']);
+        $this->assertNull($payload['techGroupName']);
     }
 
     public function testCreatePostFailsWhenGroupNotFound(): void

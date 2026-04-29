@@ -18,7 +18,7 @@ const postFormSchema = z.object({
       (value) => stripHtml(value).trim().length > 0,
       'Le contenu est requis'
     ),
-  groupId: z.coerce.number().int().positive('Un groupe doit être sélectionné'),
+  groupId: z.coerce.number().int().positive().optional(),
 })
 
 export const usePostFormController = (
@@ -72,7 +72,7 @@ export const usePostFormController = (
     loadingGroups,
     isPending,
     groupIdValue: watch('groupId'),
-    setGroupId: (value: number) => setValue('groupId', value, { shouldValidate: true }),
+    setGroupId: (value: number | undefined) => setValue('groupId', value, { shouldValidate: true }),
     selectKey,
     onSubmit,
   }
