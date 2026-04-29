@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Star } from 'lucide-react'
+import { Star, Target } from 'lucide-react'
 import RequestTypeBadge from './RequestTypeBadge'
 import PinTimer from '../cockpit/PinTimer'
 import AcceptRequestModal from '../cockpit/AcceptRequestModal'
@@ -65,9 +65,21 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
     <article
       onClick={onClick}
       className={`rounded-xl border p-4 cursor-pointer transition-colors ${
-        isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+        request.isTargeted
+          ? isSelected
+            ? 'border-violet-500 bg-violet-500/10'
+            : 'border-violet-500/60 bg-violet-500/5 hover:border-violet-500'
+          : isSelected
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:border-primary/50'
       }`}
     >
+      {request.isTargeted && (
+        <div className="flex items-center gap-1.5 mb-2 text-violet-400 text-xs font-semibold">
+          <Target className="h-3.5 w-3.5" />
+          Demande ciblée — pour vous
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Avatar junior */}

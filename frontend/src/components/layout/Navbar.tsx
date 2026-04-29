@@ -164,7 +164,7 @@ export default function Navbar() {
                         </Link>
                     ))}
 
-                    {user && <NotificationBell />}
+                    {mounted && user && <NotificationBell />}
 
                     {user && (
                         <DropdownMenu>

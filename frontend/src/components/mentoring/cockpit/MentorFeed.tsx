@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Target, Globe } from 'lucide-react'
 import { useMentorFeed } from '@/hooks/useMentorFeed'
 import MentoringRequestCard from '../feed/MentoringRequestCard'
 import FeedFilters from '../feed/FeedFilters'
@@ -61,17 +62,50 @@ export default function MentorFeed({ mentorProfile, onSelectRequest, selectedReq
             Aucune demande disponible pour le moment.
           </p>
         )}
-        {data.map(r => (
-          <MentoringRequestCard
-            key={r.id}
-            request={r}
-            isSelected={r.id === selectedRequestId}
-            onClick={() => onSelectRequest(r)}
-            onRefetch={handleRefetch}
-            onSessionAccepted={onSessionAccepted}
-            mentorSpecialties={mentorProfile.specialties}
-          />
-        ))}
+        {(() => {
+          const targeted = data.filter(r => r.isTargeted)
+          const publicReqs = data.filter(r => !r.isTargeted)
+          return (
+            <>
+              {targeted.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-violet-400 uppercase tracking-wide">
+                    <Target className="h-3.5 w-3.5" />
+                    Demandes ciblées ({targeted.length})
+                  </div>
+                  {targeted.map(r => (
+                    <MentoringRequestCard
+                      key={r.id}
+                      request={r}
+                      isSelected={r.id === selectedRequestId}
+                      onClick={() => onSelectRequest(r)}
+                      onRefetch={handleRefetch}
+                      onSessionAccepted={onSessionAccepted}
+                      mentorSpecialties={mentorProfile.specialties}
+                    />
+                  ))}
+                  {publicReqs.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">
+                      <Globe className="h-3.5 w-3.5" />
+                      Demandes publiques ({publicReqs.length})
+                    </div>
+                  )}
+                </>
+              )}
+              {publicReqs.map(r => (
+                <MentoringRequestCard
+                  key={r.id}
+                  request={r}
+                  isSelected={r.id === selectedRequestId}
+                  onClick={() => onSelectRequest(r)}
+                  onRefetch={handleRefetch}
+                  onSessionAccepted={onSessionAccepted}
+                  mentorSpecialties={mentorProfile.specialties}
+                />
+              ))}
+            </>
+          )
+        })()}
       </div>
     </div>
   )

@@ -47,6 +47,9 @@ function getMessagePreview(body: string, isMine: boolean, type?: string): React.
     if (type === 'session_proposal') {
         return '📅 Proposition de session'
     }
+    if (type === 'session_counter_proposal') {
+        return '📅 Contre-proposition de date'
+    }
     if (type === 'session_closed') {
         return '⭐ Proposition de notation'
     }
