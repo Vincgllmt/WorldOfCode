@@ -5,6 +5,13 @@ import { socket } from "@/lib/socket"
 import { uploadImage } from "@/services/uploadService"
 import toast from "react-hot-toast"
 import Image from "next/image"
+import {
+    ALLOWED_IMAGE_TYPES,
+    ALLOWED_FILE_TYPES,
+    MAX_IMAGE_SIZE_BYTES,
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MB,
+} from "@/config/upload"
 
 type Props = {
     onSend: (body: string, type?: 'text' | 'image' | 'file') => void
@@ -16,9 +23,6 @@ type ImageEntry = {
     preview: string
 }
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5 Mo
-const MAX_ZIP_SIZE = 10 * 1024 * 1024 // 10 Mo
 const MAX_IMAGES = 10
 
 function formatFileSize(bytes: number): string {
@@ -115,12 +119,12 @@ export function MessageInput({ onSend, conversationId }: Props) {
 
         const validFiles: ImageEntry[] = []
         for (const file of files.slice(0, remaining)) {
-            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number])) {
                 toast.error(`${file.name} : format non supporté.`)
                 continue
             }
-            if (file.size > MAX_IMAGE_SIZE) {
-                toast.error(`${file.name} : dépasse 5 Mo.`)
+            if (file.size > MAX_IMAGE_SIZE_BYTES) {
+                toast.error(`${file.name} : dépasse ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024} Mo.`)
                 continue
             }
             validFiles.push({ file, preview: URL.createObjectURL(file) })
@@ -136,12 +140,12 @@ export function MessageInput({ onSend, conversationId }: Props) {
     }
 
     const handleZipSelect = (file: File) => {
-        if (file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed' && !file.name.endsWith('.zip')) {
+        if (!ALLOWED_FILE_TYPES.includes(file.type) && !file.name.endsWith('.zip')) {
             toast.error("Seuls les fichiers .zip sont acceptés.")
             return
         }
-        if (file.size > MAX_ZIP_SIZE) {
-            toast.error("Le fichier ne doit pas dépasser 10 Mo.")
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            toast.error(`Le fichier ne doit pas dépasser ${MAX_FILE_SIZE_MB} Mo.`)
             return
         }
         setZipFile(file)
@@ -358,7 +362,7 @@ export function MessageInput({ onSend, conversationId }: Props) {
                 <input
                     ref={zipInputRef}
                     type="file"
-                    accept=".zip,application/zip,application/x-zip-compressed"
+                    accept={`.zip,${ALLOWED_FILE_TYPES.join(',')}`}
                     onChange={handleZipInputChange}
                     className="hidden"
                 />

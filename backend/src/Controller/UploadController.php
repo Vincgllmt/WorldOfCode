@@ -50,18 +50,22 @@ class UploadController extends AbstractController
             return $this->json(['error' => 'Aucun fichier envoyé'], 400);
         }
 
-        if (!in_array($file->getMimeType(), UploadConfig::ALLOWED_MIME_TYPES, true)) {
+        $mime = $file->getMimeType();
+
+        if (!UploadConfig::isAllowedMime($mime)) {
             $allowed = UploadConfig::allowedFormatsLabel();
             return $this->json(['error' => "Format non supporté. Utilisez $allowed."], 415);
         }
 
-        if ($file->getSize() > UploadConfig::MAX_SIZE_BYTES) {
-            return $this->json(['error' => "L'image ne doit pas dépasser " . UploadConfig::MAX_SIZE_MB . " Mo."], 413);
+        $maxBytes = UploadConfig::maxSizeBytesForMime($mime);
+        $maxMb    = UploadConfig::maxSizeMbForMime($mime);
+
+        if ($file->getSize() > $maxBytes) {
+            return $this->json(['error' => "Le fichier ne doit pas dépasser {$maxMb} Mo."], 413);
         }
 
         $key = time() . '-' . $file->getClientOriginalName();
         $localPath = $file->getPathname();
-        $mime = $file->getMimeType();
 
         $url = $s3->upload($key, $localPath, $mime);
 
