@@ -28,6 +28,9 @@ class SessionAppointment
     #[ORM\Column(type: 'string', length: 20)]
     private string $status = 'pending';
 
+    #[ORM\Column(name: 'proposed_by', type: 'string', length: 10)]
+    private string $proposedBy = 'mentor';
+
     #[ORM\Column(name: 'created_at', type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -50,6 +53,9 @@ class SessionAppointment
 
     public function getStatus(): string { return $this->status; }
     public function setStatus(string $status): self { $this->status = $status; return $this; }
+
+    public function getProposedBy(): string { return $this->proposedBy; }
+    public function setProposedBy(string $proposedBy): self { $this->proposedBy = $proposedBy; return $this; }
 
     public function getCreatedAt(): \DateTime { return $this->createdAt; }
 }

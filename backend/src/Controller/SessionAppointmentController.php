@@ -48,23 +48,26 @@ class SessionAppointmentController extends AbstractController
     }
 
     #[Route('/api/mentoring/sessions/{id}/appointments', name: 'session_appointments_create', methods: ['POST'])]
-    #[OA\Post(summary: 'Planifier un rendez-vous', responses: [
+    #[OA\Post(summary: 'Planifier un rendez-vous (mentor) ou contre-proposer (junior)', responses: [
         new OA\Response(response: 201, description: 'Rendez-vous créé'),
         new OA\Response(response: 403, description: 'Accès non autorisé'),
         new OA\Response(response: 422, description: 'Données invalides'),
     ])]
     public function create(int $id, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_MENTOR');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         /** @var User $user */
         $user = $this->getUser();
-        $profile = $this->mentorProfileRepo->findOneBy(['user' => $user]);
         $session = $this->sessionRepo->find($id);
 
         if (!$session) {
             return $this->json(['error' => 'Session non trouvée.'], 404);
         }
-        if ($session->getMentor() !== $profile) {
+
+        $isMentor = $session->getMentor()->getUser() === $user;
+        $isJunior = $session->getJunior() === $user;
+
+        if (!$isMentor && !$isJunior) {
             return $this->json(['error' => 'Accès non autorisé.'], 403);
         }
 
@@ -80,21 +83,24 @@ class SessionAppointmentController extends AbstractController
         }
 
         $format = SessionFormat::tryFrom($data['format'] ?? '') ?? $session->getFormat();
+        $proposedBy = $isMentor ? 'mentor' : 'junior';
 
         $appointment = new SessionAppointment();
         $appointment->setSession($session);
         $appointment->setScheduledAt($scheduledAt);
         $appointment->setFormat($format);
+        $appointment->setProposedBy($proposedBy);
 
         $this->em->persist($appointment);
         $this->em->flush();
 
         $formattedDate = $scheduledAt->format('d/m/Y à H\hi');
+        $recipient = $isMentor ? $session->getJunior() : $session->getMentor()->getUser();
         $this->notificationService->createAndPush(
-            $session->getJunior(),
+            $recipient,
             $user,
             NotificationType::MENTORING_SESSION_SCHEDULED,
-            $user->getUsername() . ' a planifié un rendez-vous le ' . $formattedDate . '.',
+            $user->getUsername() . ' a proposé un rendez-vous le ' . $formattedDate . '.',
             $session->getId()
         );
 
@@ -138,8 +144,16 @@ class SessionAppointmentController extends AbstractController
         if (!$appointment || $appointment->getSession()->getId() !== $sessionId) {
             return $this->json(['error' => 'Rendez-vous non trouvé.'], 404);
         }
-        if ($appointment->getSession()->getJunior() !== $user) {
-            return $this->json(['error' => 'Seul le junior peut confirmer.'], 403);
+        $session = $appointment->getSession();
+        $isJunior = $session->getJunior() === $user;
+        $isMentor = $session->getMentor()->getUser() === $user;
+
+        // Le proposant ne peut pas confirmer sa propre proposition
+        if ($appointment->getProposedBy() === 'mentor' && !$isJunior) {
+            return $this->json(['error' => 'Seul le junior peut confirmer une proposition du mentor.'], 403);
+        }
+        if ($appointment->getProposedBy() === 'junior' && !$isMentor) {
+            return $this->json(['error' => 'Seul le mentor peut confirmer une contre-proposition du junior.'], 403);
         }
         if ($appointment->getStatus() === 'confirmed') {
             return $this->json(['error' => 'Déjà confirmé.'], 422);
@@ -148,14 +162,15 @@ class SessionAppointmentController extends AbstractController
         $appointment->setStatus('confirmed');
         $this->em->flush();
 
-        $mentor = $appointment->getSession()->getMentor()->getUser();
+        $sess = $appointment->getSession();
+        $recipient = $isJunior ? $sess->getMentor()->getUser() : $sess->getJunior();
         $formattedDate = $appointment->getScheduledAt()->format('d/m/Y à H\hi');
         $this->notificationService->createAndPush(
-            $mentor,
+            $recipient,
             $user,
             NotificationType::MENTORING_SESSION_SCHEDULED,
             $user->getUsername() . ' a confirmé le rendez-vous du ' . $formattedDate . '.',
-            $appointment->getSession()->getId()
+            $sess->getId()
         );
 
         return $this->json($this->serialize($appointment));
@@ -178,8 +193,15 @@ class SessionAppointmentController extends AbstractController
         if (!$appointment || $appointment->getSession()->getId() !== $sessionId) {
             return $this->json(['error' => 'Rendez-vous non trouvé.'], 404);
         }
-        if ($appointment->getSession()->getJunior() !== $user) {
-            return $this->json(['error' => 'Seul le junior peut refuser.'], 403);
+        $sess = $appointment->getSession();
+        $isJunior = $sess->getJunior() === $user;
+        $isMentor = $sess->getMentor()->getUser() === $user;
+
+        if ($appointment->getProposedBy() === 'mentor' && !$isJunior) {
+            return $this->json(['error' => 'Seul le junior peut refuser une proposition du mentor.'], 403);
+        }
+        if ($appointment->getProposedBy() === 'junior' && !$isMentor) {
+            return $this->json(['error' => 'Seul le mentor peut refuser une contre-proposition du junior.'], 403);
         }
         if ($appointment->getStatus() !== 'pending') {
             return $this->json(['error' => 'Seuls les rendez-vous en attente peuvent être refusés.'], 422);
@@ -225,6 +247,7 @@ class SessionAppointmentController extends AbstractController
             'scheduledAt' => $a->getScheduledAt()->format('c'),
             'format'      => $a->getFormat()->value,
             'status'      => $a->getStatus(),
+            'proposedBy'  => $a->getProposedBy(),
             'createdAt'   => $a->getCreatedAt()->format('c'),
         ];
     }

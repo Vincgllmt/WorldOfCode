@@ -13,7 +13,7 @@ import {
   getSessionNotes, createSessionNote, deleteSessionNote, type SessionNote,
 } from '@/lib/api/mentoring/notes'
 import {
-  getSessionAppointments, deleteSessionAppointment,
+  getSessionAppointments, deleteSessionAppointment, confirmSessionAppointment, refuseSessionAppointment,
 } from '@/lib/api/mentoring/appointments'
 import { useAuth } from '@/hooks/useAuth'
 import type { MentoringSession, SessionAppointment } from '@/types/mentoring'
@@ -78,6 +78,8 @@ export default function MentorSessionRightPanel({ session: s }: Props) {
 
   const [appointments, setAppointments] = useState<SessionAppointment[]>([])
   const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const [refusingId, setRefusingId] = useState<number | null>(null)
 
   useEffect(() => {
     setNotes([])
@@ -86,6 +88,30 @@ export default function MentorSessionRightPanel({ session: s }: Props) {
     getSessionAppointments(s.id).then(setAppointments).catch(() => {})
     setShowFollowUpModal(false)
   }, [s.id])
+
+  const handleConfirmCounter = async (apptId: number) => {
+    setConfirmingId(apptId)
+    try {
+      const updated = await confirmSessionAppointment(s.id, apptId)
+      setAppointments(prev => prev.map(a => a.id === apptId ? updated : a))
+    } catch {
+      // silent
+    } finally {
+      setConfirmingId(null)
+    }
+  }
+
+  const handleRefuseCounter = async (apptId: number) => {
+    setRefusingId(apptId)
+    try {
+      const updated = await refuseSessionAppointment(s.id, apptId)
+      setAppointments(prev => prev.map(a => a.id === apptId ? updated : a))
+    } catch {
+      // silent
+    } finally {
+      setRefusingId(null)
+    }
+  }
 
   useEffect(() => {
     if (showForm) setTimeout(() => textareaRef.current?.focus(), 50)
@@ -306,16 +332,90 @@ export default function MentorSessionRightPanel({ session: s }: Props) {
           )}
 
           <div className="space-y-2">
-            {appointments.map(a => (
-              <AppointmentItem
-                key={a.id}
-                appointment={a}
-                onDelete={async () => {
-                  await deleteSessionAppointment(s.id, a.id).catch(() => {})
-                  setAppointments(prev => prev.filter(x => x.id !== a.id))
-                }}
-              />
-            ))}
+            {appointments.map(a => {
+              const date = new Date(a.scheduledAt)
+              const isPast = date < new Date()
+              const isCounter = a.proposedBy === 'junior'
+              const busy = confirmingId === a.id || refusingId === a.id
+              return (
+                <div
+                  key={a.id}
+                  className={cn(
+                    'rounded-xl border border-border bg-card px-3 py-2.5 space-y-2',
+                    isPast && a.status === 'pending' && 'opacity-60',
+                    a.status === 'pending' && !isCounter && 'border-amber-500/40 bg-amber-500/5',
+                    a.status === 'pending' && isCounter && 'border-violet-500/40 bg-violet-500/5',
+                    a.status === 'refused' && 'opacity-50',
+                  )}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <CalendarClock className={cn(
+                      'h-3.5 w-3.5 shrink-0 mt-0.5',
+                      isCounter ? 'text-violet-500' : a.status === 'pending' ? 'text-amber-500' : 'text-blue-500',
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      {isCounter && (
+                        <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">
+                          Contre-proposition du junior
+                        </p>
+                      )}
+                      <p className="text-sm font-medium">
+                        {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-muted-foreground capitalize">
+                          {FORMAT_LABELS[a.format] ?? a.format}
+                        </p>
+                        {a.status === 'confirmed' && (
+                          <span className="text-[10px] font-medium text-green-600 dark:text-green-400">Confirmé</span>
+                        )}
+                        {a.status === 'refused' && (
+                          <span className="text-[10px] font-medium text-muted-foreground">Refusé</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Supprimer (mentor) ses propres propositions non confirmées */}
+                    {!isCounter && a.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await deleteSessionAppointment(s.id, a.id).catch(() => {})
+                          setAppointments(prev => prev.filter(x => x.id !== a.id))
+                        }}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 mt-0.5"
+                        aria-label="Supprimer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Actions mentor sur une contre-proposition junior */}
+                  {isCounter && a.status === 'pending' && (
+                    <div className="flex items-center gap-2 flex-wrap pl-6">
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmCounter(a.id)}
+                        disabled={busy}
+                        className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 font-medium"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {confirmingId === a.id ? '…' : 'Confirmer'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRefuseCounter(a.id)}
+                        disabled={busy}
+                        className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-50 font-medium"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        {refusingId === a.id ? '…' : 'Refuser'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -393,49 +493,6 @@ function NoteItem({
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       )}
-    </div>
-  )
-}
-
-function AppointmentItem({
-  appointment: a,
-  onDelete,
-}: {
-  appointment: SessionAppointment
-  onDelete: () => void
-}) {
-  const date = new Date(a.scheduledAt)
-  const isPast = date < new Date()
-  const isPending = a.status === 'pending'
-  return (
-    <div className={cn(
-      'group flex items-start gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5',
-      isPast && !isPending && 'opacity-50',
-      isPending && 'border-amber-500/40 bg-amber-500/5',
-    )}>
-      <Calendar className={cn(
-        'h-3.5 w-3.5 shrink-0 mt-0.5',
-        isPending ? 'text-amber-500' : isPast ? 'text-muted-foreground' : 'text-blue-500',
-      )} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">
-          {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <p className="text-[10px] text-muted-foreground capitalize">{FORMAT_LABELS[a.format] ?? a.format}</p>
-          {isPending && (
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">En attente</span>
-          )}
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 mt-0.5"
-        aria-label="Supprimer"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
     </div>
   )
 }

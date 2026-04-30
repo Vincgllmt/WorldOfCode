@@ -74,6 +74,7 @@ export interface SessionAppointment {
   scheduledAt: string
   format: SessionFormat
   status: 'pending' | 'confirmed' | 'refused'
+  proposedBy: 'mentor' | 'junior'
   createdAt: string
 }
 

@@ -19,7 +19,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import type { MentoringRequest, MentoringSession, SessionAppointment } from '@/types/mentoring'
 import { getSessionAppointments, confirmSessionAppointment, refuseSessionAppointment } from '@/lib/api/mentoring/appointments'
-import CounterProposalModal from '@/components/mentoring/request/CounterProposalModal'
+import AppointmentCounterModal from '@/components/mentoring/request/AppointmentCounterModal'
 import { cn } from '@/lib/utils'
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -907,10 +907,21 @@ function SessionDetailPanel({
 
       {/* Modale contre-proposition rendez-vous */}
       {counterApptId !== null && s.conversationId && (
-        <CounterProposalModal
-          conversationId={s.conversationId}
+        <AppointmentCounterModal
           sessionId={s.id}
+          originalAppointmentId={counterApptId}
+          conversationId={s.conversationId}
+          defaultFormat={s.format}
           onClose={() => setCounterApptId(null)}
+          onCreated={(newAppt) => {
+            setAppointments(prev =>
+              prev
+                .map(a => a.id === counterApptId ? { ...a, status: 'refused' as const } : a)
+                .concat(newAppt)
+                .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+            )
+            setCounterApptId(null)
+          }}
         />
       )}
     </div>
