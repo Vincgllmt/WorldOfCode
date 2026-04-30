@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Upload } from 'lucide-react'
 import { ALLOWED_AVATAR_TYPES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
+import { checkImageNSFW, getNsfwBlockMessage } from '@/services/nsfwService'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'
 
@@ -49,6 +50,17 @@ export default function AvatarPicker({ value, onChange, username = '' }: AvatarP
         setUploadError(null)
         setUploading(true)
         try {
+            // Vérification NSFW (les SVG ne sont pas vérifiés car NSFW.js attend un bitmap)
+            if (!file.type.includes('svg')) {
+                const nsfwResult = await checkImageNSFW(file)
+                if (nsfwResult.blocked) {
+                    setUploadError(getNsfwBlockMessage(nsfwResult))
+                    setUploading(false)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                    return
+                }
+            }
+
             const formData = new FormData()
             formData.append('file', file)
             const res = await fetch(`${API_URL}/upload`, {

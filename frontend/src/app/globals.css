@@ -416,6 +416,31 @@
   border-bottom-color: rgba(6, 182, 212, 0.10);
 }
 
+/* TinyMCE — dialogs (Insert Image, etc.) doivent passer au-dessus des Dialogs Radix */
+.tox-tinymce-aux,
+.tox-dialog-wrap,
+.tox-dialog,
+.tox-silver-sink,
+.tox-tinymce-aux *,
+.tox-dialog-wrap *,
+.tox-dialog * {
+  pointer-events: auto !important;
+}
+
+.tox-tinymce-aux,
+.tox-dialog-wrap,
+.tox-dialog,
+.tox-silver-sink {
+  z-index: 1500 !important;
+}
+
+/* Empêche Radix Dialog de désactiver l'interaction avec les modales TinyMCE rendues dans body */
+[data-radix-dialog-content] ~ .tox-tinymce-aux,
+body > .tox-tinymce-aux,
+body > .tox-silver-sink {
+  pointer-events: auto !important;
+}
+
 /* TinyMCE dark mode — s'applique à .dark ET .cyberpunk-dark */
 .dark .tox.tox-tinymce,
 .cyberpunk-dark .tox.tox-tinymce {

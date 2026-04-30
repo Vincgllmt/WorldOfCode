@@ -1,0 +1,298 @@
+# Liste de mots/expressions bloqués pour la modération de texte.
+#
+# Trois catégories :
+#   - severe  : rejet automatique (slurs racistes, contenu illégal, etc.)
+#   - warning : flag pour modération humaine (insultes courantes, sexuel explicite)
+#   - urls    : domaines / patterns d'URL suspects
+#
+# Le matching est fait après normalisation : minuscules + suppression des accents
+# + remplacement des chiffres "leet speak" courants (4→a, 3→e, 1→i, 0→o, 5→s, 7→t).
+# La détection couvre donc "n@zi", "n4z1", "Nazi" de la même manière.
+#
+# Pour ajouter un mot, ajouter une entrée dans la liste appropriée et
+# redéployer / clear cache. Pas besoin de rebuild.
+#
+# NOTE : on évite volontairement les termes ambigus (ass, sex, hell, gay,
+# breast, penis, marijuana...) pour ne pas générer de faux positifs sur des
+# discussions légitimes (médicales, orientations sexuelles, jurons légers...).
+
+severe:
+  # === Slurs racistes / ethniques ===
+  - negre
+  - nègre
+  - négré
+  - négro
+  - négresse
+  - negresse
+  - bougnoule
+  - youpin
+  - sale juif
+  - sale arabe
+  - sale noir
+  - negro
+  - nique ta mere
+  - nique ta race
+  - nigger
+  - nigga
+  - kike
+  - gook
+  - chink
+  - chinetoque
+  - spic
+  - dago
+  - wetback
+  - towelhead
+  - raghead
+  - spook
+  - jiggaboo
+  - jigaboo
+  - jiggerboo
+  - pickaninny
+  - sambo
+  - beaner
+  - golliwog
+  - wigger
+  - dothead
+  - injun
+  - honkey
+  - honky
+  - coon
+  - nig nog
+  - slanteye
+  - redskin
+  - darkie
+
+  # === Slurs homophobes / transphobes ===
+  - pede
+  - pedale
+  - tapette
+  - gouine
+  - faggot
+  - tranny
+  - poofter
+  - fudge packer
+  - fudgepacker
+
+  # === Suprémacisme / nazisme / haine ===
+  - nazi
+  - nazis
+  - neonazi
+  - heil hitler
+  - sieg heil
+  - kkk
+  - ku klux klan
+  - white power
+  - aryan brotherhood
+  - swastika
+  - stormfront
+  - feminazi
+  - islam fasciste
+
+  # === Pédopornographie / contenu illégal ===
+  - cp porn
+  - child porn
+  - childporn
+  - pedo
+  - pedophile
+  - paedophile
+  - pedobear
+  - jail bait
+  - jailbait
+  - lolita
+  - pthc
+  - nambla
+  - preteen porn
+  - pre teen porn
+  - r@ygold
+
+  # === Bestialité / nécrophilie ===
+  - bestiality
+  - zoophilia
+  - necrophilia
+  - mr hands
+
+  # === Incitation à la violence / suicide ===
+  - how to kill
+  - how to murder
+  - how to commit suicide
+  - how to commit genocide
+  - how to torture
+  - how to rape
+
+  # === Contenus choquants connus ===
+  - 2g1c
+  - two girls one cup
+  - lemonparty
+  - goatse
+  - goat.se
+  - goatcx
+  - tubgirl
+  - tub girl
+
+warning:
+  # === Insultes françaises ===
+  - connard
+  - connasse
+  - conne
+  - couillon
+  - salope
+  - salaud
+  - pute
+  - putain
+  - enculé
+  - encule
+  - enculée
+  - enculeur
+  - enfoiré
+  - enfoire
+  - enfoirée
+  - bâtard
+  - batard
+  - ta gueule
+  - ferme ta gueule
+  - va te faire foutre
+  - va te faire enculer
+  - va te faire mettre
+  - fdp
+  - ntm
+  - fils de pute
+  - fille de pute
+  - la putain de ta mere
+  - pouffiasse
+  - grognasse
+  - grogniasse
+  - sac a merde
+  - sac a foutre
+  - trou du cul
+  - merdeux
+  - merdeuse
+  - emmerdeur
+  - emmerdeuse
+  - casse toi
+
+  # === Sexuel explicite (FR) ===
+  - bite
+  - bitte
+  - brackmard
+  - chatte
+  - cramouille
+  - teuch
+  - bander
+  - tringler
+  - troncher
+  - palucher
+  - branler
+  - branlette
+  - branleur
+  - branleuse
+  - branlage
+  - turlute
+  - foutre
+  - sperme
+  - jouir
+  - bloblos
+  - étron
+  - chiasse
+  - brouter le cresson
+
+  # === Insultes anglaises ===
+  - fuck you
+  - fuck off
+  - bitch
+  - asshole
+  - motherfucker
+  - cunt
+  - twat
+  - prick
+  - dickhead
+  - bastard
+  - whore
+  - slut
+  - retard
+  - retarded
+  - douchebag
+
+  # === Sexuel explicite ===
+  - blowjob
+  - blow job
+  - handjob
+  - hand job
+  - rimjob
+  - cumshot
+  - cum shot
+  - gangbang
+  - gang bang
+  - bukkake
+  - deepthroat
+  - deep throat
+  - creampie
+  - cream pie
+  - dirty sanchez
+  - cleveland steamer
+  - donkey punch
+  - golden shower
+  - watersports
+  - scat play
+  - fisting
+  - footjob
+  - foot job
+  - dick pic
+  - dickpic
+  - tits
+
+  # === Drogues dures ===
+  - cocaine
+  - cocaïne
+  - heroine
+  - heroin
+  - héroïne
+  - mdma
+  - ecstasy
+  - meth
+  - crystal meth
+  - crack cocaine
+
+  # === Violences explicites ===
+  - rape
+  - raping
+  - rapist
+  - date rape
+  - daterape
+  - molest
+  - molester
+  - molesting
+
+# === URLs / domaines suspects (raccourcisseurs + sites adultes/haineux) ===
+urls:
+  # Raccourcisseurs (souvent utilisés pour cacher des liens malveillants)
+  - bit.ly
+  - tinyurl.com
+  - shorturl.at
+  - t.co
+  - is.gd
+  - cutt.ly
+  - rb.gy
+  - ow.ly
+
+  # Sites adultes
+  - pornhub.com
+  - redtube.com
+  - xvideos.com
+  - xhamster.com
+  - youporn.com
+  - chaturbate.com
+  - spankbang.com
+  - brazzers.com
+
+  # Forums / sites haineux ou choquants
+  - 4chan.org
+  - 8chan
+  - 8kun
+  - stormfront.org
+  - dailystormer
+  - kiwifarms
+
+  # Sites de contenu choquant connu
+  - lemonparty.org
+  - goatse.cx
+  - tubgirl.com

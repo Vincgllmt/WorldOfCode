@@ -125,7 +125,17 @@ export default function HomePage() {
 
         {/* Modale Nouveau post */}
         <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent
+            className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+            onInteractOutside={(e) => {
+              // Empêche la fermeture de la modale quand on clique dans
+              // une fenêtre TinyMCE (rendue dans body, hors du Dialog).
+              const target = e.target as HTMLElement
+              if (target.closest('.tox-dialog, .tox-tinymce-aux, .tox-silver-sink')) {
+                e.preventDefault()
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Nouvelle publication</DialogTitle>
             </DialogHeader>

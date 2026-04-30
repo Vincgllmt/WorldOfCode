@@ -12,6 +12,7 @@ use App\Mapper\CommentMapper;
 use App\Repository\CommentRepository;
 use App\Repository\PostRepository;
 use App\Service\NotificationService;
+use App\Service\Moderation\TextModerationService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -118,13 +119,15 @@ class CommentControllerTest extends TestCase
         CommentRepository $commentRepo,
         ?PostRepository $postRepo = null,
         bool $isAdmin = false,
-        ?NotificationService $notifService = null
+        ?NotificationService $notifService = null,
+        ?TextModerationService $moderation = null
     ): CommentController {
         $controller = new CommentController(
             $commentRepo,
             $postRepo        ?? $this->createMock(PostRepository::class),
             new CommentMapper(),
-            $notifService    ?? $this->createMock(NotificationService::class)
+            $notifService    ?? $this->createMock(NotificationService::class),
+            $moderation      ?? $this->createMock(TextModerationService::class)
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));

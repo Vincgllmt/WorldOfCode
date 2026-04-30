@@ -68,7 +68,8 @@ export const useCreatePost = () => {
     onSuccess: async () => {
       await invalidatePostLists(queryClient)
     },
-    onError: () => toast.error('Erreur lors de la création du post'),
+    onError: (err: Error) =>
+      toast.error(err?.message || 'Erreur lors de la création du post'),
   })
 }
 
@@ -80,7 +81,8 @@ export const useUpdatePost = () => {
     onSuccess: async () => {
       await invalidatePostLists(queryClient)
     },
-    onError: () => toast.error('Erreur lors de la mise à jour du post'),
+    onError: (err: Error) =>
+      toast.error(err?.message || 'Erreur lors de la mise à jour du post'),
   })
 }
 

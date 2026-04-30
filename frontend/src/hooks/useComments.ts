@@ -20,7 +20,8 @@ export const useCreateComment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
-    onError: () => toast.error('Erreur lors de la création du commentaire')
+    onError: (err: Error) =>
+      toast.error(err?.message || 'Erreur lors de la création du commentaire'),
   })
 }
 
@@ -32,7 +33,8 @@ export const useDeleteComment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
-    onError: () => toast.error('Erreur lors de la suppression du commentaire')
+    onError: (err: Error) =>
+      toast.error(err?.message || 'Erreur lors de la suppression du commentaire'),
   })
 }
 
@@ -44,6 +46,7 @@ export const useUpdateComment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
-    onError: () => toast.error('Erreur lors de la mise à jour du commentaire')
+    onError: (err: Error) =>
+      toast.error(err?.message || 'Erreur lors de la mise à jour du commentaire'),
   })
 }

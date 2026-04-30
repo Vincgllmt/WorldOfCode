@@ -3,6 +3,7 @@
 namespace App\Tests\Controller;
 
 use App\Controller\PostController;
+use App\Service\Moderation\TextModerationService;
 use App\Entity\Post;
 use App\Entity\TechGroup;
 use App\Entity\User;
@@ -115,14 +116,16 @@ class PostControllerTest extends TestCase
         ?TechGroupRepository $groupRepo = null,
         bool $isAdmin = false,
         ?NotificationService $notifService = null,
-        ?EntityManagerInterface $em = null
+        ?EntityManagerInterface $em = null,
+        ?TextModerationService $moderation = null
     ): PostController {
         $controller = new PostController(
             $postRepo,
             $groupRepo      ?? $this->createMock(TechGroupRepository::class),
             new PostMapper(),
             $notifService   ?? $this->createMock(NotificationService::class),
-            $em             ?? $this->createMock(EntityManagerInterface::class)
+            $em             ?? $this->createMock(EntityManagerInterface::class),
+            $moderation     ?? $this->createMock(TextModerationService::class)
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
