@@ -451,6 +451,21 @@ function RequestDetailPanel({
             <p className="text-sm text-foreground/80 whitespace-pre-wrap">{r.observedBehavior}</p>
           </div>
         )}
+        {r.codeSnippet && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code partagé</p>
+              {r.codeLanguage && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded font-mono">
+                  {r.codeLanguage}
+                </span>
+              )}
+            </div>
+            <pre className="text-xs font-mono bg-muted/60 border border-border rounded-xl px-4 py-3 overflow-x-auto whitespace-pre leading-relaxed">
+              <code>{r.codeSnippet}</code>
+            </pre>
+          </div>
+        )}
 
         {/* Pinned info */}
         {r.status === 'pinned' && (
