@@ -18,7 +18,8 @@ import {
 } from '@/lib/api/mentoring/notes'
 import { useAuth } from '@/hooks/useAuth'
 import type { MentoringRequest, MentoringSession, SessionAppointment } from '@/types/mentoring'
-import { getSessionAppointments, confirmSessionAppointment } from '@/lib/api/mentoring/appointments'
+import { getSessionAppointments, confirmSessionAppointment, refuseSessionAppointment } from '@/lib/api/mentoring/appointments'
+import CounterProposalModal from '@/components/mentoring/request/CounterProposalModal'
 import { cn } from '@/lib/utils'
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -537,6 +538,8 @@ function SessionDetailPanel({
 
   const [appointments, setAppointments] = useState<SessionAppointment[]>([])
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const [refusingId, setRefusingId] = useState<number | null>(null)
+  const [counterApptId, setCounterApptId] = useState<number | null>(null)
 
   useEffect(() => {
     setNotes([])
@@ -554,6 +557,18 @@ function SessionDetailPanel({
       // silent
     } finally {
       setConfirmingId(null)
+    }
+  }
+
+  const handleRefuse = async (appointmentId: number) => {
+    setRefusingId(appointmentId)
+    try {
+      const updated = await refuseSessionAppointment(s.id, appointmentId)
+      setAppointments(prev => prev.map(a => a.id === appointmentId ? updated : a))
+    } catch {
+      // silent
+    } finally {
+      setRefusingId(null)
     }
   }
 
@@ -693,58 +708,86 @@ function SessionDetailPanel({
               {appointments.map(a => {
                 const date = new Date(a.scheduledAt)
                 const isPast = date < new Date()
-                const isPending = a.status === 'pending'
+                const busy = confirmingId === a.id || refusingId === a.id
                 return (
                   <div
                     key={a.id}
                     className={cn(
-                      'flex items-start gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5',
-                      isPast && !isPending && 'opacity-50',
-                      isPending && 'border-amber-500/40 bg-amber-500/5',
+                      'rounded-xl border border-border bg-card px-3 py-2.5 space-y-2',
+                      isPast && a.status === 'pending' && 'opacity-60',
+                      a.status === 'pending' && 'border-amber-500/40 bg-amber-500/5',
+                      a.status === 'refused' && 'opacity-50',
                     )}
                   >
-                    <Calendar className={cn(
-                      'h-3.5 w-3.5 shrink-0 mt-0.5',
-                      isPending ? 'text-amber-500' : isPast ? 'text-muted-foreground' : 'text-blue-500',
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">
-                        {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] text-muted-foreground capitalize">
-                          {FORMAT_LABELS[a.format] ?? a.format}
+                    {/* Date + format + statut */}
+                    <div className="flex items-start gap-2.5">
+                      <Calendar className={cn(
+                        'h-3.5 w-3.5 shrink-0 mt-0.5',
+                        a.status === 'pending' ? 'text-amber-500'
+                          : a.status === 'confirmed' ? 'text-blue-500'
+                          : 'text-muted-foreground',
+                      )} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">
+                          {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                         </p>
-                        {a.status === 'pending' && (
-                          <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                            En attente de confirmation
-                          </span>
-                        )}
-                        {a.status === 'confirmed' && (
-                          <span className="text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-0.5">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Confirmé
-                          </span>
-                        )}
-                        {a.status === 'refused' && (
-                          <span className="text-[10px] font-medium text-destructive/70 flex items-center gap-0.5">
-                            <X className="h-3 w-3" />
-                            Refusé
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[10px] text-muted-foreground capitalize">
+                            {FORMAT_LABELS[a.format] ?? a.format}
+                          </p>
+                          {a.status === 'pending' && (
+                            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                              En attente
+                            </span>
+                          )}
+                          {a.status === 'confirmed' && (
+                            <span className="text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-0.5">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Confirmé
+                            </span>
+                          )}
+                          {a.status === 'refused' && (
+                            <span className="text-[10px] font-medium text-destructive/70 flex items-center gap-0.5">
+                              <X className="h-3 w-3" />
+                              Refusé
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Actions pour les RDV en attente */}
                     {a.status === 'pending' && (
-                      <button
-                        type="button"
-                        onClick={() => handleConfirm(a.id)}
-                        disabled={confirmingId === a.id}
-                        className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 font-medium"
-                        aria-label="Confirmer ce rendez-vous"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        {confirmingId === a.id ? '…' : 'Confirmer'}
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap pl-6">
+                        <button
+                          type="button"
+                          onClick={() => handleConfirm(a.id)}
+                          disabled={busy}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 font-medium"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          {confirmingId === a.id ? '…' : 'Confirmer'}
+                        </button>
+                        {s.conversationId && (
+                          <button
+                            type="button"
+                            onClick={() => setCounterApptId(a.id)}
+                            disabled={busy}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-50 font-medium"
+                          >
+                            Autre date ?
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRefuse(a.id)}
+                          disabled={busy}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-50 font-medium"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          {refusingId === a.id ? '…' : 'Refuser'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )
@@ -861,6 +904,15 @@ function SessionDetailPanel({
           </div>
         </div>
       </div>
+
+      {/* Modale contre-proposition rendez-vous */}
+      {counterApptId !== null && s.conversationId && (
+        <CounterProposalModal
+          conversationId={s.conversationId}
+          sessionId={s.id}
+          onClose={() => setCounterApptId(null)}
+        />
+      )}
     </div>
   )
 }
