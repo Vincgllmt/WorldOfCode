@@ -8,7 +8,7 @@ import {
   MessageSquare, Calendar, Users, LayoutList,
   Globe, Target, ChevronRight, Plus, Zap, Code2,
   X, Video, AlignLeft, Layers, Link2, StickyNote, Trash2, Send,
-  Bookmark, Ban, ArrowUpRight,
+  Bookmark, Ban, ArrowUpRight, CalendarClock, Check,
 } from 'lucide-react'
 import { getMentoringRequestsMine, makeRequestPublic, cancelMentoringRequest } from '@/lib/api/mentoring/requests'
 import { getJuniorStats, type JuniorStats } from '@/lib/api/mentoring/junior'
@@ -17,7 +17,8 @@ import {
   getSessionNotes, createSessionNote, deleteSessionNote, type SessionNote,
 } from '@/lib/api/mentoring/notes'
 import { useAuth } from '@/hooks/useAuth'
-import type { MentoringRequest, MentoringSession } from '@/types/mentoring'
+import type { MentoringRequest, MentoringSession, SessionAppointment } from '@/types/mentoring'
+import { getSessionAppointments, confirmSessionAppointment } from '@/lib/api/mentoring/appointments'
 import { cn } from '@/lib/utils'
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -534,9 +535,27 @@ function SessionDetailPanel({
   const [submitting, setSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const [appointments, setAppointments] = useState<SessionAppointment[]>([])
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
+
   useEffect(() => {
+    setNotes([])
+    setAppointments([])
     getSessionNotes(s.id).then(setNotes).catch(() => {})
+    getSessionAppointments(s.id).then(setAppointments).catch(() => {})
   }, [s.id])
+
+  const handleConfirm = async (appointmentId: number) => {
+    setConfirmingId(appointmentId)
+    try {
+      const updated = await confirmSessionAppointment(s.id, appointmentId)
+      setAppointments(prev => prev.map(a => a.id === appointmentId ? updated : a))
+    } catch {
+      // silent
+    } finally {
+      setConfirmingId(null)
+    }
+  }
 
   useEffect(() => {
     if (showForm) setTimeout(() => textareaRef.current?.focus(), 50)
@@ -654,6 +673,79 @@ function SessionDetailPanel({
             En attente de confirmation de date par votre mentor.
           </p>
         )}
+
+        {/* ── Rendez-vous ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Rendez-vous
+              {appointments.length > 0 && <span className="ml-1.5 font-normal normal-case">({appointments.length})</span>}
+            </p>
+          </div>
+
+          {appointments.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-3 bg-muted/30 rounded-xl">
+              Aucun rendez-vous proposé pour l&apos;instant.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {appointments.map(a => {
+                const date = new Date(a.scheduledAt)
+                const isPast = date < new Date()
+                const isPending = a.status === 'pending'
+                return (
+                  <div
+                    key={a.id}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5',
+                      isPast && !isPending && 'opacity-50',
+                      isPending && 'border-amber-500/40 bg-amber-500/5',
+                    )}
+                  >
+                    <Calendar className={cn(
+                      'h-3.5 w-3.5 shrink-0 mt-0.5',
+                      isPending ? 'text-amber-500' : isPast ? 'text-muted-foreground' : 'text-blue-500',
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">
+                        {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-muted-foreground capitalize">
+                          {FORMAT_LABELS[a.format] ?? a.format}
+                        </p>
+                        {isPending && (
+                          <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                            En attente de confirmation
+                          </span>
+                        )}
+                        {!isPending && (
+                          <span className="text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-0.5">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Confirmé
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {isPending && (
+                      <button
+                        type="button"
+                        onClick={() => handleConfirm(a.id)}
+                        disabled={confirmingId === a.id}
+                        className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 font-medium"
+                        aria-label="Confirmer ce rendez-vous"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        {confirmingId === a.id ? '…' : 'Confirmer'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* ── Notes section ── */}
         <div className="space-y-3">
