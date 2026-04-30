@@ -59,6 +59,14 @@ export async function getMentoringRequestsMine(): Promise<import('@/types/mentor
   return res.json()
 }
 
+export async function cancelMentoringRequest(id: number): Promise<void> {
+  const res = await fetchWithAuth(`/mentoring/requests/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw Object.assign(new Error((err as { error?: string }).error ?? 'Erreur annulation'), { status: res.status, code: (err as { code?: string }).code })
+  }
+}
+
 export async function makeRequestPublic(id: number): Promise<import('@/types/mentoring').MentoringRequest> {
   const res = await fetchWithAuth(`/mentoring/requests/${id}/make-public`, { method: 'PATCH' })
   if (!res.ok) {
