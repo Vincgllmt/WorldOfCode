@@ -1,8 +1,13 @@
+export type MessageType =
+    | 'text' | 'image' | 'file' | 'call' | 'missed_call'
+    | 'session_proposal' | 'session_counter_proposal' | 'session_closed'
+    | 'appointment_proposal'
+
 export interface Message {
     id: string
     conversationId: string
     body: string
-    type: 'text' | 'image' | 'file' | 'call' | 'missed_call' | 'session_proposal' | 'session_closed'
+    type: MessageType
     read: boolean
     sender: {
         id: number
@@ -16,13 +21,13 @@ export interface Message {
 export interface CreateMessagePayload {
     conversationId: string
     body: string
-    type?: 'text' | 'image' | 'file' | 'call' | 'missed_call' | 'session_proposal' | 'session_closed'
+    type?: MessageType
 }
 
 export interface LastMessage {
     id: string
     body: string
-    type?: 'text' | 'image' | 'file' | 'call' | 'missed_call' | 'session_proposal' | 'session_closed'
+    type?: MessageType
     createdAt: string
     sender: {
         id: number

@@ -715,20 +715,26 @@ function SessionDetailPanel({
                         <p className="text-[10px] text-muted-foreground capitalize">
                           {FORMAT_LABELS[a.format] ?? a.format}
                         </p>
-                        {isPending && (
+                        {a.status === 'pending' && (
                           <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
                             En attente de confirmation
                           </span>
                         )}
-                        {!isPending && (
+                        {a.status === 'confirmed' && (
                           <span className="text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-0.5">
                             <CheckCircle2 className="h-3 w-3" />
                             Confirmé
                           </span>
                         )}
+                        {a.status === 'refused' && (
+                          <span className="text-[10px] font-medium text-destructive/70 flex items-center gap-0.5">
+                            <X className="h-3 w-3" />
+                            Refusé
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {isPending && (
+                    {a.status === 'pending' && (
                       <button
                         type="button"
                         onClick={() => handleConfirm(a.id)}

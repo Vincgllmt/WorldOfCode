@@ -50,6 +50,9 @@ function getMessagePreview(body: string, isMine: boolean, type?: string): React.
     if (type === 'session_counter_proposal') {
         return '📅 Contre-proposition de date'
     }
+    if (type === 'appointment_proposal') {
+        return '📅 Proposition de rendez-vous'
+    }
     if (type === 'session_closed') {
         return '⭐ Proposition de notation'
     }

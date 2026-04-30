@@ -33,6 +33,14 @@ export async function confirmSessionAppointment(sessionId: number, appointmentId
   return res.json()
 }
 
+export async function refuseSessionAppointment(sessionId: number, appointmentId: number): Promise<SessionAppointment> {
+  const res = await fetchWithAuth(`/mentoring/sessions/${sessionId}/appointments/${appointmentId}/refuse`, {
+    method: 'PATCH',
+  })
+  if (!res.ok) throw new Error('Erreur refus rendez-vous')
+  return res.json()
+}
+
 export async function deleteSessionAppointment(sessionId: number, appointmentId: number): Promise<void> {
   await fetchWithAuth(`/mentoring/sessions/${sessionId}/appointments/${appointmentId}`, {
     method: 'DELETE',

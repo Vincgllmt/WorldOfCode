@@ -161,6 +161,36 @@ class SessionAppointmentController extends AbstractController
         return $this->json($this->serialize($appointment));
     }
 
+    #[Route('/api/mentoring/sessions/{sessionId}/appointments/{id}/refuse', name: 'session_appointments_refuse', methods: ['PATCH'])]
+    #[OA\Patch(summary: 'Refuser un rendez-vous (junior)', responses: [
+        new OA\Response(response: 200, description: 'Refusé'),
+        new OA\Response(response: 403, description: 'Accès non autorisé'),
+        new OA\Response(response: 404, description: 'Non trouvé'),
+        new OA\Response(response: 422, description: 'Déjà traité'),
+    ])]
+    public function refuse(int $sessionId, int $id): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $user */
+        $user = $this->getUser();
+        $appointment = $this->appointmentRepo->find($id);
+
+        if (!$appointment || $appointment->getSession()->getId() !== $sessionId) {
+            return $this->json(['error' => 'Rendez-vous non trouvé.'], 404);
+        }
+        if ($appointment->getSession()->getJunior() !== $user) {
+            return $this->json(['error' => 'Seul le junior peut refuser.'], 403);
+        }
+        if ($appointment->getStatus() !== 'pending') {
+            return $this->json(['error' => 'Seuls les rendez-vous en attente peuvent être refusés.'], 422);
+        }
+
+        $appointment->setStatus('refused');
+        $this->em->flush();
+
+        return $this->json($this->serialize($appointment));
+    }
+
     #[Route('/api/mentoring/sessions/{sessionId}/appointments/{id}', name: 'session_appointments_delete', methods: ['DELETE'])]
     #[OA\Delete(summary: 'Supprimer un rendez-vous', responses: [
         new OA\Response(response: 204, description: 'Supprimé'),

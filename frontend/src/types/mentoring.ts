@@ -73,7 +73,7 @@ export interface SessionAppointment {
   id: number
   scheduledAt: string
   format: SessionFormat
-  status: 'pending' | 'confirmed'
+  status: 'pending' | 'confirmed' | 'refused'
   createdAt: string
 }
 

@@ -5,10 +5,10 @@ import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star } from "lucide-react"
+import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star, XCircle } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 import { confirmSessionSchedule, getSession } from "@/lib/api/mentoring/sessions"
-import { confirmSessionAppointment, getSessionAppointment } from "@/lib/api/mentoring/appointments"
+import { confirmSessionAppointment, refuseSessionAppointment, getSessionAppointment } from "@/lib/api/mentoring/appointments"
 import { getSessionRatings } from "@/lib/api/mentoring/ratings"
 import RatingModal from "@/components/mentoring/session/RatingModal"
 import CounterProposalModal from "@/components/mentoring/request/CounterProposalModal"
@@ -202,17 +202,20 @@ function AppointmentProposalCard({
     payload,
     isMe,
     createdAt,
+    conversationId,
 }: {
     payload: AppointmentProposalPayload
     isMe: boolean
     createdAt: string
+    conversationId?: string
 }) {
-    const [confirmed, setConfirmed] = useState(false)
+    const [status, setStatus] = useState<'pending' | 'confirmed' | 'refused'>('pending')
     const [loading, setLoading] = useState(false)
+    const [showCounterModal, setShowCounterModal] = useState(false)
 
     useEffect(() => {
         getSessionAppointment(payload.sessionId, payload.appointmentId)
-            .then(a => { if (a.status === 'confirmed') setConfirmed(true) })
+            .then(a => { setStatus(a.status as 'pending' | 'confirmed' | 'refused') })
             .catch(() => {})
     }, [payload.sessionId, payload.appointmentId])
 
@@ -220,7 +223,19 @@ function AppointmentProposalCard({
         setLoading(true)
         try {
             await confirmSessionAppointment(payload.sessionId, payload.appointmentId)
-            setConfirmed(true)
+            setStatus('confirmed')
+        } catch {
+            // silently ignore
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleRefuse = async () => {
+        setLoading(true)
+        try {
+            await refuseSessionAppointment(payload.sessionId, payload.appointmentId)
+            setStatus('refused')
         } catch {
             // silently ignore
         } finally {
@@ -229,6 +244,7 @@ function AppointmentProposalCard({
     }
 
     return (
+        <>
         <div className="flex justify-center py-2">
             <div className="w-full max-w-[320px] rounded-xl border border-border bg-card shadow-sm px-4 py-3 space-y-2">
                 <div className="flex items-center gap-2 text-primary">
@@ -238,37 +254,74 @@ function AppointmentProposalCard({
                     </span>
                 </div>
                 <p className="text-sm font-medium text-foreground">{payload.display}</p>
-                {!isMe && (
-                    confirmed ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CalendarCheck className="h-3.5 w-3.5" />
-                            Confirmé
-                        </div>
-                    ) : (
+                {!isMe && status === 'pending' && (
+                    <div className="flex items-center gap-2 flex-wrap">
                         <button
                             type="button"
                             onClick={handleAccept}
                             disabled={loading}
                             className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
                         >
-                            {loading ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                                <CalendarCheck className="h-3 w-3" />
-                            )}
+                            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarCheck className="h-3 w-3" />}
                             Accepter
                         </button>
-                    )
+                        {conversationId && (
+                            <button
+                                type="button"
+                                onClick={() => setShowCounterModal(true)}
+                                disabled={loading}
+                                className="flex items-center gap-1.5 text-xs font-medium border border-amber-500/60 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-lg hover:bg-amber-500/10 transition-colors disabled:opacity-60"
+                            >
+                                Autre date ?
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleRefuse}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs font-medium border border-destructive/40 text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive/5 transition-colors disabled:opacity-60"
+                        >
+                            <XCircle className="h-3 w-3" />
+                            Refuser
+                        </button>
+                    </div>
                 )}
-                {isMe && confirmed && (
+                {!isMe && status === 'confirmed' && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        Confirmé
+                    </div>
+                )}
+                {!isMe && status === 'refused' && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <XCircle className="h-3.5 w-3.5" />
+                        Refusé
+                    </div>
+                )}
+                {isMe && status === 'confirmed' && (
                     <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                         <CalendarCheck className="h-3.5 w-3.5" />
                         Accepté par le junior
                     </div>
                 )}
+                {isMe && status === 'refused' && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <XCircle className="h-3.5 w-3.5" />
+                        Refusé par le junior
+                    </div>
+                )}
                 <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
             </div>
         </div>
+        {showCounterModal && conversationId && createPortal(
+            <CounterProposalModal
+                conversationId={conversationId}
+                sessionId={payload.sessionId}
+                onClose={() => setShowCounterModal(false)}
+            />,
+            document.body
+        )}
+        </>
     )
 }
 
@@ -630,6 +683,7 @@ export function MessageList({
                                     payload={appointmentProposalData}
                                     isMe={isMe}
                                     createdAt={m.createdAt}
+                                    conversationId={conversationId}
                                 />
                             ) : isSessionClosed && sessionClosedData ? (
                                 <SessionClosedCard
