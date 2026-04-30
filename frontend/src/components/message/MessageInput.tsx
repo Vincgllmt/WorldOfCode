@@ -3,6 +3,7 @@ import CustomEmojiPicker from "./EmojiPicker"
 import { Smile, Send, ImagePlus, Paperclip, X, Loader2, FileArchive } from "lucide-react"
 import { socket } from "@/lib/socket"
 import { uploadImage } from "@/services/uploadService"
+import { checkImageNSFW, getNsfwBlockMessage } from "@/services/nsfwService"
 import toast from "react-hot-toast"
 import Image from "next/image"
 import {
@@ -110,14 +111,15 @@ export function MessageInput({ onSend, conversationId }: Props) {
         }
     }
 
-    const addImages = (files: File[]) => {
+    const addImages = async (files: File[]) => {
         const remaining = MAX_IMAGES - images.length
         if (remaining <= 0) {
             toast.error(`Maximum ${MAX_IMAGES} images à la fois.`)
             return
         }
 
-        const validFiles: ImageEntry[] = []
+        // 1. Validation format/taille
+        const candidates: File[] = []
         for (const file of files.slice(0, remaining)) {
             if (!ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number])) {
                 toast.error(`${file.name} : format non supporté.`)
@@ -127,15 +129,36 @@ export function MessageInput({ onSend, conversationId }: Props) {
                 toast.error(`${file.name} : dépasse ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024} Mo.`)
                 continue
             }
-            validFiles.push({ file, preview: URL.createObjectURL(file) })
+            candidates.push(file)
         }
 
         if (files.length > remaining) {
             toast.error(`Seulement ${remaining} image(s) ajoutée(s) (max ${MAX_IMAGES}).`)
         }
 
-        if (validFiles.length > 0) {
-            setImages((prev) => [...prev, ...validFiles])
+        if (candidates.length === 0) return
+
+        // 2. Vérification NSFW
+        const checkingToast = toast.loading('Vérification des images…')
+        try {
+            const results = await Promise.all(candidates.map((f) => checkImageNSFW(f)))
+            const validFiles: ImageEntry[] = []
+
+            for (let i = 0; i < candidates.length; i++) {
+                const file = candidates[i]
+                const result = results[i]
+                if (result.blocked) {
+                    toast.error(`${file.name} : ${getNsfwBlockMessage(result)}`)
+                    continue
+                }
+                validFiles.push({ file, preview: URL.createObjectURL(file) })
+            }
+
+            if (validFiles.length > 0) {
+                setImages((prev) => [...prev, ...validFiles])
+            }
+        } finally {
+            toast.dismiss(checkingToast)
         }
     }
 

@@ -5,6 +5,7 @@ import type { IAllProps as TinyMCEEditorProps } from '@tinymce/tinymce-react'
 import type { Editor as TinyMCEEditor } from 'tinymce'
 import toast from 'react-hot-toast'
 import { uploadImage } from '@/services/uploadService'
+import { checkImageNSFW, getNsfwBlockMessage } from '@/services/nsfwService'
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
 
 type EditorInit = NonNullable<TinyMCEEditorProps['init']>
@@ -31,6 +32,24 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       throw new Error(`L'image ne doit pas d\u00e9passer ${MAX_IMAGE_SIZE_MB} Mo.`)
+    }
+
+    // V\u00e9rification NSFW avant upload
+    const checkingToast = toast.loading('V\u00e9rification de l\'image\u2026')
+    try {
+      const nsfwResult = await checkImageNSFW(file)
+      toast.dismiss(checkingToast)
+      if (nsfwResult.blocked) {
+        const msg = getNsfwBlockMessage(nsfwResult)
+        toast.error(msg)
+        throw new Error(msg)
+      }
+    } catch (err) {
+      toast.dismiss(checkingToast)
+      if (err instanceof Error && err.message.includes('refus\u00e9e')) {
+        throw err
+      }
+      // Erreur du mod\u00e8le : on ne bloque pas, on continue l'upload
     }
 
     try {

@@ -14,6 +14,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Service\NotificationService;
+use App\Service\Moderation\TextModerationService;
+use App\Service\Moderation\ContentRejectedException;
 use App\Enum\NotificationType;
 
 #[Route('/api/comment')]
@@ -24,7 +26,8 @@ class CommentController extends AbstractController
         private CommentRepository $repo,
         private PostRepository $postRepo,
         private CommentMapper $mapper,
-        private NotificationService $notificationService
+        private NotificationService $notificationService,
+        private TextModerationService $moderation
     ) {}
 
     #[Route('', name: 'comment_list', methods: ['GET'])]
@@ -95,6 +98,16 @@ class CommentController extends AbstractController
             return $this->json(['error' => 'Missing content or postId'], 400);
         }
 
+        // Modération du contenu du commentaire
+        try {
+            $this->moderation->checkOrThrow($content);
+        } catch (ContentRejectedException $e) {
+            return $this->json([
+                'error' => $e->getMessage(),
+                'code' => 'content_rejected',
+            ], 422);
+        }
+
         $post = $this->postRepo->find($postId);
         if (!$post) {
             return $this->json(['error' => 'Post not found'], 404);
@@ -152,6 +165,15 @@ class CommentController extends AbstractController
         $content = $data['content'] ?? null;
 
         if ($content) {
+            // Modération avant écrasement
+            try {
+                $this->moderation->checkOrThrow($content);
+            } catch (ContentRejectedException $e) {
+                return $this->json([
+                    'error' => $e->getMessage(),
+                    'code' => 'content_rejected',
+                ], 422);
+            }
             $comment->setContent($content);
             $this->repo->save($comment, true);
         }

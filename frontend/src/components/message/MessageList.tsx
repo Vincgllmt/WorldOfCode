@@ -268,7 +268,7 @@ export function MessageList({
                                             <img
                                                 src={m.body}
                                                 alt="Image partagée"
-                                                className={`rounded-2xl object-cover max-h-[300px] w-auto cursor-pointer hover:opacity-90 transition-opacity ${
+                                                className={`rounded-2xl object-cover max-h-[300px] max-w-full w-auto cursor-pointer hover:opacity-90 transition-opacity ${
                                                     isMe
                                                         ? isContinuation ? "rounded-tr-md" : "rounded-br-md"
                                                         : isContinuation ? "rounded-tl-md" : "rounded-bl-md"
@@ -312,7 +312,7 @@ export function MessageList({
                                     <button
                                         type="button"
                                         onClick={() => downloadFile(fileData.url, fileData.name)}
-                                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors cursor-pointer ${
+                                        className={`flex w-full items-center gap-3 px-4 py-3 rounded-2xl transition-colors cursor-pointer ${
                                             isMe
                                                 ? `bg-primary text-primary-foreground hover:bg-primary/90 ${isContinuation ? "rounded-tr-md" : "rounded-br-md"}`
                                                 : `bg-card text-card-foreground shadow-sm hover:bg-muted ${isContinuation ? "rounded-tl-md" : "rounded-bl-md"}`

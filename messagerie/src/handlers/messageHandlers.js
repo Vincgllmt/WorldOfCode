@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import crypto from "crypto";
+import { checkMessage } from "../moderation.js";
 
 /**
  * Gestion des handlers de messagerie (texte)
@@ -64,6 +65,22 @@ export function registerMessageHandlers(socket, io, conversations) {
                 console.log("📨 [X] Not in conversation");
                 socket.emit("ack", { temp_id, error: "not_in_conversation" });
                 return;
+            }
+
+            // Modération du contenu (uniquement pour les messages texte, pas
+            // pour les images/fichiers déjà uploadés et vérifiés ailleurs)
+            const isTextMessage = !type || type === "text";
+            if (isTextMessage) {
+                const moderation = checkMessage(body);
+                if (!moderation.ok) {
+                    console.log("📨 [X] Content rejected by moderation:", moderation.code);
+                    socket.emit("ack", {
+                        temp_id,
+                        error: "content_rejected",
+                        message: moderation.reason,
+                    });
+                    return;
+                }
             }
 
             const id = crypto.randomUUID();
