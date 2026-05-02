@@ -92,7 +92,7 @@ spec:
                       "model": {
                         "datasource": {"type": "loki", "uid": "loki-datasource"},
                         "editorMode": "code",
-                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\"} | json | channel=`user_error` [1m]))",
+                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\", container=\"php-fpm\"} | json | channel=\"user_error\" [1m]))",
                         "instant": false,
                         "queryType": "range",
                         "range": true,
@@ -155,7 +155,7 @@ spec:
                       "model": {
                         "datasource": {"type": "loki", "uid": "loki-datasource"},
                         "editorMode": "code",
-                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\"} | json | channel=`server_error` [1m]))",
+                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\", container=\"php-fpm\"} | json | channel=\"server_error\" [1m]))",
                         "instant": false,
                         "queryType": "range",
                         "range": true,

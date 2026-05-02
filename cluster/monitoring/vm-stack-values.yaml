@@ -69,18 +69,9 @@ grafana:
     - name: Loki
       type: loki
       uid: loki-datasource
-      # L'URL est : http://<nom-service-loki>.<namespace>.svc:3100
-      # Comme on a appelé la release "loki" dans la CI, le service s'appelle généralement "loki"
-      url: http://loki.monitoring.svc:3100 
+      url: http://loki.monitoring.svc:3100
       access: proxy
       isDefault: false
-      jsonData:
-        derivedFields:
-          # (Optionnel) Super puissant : permet de cliquer sur une traceID dans les logs 
-          # pour aller vers Tempo (si tu ajoutes du tracing plus tard)
-          - datasourceUid: tempo
-            matcherRegex: "traceID=(\\w+)"
-            name: TraceID
-            url: "$${__value.raw}"
+      jsonData: {}
 
   defaultDashboardsEnabled: true
