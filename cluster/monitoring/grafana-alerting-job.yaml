@@ -4,7 +4,7 @@ metadata:
   name: grafana-alerting-setup
   namespace: monitoring
   annotations:
-    job-version: "3"
+    job-version: "4"
 spec:
   ttlSecondsAfterFinished: 300
   backoffLimit: 3
@@ -42,7 +42,7 @@ spec:
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "woc-alert-template",
-                  "template": "{{ define \"woc-alert-template\" -}}\n{{ if eq .Status \"firing\" }}🔴 *[FIRING] Alerte WOC*{{ else }}✅ *[RESOLVED] Alerte WOC*{{ end }}\n\n{{ range .Alerts -}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n*{{ .Annotations.summary }}*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📊 *Contexte*\n• *Namespace :* `{{ index .Labels \"namespace\" }}`\n• *Sévérité :* `{{ index .Labels \"severity\" }}`\n• *Alerte :* `{{ index .Labels \"alertname\" }}`\n• *Occurrences (1 min) :* `{{ .ValueString }}`\n\n📝 *Description*\n{{ .Annotations.description }}\n\n⏱ *Déclenché le* {{ .StartsAt.Format \"02/01/2006 à 15:04:05\" }}\n{{ end -}}\n{{- end }}"
+                  "template": "{{ define \"woc-alert-template\" -}}\n{{ if eq .Status \"firing\" }}<b>🔴 FIRING — WOC Backend</b>{{ else }}<b>✅ RESOLU — WOC Backend</b>{{ end }}\n{{ range .Alerts }}\n<b>{{ .Annotations.summary }}</b>\n\n<b>📊 Contexte</b>\nNamespace : <b>{{ index .Labels \"namespace\" }}</b>\nSeverite  : <b>{{ index .Labels \"severity\" }}</b>\nCode HTTP : <b>{{ index .Labels \"context_status_code\" }}</b>\n\n<b>📝 Detail</b>\n{{ .Annotations.description }}\n\nDeclenche le {{ .StartsAt.Format \"02/01/2006 15:04:05\" }}\n{{ end -}}\n{{- end }}"
                 }'
               echo ""
 
@@ -92,7 +92,7 @@ spec:
                       "model": {
                         "datasource": {"type": "loki", "uid": "loki-datasource"},
                         "editorMode": "code",
-                        "expr": "sum by (namespace)(count_over_time({app=\"backend\"} | json | channel=`user_error` [1m]))",
+                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\"} | json | channel=`user_error` [1m]))",
                         "instant": false,
                         "queryType": "range",
                         "range": true,
@@ -120,12 +120,12 @@ spec:
                       }
                     }
                   ],
-                  "noDataState": "NoData",
-                  "execErrState": "Error",
+                  "noDataState": "OK",
+                  "execErrState": "OK",
                   "for": "0s",
                   "annotations": {
                     "summary": "Erreur utilisateur detectee sur WOC",
-                    "description": "Une erreur 4xx a ete generee par un utilisateur (HTTP 400/401/403/422/429). Namespace : {{ index $labels \"namespace\" }}."
+                    "description": "Namespace : {{ index $labels \"namespace\" }} | Code HTTP {{ index $labels \"context_status_code\" }} reçu sur le backend. Consulter les logs Loki : {app=\"backend\"} | json | channel=`user_error` pour le détail (route, IP, user, message)."
                   },
                   "labels": {"severity": "warning", "team": "woc"},
                   "isPaused": false,
@@ -155,7 +155,7 @@ spec:
                       "model": {
                         "datasource": {"type": "loki", "uid": "loki-datasource"},
                         "editorMode": "code",
-                        "expr": "sum by (namespace)(count_over_time({app=\"backend\"} | json | channel=`server_error` [1m]))",
+                        "expr": "sum by (namespace, context_status_code)(count_over_time({app=\"backend\"} | json | channel=`server_error` [1m]))",
                         "instant": false,
                         "queryType": "range",
                         "range": true,
@@ -172,7 +172,7 @@ spec:
                             "operator": {"type": "and"},
                             "query": {"params": ["A"]},
                             "reducer": {"params": [], "type": "last"},
-                            "type": "last"
+                            "type": "query"
                           }
                         ],
                         "datasource": {"type": "__expr__", "uid": "-100"},
@@ -183,12 +183,12 @@ spec:
                       }
                     }
                   ],
-                  "noDataState": "NoData",
-                  "execErrState": "Alerting",
+                  "noDataState": "OK",
+                  "execErrState": "OK",
                   "for": "0s",
                   "annotations": {
                     "summary": "🚨 Erreur serveur critique sur WOC",
-                    "description": "Une exception non geree a provoque une erreur 5xx. Intervention requise. Namespace : {{ index $labels \"namespace\" }}."
+                    "description": "Namespace : {{ index $labels \"namespace\" }} | Exception non gérée → HTTP {{ index $labels \"context_status_code\" }}. Consulter les logs Loki : {app=\"backend\"} | json | channel=`server_error` pour exception_class, file et line."
                   },
                   "labels": {"severity": "critical", "team": "woc"},
                   "isPaused": false,

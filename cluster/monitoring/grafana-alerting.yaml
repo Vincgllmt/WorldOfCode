@@ -146,7 +146,7 @@ data:
             for: 0s
             annotations:
               summary: "Erreur utilisateur détectée sur WOC"
-              description: "Namespace : {{ index $labels \"namespace\" }} | Code HTTP {{ index $labels \"status_code\" }} reçu sur le backend. Consulter les logs Loki : {app=\"backend\"} | json | channel=`user_error` pour le détail (route, IP, user, message)."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Code HTTP {{ index $labels \"context_status_code\" }} reçu sur le backend. Consulter les logs Loki : {app=\"backend\"} | json | channel=`user_error` pour le détail (route, IP, user, message)."
             labels:
               severity: warning
               team: woc
@@ -202,7 +202,7 @@ data:
             for: 0s
             annotations:
               summary: "🚨 Erreur serveur critique sur WOC"
-              description: "Namespace : {{ index $labels \"namespace\" }} | Exception non gérée → HTTP {{ index $labels \"status_code\" }}. Consulter les logs Loki : {app=\"backend\"} | json | channel=`server_error` pour exception_class, file et line."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Exception non gérée → HTTP {{ index $labels \"context_status_code\" }}. Consulter les logs Loki : {app=\"backend\"} | json | channel=`server_error` pour exception_class, file et line."
             labels:
               severity: critical
               team: woc
