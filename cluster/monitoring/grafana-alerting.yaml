@@ -33,7 +33,8 @@ metadata:
     grafana_alert: "1"
 data:
   # ──────────────────────────────────────────────────────────────────────────
-  # Template de notification (format Google Chat markdown)
+  # Template de notification (HTML — Google Chat textParagraph ne supporte
+  # pas le markdown *bold*, uniquement les balises HTML <b>, <i>, <br>)
   # ──────────────────────────────────────────────────────────────────────────
   templates.yaml: |
     apiVersion: 1
@@ -42,22 +43,19 @@ data:
         name: woc-alert-template
         template: |
           {{ define "woc-alert-template" -}}
-          {{ if eq .Status "firing" }}🔴 *[FIRING] Alerte WOC*{{ else }}✅ *[RÉSOLU] Alerte WOC*{{ end }}
+          {{ if eq .Status "firing" }}<b>🔴 FIRING — WOC Backend</b>{{ else }}<b>✅ RESOLU — WOC Backend</b>{{ end }}
+          {{ range .Alerts }}
+          <b>{{ .Annotations.summary }}</b>
 
-          {{ range .Alerts -}}
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━
-          *{{ .Annotations.summary }}*
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━
+          <b>📊 Contexte</b>
+          Namespace : <b>{{ index .Labels "namespace" }}</b>
+          Severite  : <b>{{ index .Labels "severity" }}</b>
+          Code HTTP : <b>{{ index .Labels "context_status_code" }}</b>
 
-          📊 *Contexte*
-          • *Namespace :* `{{ index .Labels "namespace" }}`
-          • *Sévérité :* `{{ index .Labels "severity" }}`
-          • *Occurrences (1 min) :* {{ .ValueString }}
-
-          📝 *Description*
+          <b>📝 Detail</b>
           {{ .Annotations.description }}
 
-          ⏱ *Déclenché le* {{ .StartsAt.Format "02/01/2006 à 15:04:05" }}
+          Declenche le {{ .StartsAt.Format "02/01/2006 15:04:05" }}
           {{ end -}}
           {{- end }}
 
@@ -116,7 +114,7 @@ data:
                     type: loki
                     uid: loki-datasource
                   editorMode: code
-                  expr: 'sum by (namespace)(count_over_time({app="backend"} | json | channel=`user_error` [1m]))'
+                  expr: 'sum by (namespace, context_status_code)(count_over_time({app="backend"} | json | channel=`user_error` [1m]))'
                   instant: false
                   queryType: range
                   range: true
@@ -143,12 +141,12 @@ data:
                   hide: false
                   refId: B
                   type: threshold
-            noDataState: NoData
-            execErrState: Error
+            noDataState: OK
+            execErrState: OK
             for: 0s
             annotations:
               summary: "Erreur utilisateur détectée sur WOC"
-              description: "Une erreur 4xx a été générée (HTTP 400/401/403/422/429). Vérifier les logs Loki pour le détail (route, IP, user)."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Code HTTP {{ index $labels \"status_code\" }} reçu sur le backend. Consulter les logs Loki : {app=\"backend\"} | json | channel=`user_error` pour le détail (route, IP, user, message)."
             labels:
               severity: warning
               team: woc
@@ -172,7 +170,7 @@ data:
                     type: loki
                     uid: loki-datasource
                   editorMode: code
-                  expr: 'sum by (namespace)(count_over_time({app="backend"} | json | channel=`server_error` [1m]))'
+                  expr: 'sum by (namespace, context_status_code)(count_over_time({app="backend"} | json | channel=`server_error` [1m]))'
                   instant: false
                   queryType: range
                   range: true
@@ -199,12 +197,12 @@ data:
                   hide: false
                   refId: B
                   type: threshold
-            noDataState: NoData
-            execErrState: Alerting
+            noDataState: OK
+            execErrState: OK
             for: 0s
             annotations:
               summary: "🚨 Erreur serveur critique sur WOC"
-              description: "Une exception non gérée a provoqué une erreur 5xx. Intervention requise. Consulter les logs Loki (exception_class, file, line)."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Exception non gérée → HTTP {{ index $labels \"status_code\" }}. Consulter les logs Loki : {app=\"backend\"} | json | channel=`server_error` pour exception_class, file et line."
             labels:
               severity: critical
               team: woc

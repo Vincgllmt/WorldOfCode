@@ -94,8 +94,8 @@ spec:
                   if [ "$JUST_UNSEALED" = "true" ]; then
                     echo "$(date) — Vault unsealed, redémarrage des pods dépendants..."
                     for NS in dev production; do
-                      kubectl rollout restart statefulset/minio -n "$NS" 2>/dev/null \
-                        && echo "[$NS] minio redémarré" || echo "[$NS] minio: statefulset introuvable"
+                      kubectl rollout restart deployment/minio -n "$NS" 2>/dev/null \
+                        && echo "[$NS] minio redémarré" || echo "[$NS] minio: deployment introuvable"
                       kubectl rollout restart statefulset/mysql -n "$NS" 2>/dev/null \
                         && echo "[$NS] mysql redémarré" || echo "[$NS] mysql: statefulset introuvable"
                     done
