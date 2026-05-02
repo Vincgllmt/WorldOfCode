@@ -42,6 +42,8 @@ extraEnvVars:
   - name: MINIO_ROOT_PASSWORD_FILE
     value: "/vault/secrets/minio-root"
 
+defaultBuckets: "uploads"
+
 persistence:
   enabled: true
   storageClass: longhorn
