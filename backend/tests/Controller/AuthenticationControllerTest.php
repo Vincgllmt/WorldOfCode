@@ -23,6 +23,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use App\Service\LoginNotificationService;
 use App\Service\TwoFactorService;
 use App\Service\TrustedDeviceService;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 /**
@@ -39,14 +40,16 @@ class AuthenticationControllerTest extends TestCase
     private const CHELL_EMAIL    = 'chell@aperture.lab';
 
     private UserMapper $userMapper;
+    private LoggerInterface $userErrorLogger;
     private AuthenticationController $controller;
 
     protected function setUp(): void
     {
-        $skillMapper       = new SkillMapper();
-        $linkMapper        = new UserLinkMapper();
-        $this->userMapper  = new UserMapper($skillMapper, $linkMapper);
-        $this->controller  = new AuthenticationController($this->userMapper);
+        $skillMapper            = new SkillMapper();
+        $linkMapper             = new UserLinkMapper();
+        $this->userMapper       = new UserMapper($skillMapper, $linkMapper);
+        $this->userErrorLogger  = $this->createMock(LoggerInterface::class);
+        $this->controller       = new AuthenticationController($this->userMapper, $this->userErrorLogger);
         $this->controller->setContainer(new Container());
     }
 
@@ -390,7 +393,7 @@ class AuthenticationControllerTest extends TestCase
     {
         $user = $this->buildUserWithId(42);
 
-        $controller = new AuthenticationController($this->userMapper);
+        $controller = new AuthenticationController($this->userMapper, $this->userErrorLogger);
         $controller->setContainer($this->makeContainerWithUser($user));
 
         $response = $controller->me();
@@ -403,7 +406,7 @@ class AuthenticationControllerTest extends TestCase
 
     public function testMeFailsWhenUserIsNotAuthenticated(): void
     {
-        $controller = new AuthenticationController($this->userMapper);
+        $controller = new AuthenticationController($this->userMapper, $this->userErrorLogger);
         $controller->setContainer($this->makeContainerWithNullToken());
 
         $response = $controller->me();
@@ -811,7 +814,7 @@ class AuthenticationControllerTest extends TestCase
     {
         $user = $this->buildUserWithId(42);
 
-        $controller = new AuthenticationController($this->userMapper);
+        $controller = new AuthenticationController($this->userMapper, $this->userErrorLogger);
         $controller->setContainer($this->makeContainerWithUser($user));
 
         $jwt = $this->createMock(JWTTokenManagerInterface::class);
@@ -826,7 +829,7 @@ class AuthenticationControllerTest extends TestCase
 
     public function testRefreshFailsWhenUserIsNotAuthenticated(): void
     {
-        $controller = new AuthenticationController($this->userMapper);
+        $controller = new AuthenticationController($this->userMapper, $this->userErrorLogger);
         $controller->setContainer($this->makeContainerWithNullToken());
 
         $response = $controller->refresh($this->createMock(JWTTokenManagerInterface::class));
