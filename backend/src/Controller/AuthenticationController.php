@@ -23,15 +23,22 @@ use App\Service\LoginNotificationService;
 use App\Service\PasswordResetService;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\HttpFoundation\Cookie;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 
 class AuthenticationController extends AbstractController
 {
     private UserMapper $userMapper;
+    private LoggerInterface $userErrorLogger;
 
-    public function __construct(UserMapper $userMapper)
-    {
+    public function __construct(
+        UserMapper $userMapper,
+        #[Autowire(service: 'monolog.logger.user_error')]
+        LoggerInterface $userErrorLogger
+    ) {
         $this->userMapper = $userMapper;
+        $this->userErrorLogger = $userErrorLogger;
     }
 
     #[Route('api/register', name: 'register', methods: ['POST'])]
@@ -171,12 +178,26 @@ class AuthenticationController extends AbstractController
         $limiter = $loginAttemptsLimiter->create($key);
 
         if (false === $limiter->consume(1)->isAccepted()) {
+            $this->userErrorLogger->warning('Too many login attempts', [
+                'route'       => 'authenticate',
+                'method'      => $request->getMethod(),
+                'ip'          => $request->getClientIp(),
+                'user'        => 'anonymous',
+                'status_code' => 429,
+            ]);
             return $this->json(['error' => 'Too many login attempts. Please try again later.'], 429);
         }
 
         $user = $userRepository->findOneBy(['username' => $username]);
 
         if (!$user || !$passwordHasher->isPasswordValid($user, $plainPassword)) {
+            $this->userErrorLogger->warning('Invalid credentials', [
+                'route'       => 'authenticate',
+                'method'      => $request->getMethod(),
+                'ip'          => $request->getClientIp(),
+                'user'        => 'anonymous',
+                'status_code' => 401,
+            ]);
             return $this->json(['error' => 'Invalid credentials'], 401);
         }
 
@@ -293,6 +314,13 @@ class AuthenticationController extends AbstractController
         }
 
         if (!$twoFactorService->verifyCode($user, $code)) {
+            $this->userErrorLogger->warning('Invalid 2FA code', [
+                'route'       => '2fa_verify',
+                'method'      => $request->getMethod(),
+                'ip'          => $request->getClientIp(),
+                'user'        => $user->getUserIdentifier(),
+                'status_code' => 401,
+            ]);
             return $this->json(['error' => 'Invalid or expired code'], 401);
         }
 
