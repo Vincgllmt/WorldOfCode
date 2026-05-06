@@ -3,6 +3,7 @@
 namespace App\Tests\Controller;
 
 use App\Controller\AdminPostController;
+use App\Entity\Post;
 use App\Entity\User;
 use App\Enum\UserRole;
 use App\Repository\PostRepository;
@@ -73,6 +74,16 @@ class AdminPostControllerTest extends TestCase
         );
 
         return $container;
+    }
+
+    private function buildPost(int $id, User $author): Post
+    {
+        $post = new Post();
+        $post->setAuthor($author)->setContent('Companion Cube test content');
+        $post->onCreate();
+        $idProp = new \ReflectionProperty(Post::class, 'id');
+        $idProp->setValue($post, $id);
+        return $post;
     }
 
     private function makeController(
@@ -166,5 +177,48 @@ class AdminPostControllerTest extends TestCase
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
         $this->makeController($admin, isAdmin: false)->list(new Request());
+    }
+
+    // ======================================================================
+    //  detail()
+    // ======================================================================
+
+    public function testDetailReturnsPost(): void
+    {
+        $admin  = $this->buildAdmin();
+        $author = $this->buildAdmin(2, 'GLaDOS');
+        $post   = $this->buildPost(42, $author);
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->with(42)->willReturn($post);
+
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('findBy')->willReturn([]);
+
+        $response = $this->makeController($admin, $postRepo, $reportRepo)->detail(42);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(42, $payload['id']);
+        $this->assertSame('GLaDOS', $payload['authorUsername']);
+        $this->assertSame(0, $payload['reportsCount']);
+        $this->assertSame([], $payload['lastComments']);
+    }
+
+    public function testDetailReturns404WhenPostNotFound(): void
+    {
+        $admin    = $this->buildAdmin();
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->willReturn(null);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class);
+        $this->makeController($admin, $postRepo)->detail(99);
+    }
+
+    public function testDetailDeniesNonAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+        $this->expectException(AccessDeniedException::class);
+        $this->makeController($admin, isAdmin: false)->detail(1);
     }
 }

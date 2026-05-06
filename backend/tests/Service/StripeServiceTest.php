@@ -196,4 +196,43 @@ class StripeServiceTest extends TestCase
             't=' . time() . ',v1=' . str_repeat('0', 64)
         );
     }
+
+    // ======================================================================
+    //  createPaymentIntent()
+    // ======================================================================
+
+    public function testCreatePaymentIntentPersistsPaymentAndReturnsIntent(): void
+    {
+        $payer  = $this->buildUser(1);
+        $mentor = $this->buildUser(2, 'BitersHorde');
+
+        $fakeIntent = json_encode([
+            'id'            => 'pi_mock_nauvis123',
+            'object'        => 'payment_intent',
+            'amount'        => 5000,
+            'currency'      => 'eur',
+            'status'        => 'requires_payment_method',
+            'livemode'      => false,
+            'client_secret' => 'pi_mock_nauvis123_secret',
+        ]);
+
+        $httpClient = $this->createMock(\Stripe\HttpClient\ClientInterface::class);
+        $httpClient->method('request')->willReturn([$fakeIntent, 200, []]);
+        \Stripe\ApiRequestor::setHttpClient($httpClient);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())->method('persist')->with($this->isInstanceOf(Payment::class));
+        $em->expects($this->once())->method('flush');
+
+        $intent = $this->makeService($em)->createPaymentIntent($payer, $mentor, 5000, 'eur');
+
+        $this->assertSame('pi_mock_nauvis123', $intent->id);
+        $this->assertSame(5000, $intent->amount);
+        $this->assertSame('eur', $intent->currency);
+    }
+
+    protected function tearDown(): void
+    {
+        \Stripe\ApiRequestor::setHttpClient(null);
+    }
 }
