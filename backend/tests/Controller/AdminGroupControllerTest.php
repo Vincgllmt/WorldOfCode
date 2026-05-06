@@ -341,4 +341,66 @@ class AdminGroupControllerTest extends TestCase
         $this->expectException(AccessDeniedException::class);
         $this->makeController($admin, isAdmin: false)->delete(1);
     }
+
+    // ======================================================================
+    //  detail()
+    // ======================================================================
+
+    private function makeQueryBuilderMock(array $results = []): \Doctrine\ORM\QueryBuilder
+    {
+        $query = $this->createMock(\Doctrine\ORM\Query::class);
+        $query->method('getResult')->willReturn($results);
+
+        $qb = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
+        $qb->method('leftJoin')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('groupBy')->willReturnSelf();
+        $qb->method('orderBy')->willReturnSelf();
+        $qb->method('setMaxResults')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+
+        return $qb;
+    }
+
+    public function testDetailReturnsGroup(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(7, 'Elysium');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->with(7)->willReturn($group);
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn(null);
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQueryBuilder')->willReturn($this->makeQueryBuilderMock());
+
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->detail(7);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(7, $payload['id']);
+        $this->assertSame('Elysium', $payload['name']);
+        $this->assertSame(0, $payload['memberCount']);
+        $this->assertSame([], $payload['recentPosts']);
+    }
+
+    public function testDetailReturns404WhenGroupNotFound(): void
+    {
+        $admin     = $this->buildAdmin();
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn(null);
+
+        $response = $this->makeController($admin, $groupRepo)->detail(999);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testDetailDeniesNonAdmin(): void
+    {
+        $admin = $this->buildAdmin();
+        $this->expectException(AccessDeniedException::class);
+        $this->makeController($admin, isAdmin: false)->detail(1);
+    }
 }
