@@ -117,7 +117,7 @@ describe('AdminAuthContext', () => {
         await result.current?.login({ username: 'admin', password: 'pass' })
       })
 
-      expect(cookiesNext.setCookie).toHaveBeenCalledWith('token', 'jwt.trusted', { path: '/' })
+      expect(cookiesNext.setCookie).toHaveBeenCalledWith('admin_token', 'jwt.trusted', { path: '/' })
       expect(result.current?.user?.username).toBe('admin')
       expect(result.current?.twoFAPending).toBeNull()
       expect(mockPush).toHaveBeenCalledWith('/')

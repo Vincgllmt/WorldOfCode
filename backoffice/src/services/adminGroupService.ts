@@ -5,7 +5,7 @@ import { AdminGroupDetail } from '@/interfaces/adminGroupDetail'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 function getToken() {
-  return getCookie('token') as string | undefined
+  return getCookie('admin_token') as string | undefined
 }
 
 export interface AdminGroupsParams {

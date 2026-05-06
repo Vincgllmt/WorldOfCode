@@ -17,7 +17,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter()
 
   useEffect(() => {
-    const token = getCookie('token')
+    const token = getCookie('admin_token')
     if (!token) return setIsLoading(false)
 
     authService.getMe()
@@ -38,7 +38,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.login(credentials)
       if ('token' in response) {
         // Trusted device — skip 2FA, set token directly
-        setCookie('token', response.token, { path: '/' })
+        setCookie('admin_token', response.token, { path: '/' })
         const authenticatedUser = await authService.getMe()
         if (authenticatedUser.role !== 'ROLE_ADMIN') {
           toast.error("Vous n'avez pas accès à l'interface admin")
@@ -85,7 +85,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     authService.logout()
     setUser(null)
     setTwoFAPending(null)
-    deleteCookie('token')
+    deleteCookie('admin_token')
     toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }

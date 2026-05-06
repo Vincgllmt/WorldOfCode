@@ -101,7 +101,7 @@ describe('authService', () => {
 
       await verify2FA({ tempToken: 'tmp', code: '000000' })
 
-      expect(cookiesNext.setCookie).toHaveBeenCalledWith('token', 'abc', { path: '/' })
+      expect(cookiesNext.setCookie).toHaveBeenCalledWith('admin_token', 'abc', { path: '/' })
     })
 
     it('transmet rememberDevice dans le body quand fourni', async () => {
@@ -175,7 +175,7 @@ describe('authService', () => {
     it('supprime le cookie token', () => {
       logout()
 
-      expect(cookiesNext.deleteCookie).toHaveBeenCalledWith('token', { path: '/' })
+      expect(cookiesNext.deleteCookie).toHaveBeenCalledWith('admin_token', { path: '/' })
     })
   })
 })

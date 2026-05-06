@@ -33,13 +33,13 @@ export const verify2FA = async (payload: Verify2FAPayload): Promise<Authenticate
   if (!res.ok) throw new Error('Code invalide ou expiré')
 
   const { token }: TokenResponse = await res.json()
-  setCookie('token', token, { path: '/' })
+  setCookie('admin_token', token, { path: '/' })
 
   return await getMe()
 }
 
 export const getMe = async (): Promise<AuthenticatedUser> => {
-  const token = getCookie('token') as string | undefined
+  const token = getCookie('admin_token') as string | undefined
   if (!token) throw new Error('Token manquant')
 
   const res = await fetch(`${API_URL}/api/me`, {
@@ -55,5 +55,5 @@ export const getMe = async (): Promise<AuthenticatedUser> => {
 }
 
 export const logout = () => {
-  deleteCookie('token', { path: '/' })
+  deleteCookie('admin_token', { path: '/' })
 }
