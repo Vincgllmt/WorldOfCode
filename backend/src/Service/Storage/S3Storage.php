@@ -4,23 +4,26 @@ namespace App\Service\Storage;
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
+use Psr\Log\LoggerInterface;
 
 class S3Storage
 {
     private S3Client $client;
     private string $bucket;
     private string $publicBaseUrl;
+    private LoggerInterface $logger;
 
     public function __construct(
         string $endpoint,
         string $key,
         string $secret,
         string $bucket,
-        string $publicBaseUrl
+        string $publicBaseUrl,
+        LoggerInterface $logger
     ) {
         $this->client = new S3Client([
             'version' => 'latest',
-            'region'  => 'eu-west-1', // peu importe pour MinIO, mais obligatoire pour le client
+            'region'  => 'eu-west-1',
             'endpoint' => $endpoint,
             'use_path_style_endpoint' => true,
             'credentials' => [
@@ -31,6 +34,7 @@ class S3Storage
 
         $this->bucket = $bucket;
         $this->publicBaseUrl = rtrim($publicBaseUrl, '/');
+        $this->logger = $logger;
     }
 
     /**
@@ -52,8 +56,7 @@ class S3Storage
             return $this->publicBaseUrl . '/' . ltrim($key, '/');
 
         } catch (AwsException $e) {
-            // ira dans les logs PHP-FPM
-            error_log('MINIO ERROR: ' . $e->getMessage());
+            $this->logger->error('MINIO ERROR: ' . $e->getMessage());
             return null;
         }
     }
