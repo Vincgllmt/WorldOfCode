@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Clock, CheckCircle2, XCircle, AlertTriangle,
@@ -1000,6 +1000,7 @@ function TimelineItem({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyRequestsPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<MentoringSession[]>([])
   const [requests, setRequests] = useState<MentoringRequest[]>([])
@@ -1011,7 +1012,17 @@ export default function MyRequestsPage() {
 
   const justCreated = searchParams.get('created') === '1'
 
+  const replaceUrlSelection = (sessionId: number | null, requestId: number | null) => {
+    const params = new URLSearchParams()
+    if (sessionId != null) params.set('session', String(sessionId))
+    if (requestId != null) params.set('request', String(requestId))
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false })
+  }
+
   useEffect(() => {
+    const sessionId = searchParams.get('session')
+    const requestId = searchParams.get('request')
     Promise.all([
       getMentoringRequestsMine(),
       getJuniorSessions(),
@@ -1021,6 +1032,13 @@ export default function MyRequestsPage() {
         setRequests(reqs)
         setSessions(sess)
         setStats(s)
+        if (sessionId) {
+          const found = sess.find(s => s.id === Number(sessionId))
+          if (found) setSelectedSession(found)
+        } else if (requestId) {
+          const found = reqs.find(r => r.id === Number(requestId))
+          if (found) setSelectedRequest(found)
+        }
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
@@ -1136,7 +1154,9 @@ export default function MyRequestsPage() {
                             selected={selectedRequest?.id === r.id}
                             onClick={() => {
                               setSelectedSession(null)
-                              setSelectedRequest(prev => prev?.id === r.id ? null : r)
+                              const next = selectedRequest?.id === r.id ? null : r
+                              setSelectedRequest(next)
+                              replaceUrlSelection(null, next?.id ?? null)
                             }}
                           />
                         ))}
@@ -1167,7 +1187,9 @@ export default function MyRequestsPage() {
                             selected={selectedSession?.id === s.id}
                             onClick={() => {
                               setSelectedRequest(null)
-                              setSelectedSession(prev => prev?.id === s.id ? null : s)
+                              const next = selectedSession?.id === s.id ? null : s
+                              setSelectedSession(next)
+                              replaceUrlSelection(next?.id ?? null, null)
                             }}
                           />
                         ))}

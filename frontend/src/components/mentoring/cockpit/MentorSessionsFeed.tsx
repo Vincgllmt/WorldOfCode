@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Calendar, Zap, CheckCircle2, XCircle, Code2,
   AlignLeft, Video, Layers, Target, Globe,
@@ -66,13 +66,15 @@ const GROUP_ORDER = ['in_progress', 'scheduled', 'completed', 'cancelled']
 interface Props {
   selectedSessionId: number | null
   onSelectSession: (s: MentoringSession) => void
+  initialSessionId?: number | null
 }
 
-export default function MentorSessionsFeed({ selectedSessionId, onSelectSession }: Props) {
+export default function MentorSessionsFeed({ selectedSessionId, onSelectSession, initialSessionId }: Props) {
   const [sessions, setSessions] = useState<MentoringSession[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [techFilter, setTechFilter] = useState<string | null>(null)
+  const hasAutoSelected = useRef(false)
 
   useEffect(() => {
     getMentorAllSessions()
@@ -80,6 +82,15 @@ export default function MentorSessionsFeed({ selectedSessionId, onSelectSession 
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!initialSessionId || loading || sessions.length === 0 || hasAutoSelected.current) return
+    const found = sessions.find(s => s.id === initialSessionId)
+    if (found) {
+      hasAutoSelected.current = true
+      onSelectSession(found)
+    }
+  }, [sessions, loading, initialSessionId])
 
   const techs = Array.from(
     new Set(sessions.map(s => s.request?.techStack).filter(Boolean) as string[])

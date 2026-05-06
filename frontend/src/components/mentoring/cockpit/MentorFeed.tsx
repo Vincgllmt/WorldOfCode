@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Target, Globe } from 'lucide-react'
 import { useMentorFeed } from '@/hooks/useMentorFeed'
 import MentoringRequestCard from '../feed/MentoringRequestCard'
@@ -13,17 +13,28 @@ interface Props {
   selectedRequestId: number | null
   onPinnedChange?: (pinned: MentoringRequest[]) => void
   onSessionAccepted?: () => void
+  initialRequestId?: number | null
 }
 
-export default function MentorFeed({ mentorProfile, onSelectRequest, selectedRequestId, onPinnedChange, onSessionAccepted }: Props) {
+export default function MentorFeed({ mentorProfile, onSelectRequest, selectedRequestId, onPinnedChange, onSessionAccepted, initialRequestId }: Props) {
   const [techFilter, setTechFilter] = useState<string | undefined>(undefined)
   const { data, isLoading, error, refetch } = useMentorFeed(techFilter)
+  const hasAutoSelected = useRef(false)
 
   useEffect(() => {
     if (onPinnedChange) {
       onPinnedChange(data.filter(r => r.pin?.isActive))
     }
   }, [data, onPinnedChange])
+
+  useEffect(() => {
+    if (!initialRequestId || isLoading || data.length === 0 || hasAutoSelected.current) return
+    const found = data.find(r => r.id === initialRequestId)
+    if (found) {
+      hasAutoSelected.current = true
+      onSelectRequest(found)
+    }
+  }, [data, isLoading, initialRequestId])
 
   const handleRefetch = async () => {
     await refetch()

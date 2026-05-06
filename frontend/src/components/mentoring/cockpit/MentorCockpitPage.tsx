@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { LayoutList, Zap } from 'lucide-react'
 import MentorSidebar from './MentorSidebar'
 import MentorFeed from './MentorFeed'
@@ -19,8 +20,13 @@ interface Props {
 }
 
 export default function MentorCockpitPage({ initialProfile }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [profile, setProfile] = useState(initialProfile)
-  const [cockpitMode, setCockpitMode] = useState<CockpitMode>('requests')
+  const [cockpitMode, setCockpitMode] = useState<CockpitMode>(
+    () => searchParams.get('tab') === 'sessions' ? 'sessions' : 'requests'
+  )
 
   // requests mode
   const [selectedRequest, setSelectedRequest] = useState<MentoringRequest | null>(null)
@@ -28,6 +34,10 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
 
   // sessions mode
   const [selectedSession, setSelectedSession] = useState<MentoringSession | null>(null)
+
+  // initial IDs from URL — read once at mount
+  const initialRequestId = useRef(searchParams.get('request') ? Number(searchParams.get('request')) : null)
+  const initialSessionId = useRef(searchParams.get('session') ? Number(searchParams.get('session')) : null)
 
   // shared active sessions for sidebar
   const [activeSessions, setActiveSessions] = useState<MentoringSession[]>([])
@@ -42,10 +52,19 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
 
   useEffect(() => { refreshSessions() }, [refreshSessions])
 
+  const updateUrl = useCallback((tab: CockpitMode, requestId: number | null, sessionId: number | null) => {
+    const params = new URLSearchParams()
+    params.set('tab', tab)
+    if (requestId != null) params.set('request', String(requestId))
+    if (sessionId != null) params.set('session', String(sessionId))
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router])
+
   const handleSwitchMode = (mode: CockpitMode) => {
     setCockpitMode(mode)
     setSelectedRequest(null)
     setSelectedSession(null)
+    updateUrl(mode, null, null)
   }
 
   return (
@@ -100,16 +119,26 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
             {cockpitMode === 'requests' && (
               <MentorFeed
                 mentorProfile={profile}
-                onSelectRequest={(r) => { setSelectedRequest(r); setSelectedSession(null) }}
+                onSelectRequest={(r) => {
+                  setSelectedRequest(r)
+                  setSelectedSession(null)
+                  updateUrl('requests', r.id, null)
+                }}
                 selectedRequestId={selectedRequest?.id ?? null}
                 onPinnedChange={setPinnedRequests}
                 onSessionAccepted={refreshSessions}
+                initialRequestId={initialRequestId.current}
               />
             )}
             {cockpitMode === 'sessions' && (
               <MentorSessionsFeed
                 selectedSessionId={selectedSession?.id ?? null}
-                onSelectSession={(s) => { setSelectedSession(s); setSelectedRequest(null) }}
+                onSelectSession={(s) => {
+                  setSelectedSession(s)
+                  setSelectedRequest(null)
+                  updateUrl('sessions', null, s.id)
+                }}
+                initialSessionId={initialSessionId.current}
               />
             )}
           </div>
