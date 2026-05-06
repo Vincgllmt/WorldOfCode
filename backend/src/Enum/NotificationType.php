@@ -12,6 +12,7 @@ enum NotificationType: string
     case MENTORING_PIN_EXPIRED = 'mentoring_pin_expired';
     case MENTORING_RATING_REMINDER = 'mentoring_rating_reminder';
     case MENTORING_SESSION_SCHEDULED = 'mentoring_session_scheduled';
+    case APPOINTMENT_CONFIRMED = 'appointment_confirmed';
 
     /**
      * @return array<int, string>

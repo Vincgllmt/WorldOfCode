@@ -89,6 +89,17 @@ export default function MentorSessionRightPanel({ session: s }: Props) {
     setShowFollowUpModal(false)
   }, [s.id])
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { sessionId } = (e as CustomEvent<{ sessionId: number }>).detail
+      if (sessionId === s.id) {
+        getSessionAppointments(s.id).then(setAppointments).catch(() => {})
+      }
+    }
+    window.addEventListener('appointment:confirmed', handler)
+    return () => window.removeEventListener('appointment:confirmed', handler)
+  }, [s.id])
+
   const handleConfirmCounter = async (apptId: number) => {
     setConfirmingId(apptId)
     try {

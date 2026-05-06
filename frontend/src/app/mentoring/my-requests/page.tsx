@@ -548,6 +548,17 @@ function SessionDetailPanel({
     getSessionAppointments(s.id).then(setAppointments).catch(() => {})
   }, [s.id])
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { sessionId } = (e as CustomEvent<{ sessionId: number }>).detail
+      if (sessionId === s.id) {
+        getSessionAppointments(s.id).then(setAppointments).catch(() => {})
+      }
+    }
+    window.addEventListener('appointment:confirmed', handler)
+    return () => window.removeEventListener('appointment:confirmed', handler)
+  }, [s.id])
+
   const handleConfirm = async (appointmentId: number) => {
     setConfirmingId(appointmentId)
     try {

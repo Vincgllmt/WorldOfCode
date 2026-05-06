@@ -219,6 +219,19 @@ function AppointmentProposalCard({
             .catch(() => {})
     }, [payload.sessionId, payload.appointmentId])
 
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { sessionId } = (e as CustomEvent<{ sessionId: number }>).detail
+            if (sessionId === payload.sessionId) {
+                getSessionAppointment(payload.sessionId, payload.appointmentId)
+                    .then(a => setStatus(a.status as 'pending' | 'confirmed' | 'refused'))
+                    .catch(() => {})
+            }
+        }
+        window.addEventListener('appointment:confirmed', handler)
+        return () => window.removeEventListener('appointment:confirmed', handler)
+    }, [payload.sessionId, payload.appointmentId])
+
     const handleAccept = async () => {
         setLoading(true)
         try {

@@ -53,6 +53,7 @@ function getNotificationIcon(type: string): string {
         case 'comment': return '💬'
         case 'follow': return '👤'
         case 'like': return '❤️'
+        case 'appointment_confirmed': return '📅'
         default: return '🔔'
     }
 }
@@ -71,6 +72,12 @@ export const useNotificationRealtime = () => {
                 icon: getNotificationIcon(notification.type),
                 duration: 4000,
             })
+
+            if (notification.type === 'appointment_confirmed' && notification.relatedEntityId) {
+                window.dispatchEvent(new CustomEvent('appointment:confirmed', {
+                    detail: { sessionId: notification.relatedEntityId },
+                }))
+            }
         }
 
         socket.on('new_notification', onNewNotification)

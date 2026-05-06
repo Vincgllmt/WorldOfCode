@@ -168,7 +168,7 @@ class SessionAppointmentController extends AbstractController
         $this->notificationService->createAndPush(
             $recipient,
             $user,
-            NotificationType::MENTORING_SESSION_SCHEDULED,
+            NotificationType::APPOINTMENT_CONFIRMED,
             $user->getUsername() . ' a confirmé le rendez-vous du ' . $formattedDate . '.',
             $sess->getId()
         );
