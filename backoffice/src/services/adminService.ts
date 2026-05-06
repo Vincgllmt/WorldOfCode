@@ -9,7 +9,7 @@ import { AdminPostDetail } from '@/interfaces/adminPostDetail'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const getAdminStats = async (): Promise<AdminStats> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/stats`, {
     headers: {
       'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ export const getAdminStats = async (): Promise<AdminStats> => {
 }
 
 export const getAdminActivity = async (days: number): Promise<AdminActivityPoint[]> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/activity?days=${days}`, {
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const getAdminActivity = async (days: number): Promise<AdminActivityPoint
 }
 
 export const getAdminRecentActivity = async (): Promise<AdminRecentEvent[]> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/recent-activity`, {
     headers: {
       'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export interface AdminUsersPaginatedResponse {
 }
 
 export const getAdminUsersPaginated = async (params: AdminUsersParams): Promise<AdminUsersPaginatedResponse> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const query = new URLSearchParams()
   query.set('page', String(params.page))
   query.set('limit', String(params.limit))
@@ -85,7 +85,7 @@ export const getAdminUsersPaginated = async (params: AdminUsersParams): Promise<
 }
 
 export const getAdminUserDetail = async (id: number): Promise<AdminUserDetail> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/users/${id}`, {
     headers: {
       'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ export const getAdminUserDetail = async (id: number): Promise<AdminUserDetail> =
 }
 
 export const updateAdminUserRole = async (id: number, role: 'ROLE_USER' | 'ROLE_ADMIN'): Promise<void> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/users/${id}/role`, {
     method: 'PUT',
     headers: {
@@ -126,7 +126,7 @@ export interface AdminPostsPaginatedResponse {
 }
 
 export const getAdminPostsPaginated = async (params: AdminPostsParams): Promise<AdminPostsPaginatedResponse> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const query = new URLSearchParams()
   query.set('page', String(params.page))
   query.set('limit', String(params.limit))
@@ -146,7 +146,7 @@ export const getAdminPostsPaginated = async (params: AdminPostsParams): Promise<
 }
 
 export const getAdminPostDetail = async (id: number): Promise<AdminPostDetail> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/posts/${id}`, {
     headers: {
       'Content-Type': 'application/json',

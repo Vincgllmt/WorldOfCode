@@ -19,7 +19,7 @@ export interface GroupSuggestionsPaginatedResponse {
 }
 
 export const getGroupSuggestionsPaginated = async (params: GroupSuggestionsParams): Promise<GroupSuggestionsPaginatedResponse> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const query = new URLSearchParams()
   query.set('page', String(params.page))
   query.set('limit', String(params.limit))
@@ -34,7 +34,7 @@ export const getGroupSuggestionsPaginated = async (params: GroupSuggestionsParam
 }
 
 export const claimGroupSuggestion = async (id: number): Promise<GroupSuggestion> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/group-suggestions/${id}/claim`, {
     method: 'PATCH',
     headers: {
@@ -53,7 +53,7 @@ export const approveGroupSuggestion = async (
   id: number,
   payload: ApproveSuggestionPayload
 ): Promise<GroupSuggestion> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/group-suggestions/${id}/approve`, {
     method: 'PATCH',
     headers: {
@@ -73,7 +73,7 @@ export const rejectGroupSuggestion = async (
   id: number,
   payload: RejectSuggestionPayload
 ): Promise<GroupSuggestion> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/group-suggestions/${id}/reject`, {
     method: 'PATCH',
     headers: {

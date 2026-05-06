@@ -39,7 +39,7 @@ export interface AdminReportsPaginatedResponse {
 }
 
 export const getAdminReportsPaginated = async (params: AdminReportsParams): Promise<AdminReportsPaginatedResponse> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const query = new URLSearchParams()
   query.set('page', String(params.page))
   query.set('limit', String(params.limit))
@@ -59,7 +59,7 @@ export const getAdminReportsPaginated = async (params: AdminReportsParams): Prom
 }
 
 export const getAdminReportedPosts = async (params: AdminReportedPostsParams): Promise<AdminReportedPostsPaginatedResponse> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const query = new URLSearchParams()
   query.set('page', String(params.page))
   query.set('limit', String(params.limit))
@@ -73,7 +73,7 @@ export const getAdminReportedPosts = async (params: AdminReportedPostsParams): P
 }
 
 export const claimReportsByPost = async (postId: number): Promise<{ claimed: number }> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/reports/posts/${postId}/claim`, {
     method: 'PATCH',
     headers: {
@@ -89,7 +89,7 @@ export const claimReportsByPost = async (postId: number): Promise<{ claimed: num
 }
 
 export const claimReport = async (id: number): Promise<AdminReport> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/reports/${id}/claim`, {
     method: 'PATCH',
     headers: {
@@ -105,7 +105,7 @@ export const claimReport = async (id: number): Promise<AdminReport> => {
 }
 
 export const resolveReport = async (id: number, resolutionNote?: string): Promise<AdminReport> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/reports/${id}/resolve`, {
     method: 'PATCH',
     headers: {
@@ -122,7 +122,7 @@ export const resolveReport = async (id: number, resolutionNote?: string): Promis
 }
 
 export const rejectReport = async (id: number, resolutionNote: string): Promise<AdminReport> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/admin/reports/${id}/reject`, {
     method: 'PATCH',
     headers: {

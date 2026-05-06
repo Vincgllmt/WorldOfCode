@@ -213,6 +213,21 @@
     caret-color: var(--foreground);
     transition: background-color 5000s ease-in-out 0s;
   }
+
+  /* Force un rendu clair (page de login uniquement) — neutralise le thème global */
+  .force-light input:-webkit-autofill,
+  .force-light input:-webkit-autofill:hover,
+  .force-light input:-webkit-autofill:focus,
+  .force-light input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #111827 !important;
+    caret-color: #111827;
+  }
+  .force-light input {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    color-scheme: light;
+  }
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
