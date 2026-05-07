@@ -70,6 +70,8 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
     const baseSettings: EditorInit = {
       skin_url: '/tinymce/skins/ui/oxide',
       content_css: '/tinymce/skins/ui/oxide/content.min.css',
+      language: 'fr_FR',
+      language_url: '/tinymce/langs/fr_FR.js',
       menubar: false,
       statusbar: false,
       height: 200,
@@ -83,6 +85,32 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
       images_upload_handler: handleImageUpload,
       automatic_uploads: true,
       file_picker_types: 'image',
+      // Désactive l'onglet "Téléverser" → tout sur l'onglet "Général" avec
+      // un bouton "Parcourir" à côté du champ Source.
+      image_uploadtab: false,
+      // Désactive aussi l'onglet "Avancé" pour rester minimaliste.
+      image_advtab: false,
+      file_picker_callback: (callback) => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/jpeg,image/png,image/webp,image/gif'
+        input.onchange = async () => {
+          const file = input.files?.[0]
+          if (!file) return
+          try {
+            const url = await handleImageUpload({
+              blob: () => file,
+              filename: () => file.name,
+              base64: () => '',
+              uri: () => '',
+            } as Parameters<UploadHandler>[0])
+            callback(url, { alt: file.name })
+          } catch {
+            // Erreur déjà toastée par handleImageUpload
+          }
+        }
+        input.click()
+      },
       convert_urls: false,
       relative_urls: false,
       codesample_content_css: '/prism-dracula.css',

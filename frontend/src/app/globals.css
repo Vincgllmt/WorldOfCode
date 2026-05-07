@@ -416,29 +416,249 @@
   border-bottom-color: rgba(6, 182, 212, 0.10);
 }
 
-/* TinyMCE — dialogs (Insert Image, etc.) doivent passer au-dessus des Dialogs Radix */
+/* TinyMCE — dialogs ET menus (dropdowns langages, etc.) doivent passer
+   au-dessus des Dialogs Radix avec interactions actives. */
 .tox-tinymce-aux,
-.tox-dialog-wrap,
-.tox-dialog,
-.tox-silver-sink,
 .tox-tinymce-aux *,
+.tox-dialog-wrap,
 .tox-dialog-wrap *,
-.tox-dialog * {
+.tox-dialog,
+.tox-dialog *,
+.tox-silver-sink,
+.tox-silver-sink *,
+.tox-menu,
+.tox-menu *,
+.tox-pop,
+.tox-pop *,
+.tox-collection,
+.tox-collection * {
   pointer-events: auto !important;
 }
 
 .tox-tinymce-aux,
 .tox-dialog-wrap,
 .tox-dialog,
-.tox-silver-sink {
+.tox-silver-sink,
+.tox-menu,
+.tox-pop,
+.tox-collection {
   z-index: 1500 !important;
 }
 
 /* Empêche Radix Dialog de désactiver l'interaction avec les modales TinyMCE rendues dans body */
 [data-radix-dialog-content] ~ .tox-tinymce-aux,
 body > .tox-tinymce-aux,
-body > .tox-silver-sink {
+body > .tox-silver-sink,
+body > .tox-menu,
+body > .tox-pop {
   pointer-events: auto !important;
+}
+
+/* Charte graphique des modales TinyMCE — utilise les variables du thème
+   pour suivre automatiquement le mode clair/sombre du site. */
+html.dark .tox-dialog,
+html.cyberpunk-dark .tox-dialog,
+html.cyberpunk-light .tox-dialog,
+.tox-dialog {
+  border-radius: 12px !important;
+  border: none !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25) !important;
+}
+.tox .tox-dialog__header,
+.tox .tox-dialog__body,
+.tox .tox-dialog__footer {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: none !important;
+}
+.tox .tox-dialog__header {
+  border-radius: 12px 12px 0 0 !important;
+  padding: 16px 20px !important;
+  font-weight: 600 !important;
+}
+.tox .tox-dialog__title {
+  color: var(--foreground) !important;
+}
+.tox .tox-dialog__body-content {
+  color: var(--foreground) !important;
+}
+.tox .tox-form__group .tox-label,
+.tox .tox-form__group label,
+.tox .tox-label {
+  color: var(--foreground) !important;
+  opacity: 0.85 !important;
+}
+.tox .tox-dialog__footer {
+  border-radius: 0 0 12px 12px !important;
+  padding: 12px 20px !important;
+  gap: 8px !important;
+}
+
+/* Cache la nav latérale de la modale image (un seul onglet "Général" inutile) */
+.tox .tox-dialog__body-nav {
+  display: none !important;
+}
+
+/* Bouton X de fermeture */
+.tox .tox-dialog__header .tox-button--icon {
+  color: var(--foreground) !important;
+}
+
+/* Boutons primaires (Save / Enregistrer) → vert WOC */
+.tox .tox-button:not(.tox-button--secondary):not(.tox-button--naked):not(.tox-tbtn) {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: opacity 0.15s !important;
+}
+.tox .tox-button:not(.tox-button--secondary):not(.tox-button--naked):not(.tox-tbtn):hover {
+  opacity: 0.9 !important;
+}
+
+/* Boutons secondaires (Cancel / Annuler) — outline thème */
+.tox .tox-button--secondary {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  background-color: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+.tox .tox-button--secondary:hover {
+  background-color: var(--muted) !important;
+}
+
+/* Champs de formulaire — fond et bordure thème */
+.tox .tox-textfield,
+.tox .tox-listbox,
+.tox .tox-textarea {
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  padding: 8px 12px !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+.tox .tox-textfield:hover:not(:focus),
+.tox .tox-listbox:hover:not(:focus),
+.tox .tox-textarea:hover:not(:focus) {
+  border-color: var(--muted-foreground) !important;
+}
+.tox .tox-textfield:focus,
+.tox .tox-listbox:focus,
+.tox .tox-textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent) !important;
+  outline: none !important;
+}
+
+/* Bouton "browse" (icône à côté du champ Source) */
+.tox .tox-browse-url {
+  background-color: var(--muted) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  color: var(--foreground) !important;
+}
+.tox .tox-browse-url:hover {
+  background-color: var(--border) !important;
+}
+
+/* Menus / dropdowns (sélecteur Langage du Code Sample, etc.) */
+.tox .tox-menu,
+.tox .tox-collection {
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  border-radius: 8px !important;
+}
+.tox .tox-collection__item {
+  color: var(--foreground) !important;
+}
+.tox .tox-collection__item--active,
+.tox .tox-collection__item:hover {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+/* === Override explicite pour le thème SOMBRE ===
+   TinyMCE charge son skin oxide (clair) en JS et écrase les vars CSS
+   dans certains cas. On force les couleurs sombres pour les thèmes dark. */
+html.dark .tox-dialog,
+html.cyberpunk-dark .tox-dialog,
+html.dark .tox-dialog__header,
+html.cyberpunk-dark .tox-dialog__header,
+html.dark .tox-dialog__body,
+html.cyberpunk-dark .tox-dialog__body,
+html.dark .tox-dialog__body-content,
+html.cyberpunk-dark .tox-dialog__body-content,
+html.dark .tox-dialog__footer,
+html.cyberpunk-dark .tox-dialog__footer {
+  background-color: #1f2937 !important;
+  color: #f9fafb !important;
+}
+html.dark .tox-dialog__title,
+html.cyberpunk-dark .tox-dialog__title,
+html.dark .tox-label,
+html.cyberpunk-dark .tox-label,
+html.dark .tox-form__group label,
+html.cyberpunk-dark .tox-form__group label {
+  color: #f9fafb !important;
+}
+html.dark .tox-textfield,
+html.cyberpunk-dark .tox-textfield,
+html.dark .tox-listbox,
+html.cyberpunk-dark .tox-listbox,
+html.dark .tox-textarea,
+html.cyberpunk-dark .tox-textarea {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border-color: #374151 !important;
+}
+html.dark .tox-textfield:focus,
+html.cyberpunk-dark .tox-textfield:focus,
+html.dark .tox-listbox:focus,
+html.cyberpunk-dark .tox-listbox:focus,
+html.dark .tox-textarea:focus,
+html.cyberpunk-dark .tox-textarea:focus {
+  border-color: #4ade80 !important;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15) !important;
+}
+html.dark .tox-button--secondary,
+html.cyberpunk-dark .tox-button--secondary {
+  background-color: transparent !important;
+  border: 1px solid #374151 !important;
+  color: #f9fafb !important;
+}
+html.dark .tox-button--secondary:hover,
+html.cyberpunk-dark .tox-button--secondary:hover {
+  background-color: #374151 !important;
+}
+html.dark .tox-browse-url,
+html.cyberpunk-dark .tox-browse-url {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+  color: #f9fafb !important;
+}
+html.dark .tox-menu,
+html.cyberpunk-dark .tox-menu,
+html.dark .tox-collection,
+html.cyberpunk-dark .tox-collection {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #f9fafb !important;
+}
+html.dark .tox-collection__item,
+html.cyberpunk-dark .tox-collection__item {
+  color: #f9fafb !important;
+}
+html.dark .tox-collection__item--active,
+html.cyberpunk-dark .tox-collection__item--active,
+html.dark .tox-collection__item:hover,
+html.cyberpunk-dark .tox-collection__item:hover {
+  background-color: #374151 !important;
 }
 
 /* TinyMCE dark mode — s'applique à .dark ET .cyberpunk-dark */

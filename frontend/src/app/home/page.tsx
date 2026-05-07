@@ -134,12 +134,21 @@ export default function HomePage() {
         </div>
 
         {/* Modale Nouveau post */}
-        <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
+        <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen} modal={false}>
+          {/* Overlay manuel pour garder le visuel sombre derrière la modale,
+              mais sans le focus trap Radix qui bloque les inputs TinyMCE
+              (rendus dans body hors du Dialog). */}
+          {isNewPostOpen && (
+            <div
+              className="fixed inset-0 z-[60] bg-black/50 pointer-events-none"
+              aria-hidden="true"
+            />
+          )}
           <DialogContent
-            className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !z-[70]"
             onInteractOutside={(e) => {
               // Empêche la fermeture de la modale quand on clique dans
-              // une fenêtre TinyMCE (rendue dans body, hors du Dialog).
+              // une fenêtre TinyMCE (Insert Image / Link / Code).
               const target = e.target as HTMLElement
               if (target.closest('.tox-dialog, .tox-tinymce-aux, .tox-silver-sink')) {
                 e.preventDefault()
