@@ -10,14 +10,18 @@ import type { PostFormValues } from '@/interfaces/post'
 
 const stripHtml = (value: string): string => value.replace(/<[^>]*>/g, '')
 
+const hasNonEmptyContent = (value: string): boolean => {
+  const text = stripHtml(value).trim()
+  if (text.length > 0) return true
+  // Texte vide mais peut contenir une image, du code, une vidéo, etc.
+  return /<(img|iframe|video|pre|code|a)\b/i.test(value)
+}
+
 const postFormSchema = z.object({
   content: z
     .string()
     .max(5000, 'Le contenu ne peut pas dépasser 5000 caractères')
-    .refine(
-      (value) => stripHtml(value).trim().length > 0,
-      'Le contenu est requis'
-    ),
+    .refine(hasNonEmptyContent, 'Le contenu est requis'),
   groupId: z.coerce.number().int().positive().optional(),
 })
 
