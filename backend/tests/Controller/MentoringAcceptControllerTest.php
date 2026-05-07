@@ -105,9 +105,11 @@ class MentoringAcceptControllerTest extends TestCase
         $requestRepo->method('find')->with(5)->willReturn($req);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('persist')
-            ->willReturnCallback(function (\App\Entity\MentoringSession $session): void {
-                $session->onCreate(); // simule PrePersist
+        $em->expects($this->exactly(2))->method('persist')
+            ->willReturnCallback(function (object $entity): void {
+                if ($entity instanceof \App\Entity\MentoringSession) {
+                    $entity->onCreate();
+                }
             });
         $em->expects($this->once())->method('flush');
 

@@ -228,9 +228,9 @@ class MentoringRatingControllerTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertIsArray($payload);
-        $this->assertCount(2, $payload);
-        $this->assertSame(4, $payload[0]['score']);
-        $this->assertSame(5, $payload[1]['score']);
+        $this->assertSame('complete', $payload['status']);
+        $this->assertCount(2, $payload['ratings']);
+        $this->assertSame(4, $payload['ratings'][0]['score']);
+        $this->assertSame(5, $payload['ratings'][1]['score']);
     }
 }

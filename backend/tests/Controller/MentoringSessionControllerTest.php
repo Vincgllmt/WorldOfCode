@@ -12,6 +12,7 @@ use App\Enum\UserRole;
 use App\Repository\MentoringSessionRepository;
 use App\Repository\MentorProfileRepository;
 use App\Service\Mentoring\MentoringSessionService;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -81,6 +82,7 @@ class MentoringSessionControllerTest extends TestCase
         ?MentorProfileRepository $mentorProfileRepo = null,
         ?MentoringSessionService $sessionService = null,
         ?EntityManagerInterface $em = null,
+        ?NotificationService $notificationService = null,
     ): MentoringSessionController {
         $em = $em ?? $this->createMock(EntityManagerInterface::class);
         $controller = new MentoringSessionController(
@@ -88,6 +90,7 @@ class MentoringSessionControllerTest extends TestCase
             $mentorProfileRepo ?? $this->createMock(MentorProfileRepository::class),
             $sessionService ?? $this->createMock(MentoringSessionService::class),
             $em,
+            $notificationService ?? $this->createMock(NotificationService::class),
         );
         $controller->setContainer($this->makeContainer($currentUser));
         return $controller;
@@ -165,7 +168,7 @@ class MentoringSessionControllerTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->once())->method('flush');
 
-        $response = $this->makeController($alice, $sessionRepo, em: $em)->startSession(42);
+        $response = $this->makeController($mentorUser, $sessionRepo, em: $em)->startSession(42);
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(MentoringSessionStatus::IN_PROGRESS, $session->getStatus());
@@ -182,14 +185,18 @@ class MentoringSessionControllerTest extends TestCase
         $junior     = $this->buildUser(2, 'Alice');
         $profile    = $this->buildMentorProfile(10, $mentorUser);
         $session    = $this->buildSession(42, $profile, $junior);
+        $session->setStatus(MentoringSessionStatus::IN_PROGRESS);
 
         $sessionRepo = $this->createMock(MentoringSessionRepository::class);
         $sessionRepo->method('find')->with(42)->willReturn($session);
 
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('findOneBy')->with(['user' => $mentorUser])->willReturn($profile);
+
         $sessionService = $this->createMock(MentoringSessionService::class);
         $sessionService->expects($this->once())->method('complete')->with($session);
 
-        $response = $this->makeController($mentorUser, $sessionRepo, sessionService: $sessionService)->completeSession(42);
+        $response = $this->makeController($mentorUser, $sessionRepo, $mentorProfileRepo, $sessionService)->completeSession(42);
 
         $this->assertSame(200, $response->getStatusCode());
     }

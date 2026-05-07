@@ -10,7 +10,7 @@ use App\Enum\UserRole;
 use App\Repository\FollowRepository;
 use App\Repository\MentorProfileRepository;
 use App\Repository\MentoringSessionRepository;
-use Doctrine\ORM\AbstractQuery;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -89,7 +89,7 @@ class MentoringActivityControllerTest extends TestCase
 
     private function makeSessionRepoWithQueryBuilder(array $sessions): MentoringSessionRepository
     {
-        $query = $this->createMock(AbstractQuery::class);
+        $query = $this->createMock(Query::class);
         $query->method('getResult')->willReturn($sessions);
 
         $qb = $this->createMock(QueryBuilder::class);

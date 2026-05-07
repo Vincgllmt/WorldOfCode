@@ -132,7 +132,7 @@ class MentoringRequestControllerTest extends TestCase
                 $req->onCreate(); // simule PrePersist
             }
         );
-        $em->expects($this->once())->method('flush');
+        $em->expects($this->exactly(2))->method('flush');
 
         $request = $this->makeJsonRequest([
             'type'        => 'debug',

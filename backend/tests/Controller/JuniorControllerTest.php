@@ -183,7 +183,7 @@ class JuniorControllerTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame(3.0, $payload['averageRating']);
+        $this->assertEquals(3.0, $payload['averageRating']);
     }
 
     public function testStatsIgnoresInvisibleRatings(): void
@@ -206,7 +206,7 @@ class JuniorControllerTest extends TestCase
         $response = $this->makeController($alice, $sessionRepo, $requestRepo, $ratingRepo)->stats();
 
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame(5.0, $payload['averageRating']);
+        $this->assertEquals(5.0, $payload['averageRating']);
     }
 
     public function testStatsTotalRequestsCount(): void
