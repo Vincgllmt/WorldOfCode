@@ -11,6 +11,7 @@ export interface Post {
   readonly likesCount: number
   readonly likedByUser: boolean
   readonly sharedCount: number
+  readonly commentsCount: number
   readonly sharedPost?: Post | null
   readonly likedByMe?: boolean 
   readonly isAuthorFollowedByMe?: boolean

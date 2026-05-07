@@ -44,6 +44,18 @@ function getMessagePreview(body: string, isMine: boolean, type?: string): React.
             return <span className="inline-flex items-center gap-1"><FileArchive className="h-3.5 w-3.5" /> Fichier</span>
         }
     }
+    if (type === 'session_proposal') {
+        return '📅 Proposition de session'
+    }
+    if (type === 'session_counter_proposal') {
+        return '📅 Contre-proposition de date'
+    }
+    if (type === 'appointment_proposal') {
+        return '📅 Proposition de rendez-vous'
+    }
+    if (type === 'session_closed') {
+        return '⭐ Proposition de notation'
+    }
     if (body.includes('shared-post-card')) {
         return isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
     }

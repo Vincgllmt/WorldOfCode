@@ -192,6 +192,14 @@ export function MessagePanel({ open, onOpenChange, onSelectConversation }: Messa
             preview = <span className="inline-flex items-center gap-1"><FileArchive className="h-3 w-3" /> {fileName}</span>
           } else if (isSharedPost) {
             preview = isMine ? '📎 Vous avez partagé une publication' : '📎 A partagé une publication'
+          } else if (lastMsgType === 'session_proposal') {
+            preview = '📅 Proposition de session'
+          } else if (lastMsgType === 'session_counter_proposal') {
+            preview = '📅 Contre-proposition de date'
+          } else if (lastMsgType === 'appointment_proposal') {
+            preview = '📅 Proposition de rendez-vous'
+          } else if (lastMsgType === 'session_closed') {
+            preview = '⭐ Proposition de notation'
           } else {
             preview = rawPreview.replace(/<[^>]*>/g, '').trim()
           }

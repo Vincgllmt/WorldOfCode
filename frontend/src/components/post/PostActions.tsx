@@ -1,4 +1,3 @@
-
 'use client'
 
 import * as React from 'react'
@@ -44,13 +43,11 @@ export default function PostActions({
   copyLinkOnShare = false,
   postUrl,
 }: PostActionsProps) {
-  // Etat like dérivé depuis la liste des likers (persiste au refresh)
   const { likedByMe, likesCount, onToggle, isPending } = usePostLikeState(
     post.id,
     post.techGroupId
   )
 
-  // Partage + confirmation
   const share = useSharePost()
   const [confirmShareOpen, setConfirmShareOpen] = React.useState(false)
   const [shareComment, setShareComment] = React.useState('')
@@ -69,7 +66,7 @@ export default function PostActions({
               await navigator.clipboard.writeText(postUrl)
               toast.success('Lien du post copié')
             } catch {
-              /* noop: l’API de partage a réussi, seule la copie a échoué */
+              /* noop */
             }
           }
         },
@@ -78,11 +75,12 @@ export default function PostActions({
     )
   }
 
+  const commentsCount = post.commentsCount ?? 0
+
   return (
     <div className={cn('pt-2', className)}>
-      {/* Ligne d’icônes à la Instagram */}
+      {/* Boutons d'actions */}
       <div className="flex items-center gap-4">
-        {/* Like */}
         <Button
           variant="ghost"
           size="icon"
@@ -95,7 +93,7 @@ export default function PostActions({
           <motion.div
             whileTap={{ scale: 0.75 }}
             animate={likedByMe ? { scale: [1, 1.3, 0.9, 1.1, 1] } : { scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
           >
             <Heart className={cn('h-6 w-6', likedByMe && 'fill-current')} />
           </motion.div>
@@ -112,7 +110,6 @@ export default function PostActions({
           </AnimatePresence>
         </Button>
 
-        {/* Commenter */}
         <Button
           variant="ghost"
           size="icon"
@@ -123,7 +120,6 @@ export default function PostActions({
           <MessageCircle className="h-6 w-6" />
         </Button>
 
-        {/* Partager (dropdown avec 2 options) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -148,7 +144,6 @@ export default function PostActions({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Dialog repost dans le flux */}
         <AlertDialog
           open={confirmShareOpen}
           onOpenChange={(open) => {
@@ -188,7 +183,6 @@ export default function PostActions({
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Dialog envoi en message */}
         <ShareToMessageDialog
           post={post}
           open={shareToMessageOpen}
@@ -196,10 +190,49 @@ export default function PostActions({
         />
       </div>
 
-      {/* Ligne “J’aime” */}
-      <div className="mt-2 text-sm font-medium">
-        {likesCount} {`J'aime`}
-      </div>
+      {/* Compteurs */}
+      <Counters
+        likesCount={likesCount}
+        commentsCount={commentsCount}
+        onCommentClick={onCommentClick}
+      />
+    </div>
+  )
+}
+
+function Counters({
+  likesCount,
+  commentsCount,
+  onCommentClick,
+}: {
+  likesCount: number
+  commentsCount: number
+  onCommentClick?: () => void
+}) {
+  if (likesCount === 0 && commentsCount === 0) {
+    return (
+      <p className="mt-2 text-xs text-muted-foreground">
+        Soyez le premier à réagir
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-4 text-sm">
+      {likesCount > 0 && (
+        <span className="font-medium">
+          {likesCount} J&apos;aime
+        </span>
+      )}
+      {commentsCount > 0 && (
+        <button
+          type="button"
+          onClick={onCommentClick}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {commentsCount} commentaire{commentsCount > 1 ? 's' : ''}
+        </button>
+      )}
     </div>
   )
 }

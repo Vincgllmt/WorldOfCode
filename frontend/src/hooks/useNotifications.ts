@@ -54,6 +54,7 @@ function getNotificationIcon(type: string): string {
         case 'comment': return '💬'
         case 'follow': return '👤'
         case 'like': return '❤️'
+        case 'appointment_confirmed': return '📅'
         default: return '🔔'
     }
 }
@@ -92,6 +93,12 @@ export const useNotificationRealtime = () => {
                 tag: `notif-${notification.id}`,
                 onClick: url ? () => { window.location.href = url } : undefined,
             })
+
+            if (notification.type === 'appointment_confirmed' && notification.relatedEntityId) {
+                window.dispatchEvent(new CustomEvent('appointment:confirmed', {
+                    detail: { sessionId: notification.relatedEntityId },
+                }))
+            }
         }
 
         socket.on('new_notification', onNewNotification)

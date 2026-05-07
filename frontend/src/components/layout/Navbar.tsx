@@ -1,17 +1,24 @@
 "use client"
 
-import { useRef, useState, useEffect, useCallback, useMemo } from "react"
-import { MessageCircle, Settings } from "lucide-react"
+import { useRef, useState, useEffect, useCallback } from "react"
+import { MessageCircle, Settings, GraduationCap, BookOpen, User, LogOut, Palette, Check } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { getMyMentorProfile } from "@/lib/api/mentoring/profile"
+import { getMentoringRequestsMine } from "@/lib/api/mentoring/requests"
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
+    DropdownMenuLabel,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -23,7 +30,15 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import { useSettingsModal } from "@/contexts/SettingsModalContext"
 import { useNotificationRealtime } from "@/hooks/useNotifications"
 import { useTheme } from "next-themes"
+import { updateUserTheme } from "@/services/userService"
 import { motion } from "framer-motion"
+
+const THEMES = [
+    { value: 'light',          label: 'Clair',           colors: ['#ffffff', '#16a34a', '#dcfce7'] },
+    { value: 'dark',           label: 'Sombre Vert',     colors: ['#111827', '#4ade80', '#1f2937'] },
+    { value: 'cyberpunk-dark', label: 'Cyberpunk Dark',  colors: ['#0a0a0f', '#06b6d4', '#a855f7'] },
+    { value: 'cyberpunk-light',label: 'Cyberpunk Light', colors: ['#f0f9ff', '#0891b2', '#7c3aed'] },
+]
 
 
 export default function Navbar() {
@@ -31,12 +46,17 @@ export default function Navbar() {
     const { openSettings } = useSettingsModal()
     const pathname = usePathname()
     const searchParams = useSearchParams()
-    const { resolvedTheme } = useTheme()
+    const { theme, setTheme, resolvedTheme } = useTheme()
+    const { setUserTheme } = useAuth()
     const [mounted, setMounted] = useState(false)
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
+    useEffect(() => { setMounted(true) }, [])
+
+    const handleThemeChange = (newTheme: string) => {
+        setTheme(newTheme)
+        setUserTheme(newTheme)
+        if (user) updateUserTheme(user.id, newTheme).catch(() => {})
+    }
 
     const isDark = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
     const logoSrc = mounted ? (isDark ? "/logo_white.png" : "/logo2.png") : "/logo_white.png"
@@ -56,6 +76,22 @@ export default function Navbar() {
             c.lastMessage.sender?.id !== user?.id &&
             c.id !== currentConversationId // Ne pas compter la conversation actuellement ouverte
     )
+
+    const { data: mentorProfile } = useQuery({
+        queryKey: ['mentorProfile', 'me'],
+        queryFn: getMyMentorProfile,
+        retry: false,
+        enabled: !!user,
+        throwOnError: false,
+    })
+
+    const { data: myRequests } = useQuery({
+        queryKey: ['mentoringRequestsMine'],
+        queryFn: getMentoringRequestsMine,
+        retry: false,
+        enabled: !!user,
+    })
+    const hasMentoringRequests = !!myRequests && myRequests.length > 0
 
     const navRef = useRef<HTMLElement>(null)
 
@@ -130,9 +166,7 @@ export default function Navbar() {
                         </Link>
                     ))}
 
-                    {user && <NotificationBell />}
-
-                    <ThemeToggle />
+                    {mounted && user && <NotificationBell />}
 
                     {user && (
                         <DropdownMenu>
@@ -146,16 +180,68 @@ export default function Navbar() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href="/profile" className="cursor-pointer font-medium">
-                                        {user.username}
+                                    <Link href="/profile" className="cursor-pointer flex items-center gap-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span className="font-medium">{user.username}</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openSettings('profile')} className="cursor-pointer">
                                     <Settings className="mr-2 h-4 w-4" />
                                     Paramètres
                                 </DropdownMenuItem>
+                                {mentorProfile && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/mentor/cockpit" className="cursor-pointer flex items-center gap-2">
+                                                <GraduationCap className="h-4 w-4 text-primary" />
+                                                Mon espace mentor
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                                {hasMentoringRequests && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/mentoring/my-requests" className="cursor-pointer flex items-center gap-2">
+                                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                                Mes demandes de mentorat
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={logout}>
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                                        <Palette className="h-4 w-4 text-muted-foreground" />
+                                        Apparence
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                        {THEMES.map((t) => (
+                                            <DropdownMenuItem
+                                                key={t.value}
+                                                onClick={() => handleThemeChange(t.value)}
+                                                className="flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <div className="flex gap-0.5">
+                                                    {t.colors.map((color, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="inline-block h-3.5 w-3.5 rounded-full border border-foreground/20"
+                                                            style={{ backgroundColor: color }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="flex-1">{t.label}</span>
+                                                {theme === t.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={logout} className="flex items-center gap-2 text-destructive focus:text-destructive">
+                                    <LogOut className="h-4 w-4" />
                                     Déconnexion
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
