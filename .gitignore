@@ -6,3 +6,5 @@ lint-output.txt
 coverage-output.txt
 coverage.xml
 
+cluster/iptv/backend/__pycache__
+cluster/iptv/backend/.venv

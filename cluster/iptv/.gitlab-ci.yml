@@ -1,0 +1,45 @@
+build:iptv-backend:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+      changes:
+        - cluster/iptv/backend/**/*
+    - when: manual
+      allow_failure: true
+  script:
+    - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}
+    - echo "Configuration de l'authentification Kaniko..."
+    - AUTH=$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')
+    - 'echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"${AUTH}\"}}}" > /kaniko/.docker/config.json'
+    - 'echo "Build Image: ${REGISTRY_HOST}/iptv-backend:${IMAGE_TAG}"'
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/cluster/iptv/backend" \
+        --dockerfile "${CI_PROJECT_DIR}/cluster/iptv/backend/Dockerfile" \
+        --destination "${REGISTRY_HOST}/iptv-backend:${IMAGE_TAG}" \
+        --destination "${REGISTRY_HOST}/iptv-backend:latest" \
+        --insecure \
+        --skip-tls-verify \
+        --cache=true
+
+deploy:iptv-backend:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  variables:
+    # 1. Déploiement isolé dans son propre namespace
+    APP_NAMESPACE: "iptv"
+    RELEASE_NAME: "iptv-backend"
+    CHART_PATH: "cluster/iptv/chart"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    # 2. Utilisation du fichier de values unique
+    VALUES_FILE: "cluster/iptv/chart/values.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+      changes:
+        - cluster/iptv/**/*
+    - when: manual
+      allow_failure: true
