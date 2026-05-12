@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import '../models/channel.dart';
 
 class PlayerScreen extends StatefulWidget {
-  final Channel channel;
-  const PlayerScreen({super.key, required this.channel});
+  final String name;
+  final String url;
+  final String? group;
+
+  const PlayerScreen({super.key, required this.name, required this.url, this.group});
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -18,18 +20,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _player.open(_buildMedia(widget.channel.url));
+    _player.open(_buildMedia(widget.url));
   }
 
   // HLS streams (TF1, M6, France TV…) validate User-Agent and sometimes
   // Referer. Passing a browser UA dramatically increases playback success.
   Media _buildMedia(String url) {
+    final origin = Uri.parse(url).origin;
     return Media(url, httpHeaders: {
       'User-Agent':
           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
           '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Referer': Uri.parse(url).origin,
-      'Origin':  Uri.parse(url).origin,
+      'Referer': origin,
+      'Origin':  origin,
     });
   }
 
@@ -52,7 +55,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                widget.channel.name,
+                widget.name,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
@@ -60,7 +63,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ],
         ),
         actions: [
-          if (widget.channel.group != null)
+          if (widget.group != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Container(
@@ -71,7 +74,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   border: Border.all(color: const Color(0x779D4EDD)),
                 ),
                 child: Text(
-                  widget.channel.group!,
+                  widget.group!,
                   style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 12),
                 ),
               ),

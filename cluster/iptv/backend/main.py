@@ -7,22 +7,59 @@ import os
 import asyncio
 import time
 
+# ─── Models ───────────────────────────────────────────────────────────────────
 class Channel(BaseModel):
     name: str
     url: str
     logo: Optional[str] = None
     group: Optional[str] = None
 
+class Movie(BaseModel):
+    id: int
+    name: str
+    url: str
+    cover: Optional[str] = None
+    group: Optional[str] = None
+    rating: Optional[str] = None
+
+class SeriesItem(BaseModel):
+    id: int
+    name: str
+    cover: Optional[str] = None
+    group: Optional[str] = None
+    rating: Optional[str] = None
+
+class Episode(BaseModel):
+    id: int
+    title: str
+    season: int
+    episode_num: int
+    url: str
+
+class SeriesDetail(BaseModel):
+    id: int
+    name: str
+    cover: Optional[str] = None
+    plot: Optional[str] = None
+    seasons: dict[str, list[Episode]]
+
+# ─── Cache state ──────────────────────────────────────────────────────────────
 _CACHE_TTL = 1800  # 30 minutes
 
-_cache_data: list | None = None
-_cache_expires: float = 0.0
-_cache_lock = asyncio.Lock()
+_channels_data: list | None = None
+_channels_expires: float = 0.0
+_channels_lock = asyncio.Lock()
 
-app = FastAPI(
-    title="IPTV Core Backend",
-    description="API Xtream Codes → WOC TV"
-)
+_movies_data: list | None = None
+_movies_expires: float = 0.0
+_movies_lock = asyncio.Lock()
+
+_series_data: list | None = None
+_series_expires: float = 0.0
+_series_lock = asyncio.Lock()
+
+# ─── App ──────────────────────────────────────────────────────────────────────
+app = FastAPI(title="IPTV Core Backend", description="API Xtream Codes → WOC TV")
 
 _XTREAM_HOST     = os.getenv("XTREAM_HOST",     "http://space.smartpro2.com:8789")
 _XTREAM_USER     = os.getenv("XTREAM_USER",     "Hichem")
@@ -36,11 +73,16 @@ def _clean_name(name: str) -> str:
     cleaned = re.sub(r'\s{2,}', ' ', cleaned)
     return cleaned or name.strip()
 
+def _clean_cat(name: str) -> str:
+    name = re.sub(r'[^\w\s\-/éèêëàâùûüîïôœç]', '', name, flags=re.UNICODE).strip()
+    return re.sub(r'\s{2,}', ' ', name) or "Autres"
+
 async def _fetch_json(client: httpx.AsyncClient, url: str) -> list | dict:
-    r = await client.get(url, timeout=20.0)
+    r = await client.get(url, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
+# ─── Build functions ──────────────────────────────────────────────────────────
 async def _build_channels() -> list:
     base = f"{_XTREAM_HOST}/player_api.php?username={_XTREAM_USER}&password={_XTREAM_PASSWORD}"
     async with httpx.AsyncClient() as client:
@@ -48,13 +90,8 @@ async def _build_channels() -> list:
         channels = []
         for cat in categories:
             cat_id   = cat.get("category_id", "")
-            cat_name = cat.get("category_name", "Autres")
-            cat_name = re.sub(r'[^\w\s\-/éèêëàâùûüîïôœç]', '', cat_name, flags=re.UNICODE).strip()
-            cat_name = re.sub(r'\s{2,}', ' ', cat_name) or "Autres"
-
-            streams: list = await _fetch_json(
-                client, f"{base}&action=get_live_streams&category_id={cat_id}"
-            )
+            cat_name = _clean_cat(cat.get("category_name", "Autres"))
+            streams: list = await _fetch_json(client, f"{base}&action=get_live_streams&category_id={cat_id}")
             for s in streams:
                 sid  = s.get("stream_id")
                 name = _clean_name(s.get("name", ""))
@@ -62,60 +99,209 @@ async def _build_channels() -> list:
                 url  = f"{_XTREAM_HOST}/live/{_XTREAM_USER}/{_XTREAM_PASSWORD}/{sid}.m3u8"
                 if sid and name:
                     channels.append(Channel(
-                        name=name,
-                        url=url,
+                        name=name, url=url,
                         logo=logo if logo and logo.startswith("http") else None,
                         group=cat_name,
                     ))
         return channels
 
-async def _refresh_loop():
-    global _cache_data, _cache_expires
+async def _build_movies() -> list:
+    base = f"{_XTREAM_HOST}/player_api.php?username={_XTREAM_USER}&password={_XTREAM_PASSWORD}"
+    async with httpx.AsyncClient() as client:
+        categories, streams = await asyncio.gather(
+            _fetch_json(client, f"{base}&action=get_vod_categories"),
+            _fetch_json(client, f"{base}&action=get_vod_streams"),
+        )
+    cat_map = {c["category_id"]: _clean_cat(c.get("category_name", "Autres")) for c in categories}
+    movies = []
+    for s in streams:
+        sid  = s.get("stream_id")
+        name = _clean_name(s.get("name", ""))
+        ext  = s.get("container_extension") or "mp4"
+        cover = s.get("stream_icon") or None
+        cat_name = cat_map.get(str(s.get("category_id", "")), "Autres")
+        if sid and name:
+            movies.append(Movie(
+                id=sid, name=name,
+                url=f"{_XTREAM_HOST}/movie/{_XTREAM_USER}/{_XTREAM_PASSWORD}/{sid}.{ext}",
+                cover=cover if cover and cover.startswith("http") else None,
+                group=cat_name,
+                rating=str(s.get("rating") or "") or None,
+            ))
+    return movies
+
+async def _build_series_list() -> list:
+    base = f"{_XTREAM_HOST}/player_api.php?username={_XTREAM_USER}&password={_XTREAM_PASSWORD}"
+    async with httpx.AsyncClient() as client:
+        categories, items = await asyncio.gather(
+            _fetch_json(client, f"{base}&action=get_series_categories"),
+            _fetch_json(client, f"{base}&action=get_series"),
+        )
+    cat_map = {c["category_id"]: _clean_cat(c.get("category_name", "Autres")) for c in categories}
+    series_list = []
+    for s in items:
+        sid  = s.get("series_id")
+        name = _clean_name(s.get("name", ""))
+        cover = s.get("cover") or None
+        cat_name = cat_map.get(str(s.get("category_id", "")), "Autres")
+        if sid and name:
+            series_list.append(SeriesItem(
+                id=sid, name=name,
+                cover=cover if cover and cover.startswith("http") else None,
+                group=cat_name,
+                rating=str(s.get("rating") or "") or None,
+            ))
+    return series_list
+
+# ─── Background refresh loops ─────────────────────────────────────────────────
+async def _refresh_loop_channels():
+    global _channels_data, _channels_expires
     while True:
         try:
-            channels = await _build_channels()
-            async with _cache_lock:
-                _cache_data = channels
-                _cache_expires = time.monotonic() + _CACHE_TTL
+            data = await _build_channels()
+            async with _channels_lock:
+                _channels_data = data
+                _channels_expires = time.monotonic() + _CACHE_TTL
         except Exception:
-            pass  # keep stale cache on failure, retry next cycle
+            pass
+        await asyncio.sleep(_CACHE_TTL)
+
+async def _refresh_loop_movies():
+    global _movies_data, _movies_expires
+    while True:
+        try:
+            data = await _build_movies()
+            async with _movies_lock:
+                _movies_data = data
+                _movies_expires = time.monotonic() + _CACHE_TTL
+        except Exception:
+            pass
+        await asyncio.sleep(_CACHE_TTL)
+
+async def _refresh_loop_series():
+    global _series_data, _series_expires
+    while True:
+        try:
+            data = await _build_series_list()
+            async with _series_lock:
+                _series_data = data
+                _series_expires = time.monotonic() + _CACHE_TTL
+        except Exception:
+            pass
         await asyncio.sleep(_CACHE_TTL)
 
 @app.on_event("startup")
 async def _startup():
-    asyncio.create_task(_refresh_loop())
+    asyncio.create_task(_refresh_loop_channels())
+    asyncio.create_task(_refresh_loop_movies())
+    asyncio.create_task(_refresh_loop_series())
 
+# ─── Endpoints ────────────────────────────────────────────────────────────────
 @app.get("/api/v1/channels", response_model=List[Channel])
 async def get_channels():
-    global _cache_data, _cache_expires
-
-    # Fast path: serve from cache
-    if _cache_data is not None and time.monotonic() < _cache_expires:
-        return _cache_data
-
-    # Slow path: first request or cache expired — only one coroutine fetches
-    async with _cache_lock:
-        if _cache_data is not None and time.monotonic() < _cache_expires:
-            return _cache_data
+    global _channels_data, _channels_expires
+    if _channels_data is not None and time.monotonic() < _channels_expires:
+        return _channels_data
+    async with _channels_lock:
+        if _channels_data is not None and time.monotonic() < _channels_expires:
+            return _channels_data
         try:
-            channels = await _build_channels()
-            _cache_data = channels
-            _cache_expires = time.monotonic() + _CACHE_TTL
-            return channels
+            data = await _build_channels()
+            _channels_data = data
+            _channels_expires = time.monotonic() + _CACHE_TTL
+            return data
         except HTTPException:
             raise
         except Exception as e:
-            if _cache_data is not None:
-                return _cache_data  # return stale rather than crashing
+            if _channels_data is not None:
+                return _channels_data
             raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/movies", response_model=List[Movie])
+async def get_movies():
+    global _movies_data, _movies_expires
+    if _movies_data is not None and time.monotonic() < _movies_expires:
+        return _movies_data
+    async with _movies_lock:
+        if _movies_data is not None and time.monotonic() < _movies_expires:
+            return _movies_data
+        try:
+            data = await _build_movies()
+            _movies_data = data
+            _movies_expires = time.monotonic() + _CACHE_TTL
+            return data
+        except HTTPException:
+            raise
+        except Exception as e:
+            if _movies_data is not None:
+                return _movies_data
+            raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/series", response_model=List[SeriesItem])
+async def get_series():
+    global _series_data, _series_expires
+    if _series_data is not None and time.monotonic() < _series_expires:
+        return _series_data
+    async with _series_lock:
+        if _series_data is not None and time.monotonic() < _series_expires:
+            return _series_data
+        try:
+            data = await _build_series_list()
+            _series_data = data
+            _series_expires = time.monotonic() + _CACHE_TTL
+            return data
+        except HTTPException:
+            raise
+        except Exception as e:
+            if _series_data is not None:
+                return _series_data
+            raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/series/{series_id}", response_model=SeriesDetail)
+async def get_series_detail(series_id: int):
+    base = f"{_XTREAM_HOST}/player_api.php?username={_XTREAM_USER}&password={_XTREAM_PASSWORD}"
+    try:
+        async with httpx.AsyncClient() as client:
+            data = await _fetch_json(client, f"{base}&action=get_series_info&series_id={series_id}")
+        info = data.get("info", {})
+        episodes_raw: dict = data.get("episodes", {})
+        seasons: dict[str, list[Episode]] = {}
+        for season_num, eps in episodes_raw.items():
+            season_episodes = []
+            for ep in eps:
+                ep_id = ep.get("id")
+                ext   = ep.get("container_extension") or "mkv"
+                title = ep.get("title") or f"Épisode {ep.get('episode_num', '?')}"
+                if ep_id:
+                    season_episodes.append(Episode(
+                        id=int(ep_id),
+                        title=title,
+                        season=int(season_num),
+                        episode_num=ep.get("episode_num", 0),
+                        url=f"{_XTREAM_HOST}/series/{_XTREAM_USER}/{_XTREAM_PASSWORD}/{ep_id}.{ext}",
+                    ))
+            if season_episodes:
+                seasons[season_num] = season_episodes
+        cover = info.get("cover") or None
+        return SeriesDetail(
+            id=series_id,
+            name=info.get("name", ""),
+            cover=cover if cover and cover.startswith("http") else None,
+            plot=info.get("plot") or None,
+            seasons=seasons,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/cache/status")
 async def cache_status():
-    remaining = max(0.0, _cache_expires - time.monotonic())
+    now = time.monotonic()
     return {
-        "cached": _cache_data is not None,
-        "channels": len(_cache_data) if _cache_data else 0,
-        "expires_in_seconds": int(remaining),
+        "channels": {"cached": _channels_data is not None, "count": len(_channels_data) if _channels_data else 0, "expires_in": int(max(0, _channels_expires - now))},
+        "movies":   {"cached": _movies_data   is not None, "count": len(_movies_data)   if _movies_data   else 0, "expires_in": int(max(0, _movies_expires   - now))},
+        "series":   {"cached": _series_data   is not None, "count": len(_series_data)   if _series_data   else 0, "expires_in": int(max(0, _series_expires   - now))},
     }
 
 @app.get("/health")

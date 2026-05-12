@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +40,7 @@ class IptvApp extends StatelessWidget {
           color: Color(0xFF9D4EDD),
         ),
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }
