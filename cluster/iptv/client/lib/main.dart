@@ -14,22 +14,30 @@ class IptvApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WOC IPTV',
+      title: 'WOC TV',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: const Color(0xFF0F0F0F),
-        // Correction ici : CardThemeData au lieu de CardTheme
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF9D4EDD),
+          secondary: Color(0xFF8A2BE2),
+          surface: Color(0xFF1A0F2E),
+          onSurface: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0C0714),
         cardTheme: CardThemeData(
-          color: const Color(0xFF1E1E1E),
+          color: const Color(0xFF1A0F2E),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0F0F0F),
+          backgroundColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: Color(0xFF9D4EDD),
         ),
       ),
       home: const HomeScreen(),

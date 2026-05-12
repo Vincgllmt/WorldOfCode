@@ -17,6 +17,11 @@ containerPort: 8000
 env:
   APP_ENV: "production"
 
+vault:
+  enabled: true
+  role: iptv-backend
+  secretPath: secret/data/iptv
+
 ingress:
   enabled: true
   className: "traefik"

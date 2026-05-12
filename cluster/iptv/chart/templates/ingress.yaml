@@ -4,18 +4,10 @@ kind: Ingress
 metadata:
   name: {{ include "iptv-backend.fullname" . }}
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
-  tls:
-    - hosts:
-      {{- range .Values.ingress.hosts }}
-        - {{ .host }}
-      {{- end }}
-      secretName: {{ include "iptv-backend.fullname" . }}-tls
   rules:
     {{- range .Values.ingress.hosts }}
     - host: {{ .host }}
