@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
+import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
 import 'movie_detail_screen.dart';
+import 'setup_screen.dart';
 
 class _C {
   static const bg        = Color(0xFF0C0714);
@@ -125,6 +127,33 @@ class _MoviesScreenState extends State<MoviesScreen> {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => MovieDetailScreen(movie: m),
     ));
+  }
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF160B25),
+        title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('Vos identifiants seront supprimés de cet appareil.',
+          style: TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+            child: const Text('Déconnecter',
+              style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await CredentialsService.clear();
+    ApiService.invalidateCache();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SetupScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -299,7 +328,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 const SizedBox(width: 8),
-                const Text('Films', style: TextStyle(
+                const Text('TuTuTu', style: TextStyle(
                   color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
                 )),
                 const Spacer(),
@@ -325,6 +354,19 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
                   }),
                 ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: _logout,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFF8A2BE2),
+                      child: const Icon(Icons.person_rounded, size: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
               ],
             ),
           ),

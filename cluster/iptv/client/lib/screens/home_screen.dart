@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/channel.dart';
 import '../services/api_service.dart';
+import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
 import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
 import 'player_screen.dart';
+import 'setup_screen.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 class _C {
@@ -152,6 +154,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF160B25),
+        title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('Vos identifiants seront supprimés de cet appareil.',
+          style: TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+            child: const Text('Déconnecter',
+              style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await CredentialsService.clear();
+    ApiService.invalidateCache();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SetupScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -172,6 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
         searchCtrl: _searchCtrl,
         onSearchChanged: _onSearch,
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+        onAccount: _logout,
         onToggleSearch: () => setState(() {
           _searchVisible = !_searchVisible;
           if (!_searchVisible) {
@@ -354,6 +384,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onToggleSearch;
   final VoidCallback onOpenDrawer;
+  final VoidCallback onAccount;
 
   const _AppBar({
     required this.searchVisible,
@@ -361,6 +392,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onSearchChanged,
     required this.onToggleSearch,
     required this.onOpenDrawer,
+    required this.onAccount,
   });
 
   @override
@@ -414,10 +446,16 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
                 onTap: onToggleSearch,
               ),
               const SizedBox(width: 4),
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: _C.accentAlt,
-                child: const Icon(Icons.person_rounded, size: 18, color: Colors.white),
+              GestureDetector(
+                onTap: onAccount,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _C.accentAlt,
+                    child: const Icon(Icons.person_rounded, size: 18, color: Colors.white),
+                  ),
+                ),
               ),
               const SizedBox(width: 4),
             ],
