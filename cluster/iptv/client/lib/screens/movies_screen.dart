@@ -239,53 +239,48 @@ class _MoviesScreenState extends State<MoviesScreen> {
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(70),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0x990C0714),
-              border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    _IconBtn(
-                      icon: Icons.menu_rounded,
-                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Films', style: TextStyle(
-                      color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
-                    )),
-                    const Spacer(),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 280),
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: anim,
-                        child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child),
-                      ),
-                      child: _searchVisible
-                        ? SizedBox(
-                            key: const ValueKey('f'),
-                            width: 240, height: 40,
-                            child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...'),
-                          )
-                        : const SizedBox(key: ValueKey('e')),
-                    ),
-                    const SizedBox(width: 6),
-                    _IconBtn(
-                      icon: _searchVisible ? Icons.close_rounded : Icons.search_rounded,
-                      onTap: () => setState(() {
-                        _searchVisible = !_searchVisible;
-                        if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
-                      }),
-                    ),
-                  ],
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xF00C0714),
+          border: Border(bottom: BorderSide(color: _C.border, width: 1)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                _IconBtn(
+                  icon: Icons.menu_rounded,
+                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
-              ),
+                const SizedBox(width: 8),
+                const Text('Films', style: TextStyle(
+                  color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
+                )),
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child),
+                  ),
+                  child: _searchVisible
+                    ? SizedBox(
+                        key: const ValueKey('f'),
+                        width: 240, height: 40,
+                        child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...'),
+                      )
+                    : const SizedBox(key: ValueKey('e')),
+                ),
+                const SizedBox(width: 6),
+                _IconBtn(
+                  icon: _searchVisible ? Icons.close_rounded : Icons.search_rounded,
+                  onTap: () => setState(() {
+                    _searchVisible = !_searchVisible;
+                    if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
+                  }),
+                ),
+              ],
             ),
           ),
         ),

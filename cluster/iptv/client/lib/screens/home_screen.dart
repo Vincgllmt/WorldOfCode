@@ -323,74 +323,59 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0x990C0714),
-            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  // Drawer toggle
-                  _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
-                  const SizedBox(width: 8),
-
-                  // Brand
-                  const Text(
-                    'WOC TV',
-                    style: TextStyle(
-                      color: _C.accent,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                  const Spacer(),
-
-                  // Expandable search field
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child),
-                    ),
-                    child: searchVisible
-                      ? SizedBox(
-                          key: const ValueKey('field'),
-                          width: 240,
-                          height: 40,
-                          child: _GlassSearchField(
-                            controller: searchCtrl,
-                            onChanged: onSearchChanged,
-                          ),
-                        )
-                      : const SizedBox(key: ValueKey('empty')),
-                  ),
-
-                  const SizedBox(width: 6),
-
-                  // Search toggle
-                  _AppBarIcon(
-                    icon: searchVisible ? Icons.close_rounded : Icons.search_rounded,
-                    onTap: onToggleSearch,
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Avatar placeholder
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _C.accentAlt,
-                    child: const Icon(Icons.person_rounded, size: 18, color: Colors.white),
-                  ),
-                  const SizedBox(width: 4),
-                ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xF00C0714),
+        border: Border(bottom: BorderSide(color: _C.border, width: 1)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
+              const SizedBox(width: 8),
+              const Text(
+                'WOC TV',
+                style: TextStyle(
+                  color: _C.accent,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
               ),
-            ),
+              const Spacer(),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child),
+                ),
+                child: searchVisible
+                  ? SizedBox(
+                      key: const ValueKey('field'),
+                      width: 240,
+                      height: 40,
+                      child: _GlassSearchField(
+                        controller: searchCtrl,
+                        onChanged: onSearchChanged,
+                      ),
+                    )
+                  : const SizedBox(key: ValueKey('empty')),
+              ),
+              const SizedBox(width: 6),
+              _AppBarIcon(
+                icon: searchVisible ? Icons.close_rounded : Icons.search_rounded,
+                onTap: onToggleSearch,
+              ),
+              const SizedBox(width: 4),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: _C.accentAlt,
+                child: const Icon(Icons.person_rounded, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
         ),
       ),
