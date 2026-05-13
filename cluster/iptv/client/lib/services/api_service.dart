@@ -7,7 +7,7 @@ import '../models/series_item.dart';
 import '../models/series_detail.dart';
 
 class ApiService {
-  static const String _base = 'http://iptv-api.duckdns.org/api/v1';
+  static const String _base = 'https://iptv-api.duckdns.org/api/v1';
 
   Future<List<Channel>> fetchChannels() async {
     final res = await http.get(Uri.parse('$_base/channels'));
