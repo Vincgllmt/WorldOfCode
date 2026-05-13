@@ -82,6 +82,10 @@ async def _fetch_json(client: httpx.AsyncClient, url: str) -> list | dict:
     r.raise_for_status()
     return r.json()
 
+# Xtream servers often use self-signed or no SSL certificate.
+# verify=False applies only to outbound calls to user-provided Xtream hosts.
+_xtream_client_kwargs = {"verify": False, "timeout": 30.0}
+
 def _require_creds(host: Optional[str], user: Optional[str], pw: Optional[str]):
     if not host or not user or not pw:
         raise HTTPException(
@@ -99,7 +103,7 @@ async def validate(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     url = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}&action=get_user_info"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             data = await _fetch_json(client, url)
         status = data.get("user_info", {}).get("status", "")
         if status == "Disabled":
@@ -120,7 +124,7 @@ async def get_channels(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     base = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             # Fetch categories and all streams in parallel (2 requests, not N+1)
             categories, streams = await asyncio.gather(
                 _fetch_json(client, f"{base}&action=get_live_categories"),
@@ -159,7 +163,7 @@ async def get_movies(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     base = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             categories, streams = await asyncio.gather(
                 _fetch_json(client, f"{base}&action=get_vod_categories"),
                 _fetch_json(client, f"{base}&action=get_vod_streams"),
@@ -201,7 +205,7 @@ async def get_series(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     base = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             categories, items = await asyncio.gather(
                 _fetch_json(client, f"{base}&action=get_series_categories"),
                 _fetch_json(client, f"{base}&action=get_series"),
@@ -240,7 +244,7 @@ async def get_series_detail(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     base = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             data = await _fetch_json(client, f"{base}&action=get_series_info&series_id={series_id}")
         info = data.get("info", {})
         episodes_raw: dict = data.get("episodes", {})
@@ -290,7 +294,7 @@ async def get_movie_detail(
     _require_creds(x_xtream_host, x_xtream_user, x_xtream_pass)
     base = f"{x_xtream_host}/player_api.php?username={x_xtream_user}&password={x_xtream_pass}"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(**_xtream_client_kwargs) as client:
             data = await _fetch_json(client, f"{base}&action=get_vod_info&vod_id={vod_id}")
         info        = data.get("info", {})
         movie_data  = data.get("movie_data", {})
