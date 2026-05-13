@@ -198,6 +198,19 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         const SizedBox(width: 10),
                         Text('${_filtered.length} série${_filtered.length > 1 ? 's' : ''}',
                           style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => _toggleFavGenre(_selectedGenre!),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              _favGenres.contains(_selectedGenre) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                              size: 20,
+                              color: _favGenres.contains(_selectedGenre) ? _C.accent : _C.txtSub,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
