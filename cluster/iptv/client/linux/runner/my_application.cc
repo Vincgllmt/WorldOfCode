@@ -45,11 +45,19 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "client");
+    gtk_header_bar_set_title(header_bar, "Joga Bonito IPTV");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "client");
+    gtk_window_set_title(window, "Joga Bonito IPTV");
+  }
+
+  // Set window icon
+  g_autoptr(GError) icon_error = nullptr;
+  GdkPixbuf* icon = gdk_pixbuf_new_from_file("my_application.png", &icon_error);
+  if (icon) {
+    gtk_window_set_icon(window, icon);
+    g_object_unref(icon);
   }
 
   gtk_window_set_default_size(window, 1280, 720);
