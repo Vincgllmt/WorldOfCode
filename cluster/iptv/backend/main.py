@@ -6,6 +6,10 @@ import re
 import os
 import asyncio
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("iptv")
 
 # ─── Models ───────────────────────────────────────────────────────────────────
 class Channel(BaseModel):
@@ -112,7 +116,15 @@ async def _build_movies() -> list:
             _fetch_json(client, f"{base}&action=get_vod_categories"),
             _fetch_json(client, f"{base}&action=get_vod_streams"),
         )
-    cat_map = {c["category_id"]: _clean_cat(c.get("category_name", "Autres")) for c in categories}
+    logger.info("vod_categories=%s type=%s  vod_streams=%s type=%s",
+                len(categories) if isinstance(categories, list) else categories,
+                type(categories).__name__,
+                len(streams) if isinstance(streams, list) else streams,
+                type(streams).__name__)
+    if not isinstance(streams, list):
+        logger.warning("get_vod_streams returned unexpected type %s: %s", type(streams).__name__, streams)
+        return []
+    cat_map = {c["category_id"]: _clean_cat(c.get("category_name", "Autres")) for c in (categories if isinstance(categories, list) else [])}
     movies = []
     for s in streams:
         sid  = s.get("stream_id")
@@ -160,10 +172,12 @@ async def _refresh_loop_channels():
         try:
             data = await _build_channels()
             async with _channels_lock:
-                _channels_data = data
-                _channels_expires = time.monotonic() + _CACHE_TTL
-        except Exception:
-            pass
+                if data or _channels_data is None:
+                    _channels_data = data
+                    _channels_expires = time.monotonic() + _CACHE_TTL
+            logger.info("channels refreshed: %d items", len(data))
+        except Exception as e:
+            logger.error("channels refresh failed: %s", e)
         await asyncio.sleep(_CACHE_TTL)
 
 async def _refresh_loop_movies():
@@ -172,10 +186,12 @@ async def _refresh_loop_movies():
         try:
             data = await _build_movies()
             async with _movies_lock:
-                _movies_data = data
-                _movies_expires = time.monotonic() + _CACHE_TTL
-        except Exception:
-            pass
+                if data or _movies_data is None:
+                    _movies_data = data
+                    _movies_expires = time.monotonic() + _CACHE_TTL
+            logger.info("movies refreshed: %d items", len(data))
+        except Exception as e:
+            logger.error("movies refresh failed: %s", e)
         await asyncio.sleep(_CACHE_TTL)
 
 async def _refresh_loop_series():
@@ -184,10 +200,12 @@ async def _refresh_loop_series():
         try:
             data = await _build_series_list()
             async with _series_lock:
-                _series_data = data
-                _series_expires = time.monotonic() + _CACHE_TTL
-        except Exception:
-            pass
+                if data or _series_data is None:
+                    _series_data = data
+                    _series_expires = time.monotonic() + _CACHE_TTL
+            logger.info("series refreshed: %d items", len(data))
+        except Exception as e:
+            logger.error("series refresh failed: %s", e)
         await asyncio.sleep(_CACHE_TTL)
 
 @app.on_event("startup")
