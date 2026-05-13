@@ -1,9 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/channel.dart';
 import '../services/api_service.dart';
+import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
+import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
 import 'player_screen.dart';
 
@@ -35,7 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Channel> _allChannels = [];
   List<Channel> _filtered = [];
-  Set<String> _favorites = {};
+  Set<String> _favorites    = {};
+  Set<String> _favGenres    = {};
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
@@ -47,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _future = _loadChannels();
     FavoritesService.loadFavorites().then((favs) {
       if (mounted) setState(() => _favorites = favs);
+    });
+    GenreFavoritesService.load('live').then((favs) {
+      if (mounted) setState(() => _favGenres = favs);
     });
   }
 
@@ -69,10 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
         result = result.where((c) => (c.group ?? 'Autres') == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
-        final lq = _query.toLowerCase();
+        final lq = normalize(_query);
         result = result.where((c) =>
-          c.name.toLowerCase().contains(lq) ||
-          (c.group?.toLowerCase().contains(lq) ?? false),
+          normalize(c.name).contains(lq) ||
+          normalize(c.group ?? '').contains(lq),
         ).toList();
       }
       _filtered = result;
@@ -104,6 +109,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return map;
   }
 
+  void _toggleFavGenre(String genre) {
+    setState(() {
+      if (_favGenres.contains(genre)) {
+        _favGenres.remove(genre);
+      } else {
+        _favGenres.add(genre);
+      }
+    });
+    GenreFavoritesService.save('live', _favGenres);
+  }
+
   void _toggleFavorite(Channel ch) {
     setState(() {
       if (_favorites.contains(ch.url)) {
@@ -121,6 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
       (m[ch.group ?? 'Autres'] ??= []).add(ch);
     }
     return m;
+  }
+
+  List<String> _sortedKeys(Map<String, List<Channel>> groups) {
+    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    return [...fav, ...other];
   }
 
   void _openPlayer(Channel ch) {
@@ -141,7 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
         genres: _genres,
         counts: _genreCounts,
         selected: _selectedGenre,
+        favGenres: _favGenres,
         onSelect: _onGenreSelect,
+        onToggleFav: _toggleFavGenre,
       ),
       appBar: _AppBar(
         searchVisible: _searchVisible,
@@ -213,7 +237,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () { _selectedGenre = null; _applyFilters(); },
-                            child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                            behavior: HitTestBehavior.opaque,
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                            ),
                           ),
                         ]),
                       ),
@@ -280,14 +308,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (ctx, i) {
-                      final key = groups.keys.elementAt(i);
-                      return _CategoryRow(
+                      final sortedKeys = _sortedKeys(groups);
+                      final key = sortedKeys[i];
+                      return RepaintBoundary(child: _CategoryRow(
                         title: key,
                         channels: groups[key]!,
                         favorites: _favorites,
+                        isFavGenre: _favGenres.contains(key),
                         onTap: _openPlayer,
                         onFav: _toggleFavorite,
-                      );
+                        onToggleFavGenre: () => _toggleFavGenre(key),
+                        onTitleTap: () => _onGenreSelect(key),
+                      ));
                     },
                     childCount: groups.length,
                   ),
@@ -336,7 +368,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
               _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
               const SizedBox(width: 8),
               const Text(
-                'WOC TV',
+                'TuTuTu',
                 style: TextStyle(
                   color: _C.accent,
                   fontSize: 22,
@@ -415,36 +447,21 @@ class _GlassSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: TextField(
-          controller: controller,
-          autofocus: true,
-          onChanged: onChanged,
-          style: const TextStyle(color: _C.txt, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Chaîne, catégorie...',
-            hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
-            prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.09),
-            contentPadding: EdgeInsets.zero,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: _C.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: _C.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: _C.accent, width: 1.5),
-            ),
-          ),
-        ),
+    return TextField(
+      controller: controller,
+      autofocus: true,
+      onChanged: onChanged,
+      style: const TextStyle(color: _C.txt, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: 'Chaîne, catégorie...',
+        hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
+        prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
+        filled: true,
+        fillColor: const Color(0xFF1A0F2E),
+        contentPadding: EdgeInsets.zero,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
       ),
     );
   }
@@ -502,7 +519,7 @@ class _HeroBanner extends StatelessWidget {
         Positioned(
           bottom: 48,
           left: 36,
-          right: 180,
+          right: 24,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -537,19 +554,13 @@ class _HeroBanner extends StatelessWidget {
 
               // CTA buttons
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _HeroButton(
                     label: 'Lecture',
                     icon: Icons.play_arrow_rounded,
                     primary: true,
                     onTap: () => onPlay(channel),
-                  ),
-                  const SizedBox(width: 12),
-                  _HeroButton(
-                    label: "Plus d'infos",
-                    icon: Icons.info_outline_rounded,
-                    primary: false,
-                    onTap: () {},
                   ),
                 ],
               ),
@@ -688,6 +699,9 @@ class _CategoryRow extends StatelessWidget {
   final void Function(Channel) onTap;
   final void Function(Channel) onFav;
   final bool isAccent;
+  final bool isFavGenre;
+  final VoidCallback? onToggleFavGenre;
+  final VoidCallback? onTitleTap;
 
   const _CategoryRow({
     required this.title,
@@ -696,6 +710,9 @@ class _CategoryRow extends StatelessWidget {
     required this.onTap,
     required this.onFav,
     this.isAccent = false,
+    this.isFavGenre = false,
+    this.onToggleFavGenre,
+    this.onTitleTap,
   });
 
   // Row height = card image (16:9 of 248px width = 139.5) + label (18) + spacing (16)
@@ -707,34 +724,55 @@ class _CategoryRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 10),
+          padding: const EdgeInsets.fromLTRB(24, 28, 12, 10),
           child: Row(
             children: [
-              if (isAccent) ...[
+              if (isAccent)
                 Container(
-                  width: 3,
-                  height: 18,
+                  width: 3, height: 18,
                   margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: _C.accent,
-                    borderRadius: BorderRadius.circular(2),
+                  decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2)),
+                ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onTitleTap,
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isAccent ? _C.glow : _C.txt,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('(${channels.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                      if (onTitleTap != null) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.chevron_right_rounded, size: 14, color: _C.txtSub.withValues(alpha: 0.4)),
+                      ],
+                    ],
                   ),
                 ),
-              ],
-              Text(
-                title,
-                style: TextStyle(
-                  color: isAccent ? _C.glow : _C.txt,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
+              ),
+              if (onToggleFavGenre != null)
+                GestureDetector(
+                  onTap: onToggleFavGenre,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      isFavGenre ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                      size: 18,
+                      color: isFavGenre ? _C.accent : _C.txtSub.withValues(alpha: 0.35),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '(${channels.length})',
-                style: const TextStyle(color: _C.txtSub, fontSize: 12),
-              ),
             ],
           ),
         ),
@@ -743,8 +781,9 @@ class _CategoryRow extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            addAutomaticKeepAlives: false,
             itemCount: channels.length,
-            itemBuilder: (_, i) => _ChannelCard(
+            itemBuilder: (_, i) => RepaintBoundary(child: _ChannelCard(
               channel: channels[i],
               isFavorite: favorites.contains(channels[i].url),
               onTap: () => onTap(channels[i]),

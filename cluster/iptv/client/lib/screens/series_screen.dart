@@ -1,8 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../services/api_service.dart';
+import '../utils/text_utils.dart';
+import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
 import 'series_detail_screen.dart';
 
@@ -30,6 +31,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   List<SeriesItem> _all = [];
   List<SeriesItem> _filtered = [];
+  Set<String> _favGenres    = {};
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
@@ -39,6 +41,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
   void initState() {
     super.initState();
     _future = _load();
+    GenreFavoritesService.load('series').then((favs) {
+      if (mounted) setState(() => _favGenres = favs);
+    });
   }
 
   @override
@@ -60,10 +65,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
         result = result.where((s) => (s.group ?? 'Autres') == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
-        final lq = _query.toLowerCase();
+        final lq = normalize(_query);
         result = result.where((s) =>
-          s.name.toLowerCase().contains(lq) ||
-          (s.group?.toLowerCase().contains(lq) ?? false),
+          normalize(s.name).contains(lq) ||
+          normalize(s.group ?? '').contains(lq),
         ).toList();
       }
       _filtered = result;
@@ -103,6 +108,19 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return m;
   }
 
+  void _toggleFavGenre(String genre) {
+    setState(() {
+      if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
+    });
+    GenreFavoritesService.save('series', _favGenres);
+  }
+
+  List<String> _sortedKeys(Map<String, List<SeriesItem>> groups) {
+    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    return [...fav, ...other];
+  }
+
   void _open(SeriesItem s) {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => SeriesDetailScreen(series: s),
@@ -120,7 +138,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
         genres: _genres,
         counts: _genreCounts,
         selected: _selectedGenre,
+        favGenres: _favGenres,
         onSelect: _onGenreSelect,
+        onToggleFav: _toggleFavGenre,
       ),
       appBar: _buildAppBar(),
       body: FutureBuilder<List<SeriesItem>>(
@@ -167,7 +187,11 @@ class _SeriesScreenState extends State<SeriesScreen> {
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () { _selectedGenre = null; _applyFilters(); },
-                              child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                              behavior: HitTestBehavior.opaque,
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                              ),
                             ),
                           ]),
                         ),
@@ -219,8 +243,16 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final key = groups.keys.elementAt(i);
-                      return _GenreRow(title: key, items: groups[key]!, onTap: _open);
+                      final sortedKeys = _sortedKeys(groups);
+                      final key = sortedKeys[i];
+                      return _GenreRow(
+                        title: key,
+                        items: groups[key]!,
+                        isFav: _favGenres.contains(key),
+                        onTap: _open,
+                        onFavToggle: () => _toggleFavGenre(key),
+                        onTitleTap: () => _onGenreSelect(key),
+                      );
                     },
                     childCount: groups.length,
                   ),
@@ -290,12 +322,18 @@ class _SeriesScreenState extends State<SeriesScreen> {
 class _GenreRow extends StatelessWidget {
   final String title;
   final List<SeriesItem> items;
+  final bool isFav;
   final void Function(SeriesItem) onTap;
+  final VoidCallback onFavToggle;
+  final VoidCallback onTitleTap;
 
   static const double _cardH = 195;
-  static const double _rowH  = _cardH + 30;
+  static const double _rowH  = _cardH + 52;
 
-  const _GenreRow({required this.title, required this.items, required this.onTap});
+  const _GenreRow({
+    required this.title, required this.items, required this.onTap,
+    required this.isFav, required this.onFavToggle, required this.onTitleTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -303,11 +341,32 @@ class _GenreRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
+          padding: const EdgeInsets.fromLTRB(24, 24, 12, 10),
           child: Row(children: [
-            Text(title, style: const TextStyle(color: _C.txt, fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 8),
-            Text('(${items.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+            Expanded(
+              child: GestureDetector(
+                onTap: onTitleTap,
+                child: Row(children: [
+                  Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _C.txt, fontSize: 16, fontWeight: FontWeight.w700))),
+                  const SizedBox(width: 8),
+                  Text('(${items.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: _C.txtSub.withValues(alpha: 0.4)),
+                ]),
+              ),
+            ),
+            GestureDetector(
+              onTap: onFavToggle,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  size: 18,
+                  color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
           ]),
         ),
         SizedBox(
@@ -315,13 +374,14 @@ class _GenreRow extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            addAutomaticKeepAlives: false,
             itemCount: items.length,
-            itemBuilder: (_, i) => _PosterCard(
+            itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(
               name: items[i].name,
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => onTap(items[i]),
-            ),
+            )),
           ),
         ),
       ],
@@ -336,7 +396,6 @@ class _PosterCard extends StatefulWidget {
   final VoidCallback onTap;
 
   static const double _w = 130;
-  static const double _h = 195;
 
   const _PosterCard({required this.name, this.cover, this.rating, required this.onTap});
 
@@ -366,19 +425,21 @@ class _PosterCardState extends State<_PosterCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: _PosterCard._w, height: _PosterCard._h,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2),
-                    boxShadow: _hovered
-                      ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
-                      : [],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _buildCover(),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: _PosterCard._w,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2),
+                      boxShadow: _hovered
+                        ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
+                        : [],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildCover(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -445,20 +506,16 @@ class _SearchField extends StatelessWidget {
   final String hint;
   const _SearchField({required this.controller, required this.onChanged, required this.hint});
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      child: TextField(controller: controller, autofocus: true, onChanged: onChanged,
-        style: const TextStyle(color: _C.txt, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
-          prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
-          filled: true, fillColor: Colors.white.withValues(alpha: 0.09), contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
-        )),
+  Widget build(BuildContext context) => TextField(
+    controller: controller, autofocus: true, onChanged: onChanged,
+    style: const TextStyle(color: _C.txt, fontSize: 14),
+    decoration: InputDecoration(
+      hintText: hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
+      prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
+      filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
     ),
   );
 }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import '../utils/text_utils.dart';
 
 class GenreDrawer extends StatefulWidget {
   final String title;
   final List<String> genres;
   final Map<String, int> counts;
   final String? selected;
+  final Set<String> favGenres;
   final ValueChanged<String?> onSelect;
+  final ValueChanged<String> onToggleFav;
 
   const GenreDrawer({
     super.key,
@@ -13,7 +16,9 @@ class GenreDrawer extends StatefulWidget {
     required this.genres,
     required this.counts,
     required this.selected,
+    required this.favGenres,
     required this.onSelect,
+    required this.onToggleFav,
   });
 
   @override
@@ -38,16 +43,20 @@ class _GenreDrawerState extends State<GenreDrawer> {
   }
 
   List<String> get _filteredGenres {
-    if (_search.isEmpty) return widget.genres;
-    final lq = _search.toLowerCase();
-    return widget.genres.where((g) => g.toLowerCase().contains(lq)).toList();
+    final all = _search.isEmpty
+      ? widget.genres
+      : widget.genres.where((g) => normalize(g).contains(normalize(_search))).toList();
+    final favs   = all.where((g) =>  widget.favGenres.contains(g)).toList()..sort();
+    final others = all.where((g) => !widget.favGenres.contains(g)).toList()..sort();
+    return [...favs, ...others];
   }
 
   int get _total => widget.counts.values.fold(0, (a, b) => a + b);
 
   @override
   Widget build(BuildContext context) {
-    final genres = _filteredGenres;
+    final genres    = _filteredGenres;
+    final favCount  = genres.where((g) => widget.favGenres.contains(g)).length;
 
     return Drawer(
       backgroundColor: _bg,
@@ -85,7 +94,6 @@ class _GenreDrawerState extends State<GenreDrawer> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Search field
                 Container(
                   height: 38,
                   decoration: BoxDecoration(
@@ -121,22 +129,23 @@ class _GenreDrawerState extends State<GenreDrawer> {
             label: 'Tous les genres',
             count: _total,
             selected: widget.selected == null,
+            isFav: false,
+            showFavBtn: false,
             onTap: () { widget.onSelect(null); Navigator.pop(context); },
+            onToggleFav: () {},
           ),
 
           const Divider(color: _border, height: 1, indent: 16, endIndent: 16),
 
-          // Count label
           if (genres.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
               child: Text(
-                '${genres.length} genre${genres.length > 1 ? 's' : ''}',
+                '${genres.length} genre${genres.length > 1 ? 's' : ''}${favCount > 0 ? '  ·  $favCount favori${favCount > 1 ? 's' : ''}' : ''}',
                 style: TextStyle(color: _txtSub.withValues(alpha: 0.5), fontSize: 11),
               ),
             ),
 
-          // Genre list
           Expanded(
             child: genres.isEmpty
               ? Center(
@@ -150,11 +159,21 @@ class _GenreDrawerState extends State<GenreDrawer> {
                   itemCount: genres.length,
                   itemBuilder: (_, i) {
                     final g = genres[i];
-                    return _GenreItem(
-                      label: g,
-                      count: widget.counts[g] ?? 0,
-                      selected: widget.selected == g,
-                      onTap: () { widget.onSelect(g); Navigator.pop(context); },
+                    final isLastFav = favCount > 0 && i == favCount - 1;
+                    return Column(
+                      children: [
+                        _GenreItem(
+                          label: g,
+                          count: widget.counts[g] ?? 0,
+                          selected: widget.selected == g,
+                          isFav: widget.favGenres.contains(g),
+                          showFavBtn: true,
+                          onTap: () { widget.onSelect(g); Navigator.pop(context); },
+                          onToggleFav: () => widget.onToggleFav(g),
+                        ),
+                        if (isLastFav)
+                          const Divider(color: _border, height: 1, indent: 16, endIndent: 16),
+                      ],
                     );
                   },
                 ),
@@ -169,13 +188,19 @@ class _GenreItem extends StatefulWidget {
   final String label;
   final int count;
   final bool selected;
+  final bool isFav;
+  final bool showFavBtn;
   final VoidCallback onTap;
+  final VoidCallback onToggleFav;
 
   const _GenreItem({
     required this.label,
     required this.count,
     required this.selected,
+    required this.isFav,
+    required this.showFavBtn,
     required this.onTap,
+    required this.onToggleFav,
   });
 
   @override
@@ -202,7 +227,7 @@ class _GenreItemState extends State<_GenreItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          padding: const EdgeInsets.fromLTRB(12, 9, 4, 9),
           decoration: BoxDecoration(
             color: widget.selected
               ? const Color(0x229D4EDD)
@@ -230,7 +255,7 @@ class _GenreItemState extends State<_GenreItem> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               Text(
                 '${widget.count}',
                 style: TextStyle(
@@ -238,6 +263,21 @@ class _GenreItemState extends State<_GenreItem> {
                   fontSize: 11,
                 ),
               ),
+              if (widget.showFavBtn) ...[
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: widget.onToggleFav,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      widget.isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                      size: 16,
+                      color: widget.isFav ? _accent : _txtSub.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

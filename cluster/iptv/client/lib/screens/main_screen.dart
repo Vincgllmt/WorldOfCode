@@ -19,33 +19,78 @@ class _MainScreenState extends State<MainScreen> {
     SeriesScreen(),
   ];
 
+  static const _items = [
+    (icon: Icons.live_tv_outlined,  activeIcon: Icons.live_tv_rounded,  label: 'Live'),
+    (icon: Icons.movie_outlined,    activeIcon: Icons.movie_rounded,     label: 'Films'),
+    (icon: Icons.tv_outlined,       activeIcon: Icons.tv_rounded,        label: 'Séries'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: const Color(0xFF0C0714),
-        indicatorColor: const Color(0x339D4EDD),
-        surfaceTintColor: Colors.transparent,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.live_tv_outlined),
-            selectedIcon: Icon(Icons.live_tv_rounded),
-            label: 'Live',
+      bottomNavigationBar: _BottomNav(
+        index: _index,
+        items: _items,
+        onTap: (i) => setState(() => _index = i),
+      ),
+    );
+  }
+}
+
+class _BottomNav extends StatelessWidget {
+  final int index;
+  final List<({IconData icon, IconData activeIcon, String label})> items;
+  final ValueChanged<int> onTap;
+
+  const _BottomNav({required this.index, required this.items, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0C0714),
+        border: Border(top: BorderSide(color: Color(0x339D4EDD), width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              final selected = i == index;
+              final item = items[i];
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected ? item.activeIcon : item.icon,
+                          size: 24,
+                          color: selected ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                            color: selected ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.movie_outlined),
-            selectedIcon: Icon(Icons.movie_rounded),
-            label: 'Films',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tv_outlined),
-            selectedIcon: Icon(Icons.tv_rounded),
-            label: 'Séries',
-          ),
-        ],
+        ),
       ),
     );
   }

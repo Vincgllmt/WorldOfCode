@@ -1,0 +1,11 @@
+String normalize(String s) => s.toLowerCase()
+  .replaceAll(RegExp(r'[àáâãäå]'), 'a')
+  .replaceAll(RegExp(r'[èéêë]'), 'e')
+  .replaceAll(RegExp(r'[ìíîï]'), 'i')
+  .replaceAll(RegExp(r'[òóôõöø]'), 'o')
+  .replaceAll(RegExp(r'[ùúûü]'), 'u')
+  .replaceAll(RegExp(r'[ýÿ]'), 'y')
+  .replaceAll('ñ', 'n')
+  .replaceAll('ç', 'c')
+  .replaceAll('œ', 'oe')
+  .replaceAll('æ', 'ae');

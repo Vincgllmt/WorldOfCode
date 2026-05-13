@@ -1,8 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
+import '../utils/text_utils.dart';
+import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
 import 'movie_detail_screen.dart';
 
@@ -30,6 +31,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   List<Movie> _all = [];
   List<Movie> _filtered = [];
+  Set<String> _favGenres    = {};
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
@@ -39,6 +41,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
   void initState() {
     super.initState();
     _future = _load();
+    GenreFavoritesService.load('films').then((favs) {
+      if (mounted) setState(() => _favGenres = favs);
+    });
   }
 
   @override
@@ -60,10 +65,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
         result = result.where((m) => (m.group ?? 'Autres') == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
-        final lq = _query.toLowerCase();
+        final lq = normalize(_query);
         result = result.where((m) =>
-          m.name.toLowerCase().contains(lq) ||
-          (m.group?.toLowerCase().contains(lq) ?? false),
+          normalize(m.name).contains(lq) ||
+          normalize(m.group ?? '').contains(lq),
         ).toList();
       }
       _filtered = result;
@@ -103,6 +108,19 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return m;
   }
 
+  void _toggleFavGenre(String genre) {
+    setState(() {
+      if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
+    });
+    GenreFavoritesService.save('films', _favGenres);
+  }
+
+  List<String> _sortedKeys(Map<String, List<Movie>> groups) {
+    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    return [...fav, ...other];
+  }
+
   void _open(Movie m) {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => MovieDetailScreen(movie: m),
@@ -120,7 +138,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
         genres: _genres,
         counts: _genreCounts,
         selected: _selectedGenre,
+        favGenres: _favGenres,
         onSelect: _onGenreSelect,
+        onToggleFav: _toggleFavGenre,
       ),
       appBar: _buildAppBar(),
       body: FutureBuilder<List<Movie>>(
@@ -167,7 +187,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () { _selectedGenre = null; _applyFilters(); },
-                              child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                              behavior: HitTestBehavior.opaque,
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                              ),
                             ),
                           ]),
                         ),
@@ -210,7 +234,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                         name: _filtered[i].name,
                         cover: _filtered[i].cover,
                         rating: _filtered[i].rating,
-                        width: 130, height: 195,
+                        width: 130,
                         onTap: () => _open(_filtered[i]),
                       ),
                       childCount: _filtered.length,
@@ -221,8 +245,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final key = groups.keys.elementAt(i);
-                      return _GenreRow(title: key, movies: groups[key]!, onTap: _open);
+                      final sortedKeys = _sortedKeys(groups);
+                      final key = sortedKeys[i];
+                      return _GenreRow(
+                        title: key,
+                        movies: groups[key]!,
+                        isFav: _favGenres.contains(key),
+                        onTap: _open,
+                        onFavToggle: () => _toggleFavGenre(key),
+                        onTitleTap: () => _onGenreSelect(key),
+                      );
                     },
                     childCount: groups.length,
                   ),
@@ -293,13 +325,19 @@ class _MoviesScreenState extends State<MoviesScreen> {
 class _GenreRow extends StatelessWidget {
   final String title;
   final List<Movie> movies;
+  final bool isFav;
   final void Function(Movie) onTap;
+  final VoidCallback onFavToggle;
+  final VoidCallback onTitleTap;
 
   static const double _cardW = 130;
   static const double _cardH = 195;
-  static const double _rowH  = _cardH + 30;
+  static const double _rowH  = _cardH + 52;
 
-  const _GenreRow({required this.title, required this.movies, required this.onTap});
+  const _GenreRow({
+    required this.title, required this.movies, required this.onTap,
+    required this.isFav, required this.onFavToggle, required this.onTitleTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -307,11 +345,32 @@ class _GenreRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
+          padding: const EdgeInsets.fromLTRB(24, 24, 12, 10),
           child: Row(children: [
-            Text(title, style: const TextStyle(color: _C.txt, fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 8),
-            Text('(${movies.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+            Expanded(
+              child: GestureDetector(
+                onTap: onTitleTap,
+                child: Row(children: [
+                  Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _C.txt, fontSize: 16, fontWeight: FontWeight.w700))),
+                  const SizedBox(width: 8),
+                  Text('(${movies.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, size: 14, color: _C.txtSub.withValues(alpha: 0.4)),
+                ]),
+              ),
+            ),
+            GestureDetector(
+              onTap: onFavToggle,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  size: 18,
+                  color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
           ]),
         ),
         SizedBox(
@@ -319,15 +378,15 @@ class _GenreRow extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            addAutomaticKeepAlives: false,
             itemCount: movies.length,
-            itemBuilder: (_, i) => _PosterCard(
+            itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(
               name: movies[i].name,
               cover: movies[i].cover,
               rating: movies[i].rating,
               width: _cardW,
-              height: _cardH,
               onTap: () => onTap(movies[i]),
-            ),
+            )),
           ),
         ),
       ],
@@ -341,12 +400,11 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final double width;
-  final double height;
   final VoidCallback onTap;
 
   const _PosterCard({
     required this.name, this.cover, this.rating,
-    required this.width, required this.height, required this.onTap,
+    required this.width, required this.onTap,
   });
 
   @override
@@ -377,23 +435,24 @@ class _PosterCardState extends State<_PosterCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: widget.width,
-                  height: widget.height,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _hovered ? _C.accent : Colors.transparent,
-                      width: 2,
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: widget.width,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _hovered ? _C.accent : Colors.transparent,
+                        width: 2,
+                      ),
+                      boxShadow: _hovered
+                        ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
+                        : [],
                     ),
-                    boxShadow: _hovered
-                      ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
-                      : [],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: _buildCover(),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildCover(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -497,11 +556,7 @@ class _SearchField extends StatelessWidget {
   const _SearchField({required this.controller, required this.onChanged, required this.hint});
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      child: TextField(
+  Widget build(BuildContext context) => TextField(
         controller: controller,
         autofocus: true,
         onChanged: onChanged,
@@ -511,13 +566,12 @@ class _SearchField extends StatelessWidget {
           hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
           prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
           filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.09),
+          fillColor: const Color(0xFF1A0F2E),
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
         ),
-      ),
     ),
   );
 }
