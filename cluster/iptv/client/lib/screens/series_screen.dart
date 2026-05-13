@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../services/api_service.dart';
@@ -326,9 +327,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 const SizedBox(width: 8),
-                const Text('TuTuTu', style: TextStyle(
-                  color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
-                )),
+                SvgPicture.asset('assets/images/logo.svg', height: 32),
                 const Spacer(),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),

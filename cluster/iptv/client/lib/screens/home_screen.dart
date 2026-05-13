@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/channel.dart';
 import '../services/api_service.dart';
@@ -412,14 +413,9 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
               const SizedBox(width: 8),
-              const Text(
-                'TuTuTu',
-                style: TextStyle(
-                  color: _C.accent,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
-                ),
+              SvgPicture.asset(
+                'assets/images/logo.svg',
+                height: 32,
               ),
               const Spacer(),
               AnimatedSwitcher(

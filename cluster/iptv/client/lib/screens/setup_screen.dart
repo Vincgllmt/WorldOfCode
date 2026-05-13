@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import 'main_screen.dart';
@@ -106,20 +107,8 @@ class _SetupScreenState extends State<SetupScreen> {
                 children: [
                   // Logo
                   const SizedBox(height: 16),
-                  ShaderMask(
-                    shaderCallback: (r) => const LinearGradient(
-                      colors: [_accent, _glow],
-                    ).createShader(r),
-                    child: const Text(
-                      'TuTuTu',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 52, fontWeight: FontWeight.w900,
-                        letterSpacing: -2, color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  SvgPicture.asset('assets/images/logo.svg', height: 72),
+                  const SizedBox(height: 12),
                   const Text(
                     'Entrez votre abonnement IPTV\npour accéder à votre catalogue.',
                     textAlign: TextAlign.center,
