@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../services/api_service.dart';
@@ -267,6 +268,17 @@ class _EpisodeTile extends StatefulWidget {
 class _EpisodeTileState extends State<_EpisodeTile> {
   bool _hovered = false;
 
+  void _showSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _C.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _EpisodeSheet(ep: widget.ep, onPlay: widget.onPlay),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -274,7 +286,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: widget.onPlay,
+        onTap: () => _showSheet(context),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           color: _hovered ? const Color(0x229D4EDD) : Colors.transparent,
@@ -306,6 +318,107 @@ class _EpisodeTileState extends State<_EpisodeTile> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EpisodeSheet extends StatelessWidget {
+  final Episode ep;
+  final VoidCallback onPlay;
+  const _EpisodeSheet({required this.ep, required this.onPlay});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: const Color(0x44FFFFFF),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Episode number + title
+          Text(
+            'Épisode ${ep.episodeNum} — ${ep.title}',
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+
+          // Thumbnail
+          if (ep.cover != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 160),
+                  child: CachedNetworkImage(
+                    imageUrl: ep.cover!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: const Color(0xFF1A0F2E)),
+                    errorWidget: (_, __, ___) => Container(color: const Color(0xFF1A0F2E)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Duration
+          if (ep.duration != null) ...[
+            Text(
+              '⏱ ${ep.duration}',
+              style: const TextStyle(color: _C.txtSub, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          // Plot / description
+          Text(
+            (ep.plot != null && ep.plot!.isNotEmpty)
+              ? ep.plot!
+              : 'Aucune description disponible.',
+            style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 20),
+
+          // Play button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                onPlay();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _C.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.play_arrow_rounded, size: 22),
+              label: const Text(
+                'Lire l\'épisode',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

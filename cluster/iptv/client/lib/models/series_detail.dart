@@ -4,8 +4,20 @@ class Episode {
   final int season;
   final int episodeNum;
   final String url;
+  final String? plot;
+  final String? cover;
+  final String? duration;
 
-  Episode({required this.id, required this.title, required this.season, required this.episodeNum, required this.url});
+  Episode({
+    required this.id,
+    required this.title,
+    required this.season,
+    required this.episodeNum,
+    required this.url,
+    this.plot,
+    this.cover,
+    this.duration,
+  });
 
   factory Episode.fromJson(Map<String, dynamic> j) => Episode(
     id: j['id'] as int,
@@ -13,6 +25,9 @@ class Episode {
     season: j['season'] as int,
     episodeNum: j['episode_num'] as int,
     url: j['url'] as String,
+    plot: j['plot'] as String?,
+    cover: j['cover'] as String?,
+    duration: j['duration'] as String?,
   );
 }
 

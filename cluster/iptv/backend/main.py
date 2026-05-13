@@ -33,12 +33,29 @@ class SeriesItem(BaseModel):
     group: Optional[str] = None
     rating: Optional[str] = None
 
+class MovieDetail(BaseModel):
+    id: int
+    name: str
+    url: str
+    cover: Optional[str] = None
+    cover_big: Optional[str] = None
+    description: Optional[str] = None
+    duration: Optional[str] = None
+    genre: Optional[str] = None
+    cast: Optional[str] = None
+    director: Optional[str] = None
+    year: Optional[str] = None
+    rating: Optional[str] = None
+
 class Episode(BaseModel):
     id: int
     title: str
     season: int
     episode_num: int
     url: str
+    plot: Optional[str] = None
+    cover: Optional[str] = None
+    duration: Optional[str] = None
 
 class SeriesDetail(BaseModel):
     id: int
@@ -287,9 +304,11 @@ async def get_series_detail(series_id: int):
         for season_num, eps in episodes_raw.items():
             season_episodes = []
             for ep in eps:
-                ep_id = ep.get("id")
-                ext   = ep.get("container_extension") or "mkv"
-                title = ep.get("title") or f"Épisode {ep.get('episode_num', '?')}"
+                ep_id   = ep.get("id")
+                ext     = ep.get("container_extension") or "mkv"
+                title   = ep.get("title") or f"Épisode {ep.get('episode_num', '?')}"
+                ep_info = ep.get("info") or {}
+                ep_cover = ep_info.get("movie_image") or None
                 if ep_id:
                     season_episodes.append(Episode(
                         id=int(ep_id),
@@ -297,6 +316,9 @@ async def get_series_detail(series_id: int):
                         season=int(season_num),
                         episode_num=ep.get("episode_num", 0),
                         url=f"{_XTREAM_HOST}/series/{_XTREAM_USER}/{_XTREAM_PASSWORD}/{ep_id}.{ext}",
+                        plot=ep_info.get("plot") or None,
+                        cover=ep_cover if ep_cover and ep_cover.startswith("http") else None,
+                        duration=ep_info.get("duration") or None,
                     ))
             if season_episodes:
                 seasons[season_num] = season_episodes
@@ -307,6 +329,36 @@ async def get_series_detail(series_id: int):
             cover=cover if cover and cover.startswith("http") else None,
             plot=info.get("plot") or None,
             seasons=seasons,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/movies/{vod_id}", response_model=MovieDetail)
+async def get_movie_detail(vod_id: int):
+    base = f"{_XTREAM_HOST}/player_api.php?username={_XTREAM_USER}&password={_XTREAM_PASSWORD}"
+    try:
+        async with httpx.AsyncClient() as client:
+            data = await _fetch_json(client, f"{base}&action=get_vod_info&vod_id={vod_id}")
+        info        = data.get("info", {})
+        movie_data  = data.get("movie_data", {})
+        ext         = movie_data.get("container_extension") or "mp4"
+        cover       = info.get("movie_image") or info.get("cover_big") or None
+        description = info.get("description") or info.get("plot") or None
+        return MovieDetail(
+            id=vod_id,
+            name=info.get("name") or movie_data.get("name") or "",
+            url=f"{_XTREAM_HOST}/movie/{_XTREAM_USER}/{_XTREAM_PASSWORD}/{vod_id}.{ext}",
+            cover=cover if cover and cover.startswith("http") else None,
+            cover_big=info.get("cover_big") or None,
+            description=description,
+            duration=info.get("duration") or None,
+            genre=info.get("genre") or None,
+            cast=info.get("cast") or None,
+            director=info.get("director") or None,
+            year=str(info.get("releasedate") or info.get("year") or "") or None,
+            rating=str(info.get("rating") or info.get("rating_5based") or "") or None,
         )
     except HTTPException:
         raise

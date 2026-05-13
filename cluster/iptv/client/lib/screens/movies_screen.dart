@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
 import '../widgets/genre_drawer.dart';
-import 'player_screen.dart';
+import 'movie_detail_screen.dart';
 
 class _C {
   static const bg        = Color(0xFF0C0714);
@@ -103,9 +103,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return m;
   }
 
-  void _play(Movie m) {
+  void _open(Movie m) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(name: m.name, url: m.url, group: m.group),
+      builder: (_) => MovieDetailScreen(movie: m),
     ));
   }
 
@@ -211,7 +211,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                         cover: _filtered[i].cover,
                         rating: _filtered[i].rating,
                         width: 130, height: 195,
-                        onTap: () => _play(_filtered[i]),
+                        onTap: () => _open(_filtered[i]),
                       ),
                       childCount: _filtered.length,
                     ),
@@ -222,7 +222,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
                       final key = groups.keys.elementAt(i);
-                      return _GenreRow(title: key, movies: groups[key]!, onTap: _play);
+                      return _GenreRow(title: key, movies: groups[key]!, onTap: _open);
                     },
                     childCount: groups.length,
                   ),
