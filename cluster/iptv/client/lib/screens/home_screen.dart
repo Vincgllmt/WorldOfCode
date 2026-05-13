@@ -249,10 +249,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-              // Category rows
+              // Category rows / grid
               if (_filtered.isEmpty && _allChannels.isNotEmpty)
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
+                )
+              else if (_selectedGenre != null)
+                // Grid view for genre filter
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 270,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 0,
+                      childAspectRatio: 264 / 185,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _ChannelCard(
+                        channel: _filtered[i],
+                        isFavorite: _favorites.contains(_filtered[i].url),
+                        onTap: () => _openPlayer(_filtered[i]),
+                        onFav: () => _toggleFavorite(_filtered[i]),
+                      ),
+                      childCount: _filtered.length,
+                    ),
+                  ),
                 )
               else
                 SliverList(

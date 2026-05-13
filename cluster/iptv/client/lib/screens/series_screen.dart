@@ -194,6 +194,27 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
                 )
+              else if (_selectedGenre != null)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 150,
+                      mainAxisSpacing: 20,
+                      crossAxisSpacing: 4,
+                      childAspectRatio: 130 / 230,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _PosterCard(
+                        name: _filtered[i].name,
+                        cover: _filtered[i].cover,
+                        rating: _filtered[i].rating,
+                        onTap: () => _open(_filtered[i]),
+                      ),
+                      childCount: _filtered.length,
+                    ),
+                  ),
+                )
               else
                 SliverList(
                   delegate: SliverChildBuilderDelegate(

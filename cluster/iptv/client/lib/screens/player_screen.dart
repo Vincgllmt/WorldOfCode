@@ -66,8 +66,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         tracks: _tracks,
         current: _track,
         subSettings: _subSettings,
-        onAudio:       (t) { _player.setAudioTrack(t);    Navigator.pop(context); },
-        onSubtitle:    (t) { _player.setSubtitleTrack(t); Navigator.pop(context); },
+        onAudio:       (t) => _player.setAudioTrack(t),
+        onSubtitle:    (t) => _player.setSubtitleTrack(t),
         onSubSettings: (s) => setState(() => _subSettings = s),
       ),
     );
@@ -151,17 +151,31 @@ class _TrackSheet extends StatefulWidget {
 
 class _TrackSheetState extends State<_TrackSheet> {
   late SubtitleSettings _settings;
+  AudioTrack?    _selAudio;
+  SubtitleTrack? _selSubtitle;
 
   @override
   void initState() {
     super.initState();
-    _settings = widget.subSettings;
+    _settings    = widget.subSettings;
+    _selAudio    = widget.current.audio;
+    _selSubtitle = widget.current.subtitle;
   }
 
   void _update(SubtitleSettings s) {
     setState(() => _settings = s);
     widget.onSubSettings(s);
     s.save();
+  }
+
+  void _pickAudio(AudioTrack t) {
+    setState(() => _selAudio = t);
+    widget.onAudio(t);
+  }
+
+  void _pickSubtitle(SubtitleTrack t) {
+    setState(() => _selSubtitle = t);
+    widget.onSubtitle(t);
   }
 
   @override
@@ -175,16 +189,36 @@ class _TrackSheetState extends State<_TrackSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
+          // Handle + Terminé button
+          Row(
+            children: [
+              const Spacer(),
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF9D4EDD),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('Terminé', style: TextStyle(
+                    color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700,
+                  )),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
 
           // ── Audio ─────────────────────────────────────────────────────────
           if (audioTracks.length > 1) ...[
@@ -192,8 +226,8 @@ class _TrackSheetState extends State<_TrackSheet> {
             const SizedBox(height: 8),
             ...audioTracks.map((t) => _TrackTile(
               label: _audioLabel(t),
-              selected: widget.current.audio == t,
-              onTap: () => widget.onAudio(t),
+              selected: _selAudio == t,
+              onTap: () => _pickAudio(t),
             )),
             const SizedBox(height: 20),
           ],
@@ -205,15 +239,15 @@ class _TrackSheetState extends State<_TrackSheet> {
             _TrackTile(
               label: 'Désactivés',
               icon: Icons.subtitles_off_rounded,
-              selected: widget.current.subtitle == SubtitleTrack.no(),
-              onTap: () => widget.onSubtitle(SubtitleTrack.no()),
+              selected: _selSubtitle == SubtitleTrack.no(),
+              onTap: () => _pickSubtitle(SubtitleTrack.no()),
             ),
             ...subtitleTracks
               .where((t) => t != SubtitleTrack.auto() && t != SubtitleTrack.no())
               .map((t) => _TrackTile(
                 label: _subtitleLabel(t),
-                selected: widget.current.subtitle == t,
-                onTap: () => widget.onSubtitle(t),
+                selected: _selSubtitle == t,
+                onTap: () => _pickSubtitle(t),
               )),
             const SizedBox(height: 20),
           ],
