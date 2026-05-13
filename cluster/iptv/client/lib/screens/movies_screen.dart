@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
+import '../widgets/genre_drawer.dart';
 import 'player_screen.dart';
 
-// Design tokens (shared with home_screen)
 class _C {
   static const bg        = Color(0xFF0C0714);
   static const bgCard    = Color(0xFF160B25);
@@ -25,13 +25,15 @@ class MoviesScreen extends StatefulWidget {
 
 class _MoviesScreenState extends State<MoviesScreen> {
   final ApiService _api = ApiService();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Movie>> _future;
 
   List<Movie> _all = [];
   List<Movie> _filtered = [];
-  String _query = '';
-  bool _searchVisible = false;
-  final _searchCtrl = TextEditingController();
+  String  _query         = '';
+  String? _selectedGenre;
+  bool    _searchVisible = false;
+  final   _searchCtrl    = TextEditingController();
 
   @override
   void initState() {
@@ -51,16 +53,46 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return movies;
   }
 
-  void _onSearch(String q) {
+  void _applyFilters() {
     setState(() {
-      _query = q;
-      _filtered = q.isEmpty
-        ? _all
-        : _all.where((m) =>
-            m.name.toLowerCase().contains(q.toLowerCase()) ||
-            (m.group?.toLowerCase().contains(q.toLowerCase()) ?? false),
-          ).toList();
+      var result = _all;
+      if (_selectedGenre != null) {
+        result = result.where((m) => (m.group ?? 'Autres') == _selectedGenre).toList();
+      }
+      if (_query.isNotEmpty) {
+        final lq = _query.toLowerCase();
+        result = result.where((m) =>
+          m.name.toLowerCase().contains(lq) ||
+          (m.group?.toLowerCase().contains(lq) ?? false),
+        ).toList();
+      }
+      _filtered = result;
     });
+  }
+
+  void _onSearch(String q) {
+    _query = q;
+    _applyFilters();
+  }
+
+  void _onGenreSelect(String? genre) {
+    _selectedGenre = genre;
+    _applyFilters();
+  }
+
+  List<String> get _genres {
+    final set = <String>{};
+    for (final m in _all) { set.add(m.group ?? 'Autres'); }
+    return set.toList()..sort();
+  }
+
+  Map<String, int> get _genreCounts {
+    final map = <String, int>{};
+    for (final m in _all) {
+      final g = m.group ?? 'Autres';
+      map[g] = (map[g] ?? 0) + 1;
+    }
+    return map;
   }
 
   Map<String, List<Movie>> _grouped(List<Movie> movies) {
@@ -80,8 +112,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: _C.bg,
       extendBodyBehindAppBar: true,
+      drawer: GenreDrawer(
+        title: 'Films',
+        genres: _genres,
+        counts: _genreCounts,
+        selected: _selectedGenre,
+        onSelect: _onGenreSelect,
+      ),
       appBar: _buildAppBar(),
       body: FutureBuilder<List<Movie>>(
         future: _future,
@@ -92,7 +132,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
           if (snap.hasError) {
             return _ErrorView(
               message: snap.error.toString(),
-              onRetry: () => setState(() { _all = []; _filtered = []; _future = _load(); }),
+              onRetry: () => setState(() {
+                _all = []; _filtered = [];
+                _selectedGenre = null;
+                _future = _load();
+              }),
             );
           }
           if (_all.isEmpty) {
@@ -103,6 +147,38 @@ class _MoviesScreenState extends State<MoviesScreen> {
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 80)),
+
+              // Active genre badge
+              if (_selectedGenre != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0x339D4EDD),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: _C.accent),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(_selectedGenre!, style: const TextStyle(color: _C.glow, fontSize: 13, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () { _selectedGenre = null; _applyFilters(); },
+                              child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('${_filtered.length} film${_filtered.length > 1 ? 's' : ''}',
+                          style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+
               if (_query.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
@@ -113,19 +189,22 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     ),
                   ),
                 ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    final key = groups.keys.elementAt(i);
-                    return _GenreRow(
-                      title: key,
-                      movies: groups[key]!,
-                      onTap: _play,
-                    );
-                  },
-                  childCount: groups.length,
+
+              if (_filtered.isEmpty && _all.isNotEmpty)
+                const SliverFillRemaining(
+                  child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) {
+                      final key = groups.keys.elementAt(i);
+                      return _GenreRow(title: key, movies: groups[key]!, onTap: _play);
+                    },
+                    childCount: groups.length,
+                  ),
                 ),
-              ),
+
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
           );
@@ -147,9 +226,14 @@ class _MoviesScreenState extends State<MoviesScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
+                    _IconBtn(
+                      icon: Icons.menu_rounded,
+                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
+                    const SizedBox(width: 8),
                     const Text('Films', style: TextStyle(
                       color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
                     )),
@@ -193,10 +277,9 @@ class _GenreRow extends StatelessWidget {
   final List<Movie> movies;
   final void Function(Movie) onTap;
 
-  // Portrait poster: width 130, height ~195 (3:2 inverted = 2:3)
   static const double _cardW = 130;
   static const double _cardH = 195;
-  static const double _rowH  = _cardH + 30; // label below
+  static const double _rowH  = _cardH + 30;
 
   const _GenreRow({required this.title, required this.movies, required this.onTap});
 
@@ -234,7 +317,7 @@ class _GenreRow extends StatelessWidget {
   }
 }
 
-// ─── Poster Card (portrait, 2:3) ──────────────────────────────────────────────
+// ─── Poster Card ─────────────────────────────────────────────────────────────
 class _PosterCard extends StatefulWidget {
   final String name;
   final String? cover;
@@ -260,7 +343,7 @@ class _PosterCardState extends State<_PosterCard> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onExit:  (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
@@ -347,8 +430,7 @@ class _PosterCardState extends State<_PosterCard> {
   Widget _fallback() => Container(
     decoration: const BoxDecoration(
       gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
         colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)],
       ),
     ),
@@ -428,14 +510,11 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(width: 48, height: 48, child: CircularProgressIndicator(color: _C.accent, strokeWidth: 3)),
-        const SizedBox(height: 20),
-        Text(label, style: const TextStyle(color: _C.txtSub, fontSize: 15)),
-      ],
-    ),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const SizedBox(width: 48, height: 48, child: CircularProgressIndicator(color: _C.accent, strokeWidth: 3)),
+      const SizedBox(height: 20),
+      Text(label, style: const TextStyle(color: _C.txtSub, fontSize: 15)),
+    ]),
   );
 }
 
@@ -448,25 +527,22 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Padding(
       padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent),
-          const SizedBox(height: 18),
-          const Text('Connexion impossible', style: TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 28),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent),
+        const SizedBox(height: 18),
+        const Text('Connexion impossible', style: TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 28),
+        ElevatedButton.icon(
+          onPressed: onRetry,
+          style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ]),
     ),
   );
 }

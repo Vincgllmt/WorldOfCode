@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/channel.dart';
 import '../services/api_service.dart';
 import '../services/favorites_service.dart';
+import '../widgets/genre_drawer.dart';
 import 'player_screen.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -29,14 +30,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _api = ApiService();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Channel>> _future;
 
   List<Channel> _allChannels = [];
   List<Channel> _filtered = [];
   Set<String> _favorites = {};
-  String _query = '';
-  bool _searchVisible = false;
-  final _searchCtrl = TextEditingController();
+  String  _query         = '';
+  String? _selectedGenre;
+  bool    _searchVisible = false;
+  final   _searchCtrl    = TextEditingController();
 
   @override
   void initState() {
@@ -55,28 +58,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<Channel>> _loadChannels() async {
     final channels = await _api.fetchChannels();
-    if (mounted) {
-      setState(() {
-        _allChannels = channels;
-        _filtered = channels;
-      });
-    }
+    if (mounted) setState(() { _allChannels = channels; _filtered = channels; });
     return channels;
   }
 
-  void _onSearch(String q) {
+  void _applyFilters() {
     setState(() {
-      _query = q;
-      if (q.isEmpty) {
-        _filtered = _allChannels;
-      } else {
-        final lq = q.toLowerCase();
-        _filtered = _allChannels.where((c) =>
+      var result = _allChannels;
+      if (_selectedGenre != null) {
+        result = result.where((c) => (c.group ?? 'Autres') == _selectedGenre).toList();
+      }
+      if (_query.isNotEmpty) {
+        final lq = _query.toLowerCase();
+        result = result.where((c) =>
           c.name.toLowerCase().contains(lq) ||
           (c.group?.toLowerCase().contains(lq) ?? false),
         ).toList();
       }
+      _filtered = result;
     });
+  }
+
+  void _onSearch(String q) {
+    _query = q;
+    _applyFilters();
+  }
+
+  void _onGenreSelect(String? genre) {
+    _selectedGenre = genre;
+    _applyFilters();
+  }
+
+  List<String> get _genres {
+    final set = <String>{};
+    for (final c in _allChannels) { set.add(c.group ?? 'Autres'); }
+    return set.toList()..sort();
+  }
+
+  Map<String, int> get _genreCounts {
+    final map = <String, int>{};
+    for (final c in _allChannels) {
+      final g = c.group ?? 'Autres';
+      map[g] = (map[g] ?? 0) + 1;
+    }
+    return map;
   }
 
   void _toggleFavorite(Channel ch) {
@@ -108,12 +133,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: _C.bg,
       extendBodyBehindAppBar: true,
+      drawer: GenreDrawer(
+        title: 'Live',
+        genres: _genres,
+        counts: _genreCounts,
+        selected: _selectedGenre,
+        onSelect: _onGenreSelect,
+      ),
       appBar: _AppBar(
         searchVisible: _searchVisible,
         searchCtrl: _searchCtrl,
         onSearchChanged: _onSearch,
+        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
         onToggleSearch: () => setState(() {
           _searchVisible = !_searchVisible;
           if (!_searchVisible) {
@@ -145,16 +179,48 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final groups = _grouped(_filtered);
-          final favChannels = _allChannels.where((c) => _favorites.contains(c.url)).toList();
+          final favChannels = _selectedGenre == null
+            ? _allChannels.where((c) => _favorites.contains(c.url)).toList()
+            : <Channel>[];
 
           return CustomScrollView(
             slivers: [
-              // Hero banner — hidden while searching
-              if (_query.isEmpty)
+              // Hero banner — hidden while searching or filtering
+              if (_query.isEmpty && _selectedGenre == null)
                 SliverToBoxAdapter(
-                  child: _HeroBanner(
-                    channel: _allChannels.first,
-                    onPlay: _openPlayer,
+                  child: _HeroBanner(channel: _allChannels.first, onPlay: _openPlayer),
+                ),
+
+              // Spacer when no hero
+              if (_query.isNotEmpty || _selectedGenre != null)
+                const SliverToBoxAdapter(child: SizedBox(height: 110)),
+
+              // Active genre badge
+              if (_selectedGenre != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0x339D4EDD),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _C.accent),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text(_selectedGenre!, style: const TextStyle(color: _C.glow, fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () { _selectedGenre = null; _applyFilters(); },
+                            child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                          ),
+                        ]),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('${_filtered.length} chaîne${_filtered.length > 1 ? 's' : ''}',
+                        style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                    ]),
                   ),
                 ),
 
@@ -162,14 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_query.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 110, 24, 4),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
                     child: Text(
                       'Résultats pour "$_query"  (${_filtered.length})',
-                      style: const TextStyle(
-                        color: _C.glow,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(color: _C.glow, fontSize: 17, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -188,21 +250,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
               // Category rows
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
-                    final key = groups.keys.elementAt(i);
-                    return _CategoryRow(
-                      title: key,
-                      channels: groups[key]!,
-                      favorites: _favorites,
-                      onTap: _openPlayer,
-                      onFav: _toggleFavorite,
-                    );
-                  },
-                  childCount: groups.length,
+              if (_filtered.isEmpty && _allChannels.isNotEmpty)
+                const SliverFillRemaining(
+                  child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (ctx, i) {
+                      final key = groups.keys.elementAt(i);
+                      return _CategoryRow(
+                        title: key,
+                        channels: groups[key]!,
+                        favorites: _favorites,
+                        onTap: _openPlayer,
+                        onFav: _toggleFavorite,
+                      );
+                    },
+                    childCount: groups.length,
+                  ),
                 ),
-              ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
@@ -219,12 +286,14 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextEditingController searchCtrl;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onToggleSearch;
+  final VoidCallback onOpenDrawer;
 
   const _AppBar({
     required this.searchVisible,
     required this.searchCtrl,
     required this.onSearchChanged,
     required this.onToggleSearch,
+    required this.onOpenDrawer,
   });
 
   @override
@@ -242,9 +311,13 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
+                  // Drawer toggle
+                  _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
+                  const SizedBox(width: 8),
+
                   // Brand
                   const Text(
                     'WOC TV',

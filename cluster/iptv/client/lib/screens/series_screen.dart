@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../services/api_service.dart';
+import '../widgets/genre_drawer.dart';
 import 'series_detail_screen.dart';
 
 class _C {
@@ -24,13 +25,15 @@ class SeriesScreen extends StatefulWidget {
 
 class _SeriesScreenState extends State<SeriesScreen> {
   final ApiService _api = ApiService();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<SeriesItem>> _future;
 
   List<SeriesItem> _all = [];
   List<SeriesItem> _filtered = [];
-  String _query = '';
-  bool _searchVisible = false;
-  final _searchCtrl = TextEditingController();
+  String  _query         = '';
+  String? _selectedGenre;
+  bool    _searchVisible = false;
+  final   _searchCtrl    = TextEditingController();
 
   @override
   void initState() {
@@ -50,16 +53,46 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return series;
   }
 
-  void _onSearch(String q) {
+  void _applyFilters() {
     setState(() {
-      _query = q;
-      _filtered = q.isEmpty
-        ? _all
-        : _all.where((s) =>
-            s.name.toLowerCase().contains(q.toLowerCase()) ||
-            (s.group?.toLowerCase().contains(q.toLowerCase()) ?? false),
-          ).toList();
+      var result = _all;
+      if (_selectedGenre != null) {
+        result = result.where((s) => (s.group ?? 'Autres') == _selectedGenre).toList();
+      }
+      if (_query.isNotEmpty) {
+        final lq = _query.toLowerCase();
+        result = result.where((s) =>
+          s.name.toLowerCase().contains(lq) ||
+          (s.group?.toLowerCase().contains(lq) ?? false),
+        ).toList();
+      }
+      _filtered = result;
     });
+  }
+
+  void _onSearch(String q) {
+    _query = q;
+    _applyFilters();
+  }
+
+  void _onGenreSelect(String? genre) {
+    _selectedGenre = genre;
+    _applyFilters();
+  }
+
+  List<String> get _genres {
+    final set = <String>{};
+    for (final s in _all) { set.add(s.group ?? 'Autres'); }
+    return set.toList()..sort();
+  }
+
+  Map<String, int> get _genreCounts {
+    final map = <String, int>{};
+    for (final s in _all) {
+      final g = s.group ?? 'Autres';
+      map[g] = (map[g] ?? 0) + 1;
+    }
+    return map;
   }
 
   Map<String, List<SeriesItem>> _grouped(List<SeriesItem> items) {
@@ -79,8 +112,16 @@ class _SeriesScreenState extends State<SeriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: _C.bg,
       extendBodyBehindAppBar: true,
+      drawer: GenreDrawer(
+        title: 'Séries',
+        genres: _genres,
+        counts: _genreCounts,
+        selected: _selectedGenre,
+        onSelect: _onGenreSelect,
+      ),
       appBar: _buildAppBar(),
       body: FutureBuilder<List<SeriesItem>>(
         future: _future,
@@ -91,7 +132,11 @@ class _SeriesScreenState extends State<SeriesScreen> {
           if (snap.hasError) {
             return _ErrorView(
               message: snap.error.toString(),
-              onRetry: () => setState(() { _all = []; _filtered = []; _future = _load(); }),
+              onRetry: () => setState(() {
+                _all = []; _filtered = [];
+                _selectedGenre = null;
+                _future = _load();
+              }),
             );
           }
           if (_all.isEmpty) {
@@ -102,6 +147,38 @@ class _SeriesScreenState extends State<SeriesScreen> {
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 80)),
+
+              // Active genre badge
+              if (_selectedGenre != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0x339D4EDD),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: _C.accent),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(_selectedGenre!, style: const TextStyle(color: _C.glow, fontSize: 13, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () { _selectedGenre = null; _applyFilters(); },
+                              child: const Icon(Icons.close_rounded, color: _C.glow, size: 14),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('${_filtered.length} série${_filtered.length > 1 ? 's' : ''}',
+                          style: const TextStyle(color: _C.txtSub, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+
               if (_query.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
@@ -112,15 +189,22 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     ),
                   ),
                 ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    final key = groups.keys.elementAt(i);
-                    return _GenreRow(title: key, items: groups[key]!, onTap: _open);
-                  },
-                  childCount: groups.length,
+
+              if (_filtered.isEmpty && _all.isNotEmpty)
+                const SliverFillRemaining(
+                  child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) {
+                      final key = groups.keys.elementAt(i);
+                      return _GenreRow(title: key, items: groups[key]!, onTap: _open);
+                    },
+                    childCount: groups.length,
+                  ),
                 ),
-              ),
+
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
           );
@@ -142,9 +226,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
+                    _IconBtn(
+                      icon: Icons.menu_rounded,
+                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
+                    const SizedBox(width: 8),
                     const Text('Séries', style: TextStyle(
                       color: _C.accent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1,
                     )),
@@ -247,7 +336,7 @@ class _PosterCardState extends State<_PosterCard> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onExit:  (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
@@ -263,8 +352,7 @@ class _PosterCardState extends State<_PosterCard> {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: _PosterCard._w,
-                  height: _PosterCard._h,
+                  width: _PosterCard._w, height: _PosterCard._h,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2),
