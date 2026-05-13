@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utils/text_utils.dart';
+import '../services/api_service.dart';
+import '../services/credentials_service.dart';
+import '../screens/setup_screen.dart';
 
 class GenreDrawer extends StatefulWidget {
   final String title;
@@ -178,7 +181,65 @@ class _GenreDrawerState extends State<GenreDrawer> {
                   },
                 ),
           ),
+
+          // Logout footer
+          const Divider(color: _border, height: 1),
+          _LogoutButton(),
         ],
+      ),
+    );
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  static const _txtSub = Color(0xFFB0AEC8);
+  static const _err    = Color(0xFFCF6679);
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: InkWell(
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (_) => AlertDialog(
+              backgroundColor: const Color(0xFF160B25),
+              title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
+              content: const Text(
+                'Vos préférences locales seront conservées.\nVos identifiants seront supprimés de cet appareil.',
+                style: TextStyle(color: _txtSub, fontSize: 13, height: 1.5),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Annuler', style: TextStyle(color: _txtSub)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Déconnecter', style: TextStyle(color: _err, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          );
+          if (confirmed != true) return;
+          await CredentialsService.clear();
+          ApiService.invalidateCache();
+          if (!context.mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const SetupScreen()),
+            (route) => false,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Row(children: [
+            const Icon(Icons.logout_rounded, color: _err, size: 18),
+            const SizedBox(width: 12),
+            const Text('Changer de compte',
+              style: TextStyle(color: _err, fontSize: 13, fontWeight: FontWeight.w500)),
+          ]),
+        ),
       ),
     );
   }

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'screens/main_screen.dart';
+import 'screens/setup_screen.dart';
+import 'services/credentials_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  runApp(const IptvApp());
+  final hasCredentials = await CredentialsService.load() != null;
+  runApp(IptvApp(startWithSetup: !hasCredentials));
 }
 
 class IptvApp extends StatelessWidget {
-  const IptvApp({super.key});
+  final bool startWithSetup;
+  const IptvApp({super.key, required this.startWithSetup});
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +44,7 @@ class IptvApp extends StatelessWidget {
           color: Color(0xFF9D4EDD),
         ),
       ),
-      home: const MainScreen(),
+      home: startWithSetup ? const SetupScreen() : const MainScreen(),
     );
   }
 }
