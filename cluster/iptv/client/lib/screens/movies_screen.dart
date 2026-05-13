@@ -572,8 +572,7 @@ class _SearchField extends StatelessWidget {
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
         ),
-    ),
-  );
+    );
 }
 
 class _LoadingView extends StatelessWidget {

@@ -788,7 +788,7 @@ class _CategoryRow extends StatelessWidget {
               isFavorite: favorites.contains(channels[i].url),
               onTap: () => onTap(channels[i]),
               onFav: () => onFav(channels[i]),
-            ),
+            )),
           ),
         ),
       ],
