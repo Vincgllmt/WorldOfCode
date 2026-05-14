@@ -1,6 +1,7 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -52,12 +53,20 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "Joga Bonito IPTV");
   }
 
-  // Set window icon
-  g_autoptr(GError) icon_error = nullptr;
-  GdkPixbuf* icon = gdk_pixbuf_new_from_file("my_application.png", &icon_error);
-  if (icon) {
-    gtk_window_set_icon(window, icon);
-    g_object_unref(icon);
+  // Load icon from file next to executable (icon name lookup requires system install)
+  gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe_path) {
+    gchar* exe_dir = g_path_get_dirname(exe_path);
+    gchar* icon_path = g_build_filename(exe_dir, "my_application.png", nullptr);
+    GError* icon_error = nullptr;
+    GdkPixbuf* icon = gdk_pixbuf_new_from_file(icon_path, &icon_error);
+    if (icon) {
+      gtk_window_set_icon(window, icon);
+      g_object_unref(icon);
+    }
+    g_free(icon_path);
+    g_free(exe_dir);
+    g_free(exe_path);
   }
 
   gtk_window_set_default_size(window, 1280, 720);

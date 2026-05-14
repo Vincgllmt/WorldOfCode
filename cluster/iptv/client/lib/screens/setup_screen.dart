@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
+import '../widgets/brand_logo.dart';
 import 'main_screen.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -107,7 +108,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 children: [
                   // Logo
                   const SizedBox(height: 16),
-                  SvgPicture.asset('assets/images/logo.svg', height: 72),
+                  const Center(child: BrandLogo(fontSize: 64)),
                   const SizedBox(height: 12),
                   const Text(
                     'Entrez votre abonnement IPTV\npour accéder à votre catalogue.',

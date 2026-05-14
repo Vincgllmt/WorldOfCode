@@ -11,19 +11,54 @@ from PIL import Image
 import io
 
 BASE = Path(__file__).parent
-SVG = BASE / "logoSVG1.svg"
+SVG = BASE / "logo.svg"
 CLIENT = BASE / "client"
 
 
-def svg_to_png_bytes(size):
-    return cairosvg.svg2png(url=str(SVG), output_width=size, output_height=size)
+def svg_to_png(size, padding=0.0):
+    # Initial render at large size to maintain quality during crop
+    render_size = max(size * 4, 1024)
+    data = cairosvg.svg2png(url=str(SVG), output_width=render_size)
+    img = Image.open(io.BytesIO(data)).convert("RGBA")
+    
+    # Find bounding box of significant content
+    # We use a threshold to ignore noise/artifacts at the edges
+    alpha = img.split()[-1]
+    mask_alpha = alpha.point(lambda x: 255 if x > 250 else 0)
+    gray = img.convert("L")
+    mask_gray = gray.point(lambda x: 255 if x > 150 else 0)
+    
+    from PIL import ImageChops
+    mask = ImageChops.lighter(mask_alpha, mask_gray)
+    bbox = mask.getbbox()
+    if not bbox:
+        return img.resize((size, size), Image.LANCZOS)
+    
+    # Crop to content
+    img = img.crop(bbox)
+    
+    # Make it square
+    w, h = img.size
+    new_size = max(w, h)
+    square_img = Image.new("RGBA", (new_size, new_size), (0, 0, 0, 0))
+    square_img.paste(img, ((new_size - w) // 2, (new_size - h) // 2))
+    
+    # Add padding (5% to make it look balanced)
+    padding = 0.05
+    pad = int(new_size * padding)
+    padded_size = new_size + 2 * pad
+    padded_img = Image.new("RGBA", (padded_size, padded_size), (0, 0, 0, 0))
+    padded_img.paste(square_img, (pad, pad))
+    
+    # Resize to final target size
+    return padded_img.resize((size, size), Image.LANCZOS)
 
 
 def save_png(path, size):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = svg_to_png_bytes(size)
-    path.write_bytes(data)
+    img = svg_to_png(size)
+    img.save(path, "PNG")
     print(f"  {path.relative_to(BASE)} ({size}x{size})")
 
 
@@ -32,7 +67,7 @@ def save_ico(path, sizes):
     path.parent.mkdir(parents=True, exist_ok=True)
     images = []
     for s in sizes:
-        img = Image.open(io.BytesIO(svg_to_png_bytes(s))).convert("RGBA")
+        img = svg_to_png(s)
         images.append(img)
     images[0].save(
         str(path), format="ICO",

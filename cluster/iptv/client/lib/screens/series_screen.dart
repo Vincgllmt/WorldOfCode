@@ -7,6 +7,7 @@ import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
+import '../widgets/brand_logo.dart';
 import 'series_detail_screen.dart';
 import 'setup_screen.dart';
 
@@ -327,7 +328,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 const SizedBox(width: 8),
-                SvgPicture.asset('assets/images/logo.svg', height: 32),
+                const BrandLogo(fontSize: 22, showSubtitle: false),
                 const Spacer(),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
