@@ -240,6 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           final groups = _grouped(_filtered);
+          final sortedKeys = _sortedKeys(groups);
           final favChannels = _selectedGenre == null
             ? _allChannels.where((c) => _favorites.contains(c.url)).toList()
             : <Channel>[];
@@ -247,75 +248,46 @@ class _HomeScreenState extends State<HomeScreen> {
           return CustomScrollView(
             slivers: [
               // Hero banner — hidden while searching or filtering
-              if (_query.isEmpty && _selectedGenre == null)
+              if (_query.isEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
                 SliverToBoxAdapter(
-                  child: _HeroBanner(channel: _allChannels.first, onPlay: _openPlayer),
+                  child: _HeroBanner(channel: _allChannels.isNotEmpty ? _allChannels.first : null),
                 ),
 
               // Spacer when no hero
-              if (_query.isNotEmpty || _selectedGenre != null)
+              if (_query.isNotEmpty || _selectedGenre != null || _viewMode == ViewMode.themes)
                 const SliverToBoxAdapter(child: SizedBox(height: 110)),
 
-              // Active genre badge
+              // Active genre badge / Back button
               if (_selectedGenre != null)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                     child: Row(children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0x339D4EDD),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _C.accent),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(_selectedGenre!, style: const TextStyle(color: _C.glow, fontSize: 13, fontWeight: FontWeight.w600)),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () { _selectedGenre = null; _applyFilters(); },
-                            behavior: HitTestBehavior.opaque,
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(Icons.close_rounded, color: _C.glow, size: 14),
-                            ),
-                          ),
-                        ]),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('${_filtered.length} chaîne${_filtered.length > 1 ? 's' : ''}',
-                        style: const TextStyle(color: _C.txtSub, fontSize: 12)),
-                      const Spacer(),
                       GestureDetector(
-                        onTap: () => _toggleFavGenre(_selectedGenre!),
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            _favGenres.contains(_selectedGenre) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                            size: 20,
-                            color: _favGenres.contains(_selectedGenre) ? _C.accent : _C.txtSub,
+                        onTap: () => setState(() => _selectedGenre = null),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _C.accent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _C.accent),
                           ),
+                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                          ]),
                         ),
                       ),
+                      const SizedBox(width: 16),
+                      Text(_selectedGenre!.toUpperCase(), 
+                        style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ]),
                   ),
                 ),
 
-              // Search result label
-              if (_query.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
-                    child: Text(
-                      'Résultats pour "$_query"  (${_filtered.length})',
-                      style: const TextStyle(color: _C.glow, fontSize: 17, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-
               // Favorites row
-              if (_query.isEmpty && favChannels.isNotEmpty)
+              if (_query.isEmpty && favChannels.isNotEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
                 SliverToBoxAdapter(
                   child: _CategoryRow(
                     title: '★  Mes Favoris',
@@ -327,71 +299,110 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-              // Category rows / grid
-              if (_filtered.isEmpty && _allChannels.isNotEmpty)
-                const SliverFillRemaining(
-                  child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
-                )
-              else if (_selectedGenre != null || _viewMode != ViewMode.themes)
-                // Grid view with dynamic sizing
-                () {
-                  double maxExtent = 270;
-                  double aspectRatio = 264 / 185;
-                  if (_viewMode == ViewMode.gridSmall) { maxExtent = 180; aspectRatio = 160 / 120; }
-                  if (_viewMode == ViewMode.gridLarge) { maxExtent = 400; aspectRatio = 380 / 240; }
-
-                  return SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                    sliver: SliverGrid(
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: maxExtent,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: aspectRatio,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _ChannelCard(
-                          channel: _filtered[i],
-                          isFavorite: _favorites.contains(_filtered[i].url),
-                          onTap: () => _openPlayer(_filtered[i]),
-                          onFav: () => _toggleFavorite(_filtered[i]),
-                        ),
-                        childCount: _filtered.length,
-                      ),
-                    ),
-                  );
-                }()
+              if (_query.isNotEmpty)
+                ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+              else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                // Mode Thèmes uniquement
+                _buildThemesGrid(groups, sortedKeys)
+              else if (_selectedGenre != null)
+                // Un seul thème sélectionné
+                ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
               else
-                // ViewMode.themes: List of categories (Themes)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 300,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 3 / 1,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, i) {
-                        final sortedKeys = _sortedKeys(groups);
-                        final key = sortedKeys[i];
-                        return _CategoryCard(
-                          title: key,
-                          count: groups[key]!.length,
-                          isFav: _favGenres.contains(key),
-                          onTap: () => _onGenreSelect(key),
-                        );
-                      },
-                      childCount: groups.length,
-                    ),
-                  ),
-                ),
+                // Mode Images normal : On laisse les thèmes !
+                for (final key in sortedKeys)
+                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
           );
         },
+      ),
+    );
+  }
+
+  List<Widget> _buildGridSlivers(List<Channel> channels, {bool showTitle = false, String? title}) {
+    double maxExtent = 270;
+    double aspectRatio = 264 / 185;
+    
+    switch (_viewMode) {
+      case ViewMode.gridSmall:
+        maxExtent = 180;
+        aspectRatio = 160 / 120;
+        break;
+      case ViewMode.gridLarge:
+        maxExtent = 400;
+        aspectRatio = 380 / 240;
+        break;
+      default:
+        maxExtent = 270;
+        aspectRatio = 264 / 185;
+    }
+
+    return [
+      if (showTitle && title != null)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4, height: 24,
+                  decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(width: 12),
+                Text(title.toUpperCase(), 
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                const SizedBox(width: 12),
+                Text('(${channels.length})', style: const TextStyle(color: _C.txtSub, fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 8,
+            childAspectRatio: aspectRatio,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (_, i) => _ChannelCard(
+              channel: channels[i],
+              isFavorite: _favorites.contains(channels[i].url),
+              onTap: () => _openPlayer(channels[i]),
+              onFav: () => _toggleFavorite(channels[i]),
+            ),
+            childCount: channels.length,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildThemesGrid(Map<String, List<Channel>> groups, List<String> sortedKeys) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 350,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 2.8 / 1,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (_, i) {
+            final key = sortedKeys[i];
+            return _CategoryCard(
+              title: key,
+              count: groups[key]!.length,
+              isFav: _favGenres.contains(key),
+              onTap: () => setState(() => _selectedGenre = key),
+            );
+          },
+          childCount: sortedKeys.length,
+        ),
       ),
     );
   }

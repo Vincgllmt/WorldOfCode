@@ -261,71 +261,154 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   ),
                 ),
 
-              if (_filtered.isEmpty && _all.isNotEmpty)
-                const SliverFillRemaining(
-                  child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
-                )
-              else if (_selectedGenre != null || _viewMode != ViewMode.themes)
-                // Grid view with dynamic sizing
-                () {
-                  double maxExtent = 150;
-                  double aspectRatio = 130 / 230;
-                  if (_viewMode == ViewMode.gridSmall) { maxExtent = 110; aspectRatio = 100 / 180; }
-                  if (_viewMode == ViewMode.gridLarge) { maxExtent = 220; aspectRatio = 200 / 320; }
+          final groups = _grouped(_filtered);
+          final sortedKeys = _sortedKeys(groups);
 
-                  return SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    sliver: SliverGrid(
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: maxExtent,
-                        mainAxisSpacing: 20,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: aspectRatio,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _PosterCard(
-                          name: _filtered[i].name,
-                          cover: _filtered[i].cover,
-                          rating: _filtered[i].rating,
-                          width: maxExtent,
-                          onTap: () => _open(_filtered[i]),
+          return CustomScrollView(
+            slivers: [
+              // Hero banner — hidden while searching or filtering
+              if (_query.isEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
+                SliverToBoxAdapter(
+                  child: _HeroBanner(movie: _all.isNotEmpty ? _all.first : null),
+                ),
+
+              // Spacer when no hero
+              if (_query.isNotEmpty || _selectedGenre != null || _viewMode == ViewMode.themes)
+                const SliverToBoxAdapter(child: SizedBox(height: 110)),
+
+              // Active genre badge / Back button
+              if (_selectedGenre != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Row(children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedGenre = null),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _C.accent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _C.accent),
+                          ),
+                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                          ]),
                         ),
-                        childCount: _filtered.length,
                       ),
-                    ),
-                  );
-                }()
-              else
-                // ViewMode.themes: List of categories (Themes)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 300,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 3 / 1,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, i) {
-                        final sortedKeys = _sortedKeys(groups);
-                        final key = sortedKeys[i];
-                        return _CategoryCard(
-                          title: key,
-                          count: groups[key]!.length,
-                          isFav: _favGenres.contains(key),
-                          onTap: () => _onGenreSelect(key),
-                        );
-                      },
-                      childCount: groups.length,
-                    ),
+                      const SizedBox(width: 16),
+                      Text(_selectedGenre!.toUpperCase(), 
+                        style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    ]),
                   ),
                 ),
+
+              if (_query.isNotEmpty)
+                ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+              else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                // Mode Thèmes uniquement
+                _buildThemesGrid(groups, sortedKeys)
+              else if (_selectedGenre != null)
+                // Un seul thème sélectionné
+                ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+              else
+                // Mode Images normal : On laisse les thèmes !
+                for (final key in sortedKeys)
+                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
           );
         },
+      ),
+    );
+  }
+
+  List<Widget> _buildGridSlivers(List<Movie> movies, {bool showTitle = false, String? title}) {
+    double maxExtent = 150;
+    double aspectRatio = 130 / 220;
+    
+    switch (_viewMode) {
+      case ViewMode.gridSmall:
+        maxExtent = 115;
+        aspectRatio = 100 / 170;
+        break;
+      case ViewMode.gridLarge:
+        maxExtent = 220;
+        aspectRatio = 200 / 310;
+        break;
+      default:
+        maxExtent = 155;
+        aspectRatio = 135 / 235;
+    }
+
+    return [
+      if (showTitle && title != null)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4, height: 24,
+                  decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(width: 12),
+                Text(title.toUpperCase(), 
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                const SizedBox(width: 12),
+                Text('(${movies.length})', style: const TextStyle(color: _C.txtSub, fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            mainAxisSpacing: 24,
+            crossAxisSpacing: 12,
+            childAspectRatio: aspectRatio,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (_, i) => _PosterCard(
+              name: movies[i].name,
+              cover: movies[i].cover,
+              rating: movies[i].rating,
+              onTap: () => _open(movies[i]),
+            ),
+            childCount: movies.length,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildThemesGrid(Map<String, List<Movie>> groups, List<String> sortedKeys) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 350,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 2.8 / 1,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (_, i) {
+            final key = sortedKeys[i];
+            return _CategoryCard(
+              title: key,
+              count: groups[key]!.length,
+              isFav: _favGenres.contains(key),
+              onTap: () => setState(() => _selectedGenre = key),
+            );
+          },
+          childCount: sortedKeys.length,
+        ),
       ),
     );
   }
