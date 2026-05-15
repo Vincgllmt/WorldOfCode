@@ -255,8 +255,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     ),
                   )
               else
-                // Mode Grille (Small/Large) : On affiche tout en grille
-                ..._buildGridSlivers(_filtered, showTitle: false),
+                // Mode Grille (Small/Large) : On affiche par thèmes mais en grille !
+                for (final key in sortedKeys)
+                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
@@ -592,31 +593,46 @@ class _PosterCardState extends State<_PosterCard> {
           ),
         ),
       ),
-    Widget _buildCover() {
-      if (widget.cover != null && widget.cover!.isNotEmpty) {
-        return CachedNetworkImage(
-          imageUrl: widget.cover!,
-          fit: BoxFit.cover,
-          memCacheWidth: 250, // Optimize memory for vertical posters
-          placeholder: (_, __) => _shimmer(),
-          errorWidget: (_, __, ___) => _fallback(),
-        );
-      }
-      return _fallback();
+    );
+  }
+
+  Widget _buildCover() {
+    if (widget.cover != null && widget.cover!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: widget.cover!,
+        fit: BoxFit.cover,
+        memCacheWidth: 250, // Optimize memory for vertical posters
+        placeholder: (_, __) => _shimmer(),
+        errorWidget: (_, __, ___) => _fallback(),
+      );
     }
-  Widget _shimmer() => Container(color: _C.bgCard,
-    child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))));
+    return _fallback();
+  }
+
+  Widget _shimmer() => Container(
+    color: _C.bgCard,
+    child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))),
+  );
 
   Widget _fallback() => Container(
-    decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-      colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)])),
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Icon(Icons.tv_rounded, color: Color(0x779D4EDD), size: 32),
-      const SizedBox(height: 6),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Text(widget.name, maxLines: 2, overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center, style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 9))),
-    ]),
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)],
+      ),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.tv_rounded, color: Color(0x779D4EDD), size: 32),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(widget.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center, style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 9)),
+        ),
+      ],
+    ),
   );
 }
 
