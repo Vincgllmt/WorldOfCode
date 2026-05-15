@@ -39,6 +39,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
+  bool    _gridView      = false;
   final   _searchCtrl    = TextEditingController();
 
   @override
@@ -262,8 +263,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
                 )
-              else if (_selectedGenre != null)
-                // Grid view when a genre is selected
+              else if (_selectedGenre != null || _gridView)
+                // Grid view (forced for genre, or selected by user)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   sliver: SliverGrid(
@@ -341,7 +342,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   child: _searchVisible
                     ? SizedBox(
                         key: const ValueKey('f'),
-                        width: 240, height: 40,
+                        width: 200, height: 40,
                         child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...'),
                       )
                     : const SizedBox(key: ValueKey('e')),
@@ -353,6 +354,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     _searchVisible = !_searchVisible;
                     if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
                   }),
+                ),
+                const SizedBox(width: 4),
+                _IconBtn(
+                  icon: _gridView ? Icons.list_alt_rounded : Icons.grid_view_rounded,
+                  onTap: () => setState(() => _gridView = !_gridView),
                 ),
                 const SizedBox(width: 4),
                 GestureDetector(

@@ -40,7 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Channel> _allChannels = [];
   List<Channel> _filtered = [];
-  Set<String> _favorites    = {};
+  bool _gridView = false;
+  Set<String> _favorites = {};
   Set<String> _favGenres    = {};
   String  _query         = '';
   String? _selectedGenre;
@@ -200,10 +201,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       appBar: _AppBar(
         searchVisible: _searchVisible,
+        gridView: _gridView,
         searchCtrl: _searchCtrl,
         onSearchChanged: _onSearch,
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
         onAccount: _logout,
+        onToggleView: () => setState(() => _gridView = !_gridView),
         onToggleSearch: () => setState(() {
           _searchVisible = !_searchVisible;
           if (!_searchVisible) {
@@ -327,8 +330,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
                 )
-              else if (_selectedGenre != null)
-                // Grid view for genre filter
+              else if (_selectedGenre != null || _gridView)
+                // Grid view (forced for genre, or selected by user)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
                   sliver: SliverGrid(
@@ -382,17 +385,21 @@ class _HomeScreenState extends State<HomeScreen> {
 // ─── App Bar (glassmorphism) ──────────────────────────────────────────────────
 class _AppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool searchVisible;
+  final bool gridView;
   final TextEditingController searchCtrl;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onToggleSearch;
+  final VoidCallback onToggleView;
   final VoidCallback onOpenDrawer;
   final VoidCallback onAccount;
 
   const _AppBar({
     required this.searchVisible,
+    required this.gridView,
     required this.searchCtrl,
     required this.onSearchChanged,
     required this.onToggleSearch,
+    required this.onToggleView,
     required this.onOpenDrawer,
     required this.onAccount,
   });
@@ -425,7 +432,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
                 child: searchVisible
                   ? SizedBox(
                       key: const ValueKey('field'),
-                      width: 240,
+                      width: 200,
                       height: 40,
                       child: _GlassSearchField(
                         controller: searchCtrl,
@@ -438,6 +445,11 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
               _AppBarIcon(
                 icon: searchVisible ? Icons.close_rounded : Icons.search_rounded,
                 onTap: onToggleSearch,
+              ),
+              const SizedBox(width: 4),
+              _AppBarIcon(
+                icon: gridView ? Icons.list_alt_rounded : Icons.grid_view_rounded,
+                onTap: onToggleView,
               ),
               const SizedBox(width: 4),
               GestureDetector(
