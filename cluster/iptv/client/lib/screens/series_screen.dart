@@ -393,7 +393,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 PopupMenuButton<ViewMode>(
                   icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
                   tooltip: 'Mode d\'affichage',
-                  backgroundColor: const Color(0xFF160B25),
+                  color: const Color(0xFF160B25),
                   offset: const Offset(0, 50),
                   onSelected: (v) => setState(() => _viewMode = v),
                   itemBuilder: (_) => [
