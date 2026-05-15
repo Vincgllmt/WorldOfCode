@@ -286,26 +286,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           items: recentSeries,
                           isFav: false,
                           onTap: (s) => _open(s).then((_) => setState(() {})),
-                          onLongPress: (s) {
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                backgroundColor: _C.bgCard,
-                                title: const Text('Retirer de la liste', style: TextStyle(color: Colors.white, fontSize: 16)),
-                                content: Text('Voulez-vous retirer "${s.name}" de la liste "Reprendre la lecture" ?', style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
-                                  TextButton(
-                                    onPressed: () async {
-                                      Navigator.pop(context);
-                                      await ProgressService.removeBySeriesId(s.id);
-                                      setState(() {});
-                                    }, 
-                                    child: const Text('Retirer', style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
-                                  ),
-                                ],
-                              )
-                            );
+                          onRemove: (s) async {
+                            await ProgressService.removeBySeriesId(s.id);
+                            setState(() {});
                           },
                           onFavToggle: () {},
                           onTitleTap: () {},
@@ -537,14 +520,14 @@ class _GenreRow extends StatelessWidget {
   final List<SeriesItem> items;
   final bool isFav;
   final void Function(SeriesItem) onTap;
-  final void Function(SeriesItem)? onLongPress;
+  final void Function(SeriesItem)? onRemove;
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
   final ViewMode viewMode;
   final bool isAccent;
 
   const _GenreRow({
-    required this.title, required this.items, required this.onTap, this.onLongPress,
+    required this.title, required this.items, required this.onTap, this.onRemove,
     required this.isFav, required this.onFavToggle, required this.onTitleTap, 
     required this.viewMode, this.isAccent = false,
   });
@@ -600,7 +583,7 @@ class _GenreRow extends StatelessWidget {
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => onTap(items[i]),
-              onLongPress: onLongPress != null ? () => onLongPress!(items[i]) : null,
+              onRemove: onRemove != null ? () => onRemove!(items[i]) : null,
               viewMode: viewMode,
             )),
           ),
@@ -615,10 +598,10 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
+  final VoidCallback? onRemove;
   final ViewMode viewMode;
 
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onLongPress, required this.viewMode});
+  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onRemove, required this.viewMode});
 
   @override
   State<_PosterCard> createState() => _PosterCardState();
@@ -639,8 +622,6 @@ class _PosterCardState extends State<_PosterCard> {
       onExit:  (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
-        onSecondaryTap: widget.onLongPress,
         child: Container(
           width: w,
           margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -663,9 +644,31 @@ class _PosterCardState extends State<_PosterCard> {
                         ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
                         : [],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: _buildCover(),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _buildCover(),
+                        ),
+                        if (widget.onRemove != null)
+                          Positioned(
+                            top: 4, right: 4,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
+                                  padding: const EdgeInsets.all(4),
+                                  minimumSize: const Size(24, 24),
+                                ),
+                                onPressed: widget.onRemove,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
