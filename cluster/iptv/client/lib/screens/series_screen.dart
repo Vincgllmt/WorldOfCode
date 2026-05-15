@@ -201,11 +201,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
           return CustomScrollView(
             slivers: [
-              // Spacer
-              if (_query.isNotEmpty || _selectedGenre != null || _viewMode == ViewMode.themes)
-                const SliverToBoxAdapter(child: SizedBox(height: 110))
-              else
-                SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 80)),
+              // Increased spacer at the top to clear the AppBar (70px + status bar)
+              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
 
               // Active genre badge / Back button
               if (_selectedGenre != null)
@@ -244,8 +241,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
               else if (_selectedGenre != null)
                 // Un seul thème sélectionné
                 ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-              else
-                // Mode Images normal : On laisse les thèmes !
+              else if (_viewMode == ViewMode.gridMedium)
+                // Mode Images normal : On laisse les thèmes en lignes !
                 for (final key in sortedKeys)
                   SliverToBoxAdapter(
                     child: _GenreRow(
@@ -256,7 +253,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
                       onFavToggle: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
                     ),
-                  ),
+                  )
+              else
+                // Mode Grille (Small/Large) : On affiche tout en grille
+                ..._buildGridSlivers(_filtered, showTitle: false),
+
+              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+            ],
+          );
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
@@ -274,6 +278,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
       case ViewMode.gridSmall:
         maxExtent = 115;
         aspectRatio = 100 / 170;
+        break;
+      case ViewMode.gridMedium:
+        maxExtent = 155;
+        aspectRatio = 135 / 235;
         break;
       case ViewMode.gridLarge:
         maxExtent = 220;

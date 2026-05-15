@@ -201,8 +201,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
           return CustomScrollView(
             slivers: [
-              // Reduced spacer at the top
-              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 20)),
+              // Increased spacer at the top to clear the AppBar (70px + status bar)
+              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
 
               // Active genre badge / Back button
               if (_selectedGenre != null)
@@ -241,8 +241,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
               else if (_selectedGenre != null)
                 // Un seul thème sélectionné
                 ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-              else
-                // Mode Images normal : On laisse les thèmes !
+              else if (_viewMode == ViewMode.gridMedium)
+                // Mode Images normal : On laisse les thèmes en lignes !
                 for (final key in sortedKeys)
                   SliverToBoxAdapter(
                     child: _GenreRow(
@@ -253,7 +253,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       onFavToggle: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
                     ),
-                  ),
+                  )
+              else
+                // Mode Grille (Small/Large) : On affiche tout en grille
+                ..._buildGridSlivers(_filtered, showTitle: false),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
