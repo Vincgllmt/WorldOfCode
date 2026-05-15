@@ -270,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onToggleFavGenre: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
                       viewMode: _viewMode,
-                    ))
+                    )),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
             ),

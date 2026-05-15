@@ -241,7 +241,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       onTap: _open, onFavToggle: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
                       viewMode: _viewMode,
-                    ))
+                    )),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
             ),
@@ -275,7 +275,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
           gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: maxExtent, mainAxisSpacing: 24, crossAxisSpacing: 12, childAspectRatio: aspectRatio),
           delegate: SliverChildBuilderDelegate((_, i) => _PosterCard(
             name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating,
-            onTap: () => _open(movies[i]),
+            onTap: () => _open(movies[i]), viewMode: _viewMode,
           ), childCount: movies.length),
         ),
       ),

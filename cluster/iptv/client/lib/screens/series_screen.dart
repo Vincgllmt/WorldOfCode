@@ -268,7 +268,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         onTitleTap: () => setState(() => _selectedGenre = key),
                         viewMode: _viewMode,
                       ),
-                    )
+                    ),
 
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
@@ -332,6 +332,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => _open(items[i]),
+              viewMode: _viewMode,
             ),
             childCount: items.length,
           ),
