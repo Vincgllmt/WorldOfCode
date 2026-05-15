@@ -85,6 +85,22 @@ class ProgressService {
     _cache = all;
   }
 
+  static Future<void> removeByMediaId(int mediaId, String type) async {
+    final all = await getAll();
+    all.removeWhere((p) => p.mediaId == mediaId && p.type == type);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_key, all.map((e) => json.encode(e.toJson())).toList());
+    _cache = all;
+  }
+
+  static Future<void> removeBySeriesId(int seriesId) async {
+    final all = await getAll();
+    all.removeWhere((p) => p.seriesId == seriesId && p.type == 'series');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_key, all.map((e) => json.encode(e.toJson())).toList());
+    _cache = all;
+  }
+
   static Future<MediaProgress?> getProgress(String url) async {
     final all = await getAll();
     try {

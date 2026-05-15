@@ -259,6 +259,27 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           movies: recentMovies,
                           isFav: false,
                           onTap: (m) => _open(m).then((_) => setState(() {})),
+                          onLongPress: (m) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                backgroundColor: _C.bgCard,
+                                title: const Text('Retirer de la liste', style: TextStyle(color: Colors.white, fontSize: 16)),
+                                content: Text('Voulez-vous retirer "${m.name}" de la liste "Reprendre la lecture" ?', style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
+                                  TextButton(
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                      await ProgressService.removeByMediaId(m.id, 'movie');
+                                      setState(() {});
+                                    }, 
+                                    child: const Text('Retirer', style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+                                  ),
+                                ],
+                              )
+                            );
+                          },
                           onFavToggle: () {},
                           onTitleTap: () {},
                           viewMode: _viewMode,
@@ -401,13 +422,14 @@ class _GenreRow extends StatelessWidget {
   final List<Movie> movies;
   final bool isFav;
   final void Function(Movie) onTap;
+  final void Function(Movie)? onLongPress;
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
   final ViewMode viewMode;
   final bool isAccent;
 
   const _GenreRow({
-    required this.title, required this.movies, required this.onTap, 
+    required this.title, required this.movies, required this.onTap, this.onLongPress,
     required this.isFav, required this.onFavToggle, required this.onTitleTap, 
     required this.viewMode, this.isAccent = false,
   });
@@ -430,7 +452,7 @@ class _GenreRow extends StatelessWidget {
         ]))),
         if (!isAccent) GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), viewMode: viewMode)))),
+      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), onLongPress: onLongPress != null ? () => onLongPress!(movies[i]) : null, viewMode: viewMode)))),
     ]);
   }
 }
@@ -440,8 +462,9 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final ViewMode viewMode;
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, required this.viewMode});
+  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onLongPress, required this.viewMode});
   @override
   State<_PosterCard> createState() => _PosterCardState();
 }
@@ -454,7 +477,7 @@ class _PosterCardState extends State<_PosterCard> {
     if (widget.viewMode == ViewMode.gridSmall) w = 100;
     if (widget.viewMode == ViewMode.gridLarge) w = 180;
 
-    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 6), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, onLongPress: widget.onLongPress, onSecondaryTap: widget.onLongPress, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 6), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: w, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: _buildCover()))),
       const SizedBox(height: 6),
       Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500))),

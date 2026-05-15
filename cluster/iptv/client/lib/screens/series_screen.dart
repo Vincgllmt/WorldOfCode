@@ -286,6 +286,27 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           items: recentSeries,
                           isFav: false,
                           onTap: (s) => _open(s).then((_) => setState(() {})),
+                          onLongPress: (s) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                backgroundColor: _C.bgCard,
+                                title: const Text('Retirer de la liste', style: TextStyle(color: Colors.white, fontSize: 16)),
+                                content: Text('Voulez-vous retirer "${s.name}" de la liste "Reprendre la lecture" ?', style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
+                                  TextButton(
+                                    onPressed: () async {
+                                      Navigator.pop(context);
+                                      await ProgressService.removeBySeriesId(s.id);
+                                      setState(() {});
+                                    }, 
+                                    child: const Text('Retirer', style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+                                  ),
+                                ],
+                              )
+                            );
+                          },
                           onFavToggle: () {},
                           onTitleTap: () {},
                           viewMode: _viewMode,
@@ -516,13 +537,14 @@ class _GenreRow extends StatelessWidget {
   final List<SeriesItem> items;
   final bool isFav;
   final void Function(SeriesItem) onTap;
+  final void Function(SeriesItem)? onLongPress;
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
   final ViewMode viewMode;
   final bool isAccent;
 
   const _GenreRow({
-    required this.title, required this.items, required this.onTap,
+    required this.title, required this.items, required this.onTap, this.onLongPress,
     required this.isFav, required this.onFavToggle, required this.onTitleTap, 
     required this.viewMode, this.isAccent = false,
   });
@@ -578,6 +600,7 @@ class _GenreRow extends StatelessWidget {
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => onTap(items[i]),
+              onLongPress: onLongPress != null ? () => onLongPress!(items[i]) : null,
               viewMode: viewMode,
             )),
           ),
@@ -592,9 +615,10 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final ViewMode viewMode;
 
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, required this.viewMode});
+  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onLongPress, required this.viewMode});
 
   @override
   State<_PosterCard> createState() => _PosterCardState();
@@ -615,6 +639,8 @@ class _PosterCardState extends State<_PosterCard> {
       onExit:  (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        onSecondaryTap: widget.onLongPress,
         child: Container(
           width: w,
           margin: const EdgeInsets.symmetric(horizontal: 6),
