@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../widgets/brand_logo.dart';
@@ -120,10 +121,10 @@ class _SetupScreenState extends State<SetupScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFBB86FC).withValues(alpha: 0.3), width: 1.5),
                     ),
-                    child: const Text(
+                    child: Text(
                       'JOGA BONITO IPTV',
-                      style: TextStyle(
-                        color: Color(0xFFBB86FC),
+                      style: GoogleFonts.nunito(
+                        color: const Color(0xFFBB86FC),
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 4,

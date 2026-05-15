@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BrandLogo extends StatelessWidget {
   final double fontSize;
@@ -27,7 +28,7 @@ class BrandLogo extends StatelessWidget {
           children: [
             Text(
               'J',
-              style: TextStyle(
+              style: GoogleFonts.nunito(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w900,
                 color: primaryAccent,
@@ -46,7 +47,7 @@ class BrandLogo extends StatelessWidget {
             ),
             Text(
               'GA',
-              style: TextStyle(
+              style: GoogleFonts.nunito(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w900,
                 color: primaryAccent,
@@ -60,7 +61,7 @@ class BrandLogo extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'BONITO',
-              style: TextStyle(
+              style: GoogleFonts.nunito(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
@@ -91,7 +92,7 @@ class BrandLogo extends StatelessWidget {
             ),
             child: Text(
               'IPTV PREMIUM SERVICE',
-              style: TextStyle(
+              style: GoogleFonts.nunito(
                 fontSize: fontSize * 0.25,
                 fontWeight: FontWeight.w800,
                 color: primaryAccent,
