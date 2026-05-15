@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../services/api_service.dart';
@@ -44,9 +45,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       body: FutureBuilder<SeriesDetail>(
         future: _future,
         builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: _C.accent));
-          }
+          final detail = snap.data;
+          final isLoading = snap.connectionState == ConnectionState.waiting;
+
           if (snap.hasError) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.error_outline_rounded, size: 48, color: _C.accent),
@@ -59,8 +60,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             ]));
           }
 
-          final detail = snap.data!;
-          final sortedSeasons = detail.seasons.keys.toList()
+          if (isLoading && detail == null) {
+            return Stack(
+              children: [
+                _Header(series: widget.series, detail: null),
+                const Center(child: CircularProgressIndicator(color: _C.accent)),
+              ],
+            );
+          }
+
+          final sortedSeasons = detail!.seasons.keys.toList()
             ..sort((a, b) => int.tryParse(a)!.compareTo(int.tryParse(b)!));
 
           if (_expandedSeason == -1 && sortedSeasons.isNotEmpty) {
@@ -113,11 +122,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
 class _Header extends StatelessWidget {
   final SeriesItem series;
-  final SeriesDetail detail;
-  const _Header({required this.series, required this.detail});
+  final SeriesDetail? detail;
+  const _Header({required this.series, this.detail});
 
   @override
   Widget build(BuildContext context) {
+    final name = detail?.name ?? series.name;
+    final plot = detail?.plot;
+
     return Stack(
       children: [
         // Backdrop
@@ -154,14 +166,14 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(detail.name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1)),
+              Text(name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1)),
               if (series.rating != null && series.rating!.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text('★ ${series.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 13)),
               ],
-              if (detail.plot != null && detail.plot!.isNotEmpty) ...[
+              if (plot != null && plot.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Text(detail.plot!, maxLines: 3, overflow: TextOverflow.ellipsis,
+                Text(plot, maxLines: 3, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.4)),
               ],
             ],
@@ -171,8 +183,18 @@ class _Header extends StatelessWidget {
     );
   }
 
-  Widget _buildCover(String url) => Image.network(url, fit: BoxFit.cover, width: double.infinity,
-    errorBuilder: (_, __, ___) => _fallback());
+  Widget _buildCover(String url) => CachedNetworkImage(
+    imageUrl: url,
+    fit: BoxFit.cover,
+    width: double.infinity,
+    placeholder: (_, __) => _shimmer(),
+    errorWidget: (_, __, ___) => _fallback(),
+  );
+
+  Widget _shimmer() => Container(
+    color: Colors.black26,
+    child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: _C.accent)),
+  );
 
   Widget _fallback() => Container(
     decoration: const BoxDecoration(gradient: LinearGradient(

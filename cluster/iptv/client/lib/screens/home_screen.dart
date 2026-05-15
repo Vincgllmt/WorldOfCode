@@ -21,7 +21,6 @@ class _C {
   static const txt       = Color(0xFFFFFFFF);
   static const txtSub    = Color(0xFFB0AEC8);
   static const border    = Color(0x449D4EDD);
-  static const liveDot   = Color(0xFFFF4757);
 }
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
@@ -246,18 +245,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
           return CustomScrollView(
             slivers: [
-              // Hero banner — hidden while searching or filtering
-              if (_query.isEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
-                SliverToBoxAdapter(
-                  child: _HeroBanner(
-                    channel: _allChannels.first,
-                    onPlay: _openPlayer,
-                  ),
-                ),
-
-              // Spacer when no hero
-              if (_query.isNotEmpty || _selectedGenre != null || _viewMode == ViewMode.themes)
-                const SliverToBoxAdapter(child: SizedBox(height: 110)),
+              // Reduced spacer at the top
+              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 20)),
 
               // Active genre badge / Back button
               if (_selectedGenre != null)
@@ -342,6 +331,10 @@ class _HomeScreenState extends State<HomeScreen> {
         maxExtent = 180;
         aspectRatio = 160 / 120;
         break;
+      case ViewMode.gridMedium:
+        maxExtent = 270;
+        aspectRatio = 264 / 185;
+        break;
       case ViewMode.gridLarge:
         maxExtent = 400;
         aspectRatio = 380 / 240;
@@ -420,23 +413,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode v, IconData icon, String label) {
-    final selected = _viewMode == v;
-    return PopupMenuItem(
-      value: v,
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
-          const SizedBox(width: 12),
-          Text(label, style: TextStyle(
-            color: selected ? _C.accent : Colors.white,
-            fontSize: 14,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-          )),
-        ],
-      ),
-    );
-  }
 }
 
 // ─── App Bar (glassmorphism) ──────────────────────────────────────────────────
@@ -603,230 +579,6 @@ class _GlassSearchField extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.accent, width: 1.5)),
-      ),
-    );
-  }
-}
-
-// ─── Hero Banner ─────────────────────────────────────────────────────────────
-class _HeroBanner extends StatelessWidget {
-  final Channel channel;
-  final void Function(Channel) onPlay;
-  const _HeroBanner({required this.channel, required this.onPlay});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Background image
-        SizedBox(
-          height: 520,
-          width: double.infinity,
-          child: _buildBg(),
-        ),
-
-        // Bottom purple gradient
-        Container(
-          height: 520,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x660C0714),
-                Color(0x000C0714),
-                Color(0xCC0C0714),
-                Color(0xFF0C0714),
-              ],
-              stops: [0.0, 0.35, 0.72, 1.0],
-            ),
-          ),
-        ),
-
-        // Left vignette
-        Container(
-          height: 520,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xDD0C0714), Colors.transparent],
-              stops: [0.0, 0.65],
-            ),
-          ),
-        ),
-
-        // Content
-        Positioned(
-          bottom: 48,
-          left: 36,
-          right: 24,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Live badge
-              _LiveBadge(label: channel.group ?? 'EN DIRECT'),
-              const SizedBox(height: 16),
-
-              // Channel name
-              Text(
-                channel.name.toUpperCase(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.5,
-                  height: 1.05,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Subtitle line
-              Row(
-                children: [
-                  const Icon(Icons.circle, size: 8, color: _C.liveDot),
-                  const SizedBox(width: 6),
-                  const Text('Diffusion en direct', style: TextStyle(color: _C.glow, fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 28),
-
-              // CTA buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _HeroButton(
-                    label: 'Lecture',
-                    icon: Icons.play_arrow_rounded,
-                    primary: true,
-                    onTap: () => onPlay(channel),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBg() {
-    final logo = channel.logo;
-    if (logo != null && logo.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: logo,
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
-        placeholder: (_, __) => _fallbackBg(),
-        errorWidget: (_, __, ___) => _fallbackBg(),
-      );
-    }
-    return _fallbackBg();
-  }
-
-  Widget _fallbackBg() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2D1B4E), Color(0xFF0C0714)],
-        ),
-      ),
-      child: const Center(
-        child: Icon(Icons.live_tv_rounded, size: 100, color: Color(0x449D4EDD)),
-      ),
-    );
-  }
-}
-
-class _LiveBadge extends StatelessWidget {
-  final String label;
-  const _LiveBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: _C.accent.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.circle, size: 7, color: Colors.white),
-          const SizedBox(width: 5),
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroButton extends StatefulWidget {
-  final String label;
-  final IconData icon;
-  final bool primary;
-  final VoidCallback onTap;
-  const _HeroButton({required this.label, required this.icon, required this.primary, required this.onTap});
-
-  @override
-  State<_HeroButton> createState() => _HeroButtonState();
-}
-
-class _HeroButtonState extends State<_HeroButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 13),
-          decoration: BoxDecoration(
-            color: widget.primary
-              ? (_hovered ? _C.glow : _C.accent)
-              : Colors.white.withValues(alpha: _hovered ? 0.22 : 0.13),
-            borderRadius: BorderRadius.circular(6),
-            border: widget.primary
-              ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.3)),
-            boxShadow: widget.primary && _hovered
-              ? [BoxShadow(color: _C.accent.withValues(alpha: 0.6), blurRadius: 16, spreadRadius: 1)]
-              : [],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon, color: Colors.white, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

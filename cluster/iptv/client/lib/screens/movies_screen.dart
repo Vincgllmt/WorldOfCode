@@ -201,18 +201,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
           return CustomScrollView(
             slivers: [
-              // Hero banner — hidden while searching or filtering
-              if (_query.isEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
-                SliverToBoxAdapter(
-                  child: _HeroBanner(
-                    movie: _all.isNotEmpty ? _all.first : null,
-                    onPlay: _open,
-                  ),
-                ),
-
-              // Spacer when no hero
-              if (_query.isNotEmpty || _selectedGenre != null || _viewMode == ViewMode.themes)
-                const SliverToBoxAdapter(child: SizedBox(height: 110)),
+              // Reduced spacer at the top
+              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 20)),
 
               // Active genre badge / Back button
               if (_selectedGenre != null)
@@ -281,6 +271,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
       case ViewMode.gridSmall:
         maxExtent = 115;
         aspectRatio = 100 / 170;
+        break;
+      case ViewMode.gridMedium:
+        maxExtent = 155;
+        aspectRatio = 135 / 235;
         break;
       case ViewMode.gridLarge:
         maxExtent = 220;
@@ -841,141 +835,4 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-// ─── Hero Banner ─────────────────────────────────────────────────────────────
-class _HeroBanner extends StatelessWidget {
-  final Movie? movie;
-  final void Function(Movie) onPlay;
-  const _HeroBanner({required this.movie, required this.onPlay});
 
-  @override
-  Widget build(BuildContext context) {
-    if (movie == null) return const SizedBox.shrink();
-    
-    return Stack(
-      children: [
-        // Background image
-        SizedBox(
-          height: 520,
-          width: double.infinity,
-          child: movie!.cover != null 
-            ? Image.network(movie!.cover!, fit: BoxFit.cover)
-            : Container(color: Colors.black),
-        ),
-
-        // Bottom purple gradient
-        Container(
-          height: 520,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x660C0714),
-                Color(0x000C0714),
-                Color(0xCC0C0714),
-                Color(0xFF0C0714),
-              ],
-              stops: [0.0, 0.35, 0.72, 1.0],
-            ),
-          ),
-        ),
-
-        // Left vignette
-        Container(
-          height: 520,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xDD0C0714), Colors.transparent],
-              stops: [0.0, 0.65],
-            ),
-          ),
-        ),
-
-        // Content
-        Positioned(
-          bottom: 48,
-          left: 36,
-          right: 24,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Genre badge
-              if (movie!.group != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF9D4EDD),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    movie!.group!.toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
-                  ),
-                ),
-              const SizedBox(height: 16),
-
-              // Movie name
-              Text(
-                movie!.name.toUpperCase(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.5,
-                  height: 1.05,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Rating / Year placeholder
-              Row(
-                children: [
-                  if (movie!.rating != null) ...[
-                    const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFD700)),
-                    const SizedBox(width: 4),
-                    Text(movie!.rating!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 16),
-                  ],
-                  const Icon(Icons.movie_filter_rounded, size: 16, color: Colors.white70),
-                  const SizedBox(width: 6),
-                  const Text('FILM', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Play button
-              GestureDetector(
-                onTap: () => onPlay(movie!),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(color: Colors.white.withValues(alpha: 0.3), blurRadius: 15, spreadRadius: 2),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
-                        SizedBox(width: 10),
-                        Text('DÉTAILS', style: TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}

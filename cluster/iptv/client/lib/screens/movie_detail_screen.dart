@@ -45,6 +45,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         builder: (ctx, snap) {
           final detail = snap.data;
           final playUrl = detail?.url ?? widget.movie.url;
+          final isLoading = snap.connectionState == ConnectionState.waiting;
 
           return CustomScrollView(
             slivers: [
@@ -54,79 +55,87 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   detail: detail,
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Synopsis
-                      const Text(
-                        'Synopsis',
-                        style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        (detail?.description != null && detail!.description!.isNotEmpty)
-                          ? detail.description!
-                          : 'Aucune description disponible.',
-                        style: const TextStyle(color: _C.txtSub, fontSize: 14, height: 1.55),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Play button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _play(playUrl),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _C.accent,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                          icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                          label: const Text(
-                            'Lire le film',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                          ),
+              if (isLoading)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(child: CircularProgressIndicator(color: _C.accent)),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Synopsis
+                        const Text(
+                          'Synopsis',
+                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                         ),
-                      ),
-
-                      // Cast
-                      if (detail?.cast != null && detail!.cast!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          (detail?.description != null && detail!.description!.isNotEmpty)
+                            ? detail.description!
+                            : 'Aucune description disponible.',
+                          style: const TextStyle(color: _C.txtSub, fontSize: 14, height: 1.55),
+                        ),
                         const SizedBox(height: 28),
-                        const Text(
-                          'Avec',
-                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          detail.cast!,
-                          style: const TextStyle(color: _C.txtSub, fontSize: 14, height: 1.5),
-                        ),
-                      ],
 
-                      // Director
-                      if (detail?.director != null && detail!.director!.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Réalisateur',
-                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                        // Play button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _play(playUrl),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _C.accent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                            label: const Text(
+                              'Lire le film',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          detail.director!,
-                          style: const TextStyle(color: _C.txtSub, fontSize: 14),
-                        ),
-                      ],
 
-                      const SizedBox(height: 60),
-                    ],
+                        // Cast
+                        if (detail?.cast != null && detail!.cast!.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          const Text(
+                            'Avec',
+                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            detail.cast!,
+                            style: const TextStyle(color: _C.txtSub, fontSize: 14, height: 1.5),
+                          ),
+                        ],
+
+                        // Director
+                        if (detail?.director != null && detail!.director!.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Réalisateur',
+                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            detail.director!,
+                            style: const TextStyle(color: _C.txtSub, fontSize: 14),
+                          ),
+                        ],
+
+                        const SizedBox(height: 60),
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },

@@ -15,7 +15,6 @@ class _SetupScreenState extends State<SetupScreen> {
   static const _bg     = Color(0xFF0C0714);
   static const _bgCard = Color(0xFF160B25);
   static const _accent = Color(0xFF9D4EDD);
-  static const _glow   = Color(0xFFBB86FC);
   static const _txt    = Color(0xFFFFFFFF);
   static const _txtSub = Color(0xFFB0AEC8);
   static const _border = Color(0x449D4EDD);
