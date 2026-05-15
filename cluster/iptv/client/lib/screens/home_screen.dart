@@ -33,6 +33,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+enum ViewMode { themes, gridSmall, gridMedium, gridLarge }
+
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _api = ApiService();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -40,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Channel> _allChannels = [];
   List<Channel> _filtered = [];
-  bool _gridView = false;
+  ViewMode _viewMode = ViewMode.gridMedium;
   Set<String> _favorites = {};
   Set<String> _favGenres    = {};
   String  _query         = '';
@@ -201,12 +203,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       appBar: _AppBar(
         searchVisible: _searchVisible,
-        gridView: _gridView,
+        viewMode: _viewMode,
         searchCtrl: _searchCtrl,
         onSearchChanged: _onSearch,
         onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
         onAccount: _logout,
-        onToggleView: () => setState(() => _gridView = !_gridView),
+        onToggleView: (v) => setState(() => _viewMode = v),
         onToggleSearch: () => setState(() {
           _searchVisible = !_searchVisible;
           if (!_searchVisible) {
@@ -330,46 +332,59 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
                 )
-              else if (_selectedGenre != null || _gridView)
-                // Grid view (forced for genre, or selected by user)
+              else if (_selectedGenre != null || _viewMode != ViewMode.themes)
+                // Grid view with dynamic sizing
+                () {
+                  double maxExtent = 270;
+                  double aspectRatio = 264 / 185;
+                  if (_viewMode == ViewMode.gridSmall) { maxExtent = 180; aspectRatio = 160 / 120; }
+                  if (_viewMode == ViewMode.gridLarge) { maxExtent = 400; aspectRatio = 380 / 240; }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: maxExtent,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: aspectRatio,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (_, i) => _ChannelCard(
+                          channel: _filtered[i],
+                          isFavorite: _favorites.contains(_filtered[i].url),
+                          onTap: () => _openPlayer(_filtered[i]),
+                          onFav: () => _toggleFavorite(_filtered[i]),
+                        ),
+                        childCount: _filtered.length,
+                      ),
+                    ),
+                  );
+                }()
+              else
+                // ViewMode.themes: List of categories (Themes)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 270,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 0,
-                      childAspectRatio: 264 / 185,
+                      maxCrossAxisExtent: 300,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 3 / 1,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, i) => _ChannelCard(
-                        channel: _filtered[i],
-                        isFavorite: _favorites.contains(_filtered[i].url),
-                        onTap: () => _openPlayer(_filtered[i]),
-                        onFav: () => _toggleFavorite(_filtered[i]),
-                      ),
-                      childCount: _filtered.length,
+                      (_, i) {
+                        final sortedKeys = _sortedKeys(groups);
+                        final key = sortedKeys[i];
+                        return _CategoryCard(
+                          title: key,
+                          count: groups[key]!.length,
+                          isFav: _favGenres.contains(key),
+                          onTap: () => _onGenreSelect(key),
+                        );
+                      },
+                      childCount: groups.length,
                     ),
-                  ),
-                )
-              else
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (ctx, i) {
-                      final sortedKeys = _sortedKeys(groups);
-                      final key = sortedKeys[i];
-                      return RepaintBoundary(child: _CategoryRow(
-                        title: key,
-                        channels: groups[key]!,
-                        favorites: _favorites,
-                        isFavGenre: _favGenres.contains(key),
-                        onTap: _openPlayer,
-                        onFav: _toggleFavorite,
-                        onToggleFavGenre: () => _toggleFavGenre(key),
-                        onTitleTap: () => _onGenreSelect(key),
-                      ));
-                    },
-                    childCount: groups.length,
                   ),
                 ),
 
@@ -380,22 +395,40 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode v, IconData icon, String label) {
+    final selected = _viewMode == v;
+    return PopupMenuItem(
+      value: v,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(
+            color: selected ? _C.accent : Colors.white,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+          )),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── App Bar (glassmorphism) ──────────────────────────────────────────────────
 class _AppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool searchVisible;
-  final bool gridView;
+  final ViewMode viewMode;
   final TextEditingController searchCtrl;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onToggleSearch;
-  final VoidCallback onToggleView;
+  final ValueChanged<ViewMode> onToggleView;
   final VoidCallback onOpenDrawer;
   final VoidCallback onAccount;
 
   const _AppBar({
     required this.searchVisible,
-    required this.gridView,
+    required this.viewMode,
     required this.searchCtrl,
     required this.onSearchChanged,
     required this.onToggleSearch,
@@ -447,9 +480,18 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
                 onTap: onToggleSearch,
               ),
               const SizedBox(width: 4),
-              _AppBarIcon(
-                icon: gridView ? Icons.list_alt_rounded : Icons.grid_view_rounded,
-                onTap: onToggleView,
+              PopupMenuButton<ViewMode>(
+                icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
+                tooltip: 'Mode d\'affichage',
+                backgroundColor: const Color(0xFF160B25),
+                offset: const Offset(0, 50),
+                onSelected: onToggleView,
+                itemBuilder: (_) => [
+                  _buildPopupItem(context, ViewMode.themes, Icons.list_alt_rounded, 'Thèmes (Liste)'),
+                  _buildPopupItem(context, ViewMode.gridSmall, Icons.grid_view_rounded, 'Grille (Petite)'),
+                  _buildPopupItem(context, ViewMode.gridMedium, Icons.grid_view_rounded, 'Grille (Moyenne)'),
+                  _buildPopupItem(context, ViewMode.gridLarge, Icons.grid_view_rounded, 'Grille (Grande)'),
+                ],
               ),
               const SizedBox(width: 4),
               GestureDetector(
@@ -467,6 +509,24 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  PopupMenuItem<ViewMode> _buildPopupItem(BuildContext context, ViewMode v, IconData icon, String label) {
+    final selected = viewMode == v;
+    return PopupMenuItem(
+      value: v,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(
+            color: selected ? _C.accent : Colors.white,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+          )),
+        ],
       ),
     );
   }
@@ -1120,6 +1180,93 @@ class _ErrorView extends StatelessWidget {
               label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryCard extends StatelessWidget {
+  final String title;
+  final int count;
+  final bool isFav;
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.title,
+    required this.count,
+    required this.isFav,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _C.bgCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _C.bgCard,
+                isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235),
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isFav ? _C.accent : const Color(0xFF2D1B4E),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "$count chaîne${count > 1 ? 's' : ''}",
+                      style: TextStyle(
+                        color: isFav ? _C.glow : _C.txtSub,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
+            ],
+          ),
         ),
       ),
     );

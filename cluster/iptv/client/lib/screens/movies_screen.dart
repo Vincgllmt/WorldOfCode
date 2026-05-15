@@ -28,6 +28,8 @@ class MoviesScreen extends StatefulWidget {
   State<MoviesScreen> createState() => _MoviesScreenState();
 }
 
+enum ViewMode { themes, gridSmall, gridMedium, gridLarge }
+
 class _MoviesScreenState extends State<MoviesScreen> {
   final ApiService _api = ApiService();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -39,7 +41,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
-  bool    _gridView      = false;
+  ViewMode _viewMode     = ViewMode.gridMedium;
   final   _searchCtrl    = TextEditingController();
 
   @override
@@ -263,45 +265,60 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 const SliverFillRemaining(
                   child: Center(child: Text('Aucun résultat.', style: TextStyle(color: _C.txtSub))),
                 )
-              else if (_selectedGenre != null || _gridView)
-                // Grid view (forced for genre, or selected by user)
+              else if (_selectedGenre != null || _viewMode != ViewMode.themes)
+                // Grid view with dynamic sizing
+                () {
+                  double maxExtent = 150;
+                  double aspectRatio = 130 / 230;
+                  if (_viewMode == ViewMode.gridSmall) { maxExtent = 110; aspectRatio = 100 / 180; }
+                  if (_viewMode == ViewMode.gridLarge) { maxExtent = 220; aspectRatio = 200 / 320; }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: maxExtent,
+                        mainAxisSpacing: 20,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: aspectRatio,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (_, i) => _PosterCard(
+                          name: _filtered[i].name,
+                          cover: _filtered[i].cover,
+                          rating: _filtered[i].rating,
+                          width: maxExtent,
+                          onTap: () => _open(_filtered[i]),
+                        ),
+                        childCount: _filtered.length,
+                      ),
+                    ),
+                  );
+                }()
+              else
+                // ViewMode.themes: List of categories (Themes)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 150,
-                      mainAxisSpacing: 20,
-                      crossAxisSpacing: 4,
-                      childAspectRatio: 130 / 230,
+                      maxCrossAxisExtent: 300,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 3 / 1,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, i) => _PosterCard(
-                        name: _filtered[i].name,
-                        cover: _filtered[i].cover,
-                        rating: _filtered[i].rating,
-                        width: 130,
-                        onTap: () => _open(_filtered[i]),
-                      ),
-                      childCount: _filtered.length,
+                      (_, i) {
+                        final sortedKeys = _sortedKeys(groups);
+                        final key = sortedKeys[i];
+                        return _CategoryCard(
+                          title: key,
+                          count: groups[key]!.length,
+                          isFav: _favGenres.contains(key),
+                          onTap: () => _onGenreSelect(key),
+                        );
+                      },
+                      childCount: groups.length,
                     ),
-                  ),
-                )
-              else
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) {
-                      final sortedKeys = _sortedKeys(groups);
-                      final key = sortedKeys[i];
-                      return _GenreRow(
-                        title: key,
-                        movies: groups[key]!,
-                        isFav: _favGenres.contains(key),
-                        onTap: _open,
-                        onFavToggle: () => _toggleFavGenre(key),
-                        onTitleTap: () => _onGenreSelect(key),
-                      );
-                    },
-                    childCount: groups.length,
                   ),
                 ),
 
@@ -309,6 +326,24 @@ class _MoviesScreenState extends State<MoviesScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode v, IconData icon, String label) {
+    final selected = _viewMode == v;
+    return PopupMenuItem(
+      value: v,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(
+            color: selected ? _C.accent : Colors.white,
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+          )),
+        ],
       ),
     );
   }
@@ -356,9 +391,18 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   }),
                 ),
                 const SizedBox(width: 4),
-                _IconBtn(
-                  icon: _gridView ? Icons.list_alt_rounded : Icons.grid_view_rounded,
-                  onTap: () => setState(() => _gridView = !_gridView),
+                PopupMenuButton<ViewMode>(
+                  icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
+                  tooltip: 'Mode d\'affichage',
+                  backgroundColor: const Color(0xFF160B25),
+                  offset: const Offset(0, 50),
+                  onSelected: (v) => setState(() => _viewMode = v),
+                  itemBuilder: (_) => [
+                    _buildPopupItem(ViewMode.themes, Icons.list_alt_rounded, 'Thèmes (Liste)'),
+                    _buildPopupItem(ViewMode.gridSmall, Icons.grid_view_rounded, 'Grille (Petite)'),
+                    _buildPopupItem(ViewMode.gridMedium, Icons.grid_view_rounded, 'Grille (Moyenne)'),
+                    _buildPopupItem(ViewMode.gridLarge, Icons.grid_view_rounded, 'Grille (Grande)'),
+                  ],
                 ),
                 const SizedBox(width: 4),
                 GestureDetector(
@@ -677,4 +721,91 @@ class _ErrorView extends StatelessWidget {
       ]),
     ),
   );
+}
+
+class _CategoryCard extends StatelessWidget {
+  final String title;
+  final int count;
+  final bool isFav;
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.title,
+    required this.count,
+    required this.isFav,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _C.bgCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _C.bgCard,
+                isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235),
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isFav ? _C.accent : const Color(0xFF2D1B4E),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isFav ? Icons.bookmark_rounded : Icons.folder_open_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "$count film${count > 1 ? 's' : ''}",
+                      style: TextStyle(
+                        color: isFav ? _C.glow : _C.txtSub,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
