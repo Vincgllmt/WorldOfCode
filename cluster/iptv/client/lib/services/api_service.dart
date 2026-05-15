@@ -13,7 +13,17 @@ class ApiService {
   // In-memory cache so we don't hit secure storage on every request.
   static Credentials? _creds;
 
-  static void invalidateCache() => _creds = null;
+  // In-memory data cache
+  static List<Channel>? _channelsCache;
+  static List<Movie>? _moviesCache;
+  static List<SeriesItem>? _seriesCache;
+
+  static void invalidateCache() {
+    _creds = null;
+    _channelsCache = null;
+    _moviesCache = null;
+    _seriesCache = null;
+  }
 
   Future<Map<String, String>> _headers() async {
     _creds ??= await CredentialsService.load();
@@ -38,20 +48,26 @@ class ApiService {
     return res.statusCode == 200;
   }
 
-  Future<List<Channel>> fetchChannels() async {
+  Future<List<Channel>> fetchChannels({bool forceRefresh = false}) async {
+    if (!forceRefresh && _channelsCache != null) return _channelsCache!;
+
     final res = await http.get(Uri.parse('$_base/channels'), headers: await _headers());
     if (res.statusCode == 200) {
       final List<dynamic> data = json.decode(utf8.decode(res.bodyBytes));
-      return data.map((j) => Channel.fromJson(j as Map<String, dynamic>)).toList();
+      _channelsCache = data.map((j) => Channel.fromJson(j as Map<String, dynamic>)).toList();
+      return _channelsCache!;
     }
     throw Exception('Erreur serveur: ${res.statusCode}');
   }
 
-  Future<List<Movie>> fetchMovies() async {
+  Future<List<Movie>> fetchMovies({bool forceRefresh = false}) async {
+    if (!forceRefresh && _moviesCache != null) return _moviesCache!;
+
     final res = await http.get(Uri.parse('$_base/movies'), headers: await _headers());
     if (res.statusCode == 200) {
       final List<dynamic> data = json.decode(utf8.decode(res.bodyBytes));
-      return data.map((j) => Movie.fromJson(j as Map<String, dynamic>)).toList();
+      _moviesCache = data.map((j) => Movie.fromJson(j as Map<String, dynamic>)).toList();
+      return _moviesCache!;
     }
     throw Exception('Erreur serveur: ${res.statusCode}');
   }
@@ -64,11 +80,14 @@ class ApiService {
     throw Exception('Erreur serveur: ${res.statusCode}');
   }
 
-  Future<List<SeriesItem>> fetchSeries() async {
+  Future<List<SeriesItem>> fetchSeries({bool forceRefresh = false}) async {
+    if (!forceRefresh && _seriesCache != null) return _seriesCache!;
+
     final res = await http.get(Uri.parse('$_base/series'), headers: await _headers());
     if (res.statusCode == 200) {
       final List<dynamic> data = json.decode(utf8.decode(res.bodyBytes));
-      return data.map((j) => SeriesItem.fromJson(j as Map<String, dynamic>)).toList();
+      _seriesCache = data.map((j) => SeriesItem.fromJson(j as Map<String, dynamic>)).toList();
+      return _seriesCache!;
     }
     throw Exception('Erreur serveur: ${res.statusCode}');
   }

@@ -61,8 +61,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
     super.dispose();
   }
 
-  Future<List<Movie>> _load() async {
-    final movies = await _api.fetchMovies();
+  Future<List<Movie>> _load({bool force = false}) async {
+    final movies = await _api.fetchMovies(forceRefresh: force);
     if (mounted) setState(() { _all = movies; _filtered = movies; });
     return movies;
   }
@@ -199,48 +199,53 @@ class _MoviesScreenState extends State<MoviesScreen> {
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
 
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
-              if (_selectedGenre != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Row(children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedGenre = null),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                          ]),
+          return RefreshIndicator(
+            onRefresh: () => _load(force: true),
+            color: _C.accent,
+            backgroundColor: _C.bgCard,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+                if (_selectedGenre != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Row(children: [
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedGenre = null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
+                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                            ]),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(_selectedGenre!.toUpperCase(), style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    ]),
+                        const SizedBox(width: 16),
+                        Text(_selectedGenre!.toUpperCase(), style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      ]),
+                    ),
                   ),
-                ),
-              if (_query.isNotEmpty)
-                ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
-              else if (_viewMode == ViewMode.themes && _selectedGenre == null)
-                _buildThemesGrid(groups, sortedKeys)
-              else if (_selectedGenre != null)
-                ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-              else if (_viewMode == ViewMode.gridMedium)
-                for (final key in sortedKeys)
-                  SliverToBoxAdapter(child: _GenreRow(
-                    title: key, movies: groups[key]!, isFav: _favGenres.contains(key),
-                    onTap: _open, onFavToggle: () => _toggleFavGenre(key),
-                    onTitleTap: () => setState(() => _selectedGenre = key),
-                  ))
-              else
-                for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-            ],
+                if (_query.isNotEmpty)
+                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                  _buildThemesGrid(groups, sortedKeys)
+                else if (_selectedGenre != null)
+                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                else if (_viewMode == ViewMode.gridMedium)
+                  for (final key in sortedKeys)
+                    SliverToBoxAdapter(child: _GenreRow(
+                      title: key, movies: groups[key]!, isFav: _favGenres.contains(key),
+                      onTap: _open, onFavToggle: () => _toggleFavGenre(key),
+                      onTitleTap: () => setState(() => _selectedGenre = key),
+                    ))
+                else
+                  for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+              ],
+            ),
           );
         },
       ),
@@ -373,7 +378,7 @@ class _GenreRow extends StatelessWidget {
         ]))),
         GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: 247, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), addAutomaticKeepAlives: false, itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]))))),
+      SizedBox(height: 247, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]))))),
     ]);
   }
 }

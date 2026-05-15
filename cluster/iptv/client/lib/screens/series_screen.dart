@@ -58,8 +58,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
     super.dispose();
   }
 
-  Future<List<SeriesItem>> _load() async {
-    final series = await _api.fetchSeries();
+  Future<List<SeriesItem>> _load({bool force = false}) async {
+    final series = await _api.fetchSeries(forceRefresh: force);
     if (mounted) setState(() { _all = series; _filtered = series; });
     return series;
   }
@@ -209,68 +209,73 @@ class _SeriesScreenState extends State<SeriesScreen> {
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
 
-          return CustomScrollView(
-            slivers: [
-              // Increased spacer at the top to clear the AppBar (70px + status bar)
-              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+          return RefreshIndicator(
+            onRefresh: () => _load(force: true),
+            color: _C.accent,
+            backgroundColor: _C.bgCard,
+            child: CustomScrollView(
+              slivers: [
+                // Increased spacer at the top to clear the AppBar (70px + status bar)
+                SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
 
-              // Active genre badge / Back button
-              if (_selectedGenre != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Row(children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedGenre = null),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _C.accent.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _C.accent),
-                          ),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                          ]),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(_selectedGenre!.toUpperCase(), 
-                        style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    ]),
-                  ),
-                ),
-
-              if (_query.isNotEmpty)
-                ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
-              else if (_viewMode == ViewMode.themes && _selectedGenre == null)
-                // Mode Thèmes uniquement
-                _buildThemesGrid(groups, sortedKeys)
-              else if (_selectedGenre != null)
-                // Un seul thème sélectionné
-                ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-              else if (_viewMode == ViewMode.gridMedium)
-                // Mode Images normal : On laisse les thèmes en lignes !
-                for (final key in sortedKeys)
+                // Active genre badge / Back button
+                if (_selectedGenre != null)
                   SliverToBoxAdapter(
-                    child: _GenreRow(
-                      title: key,
-                      items: groups[key]!,
-                      isFav: _favGenres.contains(key),
-                      onTap: _open,
-                      onFavToggle: () => _toggleFavGenre(key),
-                      onTitleTap: () => setState(() => _selectedGenre = key),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Row(children: [
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedGenre = null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _C.accent.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _C.accent),
+                            ),
+                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                            ]),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(_selectedGenre!.toUpperCase(), 
+                          style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      ]),
                     ),
-                  )
-              else
-                // Mode Grille (Small/Large) : On affiche par thèmes mais en grille !
-                for (final key in sortedKeys)
-                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+                  ),
 
-              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-            ],
+                if (_query.isNotEmpty)
+                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                  // Mode Thèmes uniquement
+                  _buildThemesGrid(groups, sortedKeys)
+                else if (_selectedGenre != null)
+                  // Un seul thème sélectionné
+                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                else if (_viewMode == ViewMode.gridMedium)
+                  // Mode Images normal : On laisse les thèmes en lignes !
+                  for (final key in sortedKeys)
+                    SliverToBoxAdapter(
+                      child: _GenreRow(
+                        title: key,
+                        items: groups[key]!,
+                        isFav: _favGenres.contains(key),
+                        onTap: _open,
+                        onFavToggle: () => _toggleFavGenre(key),
+                        onTitleTap: () => setState(() => _selectedGenre = key),
+                      ),
+                    )
+                else
+                  // Mode Grille (Small/Large) : On affiche par thèmes mais en grille !
+                  for (final key in sortedKeys)
+                    ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+
+                const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+              ],
+            ),
           );
         },
       ),
@@ -519,7 +524,6 @@ class _GenreRow extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            addAutomaticKeepAlives: false,
             itemCount: items.length,
             itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(
               name: items[i].name,

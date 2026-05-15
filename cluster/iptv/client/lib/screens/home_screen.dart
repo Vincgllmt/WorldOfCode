@@ -69,8 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<List<Channel>> _loadChannels() async {
-    final channels = await _api.fetchChannels();
+  Future<List<Channel>> _loadChannels({bool force = false}) async {
+    final channels = await _api.fetchChannels(forceRefresh: force);
     if (mounted) setState(() { _allChannels = channels; _filtered = channels; });
     return channels;
   }
@@ -222,54 +222,59 @@ class _HomeScreenState extends State<HomeScreen> {
           final sortedKeys = _sortedKeys(groups);
           final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
 
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
-              if (_selectedGenre != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Row(children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedGenre = null),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                          ]),
+          return RefreshIndicator(
+            onRefresh: () => _loadChannels(force: true),
+            color: _C.accent,
+            backgroundColor: _C.bgCard,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+                if (_selectedGenre != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Row(children: [
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedGenre = null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
+                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                            ]),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(_selectedGenre!.toUpperCase(), style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    ]),
+                        const SizedBox(width: 16),
+                        Text(_selectedGenre!.toUpperCase(), style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      ]),
+                    ),
                   ),
-                ),
-              if (_query.isEmpty && favChannels.isNotEmpty && _selectedGenre == null && _viewMode == ViewMode.gridMedium)
-                SliverToBoxAdapter(child: _CategoryRow(
-                  title: '★  Mes Favoris', channels: favChannels, favorites: _favorites,
-                  onTap: _openPlayer, onFav: _toggleFavorite, isAccent: true,
-                )),
-              if (_query.isNotEmpty)
-                ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
-              else if (_viewMode == ViewMode.themes && _selectedGenre == null)
-                _buildThemesGrid(groups, sortedKeys)
-              else if (_selectedGenre != null)
-                ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-              else if (_viewMode == ViewMode.gridMedium)
-                for (final key in sortedKeys)
+                if (_query.isEmpty && favChannels.isNotEmpty && _selectedGenre == null && _viewMode == ViewMode.gridMedium)
                   SliverToBoxAdapter(child: _CategoryRow(
-                    title: key, channels: groups[key]!, favorites: _favorites, onTap: _openPlayer,
-                    onFav: _toggleFavorite, isFavGenre: _favGenres.contains(key),
-                    onToggleFavGenre: () => _toggleFavGenre(key),
-                    onTitleTap: () => setState(() => _selectedGenre = key),
-                  ))
-              else
-                for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-            ],
+                    title: '★  Mes Favoris', channels: favChannels, favorites: _favorites,
+                    onTap: _openPlayer, onFav: _toggleFavorite, isAccent: true,
+                  )),
+                if (_query.isNotEmpty)
+                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                  _buildThemesGrid(groups, sortedKeys)
+                else if (_selectedGenre != null)
+                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                else if (_viewMode == ViewMode.gridMedium)
+                  for (final key in sortedKeys)
+                    SliverToBoxAdapter(child: _CategoryRow(
+                      title: key, channels: groups[key]!, favorites: _favorites, onTap: _openPlayer,
+                      onFav: _toggleFavorite, isFavGenre: _favGenres.contains(key),
+                      onToggleFavGenre: () => _toggleFavGenre(key),
+                      onTitleTap: () => setState(() => _selectedGenre = key),
+                    ))
+                else
+                  for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+              ],
+            ),
           );
         },
       ),
@@ -450,7 +455,7 @@ class _CategoryRow extends StatelessWidget {
         ]))),
         if (onToggleFavGenre != null) GestureDetector(onTap: onToggleFavGenre, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFavGenre ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFavGenre ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: 185, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), addAutomaticKeepAlives: false, itemCount: channels.length, itemBuilder: (_, i) => RepaintBoundary(child: _ChannelCard(channel: channels[i], isFavorite: favorites.contains(channels[i].url), onTap: () => onTap(channels[i]), onFav: () => onFav(channels[i]))))),
+      SizedBox(height: 185, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: channels.length, itemBuilder: (_, i) => RepaintBoundary(child: _ChannelCard(channel: channels[i], isFavorite: favorites.contains(channels[i].url), onTap: () => onTap(channels[i]), onFav: () => onFav(channels[i]))))),
     ]);
   }
 }
