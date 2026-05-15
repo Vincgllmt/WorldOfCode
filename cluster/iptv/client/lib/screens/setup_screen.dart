@@ -105,7 +105,11 @@ class _SetupScreenState extends State<SetupScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Huge Logo
-                  const BrandLogo(fontSize: 80, showSubtitle: false, centered: true),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 120,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(height: 24),
                   
                   // Styled encadré for "JOGA BONITO IPTV"
