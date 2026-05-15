@@ -72,6 +72,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return channels;
   }
 
+  Map<String, List<Channel>>? _cachedGroups;
+  List<String>? _cachedSortedKeys;
+
   void _applyFilters() {
     setState(() {
       var result = _allChannels;
@@ -86,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ).toList();
       }
       _filtered = result;
+      _cachedGroups = null;
+      _cachedSortedKeys = null;
     });
   }
 
@@ -121,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         _favGenres.add(genre);
       }
+      _cachedSortedKeys = null;
     });
     GenreFavoritesService.save('live', _favGenres);
   }
@@ -137,17 +143,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<String, List<Channel>> _grouped(List<Channel> channels) {
+    if (_cachedGroups != null) return _cachedGroups!;
     final Map<String, List<Channel>> m = {};
     for (final ch in channels) {
       (m[ch.group ?? 'Autres'] ??= []).add(ch);
     }
+    _cachedGroups = m;
     return m;
   }
 
   List<String> _sortedKeys(Map<String, List<Channel>> groups) {
+    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
     final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
     final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    return [...fav, ...other];
+    _cachedSortedKeys = [...fav, ...other];
+    return _cachedSortedKeys!;
+  }
   }
 
   void _openPlayer(Channel ch) {

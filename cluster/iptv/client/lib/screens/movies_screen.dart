@@ -64,6 +64,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return movies;
   }
 
+  Map<String, List<Movie>>? _cachedGroups;
+  List<String>? _cachedSortedKeys;
+
   void _applyFilters() {
     setState(() {
       var result = _all;
@@ -78,6 +81,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
         ).toList();
       }
       _filtered = result;
+      _cachedGroups = null;
+      _cachedSortedKeys = null;
     });
   }
 
@@ -107,24 +112,29 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Map<String, List<Movie>> _grouped(List<Movie> movies) {
+    if (_cachedGroups != null) return _cachedGroups!;
     final m = <String, List<Movie>>{};
     for (final mv in movies) {
       (m[mv.group ?? 'Autres'] ??= []).add(mv);
     }
+    _cachedGroups = m;
     return m;
   }
 
   void _toggleFavGenre(String genre) {
     setState(() {
       if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
+      _cachedSortedKeys = null;
     });
     GenreFavoritesService.save('films', _favGenres);
   }
 
   List<String> _sortedKeys(Map<String, List<Movie>> groups) {
+    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
     final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
     final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    return [...fav, ...other];
+    _cachedSortedKeys = [...fav, ...other];
+    return _cachedSortedKeys!;
   }
 
   void _open(Movie m) {

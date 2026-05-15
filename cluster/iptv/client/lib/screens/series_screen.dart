@@ -64,6 +64,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return series;
   }
 
+  Map<String, List<SeriesItem>>? _cachedGroups;
+  List<String>? _cachedSortedKeys;
+
   void _applyFilters() {
     setState(() {
       var result = _all;
@@ -78,6 +81,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
         ).toList();
       }
       _filtered = result;
+      _cachedGroups = null;
+      _cachedSortedKeys = null;
     });
   }
 
@@ -107,24 +112,29 @@ class _SeriesScreenState extends State<SeriesScreen> {
   }
 
   Map<String, List<SeriesItem>> _grouped(List<SeriesItem> items) {
+    if (_cachedGroups != null) return _cachedGroups!;
     final m = <String, List<SeriesItem>>{};
     for (final s in items) {
       (m[s.group ?? 'Autres'] ??= []).add(s);
     }
+    _cachedGroups = m;
     return m;
   }
 
   void _toggleFavGenre(String genre) {
     setState(() {
       if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
+      _cachedSortedKeys = null;
     });
     GenreFavoritesService.save('series', _favGenres);
   }
 
   List<String> _sortedKeys(Map<String, List<SeriesItem>> groups) {
+    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
     final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
     final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    return [...fav, ...other];
+    _cachedSortedKeys = [...fav, ...other];
+    return _cachedSortedKeys!;
   }
 
   void _open(SeriesItem s) {
