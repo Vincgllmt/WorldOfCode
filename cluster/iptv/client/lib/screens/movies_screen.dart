@@ -623,6 +623,7 @@ class _PosterCardState extends State<_PosterCard> {
       return CachedNetworkImage(
         imageUrl: widget.cover!,
         fit: BoxFit.cover,
+        memCacheWidth: 250, // Optimize memory for vertical posters
         placeholder: (_, __) => _shimmer(),
         errorWidget: (_, __, ___) => _fallback(),
       );
@@ -835,6 +836,10 @@ class _CategoryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
   }
 }
 

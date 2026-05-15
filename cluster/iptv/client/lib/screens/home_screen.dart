@@ -842,6 +842,7 @@ class _ChannelCardState extends State<_ChannelCard> {
       return CachedNetworkImage(
         imageUrl: logo,
         fit: BoxFit.cover,
+        memCacheWidth: 400, // Optimize memory for thumbnails
         placeholder: (_, __) => _shimmer(),
         errorWidget: (_, __, ___) => _fallback(),
       );
@@ -1048,6 +1049,10 @@ class _CategoryCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
     );
   }
 }

@@ -592,17 +592,18 @@ class _PosterCardState extends State<_PosterCard> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildCover() {
-    if (widget.cover != null && widget.cover!.isNotEmpty) {
-      return CachedNetworkImage(imageUrl: widget.cover!, fit: BoxFit.cover,
-        placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
+    Widget _buildCover() {
+      if (widget.cover != null && widget.cover!.isNotEmpty) {
+        return CachedNetworkImage(
+          imageUrl: widget.cover!,
+          fit: BoxFit.cover,
+          memCacheWidth: 250, // Optimize memory for vertical posters
+          placeholder: (_, __) => _shimmer(),
+          errorWidget: (_, __, ___) => _fallback(),
+        );
+      }
+      return _fallback();
     }
-    return _fallback();
-  }
-
   Widget _shimmer() => Container(color: _C.bgCard,
     child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))));
 
