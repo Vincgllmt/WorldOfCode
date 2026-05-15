@@ -107,7 +107,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   // Huge Logo
                   Image.asset(
                     'assets/images/logo.png',
-                    height: 120,
+                    height: 240,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 24),
