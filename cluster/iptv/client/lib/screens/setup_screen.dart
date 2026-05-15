@@ -12,8 +12,9 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  static const _bg     = Color(0xFF0C0714);
-  static const _bgCard = Color(0xFF160B25);
+  // Background éclairci vers le violet (0xFF160B25 au lieu de 0xFF0C0714)
+  static const _bg     = Color(0xFF160B25);
+  static const _bgCard = Color(0xFF1F1235);
   static const _accent = Color(0xFF9D4EDD);
   static const _txt    = Color(0xFFFFFFFF);
   static const _txtSub = Color(0xFFB0AEC8);
@@ -97,19 +98,38 @@ class _SetupScreenState extends State<SetupScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
+              constraints: const BoxConstraints(maxWidth: 500),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo
-                  const SizedBox(height: 16),
-                  const Center(child: BrandLogo(fontSize: 64)),
-                  const SizedBox(height: 12),
+                  // Huge Logo
+                  const BrandLogo(fontSize: 80, showSubtitle: false, centered: true),
+                  const SizedBox(height: 24),
+                  
+                  // Styled encadré for "JOGA BONITO IPTV"
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9D4EDD).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFBB86FC).withValues(alpha: 0.3), width: 1.5),
+                    ),
+                    child: const Text(
+                      'JOGA BONITO IPTV',
+                      style: TextStyle(
+                        color: Color(0xFFBB86FC),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 48),
                   const Text(
-                    'Entrez votre abonnement IPTV\npour accéder à votre catalogue.',
+                    'Entrez votre abonnement IPTV pour accéder à votre catalogue.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: _txtSub, fontSize: 14, height: 1.5),
                   ),
@@ -117,10 +137,10 @@ class _SetupScreenState extends State<SetupScreen> {
 
                   // Mode toggle
                   Container(
-                    height: 42,
+                    height: 46,
                     decoration: BoxDecoration(
                       color: _bgCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: _border),
                     ),
                     child: Row(children: [
@@ -130,7 +150,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         onTap: () => setState(() { _manualMode = true;  _error = null; })),
                     ]),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // Fields
                   if (!_manualMode) ...[
@@ -141,11 +161,6 @@ class _SetupScreenState extends State<SetupScreen> {
                       icon: Icons.link_rounded,
                       onSubmitted: (_) => _submit(),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Collez le lien fourni par votre opérateur IPTV.',
-                      style: TextStyle(color: _txtSub.withValues(alpha: 0.6), fontSize: 12),
-                    ),
                   ] else ...[
                     _Field(
                       ctrl: _hostCtrl,
@@ -153,14 +168,14 @@ class _SetupScreenState extends State<SetupScreen> {
                       label: 'Serveur',
                       icon: Icons.dns_rounded,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _Field(
                       ctrl: _userCtrl,
                       hint: 'Identifiant',
                       label: 'Utilisateur',
                       icon: Icons.person_rounded,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _Field(
                       ctrl: _passCtrl,
                       hint: 'Mot de passe',
@@ -178,14 +193,26 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                   ],
 
+                  // Collez le lien info
+                  if (!_manualMode) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '  Collez le lien fourni par votre opérateur IPTV.',
+                        style: TextStyle(color: _txtSub.withValues(alpha: 0.6), fontSize: 11),
+                      ),
+                    ),
+                  ],
+
                   // Error
                   if (_error != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: _err.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: _err.withValues(alpha: 0.4)),
                       ),
                       child: Text(_error!,
@@ -193,28 +220,29 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                   ],
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 36),
 
                   // Submit button
                   SizedBox(
-                    height: 50,
+                    height: 54,
+                    width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accent,
                         foregroundColor: _txt,
                         disabledBackgroundColor: _accent.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                       child: _loading
-                        ? const SizedBox(width: 22, height: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                        ? const SizedBox(width: 24, height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                         : const Text('Vérifier et continuer',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -241,18 +269,18 @@ class _Tab extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: active ? const Color(0x339D4EDD) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: active ? _accent : Colors.transparent),
         ),
         alignment: Alignment.center,
         child: Text(label, style: TextStyle(
           color: active ? _glow : _txtSub,
           fontSize: 13,
-          fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+          fontWeight: active ? FontWeight.w800 : FontWeight.w500,
         )),
       ),
     ),
@@ -273,7 +301,7 @@ class _Field extends StatelessWidget {
     this.obscure = false, this.suffix, this.onSubmitted,
   });
 
-  static const _bgCard = Color(0xFF160B25);
+  static const _bgCard = Color(0xFF1F1235);
   static const _accent = Color(0xFF9D4EDD);
   static const _txt    = Color(0xFFFFFFFF);
   static const _txtSub = Color(0xFFB0AEC8);
@@ -289,15 +317,15 @@ class _Field extends StatelessWidget {
       labelText: label,
       labelStyle: const TextStyle(color: _txtSub, fontSize: 13),
       hintText: hint,
-      hintStyle: TextStyle(color: _txtSub.withValues(alpha: 0.4), fontSize: 12),
-      prefixIcon: Icon(icon, color: _accent, size: 18),
+      hintStyle: TextStyle(color: _txtSub.withValues(alpha: 0.3), fontSize: 12),
+      prefixIcon: Icon(icon, color: _accent, size: 20),
       suffixIcon: suffix,
       filled: true,
       fillColor: _bgCard,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _accent, width: 1.5)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _accent, width: 2.0)),
     ),
   );
 }

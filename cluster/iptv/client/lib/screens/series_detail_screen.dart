@@ -6,8 +6,8 @@ import '../services/api_service.dart';
 import 'player_screen.dart';
 
 class _C {
-  static const bg     = Color(0xFF0C0714);
-  static const card   = Color(0xFF160B25);
+  static const bg     = Color(0xFF160B25);
+  static const card   = Color(0xFF1F1235);
   static const accent = Color(0xFF9D4EDD);
   static const glow   = Color(0xFFBB86FC);
   static const txtSub = Color(0xFFB0AEC8);
