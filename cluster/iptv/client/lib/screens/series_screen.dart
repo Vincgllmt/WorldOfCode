@@ -261,10 +261,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
           );
-
-              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-            ],
-          );
         },
       ),
     );
