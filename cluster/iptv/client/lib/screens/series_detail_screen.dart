@@ -72,10 +72,6 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           final sortedSeasons = detail!.seasons.keys.toList()
             ..sort((a, b) => int.tryParse(a)!.compareTo(int.tryParse(b)!));
 
-          if (_expandedSeason == -1 && sortedSeasons.isNotEmpty) {
-            _expandedSeason = int.tryParse(sortedSeasons.first) ?? 1;
-          }
-
           return CustomScrollView(
             slivers: [
               // Cover + back button

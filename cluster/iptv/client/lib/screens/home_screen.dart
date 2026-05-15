@@ -262,16 +262,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildThemesGrid(groups, sortedKeys)
                 else if (_selectedGenre != null)
                   ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-                else if (_viewMode == ViewMode.gridMedium)
+                else
                   for (final key in sortedKeys)
                     SliverToBoxAdapter(child: _CategoryRow(
                       title: key, channels: groups[key]!, favorites: _favorites, onTap: _openPlayer,
                       onFav: _toggleFavorite, isFavGenre: _favGenres.contains(key),
                       onToggleFavGenre: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
+                      viewMode: _viewMode,
                     ))
-                else
-                  for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
             ),
@@ -285,10 +284,10 @@ class _HomeScreenState extends State<HomeScreen> {
     double maxExtent = 270;
     double aspectRatio = 264 / 185;
     switch (_viewMode) {
-      case ViewMode.gridSmall: maxExtent = 180; aspectRatio = 160 / 120; break;
-      case ViewMode.gridMedium: maxExtent = 270; aspectRatio = 264 / 185; break;
-      case ViewMode.gridLarge: maxExtent = 400; aspectRatio = 380 / 240; break;
-      default: maxExtent = 270; aspectRatio = 264 / 185;
+      case ViewMode.gridSmall: maxExtent = 180; break;
+      case ViewMode.gridMedium: maxExtent = 270; break;
+      case ViewMode.gridLarge: maxExtent = 380; break;
+      default: maxExtent = 270;
     }
     return [
       if (showTitle && title != null)
@@ -439,11 +438,16 @@ class _CategoryRow extends StatelessWidget {
   final bool isFavGenre;
   final VoidCallback? onToggleFavGenre;
   final VoidCallback? onTitleTap;
+  final ViewMode viewMode;
 
-  const _CategoryRow({required this.title, required this.channels, required this.favorites, required this.onTap, required this.onFav, this.isAccent = false, this.isFavGenre = false, this.onToggleFavGenre, this.onTitleTap});
+  const _CategoryRow({required this.title, required this.channels, required this.favorites, required this.onTap, required this.onFav, this.isAccent = false, this.isFavGenre = false, this.onToggleFavGenre, this.onTitleTap, this.viewMode = ViewMode.gridMedium});
 
   @override
   Widget build(BuildContext context) {
+    double rowHeight = 185;
+    if (viewMode == ViewMode.gridSmall) rowHeight = 125;
+    if (viewMode == ViewMode.gridLarge) rowHeight = 265;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 28, 12, 10), child: Row(children: [
         if (isAccent) Container(width: 3, height: 18, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2))),
@@ -455,7 +459,7 @@ class _CategoryRow extends StatelessWidget {
         ]))),
         if (onToggleFavGenre != null) GestureDetector(onTap: onToggleFavGenre, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFavGenre ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFavGenre ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: 185, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: channels.length, itemBuilder: (_, i) => RepaintBoundary(child: _ChannelCard(channel: channels[i], isFavorite: favorites.contains(channels[i].url), onTap: () => onTap(channels[i]), onFav: () => onFav(channels[i]))))),
+      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: channels.length, itemBuilder: (_, i) => RepaintBoundary(child: _ChannelCard(channel: channels[i], isFavorite: favorites.contains(channels[i].url), onTap: () => onTap(channels[i]), onFav: () => onFav(channels[i]), viewMode: viewMode)))),
     ]);
   }
 }
@@ -465,7 +469,8 @@ class _ChannelCard extends StatefulWidget {
   final bool isFavorite;
   final VoidCallback onTap;
   final VoidCallback onFav;
-  const _ChannelCard({required this.channel, required this.isFavorite, required this.onTap, required this.onFav});
+  final ViewMode viewMode;
+  const _ChannelCard({required this.channel, required this.isFavorite, required this.onTap, required this.onFav, this.viewMode = ViewMode.gridMedium});
   @override
   State<_ChannelCard> createState() => _ChannelCardState();
 }
@@ -474,7 +479,11 @@ class _ChannelCardState extends State<_ChannelCard> {
   bool _hovered = false;
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: 248, margin: const EdgeInsets.symmetric(horizontal: 8), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    double w = 248;
+    if (widget.viewMode == ViewMode.gridSmall) w = 160;
+    if (widget.viewMode == ViewMode.gridLarge) w = 380;
+
+    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 8), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Stack(children: [
         AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
         Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _hovered || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),

@@ -255,7 +255,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 else if (_selectedGenre != null)
                   // Un seul thème sélectionné
                   ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-                else if (_viewMode == ViewMode.gridMedium)
+                else
                   // Mode Images normal : On laisse les thèmes en lignes !
                   for (final key in sortedKeys)
                     SliverToBoxAdapter(
@@ -266,12 +266,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         onTap: _open,
                         onFavToggle: () => _toggleFavGenre(key),
                         onTitleTap: () => setState(() => _selectedGenre = key),
+                        viewMode: _viewMode,
                       ),
                     )
-                else
-                  // Mode Grille (Small/Large) : On affiche par thèmes mais en grille !
-                  for (final key in sortedKeys)
-                    ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
 
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
@@ -289,19 +286,15 @@ class _SeriesScreenState extends State<SeriesScreen> {
     switch (_viewMode) {
       case ViewMode.gridSmall:
         maxExtent = 115;
-        aspectRatio = 100 / 170;
         break;
       case ViewMode.gridMedium:
         maxExtent = 155;
-        aspectRatio = 135 / 235;
         break;
       case ViewMode.gridLarge:
         maxExtent = 220;
-        aspectRatio = 200 / 310;
         break;
       default:
         maxExtent = 155;
-        aspectRatio = 135 / 235;
     }
 
     return [
@@ -476,17 +469,19 @@ class _GenreRow extends StatelessWidget {
   final void Function(SeriesItem) onTap;
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
-
-  static const double _cardH = 195;
-  static const double _rowH  = _cardH + 52;
+  final ViewMode viewMode;
 
   const _GenreRow({
     required this.title, required this.items, required this.onTap,
-    required this.isFav, required this.onFavToggle, required this.onTitleTap,
+    required this.isFav, required this.onFavToggle, required this.onTitleTap, required this.viewMode,
   });
 
   @override
   Widget build(BuildContext context) {
+    double rowHeight = 247;
+    if (viewMode == ViewMode.gridSmall) rowHeight = 195;
+    if (viewMode == ViewMode.gridLarge) rowHeight = 350;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -520,7 +515,7 @@ class _GenreRow extends StatelessWidget {
           ]),
         ),
         SizedBox(
-          height: _rowH,
+          height: rowHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -530,6 +525,7 @@ class _GenreRow extends StatelessWidget {
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => onTap(items[i]),
+              viewMode: viewMode,
             )),
           ),
         ),
@@ -543,10 +539,9 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final VoidCallback onTap;
+  final ViewMode viewMode;
 
-  static const double _w = 130;
-
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap});
+  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, required this.viewMode});
 
   @override
   State<_PosterCard> createState() => _PosterCardState();
@@ -557,6 +552,10 @@ class _PosterCardState extends State<_PosterCard> {
 
   @override
   Widget build(BuildContext context) {
+    double w = 130;
+    if (widget.viewMode == ViewMode.gridSmall) w = 100;
+    if (widget.viewMode == ViewMode.gridLarge) w = 180;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -564,7 +563,7 @@ class _PosterCardState extends State<_PosterCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          width: _PosterCard._w,
+          width: w,
           margin: const EdgeInsets.symmetric(horizontal: 6),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -577,7 +576,7 @@ class _PosterCardState extends State<_PosterCard> {
                 Expanded(
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: _PosterCard._w,
+                    width: w,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2),

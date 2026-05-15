@@ -234,15 +234,14 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   _buildThemesGrid(groups, sortedKeys)
                 else if (_selectedGenre != null)
                   ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-                else if (_viewMode == ViewMode.gridMedium)
+                else
                   for (final key in sortedKeys)
                     SliverToBoxAdapter(child: _GenreRow(
                       title: key, movies: groups[key]!, isFav: _favGenres.contains(key),
                       onTap: _open, onFavToggle: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
+                      viewMode: _viewMode,
                     ))
-                else
-                  for (final key in sortedKeys) ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
             ),
@@ -256,10 +255,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
     double maxExtent = 155;
     double aspectRatio = 135 / 235;
     switch (_viewMode) {
-      case ViewMode.gridSmall: maxExtent = 115; aspectRatio = 100 / 170; break;
-      case ViewMode.gridMedium: maxExtent = 155; aspectRatio = 135 / 235; break;
-      case ViewMode.gridLarge: maxExtent = 220; aspectRatio = 200 / 310; break;
-      default: maxExtent = 155; aspectRatio = 135 / 235;
+      case ViewMode.gridSmall: maxExtent = 115; break;
+      case ViewMode.gridMedium: maxExtent = 155; break;
+      case ViewMode.gridLarge: maxExtent = 220; break;
+      default: maxExtent = 155;
     }
     return [
       if (showTitle && title != null)
@@ -364,9 +363,14 @@ class _GenreRow extends StatelessWidget {
   final void Function(Movie) onTap;
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
-  const _GenreRow({required this.title, required this.movies, required this.onTap, required this.isFav, required this.onFavToggle, required this.onTitleTap});
+  final ViewMode viewMode;
+  const _GenreRow({required this.title, required this.movies, required this.onTap, required this.isFav, required this.onFavToggle, required this.onTitleTap, required this.viewMode});
   @override
   Widget build(BuildContext context) {
+    double rowHeight = 247;
+    if (viewMode == ViewMode.gridSmall) rowHeight = 195;
+    if (viewMode == ViewMode.gridLarge) rowHeight = 350;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 24, 12, 10), child: Row(children: [
         Expanded(child: GestureDetector(onTap: onTitleTap, child: Row(children: [
@@ -378,7 +382,7 @@ class _GenreRow extends StatelessWidget {
         ]))),
         GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: 247, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]))))),
+      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), viewMode: viewMode)))),
     ]);
   }
 }
@@ -388,7 +392,8 @@ class _PosterCard extends StatefulWidget {
   final String? cover;
   final String? rating;
   final VoidCallback onTap;
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap});
+  final ViewMode viewMode;
+  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, required this.viewMode});
   @override
   State<_PosterCard> createState() => _PosterCardState();
 }
@@ -397,8 +402,12 @@ class _PosterCardState extends State<_PosterCard> {
   bool _hovered = false;
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: 130, margin: const EdgeInsets.symmetric(horizontal: 6), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: 130, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: _buildCover()))),
+    double w = 130;
+    if (widget.viewMode == ViewMode.gridSmall) w = 100;
+    if (widget.viewMode == ViewMode.gridLarge) w = 180;
+
+    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 6), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: w, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: _buildCover()))),
       const SizedBox(height: 6),
       Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500))),
       if (widget.rating != null && widget.rating!.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text('★ ${widget.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10))),
