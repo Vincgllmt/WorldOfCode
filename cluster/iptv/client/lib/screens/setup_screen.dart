@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../widgets/brand_logo.dart';

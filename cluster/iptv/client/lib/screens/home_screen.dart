@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/channel.dart';
 import '../services/api_service.dart';
@@ -250,7 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
               // Hero banner — hidden while searching or filtering
               if (_query.isEmpty && _selectedGenre == null && _viewMode != ViewMode.themes)
                 SliverToBoxAdapter(
-                  child: _HeroBanner(channel: _allChannels.isNotEmpty ? _allChannels.first : null),
+                  child: _HeroBanner(
+                    channel: _allChannels.first,
+                    onPlay: _openPlayer,
+                  ),
                 ),
 
               // Spacer when no hero
