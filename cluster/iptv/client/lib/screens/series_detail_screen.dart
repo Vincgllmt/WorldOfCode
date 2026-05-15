@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../services/api_service.dart';
+import '../services/progress_service.dart';
 import 'player_screen.dart';
 
 class _C {
@@ -34,8 +35,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   void _play(Episode ep) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(name: ep.title, url: ep.url, group: widget.series.name),
-    ));
+      builder: (_) => PlayerScreen(
+        name: ep.title, 
+        url: ep.url, 
+        group: widget.series.name,
+        type: 'series',
+        mediaId: ep.id,
+        seriesId: widget.series.id,
+        cover: ep.cover ?? widget.series.cover,
+      ),
+    )).then((_) => setState(() {})); // trigger refresh when coming back to update progress indicators
   }
 
   @override
@@ -287,44 +296,74 @@ class _EpisodeTileState extends State<_EpisodeTile> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onPlay,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          color: _hovered ? const Color(0x229D4EDD) : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color: _hovered ? _C.accent : const Color(0x22FFFFFF),
-                  shape: BoxShape.circle,
-                ),
-                child: _hovered
-                  ? const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20)
-                  : Center(child: Text('${widget.ep.episodeNum}',
-                      style: const TextStyle(color: _C.txtSub, fontSize: 12, fontWeight: FontWeight.w600))),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(widget.ep.title,
-                  style: TextStyle(
-                    color: _hovered ? Colors.white : _C.txtSub,
-                    fontSize: 13, fontWeight: FontWeight.w500,
+    return FutureBuilder<MediaProgress?>(
+      future: ProgressService.getProgress(widget.ep.url),
+      builder: (context, snapshot) {
+        final progress = snapshot.data;
+        final bool isCompleted = progress?.isCompleted ?? false;
+        final double progressPercent = progress != null && progress.durationSeconds > 0 
+            ? (progress.positionSeconds / progress.durationSeconds).clamp(0.0, 1.0) 
+            : 0.0;
+
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onPlay,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              color: _hovered ? const Color(0x229D4EDD) : Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: _hovered ? _C.accent : const Color(0x22FFFFFF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: _hovered
+                      ? const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20)
+                      : Center(child: Text('${widget.ep.episodeNum}',
+                          style: const TextStyle(color: _C.txtSub, fontSize: 12, fontWeight: FontWeight.w600))),
                   ),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.ep.title,
+                          style: TextStyle(
+                            color: isCompleted ? _C.txtSub : (_hovered ? Colors.white : Colors.white),
+                            fontSize: 13, fontWeight: FontWeight.w500,
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                        if (progressPercent > 0 && !isCompleted)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, right: 16),
+                            child: LinearProgressIndicator(
+                              value: progressPercent,
+                              backgroundColor: Colors.white.withValues(alpha: 0.1),
+                              color: _C.accent,
+                              minHeight: 2,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isCompleted)
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 20)
+                  else
+                    Icon(Icons.play_arrow_rounded, color: _hovered ? _C.accent : const Color(0x33FFFFFF), size: 20),
+                ],
               ),
-              Icon(Icons.play_arrow_rounded, color: _hovered ? _C.accent : const Color(0x33FFFFFF), size: 20),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
 }

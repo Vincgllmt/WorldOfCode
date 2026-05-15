@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../services/subtitle_settings.dart';
+import '../services/progress_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String name;
   final String url;
   final String? group;
+  final String? type;
+  final int? mediaId;
+  final int? seriesId;
+  final String? cover;
 
-  const PlayerScreen({super.key, required this.name, required this.url, this.group});
+  const PlayerScreen({super.key, required this.name, required this.url, this.group, this.type, this.mediaId, this.seriesId, this.cover});
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -21,6 +27,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Tracks _tracks = const Tracks();
   Track  _track  = const Track();
   SubtitleSettings _subSettings = const SubtitleSettings();
+  
+  Timer? _progressTimer;
+  bool _hasSeeked = false;
 
   @override
   void initState() {
@@ -29,6 +38,46 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
     _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
+
+    _player.stream.duration.listen((duration) {
+      if (!_hasSeeked && widget.type != null && widget.type != 'live' && duration.inSeconds > 0) {
+        _hasSeeked = true;
+        _resumeProgress();
+      }
+    });
+
+    if (widget.type != null && widget.type != 'live') {
+      _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
+    }
+  }
+
+  Future<void> _resumeProgress() async {
+    final progress = await ProgressService.getProgress(widget.url);
+    if (progress != null && !progress.isCompleted) {
+      final target = Duration(seconds: progress.positionSeconds);
+      _player.seek(target);
+    }
+  }
+
+  void _saveProgress() {
+    if (widget.type == null || widget.type == 'live' || widget.mediaId == null) return;
+    
+    final pos = _player.state.position;
+    final dur = _player.state.duration;
+    
+    if (pos.inSeconds > 0) {
+      ProgressService.saveProgress(MediaProgress(
+        url: widget.url,
+        title: widget.name,
+        type: widget.type!,
+        mediaId: widget.mediaId!,
+        seriesId: widget.seriesId,
+        cover: widget.cover,
+        positionSeconds: pos.inSeconds,
+        durationSeconds: dur.inSeconds,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      ));
+    }
   }
 
   // HLS streams (TF1, M6, France TV…) validate User-Agent and sometimes
@@ -46,6 +95,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _progressTimer?.cancel();
+    _saveProgress();
     _player.dispose();
     super.dispose();
   }

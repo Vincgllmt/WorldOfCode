@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openPlayer(Channel ch) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(name: ch.name, url: ch.url, group: ch.group),
+      builder: (_) => PlayerScreen(name: ch.name, url: ch.url, group: ch.group, type: 'live'),
     ));
   }
 

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
+import '../services/progress_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../widgets/genre_drawer.dart';
@@ -137,8 +138,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return _cachedSortedKeys!;
   }
 
-  void _open(Movie m) {
-    Navigator.push(context, MaterialPageRoute(
+  Future<void> _open(Movie m) {
+    return Navigator.push(context, MaterialPageRoute(
       builder: (_) => MovieDetailScreen(movie: m),
     ));
   }
@@ -200,7 +201,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
           final sortedKeys = _sortedKeys(groups);
 
           return RefreshIndicator(
-            onRefresh: () => _load(force: true),
+            onRefresh: () {
+              setState(() {});
+              return _load(force: true);
+            },
             color: _C.accent,
             backgroundColor: _C.bgCard,
             child: CustomScrollView(
@@ -228,6 +232,42 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       ]),
                     ),
                   ),
+
+                // Reprendre la lecture
+                if (_query.isEmpty && _selectedGenre == null)
+                  SliverToBoxAdapter(
+                    child: FutureBuilder<List<MediaProgress>>(
+                      future: ProgressService.getAll(),
+                      builder: (ctx, snap) {
+                        final progresses = (snap.data ?? [])
+                            .where((p) => p.type == 'movie' && !p.isCompleted)
+                            .toList();
+                        
+                        if (progresses.isEmpty) return const SizedBox.shrink();
+
+                        // Match progress with actual movie objects (to get full details and allow navigation)
+                        final Map<int, Movie> movieMap = { for (final m in _all) m.id: m };
+                        final recentMovies = progresses
+                            .map((p) => movieMap[p.mediaId])
+                            .whereType<Movie>()
+                            .toList();
+
+                        if (recentMovies.isEmpty) return const SizedBox.shrink();
+
+                        return _GenreRow(
+                          title: '► Reprendre la lecture',
+                          movies: recentMovies,
+                          isFav: false,
+                          onTap: (m) => _open(m).then((_) => setState(() {})),
+                          onFavToggle: () {},
+                          onTitleTap: () {},
+                          viewMode: _viewMode,
+                          isAccent: true,
+                        );
+                      },
+                    ),
+                  ),
+
                 if (_query.isNotEmpty)
                   ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
                 else if (_viewMode == ViewMode.themes && _selectedGenre == null)
@@ -364,7 +404,14 @@ class _GenreRow extends StatelessWidget {
   final VoidCallback onFavToggle;
   final VoidCallback onTitleTap;
   final ViewMode viewMode;
-  const _GenreRow({required this.title, required this.movies, required this.onTap, required this.isFav, required this.onFavToggle, required this.onTitleTap, required this.viewMode});
+  final bool isAccent;
+
+  const _GenreRow({
+    required this.title, required this.movies, required this.onTap, 
+    required this.isFav, required this.onFavToggle, required this.onTitleTap, 
+    required this.viewMode, this.isAccent = false,
+  });
+
   @override
   Widget build(BuildContext context) {
     double rowHeight = 247;
@@ -373,14 +420,15 @@ class _GenreRow extends StatelessWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 24, 12, 10), child: Row(children: [
+        if (isAccent) Container(width: 3, height: 18, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2))),
         Expanded(child: GestureDetector(onTap: onTitleTap, child: Row(children: [
-          Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _C.txt, fontSize: 16, fontWeight: FontWeight.w700))),
+          Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isAccent ? _C.glow : _C.txt, fontSize: 16, fontWeight: FontWeight.w700))),
           const SizedBox(width: 8),
           Text('(${movies.length})', style: const TextStyle(color: _C.txtSub, fontSize: 12)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right_rounded, size: 14, color: _C.txtSub.withValues(alpha: 0.4)),
         ]))),
-        GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
+        if (!isAccent) GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
       SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), viewMode: viewMode)))),
     ]);

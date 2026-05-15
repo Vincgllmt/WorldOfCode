@@ -32,7 +32,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   void _play(String url) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(name: widget.movie.name, url: url, group: widget.movie.group),
+      builder: (_) => PlayerScreen(
+        name: widget.movie.name, 
+        url: url, 
+        group: widget.movie.group,
+        type: 'movie',
+        mediaId: widget.movie.id,
+        cover: widget.movie.cover,
+      ),
     ));
   }
 
