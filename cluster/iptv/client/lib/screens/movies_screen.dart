@@ -254,7 +254,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
               else
                 // Mode Images normal : On laisse les thèmes !
                 for (final key in sortedKeys)
-                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+                  SliverToBoxAdapter(
+                    child: _GenreRow(
+                      title: key,
+                      movies: groups[key]!,
+                      isFav: _favGenres.contains(key),
+                      onTap: _open,
+                      onFavToggle: () => _toggleFavGenre(key),
+                      onTitleTap: () => setState(() => _selectedGenre = key),
+                    ),
+                  ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],

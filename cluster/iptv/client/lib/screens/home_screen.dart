@@ -312,7 +312,18 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 // Mode Images normal : On laisse les thèmes !
                 for (final key in sortedKeys)
-                  ..._buildGridSlivers(groups[key]!, showTitle: true, title: key),
+                  SliverToBoxAdapter(
+                    child: _CategoryRow(
+                      title: key,
+                      channels: groups[key]!,
+                      favorites: _favorites,
+                      onTap: _openPlayer,
+                      onFav: _toggleFavorite,
+                      isFavGenre: _favGenres.contains(key),
+                      onToggleFavGenre: () => _toggleFavGenre(key),
+                      onTitleTap: () => setState(() => _selectedGenre = key),
+                    ),
+                  ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
             ],
