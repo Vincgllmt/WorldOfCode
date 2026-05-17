@@ -284,74 +284,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     );
   }
-}
-
-class _LangBtn extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _LangBtn({required this.label, required this.active, required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: active ? _C.glow : _C.border),
-      ),
-      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
-    ),
-  );
-}
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                      child: Row(children: [
-                        GestureDetector(
-                          onTap: () => setState(() => _selectedGenre = null),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
-                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(_selectedGenre!.toUpperCase(), style: const TextStyle(color: _C.glow, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      ]),
-                    ),
-                  ),
-                if (_query.isEmpty && favChannels.isNotEmpty && _selectedGenre == null && _viewMode == ViewMode.gridMedium)
-                  SliverToBoxAdapter(child: _CategoryRow(
-                    title: '★  Mes Favoris', channels: favChannels, favorites: _favorites,
-                    onTap: _openPlayer, onFav: _toggleFavorite, isAccent: true,
-                  )),
-                if (_query.isNotEmpty)
-                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
-                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
-                  _buildThemesGrid(groups, sortedKeys)
-                else if (_selectedGenre != null)
-                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-                else
-                  for (final key in sortedKeys)
-                    SliverToBoxAdapter(child: _CategoryRow(
-                      title: key, channels: groups[key]!, favorites: _favorites, onTap: _openPlayer,
-                      onFav: _toggleFavorite, isFavGenre: _favGenres.contains(key),
-                      onToggleFavGenre: () => _toggleFavGenre(key),
-                      onTitleTap: () => setState(() => _selectedGenre = key),
-                      viewMode: _viewMode,
-                    )),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   List<Widget> _buildGridSlivers(List<Channel> channels, {bool showTitle = false, String? title}) {
     double maxExtent = 270;
@@ -611,4 +543,24 @@ class _CategoryCard extends StatelessWidget {
     
     return GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(channelsLabel, style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? _C.glow : _C.border),
+      ),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
+    ),
+  );
 }
