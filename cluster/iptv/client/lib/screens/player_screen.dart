@@ -55,6 +55,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final progress = await ProgressService.getProgress(widget.url);
     if (progress != null && !progress.isCompleted) {
       final target = Duration(seconds: progress.positionSeconds);
+      // Attend que le lecteur soit prêt à recevoir le seek
+      await Future.delayed(const Duration(milliseconds: 800));
       _player.seek(target);
     }
   }
@@ -128,72 +130,118 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Row(
-          children: [
-            const Icon(Icons.circle, size: 8, color: Color(0xFFFF4757)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                widget.name,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+      body: MaterialVideoControlsTheme(
+        normal: MaterialVideoControlsThemeData(
+          topButtonBar: [
+            const SizedBox(width: 12),
+            _AppBarTitle(name: widget.name),
+            const Spacer(),
+            if (widget.group != null) _GroupTag(group: widget.group!),
+            if (widget.type != 'live') _SpeedButton(
+              speed: _playbackSpeed,
+              onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
             ),
+            _TrackButton(onTap: _showTrackSelector),
+          ],
+          bottomButtonBar: const [
+            MaterialPositionIndicator(),
+            Spacer(),
+            MaterialFullscreenButton(),
           ],
         ),
-        actions: [
-          if (widget.group != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0x449D4EDD),
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: const Color(0x779D4EDD)),
-                ),
-                child: Text(
-                  widget.group!,
-                  style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 12),
-                ),
-              ),
+        fullscreen: MaterialVideoControlsThemeData(
+          topButtonBar: [
+            const SizedBox(width: 12),
+            _AppBarTitle(name: widget.name),
+            const Spacer(),
+            if (widget.group != null) _GroupTag(group: widget.group!),
+            if (widget.type != 'live') _SpeedButton(
+              speed: _playbackSpeed,
+              onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
             ),
-          if (widget.type != 'live')
-            PopupMenuButton<double>(
-              icon: const Icon(Icons.speed_rounded),
-              tooltip: 'Vitesse de lecture',
-              color: const Color(0xFF1A0F2E),
-              offset: const Offset(0, 40),
-              initialValue: _playbackSpeed,
-              onSelected: (speed) {
-                setState(() => _playbackSpeed = speed);
-                _player.setRate(speed);
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 1.0, child: Text('Normal', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 1.25, child: Text('1.25x', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 1.5, child: Text('1.5x', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 2.0, child: Text('2.0x', style: TextStyle(color: Colors.white))),
-              ],
-            ),
-          IconButton(
-            icon: const Icon(Icons.tune_rounded),
-            tooltip: 'Audio / Sous-titres',
-            onPressed: _showTrackSelector,
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Video(
-        controller: _ctrl,
-        controls: AdaptiveVideoControls,
-        subtitleViewConfiguration: _subConfig,
+            _TrackButton(onTap: _showTrackSelector),
+          ],
+        ),
+        child: Video(
+          controller: _ctrl,
+          controls: MaterialVideoControls,
+          subtitleViewConfiguration: _subConfig,
+        ),
       ),
     );
   }
+}
+
+class _AppBarTitle extends StatelessWidget {
+  final String name;
+  const _AppBarTitle({required this.name});
+  @override
+  Widget build(BuildContext context) => Flexible(
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.circle, size: 8, color: Color(0xFFFF4757)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            name,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _GroupTag extends StatelessWidget {
+  final String group;
+  const _GroupTag({required this.group});
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0x449D4EDD),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: const Color(0x779D4EDD)),
+      ),
+      child: Text(group, style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 12)),
+    ),
+  );
+}
+
+class _SpeedButton extends StatelessWidget {
+  final double speed;
+  final ValueChanged<double> onSelected;
+  const _SpeedButton({required this.speed, required this.onSelected});
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<double>(
+    icon: const Icon(Icons.speed_rounded, color: Colors.white),
+    tooltip: 'Vitesse de lecture',
+    color: const Color(0xFF1A0F2E),
+    offset: const Offset(0, 40),
+    initialValue: speed,
+    onSelected: onSelected,
+    itemBuilder: (_) => [
+      const PopupMenuItem(value: 1.0, child: Text('Normal', style: TextStyle(color: Colors.white))),
+      const PopupMenuItem(value: 1.25, child: Text('1.25x', style: TextStyle(color: Colors.white))),
+      const PopupMenuItem(value: 1.5, child: Text('1.5x', style: TextStyle(color: Colors.white))),
+      const PopupMenuItem(value: 2.0, child: Text('2.0x', style: TextStyle(color: Colors.white))),
+    ],
+  );
+}
+
+class _TrackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _TrackButton({required this.onTap});
+  @override
+  Widget build(BuildContext context) => IconButton(
+    icon: const Icon(Icons.tune_rounded, color: Colors.white),
+    tooltip: 'Audio / Sous-titres',
+    onPressed: onTap,
+  );
 }
 
 // ─── Track + subtitle settings sheet ─────────────────────────────────────────

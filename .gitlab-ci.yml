@@ -65,7 +65,6 @@ include:
   #- local: cluster/n8n/.gitlab-ci.yml
   - local: cluster/cert-manager/.gitlab-ci.yml
   - local: cluster/uptime-kuma/.gitlab-ci.yml
-  - local: cluster/iptv/.gitlab-ci.yml
 
 # ===================================
 # JOB 1: LINTER (Frontend & Backoffice)
