@@ -128,11 +128,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: MaterialVideoControlsTheme(
-        normal: MaterialVideoControlsThemeData(
-          topButtonBar: [
+    final topBar = [
+      Expanded(
+        child: Row(
+          children: [
             const SizedBox(width: 12),
             _AppBarTitle(name: widget.name),
             const Spacer(),
@@ -142,7 +141,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
               onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
             ),
             _TrackButton(onTap: _showTrackSelector),
+            const SizedBox(width: 12),
           ],
+        ),
+      ),
+    ];
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: MaterialVideoControlsTheme(
+        normal: MaterialVideoControlsThemeData(
+          topButtonBar: topBar,
+          topButtonBarMargin: EdgeInsets.zero,
+          padding: EdgeInsets.zero,
           bottomButtonBar: const [
             MaterialPositionIndicator(),
             Spacer(),
@@ -150,22 +161,33 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ],
         ),
         fullscreen: MaterialVideoControlsThemeData(
-          topButtonBar: [
-            const SizedBox(width: 12),
-            _AppBarTitle(name: widget.name),
-            const Spacer(),
-            if (widget.group != null) _GroupTag(group: widget.group!),
-            if (widget.type != 'live') _SpeedButton(
-              speed: _playbackSpeed,
-              onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
-            ),
-            _TrackButton(onTap: _showTrackSelector),
-          ],
+          topButtonBar: topBar,
+          topButtonBarMargin: EdgeInsets.zero,
+          padding: EdgeInsets.zero,
         ),
-        child: Video(
-          controller: _ctrl,
-          controls: MaterialVideoControls,
-          subtitleViewConfiguration: _subConfig,
+        child: MaterialDesktopVideoControlsTheme(
+          normal: MaterialDesktopVideoControlsThemeData(
+            topButtonBar: topBar,
+            topButtonBarMargin: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
+            controlsHoverDuration: const Duration(seconds: 3),
+            bottomButtonBar: const [
+              MaterialDesktopPositionIndicator(),
+              Spacer(),
+              MaterialDesktopFullscreenButton(),
+            ],
+          ),
+          fullscreen: MaterialDesktopVideoControlsThemeData(
+            topButtonBar: topBar,
+            topButtonBarMargin: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
+            controlsHoverDuration: const Duration(seconds: 3),
+          ),
+          child: Video(
+            controller: _ctrl,
+            controls: AdaptiveVideoControls,
+            subtitleViewConfiguration: _subConfig,
+          ),
         ),
       ),
     );
