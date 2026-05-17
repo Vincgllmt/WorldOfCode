@@ -168,7 +168,7 @@ class ApiService {
         name: _cleanName(movieData['name'] ?? ""),
         url: '${c.host}/movie/${c.user}/${c.pass}/${movieData['stream_id']}.$ext',
         cover: info['movie_image'],
-        cover_big: info['movie_image'],
+        coverBig: info['movie_image'],
         description: info['plot'],
         duration: info['duration'],
         genre: info['genre'],
@@ -229,13 +229,13 @@ class ApiService {
 
       episodesData.forEach((seasonNum, episodes) {
         final List epsList = episodes as List;
-        seasons[seasonNum] = epsList.map((e) {
+        seasons[seasonNum] = epsList.map<Episode>((e) {
           final ext = e['container_extension'] ?? 'mp4';
           return Episode(
             id: int.tryParse(e['id'].toString()) ?? 0,
             title: e['title'] ?? "Épisode ${e['episode_num']}",
             season: int.tryParse(seasonNum) ?? 0,
-            episode_num: int.tryParse(e['episode_num'].toString()) ?? 0,
+            episodeNum: int.tryParse(e['episode_num'].toString()) ?? 0,
             url: '${c.host}/series/${c.user}/${c.pass}/${e['id']}.$ext',
             plot: e['info']?['plot'],
             cover: e['info']?['movie_image'],
