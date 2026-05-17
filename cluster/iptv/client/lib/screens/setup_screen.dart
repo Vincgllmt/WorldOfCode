@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
+import '../services/language_service.dart';
 import '../widgets/brand_logo.dart';
 import 'main_screen.dart';
 
@@ -51,7 +52,7 @@ class _SetupScreenState extends State<SetupScreen> {
       final user = _userCtrl.text.trim();
       final pass = _passCtrl.text.trim();
       if (host.isEmpty || user.isEmpty || pass.isEmpty) {
-        setState(() { _loading = false; _error = 'Tous les champs sont requis.'; });
+        setState(() { _loading = false; _error = lang.t('setup_err_all_fields'); });
         return;
       }
       creds = Credentials(
@@ -62,14 +63,14 @@ class _SetupScreenState extends State<SetupScreen> {
     } else {
       final raw = _urlCtrl.text.trim();
       if (raw.isEmpty) {
-        setState(() { _loading = false; _error = 'Entrez votre lien M3U.'; });
+        setState(() { _loading = false; _error = lang.t('setup_err_enter_m3u'); });
         return;
       }
       creds = CredentialsService.parseUrl(raw);
       if (creds == null) {
         setState(() {
           _loading = false;
-          _error = 'Lien invalide. Format attendu :\nhttp://host:port/get.php?username=X&password=Y';
+          _error = lang.t('setup_err_invalid_m3u');
         });
         return;
       }
@@ -78,7 +79,7 @@ class _SetupScreenState extends State<SetupScreen> {
     try {
       final ok = await ApiService().validate(creds);
       if (!ok) {
-        setState(() { _loading = false; _error = 'Identifiants incorrects ou serveur inaccessible.'; });
+        setState(() { _loading = false; _error = lang.t('setup_err_invalid_creds'); });
         return;
       }
       await CredentialsService.save(creds);
@@ -88,174 +89,215 @@ class _SetupScreenState extends State<SetupScreen> {
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } catch (e) {
-      setState(() { _loading = false; _error = 'Erreur de connexion : $e'; });
+      setState(() { _loading = false; _error = '${lang.t('setup_err_connection')} $e'; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Huge Logo
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 240,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Styled encadré for "JOGA BONITO IPTV"
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF9D4EDD).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFBB86FC).withValues(alpha: 0.3), width: 1.5),
-                    ),
-                    child: Text(
-                      'JOGA BONITO IPTV',
-                      style: GoogleFonts.nunito(
-                        color: const Color(0xFFBB86FC),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 4,
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        return Scaffold(
+          backgroundColor: _bg,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Huge Logo
+                          Image.asset(
+                            'assets/images/logo.png',
+                            height: 240,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Styled encadré for "JOGA BONITO IPTV"
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF9D4EDD).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFBB86FC).withValues(alpha: 0.3), width: 1.5),
+                            ),
+                            child: Text(
+                              lang.t('setup_title'),
+                              style: GoogleFonts.nunito(
+                                color: const Color(0xFFBB86FC),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 4,
+                              ),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 48),
+                          Text(
+                            lang.t('setup_subtitle'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: _txtSub, fontSize: 14, height: 1.5),
+                          ),
+                          const SizedBox(height: 36),
+
+                          // Mode toggle
+                          Container(
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: _bgCard,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _border),
+                            ),
+                            child: Row(children: [
+                              _Tab(label: lang.t('setup_m3u_tab'), active: !_manualMode,
+                                onTap: () => setState(() { _manualMode = false; _error = null; })),
+                              _Tab(label: lang.t('setup_manual_tab'),   active: _manualMode,
+                                onTap: () => setState(() { _manualMode = true;  _error = null; })),
+                            ]),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Fields
+                          if (!_manualMode) ...[
+                            _Field(
+                              ctrl: _urlCtrl,
+                              hint: 'http://host:port/get.php?username=X&password=Y',
+                              label: lang.t('setup_m3u_label'),
+                              icon: Icons.link_rounded,
+                              onSubmitted: (_) => _submit(),
+                            ),
+                          ] else ...[
+                            _Field(
+                              ctrl: _hostCtrl,
+                              hint: 'http://host:port',
+                              label: lang.t('setup_server_label'),
+                              icon: Icons.dns_rounded,
+                            ),
+                            const SizedBox(height: 14),
+                            _Field(
+                              ctrl: _userCtrl,
+                              hint: lang.t('setup_user_hint'),
+                              label: lang.t('setup_user_label'),
+                              icon: Icons.person_rounded,
+                            ),
+                            const SizedBox(height: 14),
+                            _Field(
+                              ctrl: _passCtrl,
+                              hint: lang.t('setup_pass_hint'),
+                              label: lang.t('setup_pass_label'),
+                              icon: Icons.lock_rounded,
+                              obscure: !_passVisible,
+                              suffix: IconButton(
+                                onPressed: () => setState(() => _passVisible = !_passVisible),
+                                icon: Icon(
+                                  _passVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                  color: _txtSub, size: 18,
+                                ),
+                              ),
+                              onSubmitted: (_) => _submit(),
+                            ),
+                          ],
+
+                          // Collez le lien info
+                          if (!_manualMode) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '  ${lang.t('setup_paste_info')}',
+                                style: TextStyle(color: _txtSub.withValues(alpha: 0.6), fontSize: 11),
+                              ),
+                            ),
+                          ],
+
+                          // Error
+                          if (_error != null) ...[
+                            const SizedBox(height: 20),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _err.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: _err.withValues(alpha: 0.4)),
+                              ),
+                              child: Text(_error!,
+                                style: const TextStyle(color: _err, fontSize: 13, height: 1.4)),
+                            ),
+                          ],
+
+                          const SizedBox(height: 36),
+
+                          // Submit button
+                          SizedBox(
+                            height: 54,
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _loading ? null : _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accent,
+                                foregroundColor: _txt,
+                                disabledBackgroundColor: _accent.withValues(alpha: 0.4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                elevation: 0,
+                              ),
+                              child: _loading
+                                ? const SizedBox(width: 24, height: 24,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                                : Text(lang.t('setup_btn_check'),
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 48),
-                  const Text(
-                    'Entrez votre abonnement IPTV pour accéder à votre catalogue.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _txtSub, fontSize: 14, height: 1.5),
+                ),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); }),
+                      const SizedBox(width: 8),
+                      _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); }),
+                    ],
                   ),
-                  const SizedBox(height: 36),
-
-                  // Mode toggle
-                  Container(
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: _bgCard,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _border),
-                    ),
-                    child: Row(children: [
-                      _Tab(label: 'Lien M3U', active: !_manualMode,
-                        onTap: () => setState(() { _manualMode = false; _error = null; })),
-                      _Tab(label: 'Manuel',   active: _manualMode,
-                        onTap: () => setState(() { _manualMode = true;  _error = null; })),
-                    ]),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Fields
-                  if (!_manualMode) ...[
-                    _Field(
-                      ctrl: _urlCtrl,
-                      hint: 'http://host:port/get.php?username=X&password=Y',
-                      label: 'Lien M3U',
-                      icon: Icons.link_rounded,
-                      onSubmitted: (_) => _submit(),
-                    ),
-                  ] else ...[
-                    _Field(
-                      ctrl: _hostCtrl,
-                      hint: 'http://host:port',
-                      label: 'Serveur',
-                      icon: Icons.dns_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    _Field(
-                      ctrl: _userCtrl,
-                      hint: 'Identifiant',
-                      label: 'Utilisateur',
-                      icon: Icons.person_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    _Field(
-                      ctrl: _passCtrl,
-                      hint: 'Mot de passe',
-                      label: 'Mot de passe',
-                      icon: Icons.lock_rounded,
-                      obscure: !_passVisible,
-                      suffix: IconButton(
-                        onPressed: () => setState(() => _passVisible = !_passVisible),
-                        icon: Icon(
-                          _passVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                          color: _txtSub, size: 18,
-                        ),
-                      ),
-                      onSubmitted: (_) => _submit(),
-                    ),
-                  ],
-
-                  // Collez le lien info
-                  if (!_manualMode) ...[
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '  Collez le lien fourni par votre opérateur IPTV.',
-                        style: TextStyle(color: _txtSub.withValues(alpha: 0.6), fontSize: 11),
-                      ),
-                    ),
-                  ],
-
-                  // Error
-                  if (_error != null) ...[
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _err.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _err.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(_error!,
-                        style: const TextStyle(color: _err, fontSize: 13, height: 1.4)),
-                    ),
-                  ],
-
-                  const SizedBox(height: 36),
-
-                  // Submit button
-                  SizedBox(
-                    height: 54,
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accent,
-                        foregroundColor: _txt,
-                        disabledBackgroundColor: _accent.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: _loading
-                        ? const SizedBox(width: 24, height: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                        : const Text('Vérifier et continuer',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF9D4EDD) : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? const Color(0xFFBB86FC) : const Color(0x449D4EDD)),
+      ),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : const Color(0xFFB0AEC8), fontWeight: FontWeight.bold, fontSize: 12)),
+    ),
+  );
 }
 
 class _Tab extends StatelessWidget {
