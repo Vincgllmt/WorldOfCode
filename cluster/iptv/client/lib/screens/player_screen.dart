@@ -27,13 +27,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Tracks _tracks = const Tracks();
   Track  _track  = const Track();
   SubtitleSettings _subSettings = const SubtitleSettings();
-  
+
   Timer? _progressTimer;
   bool _hasSeeked = false;
+  double _playbackSpeed = 1.0;
 
   @override
-  void initState() {
-    super.initState();
+  void initState() {    super.initState();
     _player.open(_buildMedia(widget.url));
     _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
     _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
@@ -160,6 +160,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 12),
                 ),
               ),
+            ),
+          if (widget.type != 'live')
+            PopupMenuButton<double>(
+              icon: const Icon(Icons.speed_rounded),
+              tooltip: 'Vitesse de lecture',
+              color: const Color(0xFF1A0F2E),
+              offset: const Offset(0, 40),
+              initialValue: _playbackSpeed,
+              onSelected: (speed) {
+                setState(() => _playbackSpeed = speed);
+                _player.setRate(speed);
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 1.0, child: Text('Normal', style: TextStyle(color: Colors.white))),
+                const PopupMenuItem(value: 1.25, child: Text('1.25x', style: TextStyle(color: Colors.white))),
+                const PopupMenuItem(value: 1.5, child: Text('1.5x', style: TextStyle(color: Colors.white))),
+                const PopupMenuItem(value: 2.0, child: Text('2.0x', style: TextStyle(color: Colors.white))),
+              ],
             ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
