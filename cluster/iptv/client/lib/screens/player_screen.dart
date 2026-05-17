@@ -190,13 +190,37 @@ class _PlayerScreenState extends State<PlayerScreen> {
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
           ),
-          child: GestureDetector(
-            onTap: () => _player.playOrPause(),
-            child: Video(
-              controller: _ctrl,
-              controls: AdaptiveVideoControls,
-              subtitleViewConfiguration: _subConfig,
-            ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Video(
+                controller: _ctrl,
+                controls: AdaptiveVideoControls,
+                subtitleViewConfiguration: _subConfig,
+              ),
+              // Center Play/Pause button
+              StreamBuilder<bool>(
+                stream: _player.stream.playing,
+                builder: (context, snapshot) {
+                  final isPlaying = snapshot.data ?? false;
+                  return GestureDetector(
+                    onTap: () => _player.playOrPause(),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Colors.black26,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        size: 80,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
