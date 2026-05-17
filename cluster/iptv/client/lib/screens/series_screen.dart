@@ -394,14 +394,17 @@ class _SeriesScreenState extends State<SeriesScreen> {
   }
 
   Widget _buildThemesGrid(Map<String, List<SeriesItem>> groups, List<String> sortedKeys) {
+    final width = MediaQuery.of(context).size.width;
+    final maxExtent = width < 600 ? width : 350.0;
+
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 350,
-          mainAxisSpacing: 16,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: maxExtent,
+          mainAxisSpacing: 12,
           crossAxisSpacing: 16,
-          childAspectRatio: 2.8 / 1,
+          childAspectRatio: width < 600 ? 3.5 / 1 : 2.8 / 1,
         ),
         delegate: SliverChildBuilderDelegate(
           (_, i) {

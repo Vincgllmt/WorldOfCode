@@ -327,10 +327,20 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Widget _buildThemesGrid(Map<String, List<Movie>> groups, List<String> sortedKeys) {
+    final width = MediaQuery.of(context).size.width;
+    // On mobile (width < 600), we want 1 column. 
+    // Since MaxCrossAxisExtent uses "max", setting it to a large value or width ensures 1 column.
+    final maxExtent = width < 600 ? width : 350.0;
+    
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 350, mainAxisSpacing: 16, crossAxisSpacing: 16, childAspectRatio: 2.8 / 1),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: maxExtent, 
+          mainAxisSpacing: 12, 
+          crossAxisSpacing: 16, 
+          childAspectRatio: width < 600 ? 3.5 / 1 : 2.8 / 1
+        ),
         delegate: SliverChildBuilderDelegate((_, i) {
           final key = sortedKeys[i];
           return _CategoryCard(
