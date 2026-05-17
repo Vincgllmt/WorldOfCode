@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 import 'home_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
@@ -19,21 +20,26 @@ class _MainScreenState extends State<MainScreen> {
     SeriesScreen(),
   ];
 
-  static const _items = [
-    (icon: Icons.live_tv_outlined,  activeIcon: Icons.live_tv_rounded,  label: 'Live'),
-    (icon: Icons.movie_outlined,    activeIcon: Icons.movie_rounded,     label: 'Films'),
-    (icon: Icons.tv_outlined,       activeIcon: Icons.tv_rounded,        label: 'Séries'),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: _BottomNav(
-        index: _index,
-        items: _items,
-        onTap: (i) => setState(() => _index = i),
-      ),
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        final items = [
+          (icon: Icons.live_tv_outlined,  activeIcon: Icons.live_tv_rounded,  label: lang.t('live')),
+          (icon: Icons.movie_outlined,    activeIcon: Icons.movie_rounded,     label: lang.t('movies')),
+          (icon: Icons.tv_outlined,       activeIcon: Icons.tv_rounded,        label: lang.t('series')),
+        ];
+
+        return Scaffold(
+          body: IndexedStack(index: _index, children: _screens),
+          bottomNavigationBar: _BottomNav(
+            index: _index,
+            items: items,
+            onTap: (i) => setState(() => _index = i),
+          ),
+        );
+      }
     );
   }
 }

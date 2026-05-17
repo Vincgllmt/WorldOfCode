@@ -6,6 +6,7 @@ import '../services/credentials_service.dart';
 import '../services/progress_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
+import '../services/language_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'series_detail_screen.dart';
@@ -144,23 +145,49 @@ class _SeriesScreenState extends State<SeriesScreen> {
     ));
   }
 
-  Future<void> _logout() async {
-    final ok = await showDialog<bool>(
+  Future<void> _openSettings() async {
+    await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF160B25),
-        title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: const Text('Vos identifiants seront supprimés de cet appareil.',
-          style: TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+        title: Text(lang.t('logout_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lang.t('language'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); Navigator.pop(ctx); }),
+                const SizedBox(width: 12),
+                _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: _C.border, height: 1),
+            const SizedBox(height: 24),
+            Text(lang.t('logout_confirm'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(lang.t('logout_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-            child: const Text('Déconnecter',
-              style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'), style: const TextStyle(color: _C.txtSub))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _logout();
+            },
+            child: Text(lang.t('logout'), style: const TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    final ok = true;
     if (ok != true || !mounted) return;
     await CredentialsService.clear();
     ApiService.invalidateCache();
@@ -173,39 +200,42 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: _C.bg,
-      extendBodyBehindAppBar: true,
-      drawer: GenreDrawer(
-        title: 'Séries',
-        genres: _genres,
-        counts: _genreCounts,
-        selected: _selectedGenre,
-        favGenres: _favGenres,
-        onSelect: _onGenreSelect,
-        onToggleFav: _toggleFavGenre,
-      ),
-      appBar: _buildAppBar(),
-      body: FutureBuilder<List<SeriesItem>>(
-        future: _future,
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const _LoadingView(label: 'Chargement des séries...');
-          }
-          if (snap.hasError) {
-            return _ErrorView(
-              message: snap.error.toString(),
-              onRetry: () => setState(() {
-                _all = []; _filtered = [];
-                _selectedGenre = null;
-                _future = _load();
-              }),
-            );
-          }
-          if (_all.isEmpty) {
-            return const Center(child: Text('Aucune série disponible.', style: TextStyle(color: _C.txtSub)));
-          }
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: _C.bg,
+          extendBodyBehindAppBar: true,
+          drawer: GenreDrawer(
+            title: lang.t('series'),
+            genres: _genres,
+            counts: _genreCounts,
+            selected: _selectedGenre,
+            favGenres: _favGenres,
+            onSelect: _onGenreSelect,
+            onToggleFav: _toggleFavGenre,
+          ),
+          appBar: _buildAppBar(),
+          body: FutureBuilder<List<SeriesItem>>(
+            future: _future,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return _LoadingView(label: lang.t('loading_series'));
+              }
+              if (snap.hasError) {
+                return _ErrorView(
+                  message: snap.error.toString(),
+                  onRetry: () => setState(() {
+                    _all = []; _filtered = [];
+                    _selectedGenre = null;
+                    _future = _load();
+                  }),
+                );
+              }
+              if (_all.isEmpty) {
+                return const Center(child: Text('Aucune série disponible.', style: TextStyle(color: _C.txtSub)));
+              }
 
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
@@ -237,10 +267,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: _C.accent),
                             ),
-                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              Text(lang.t('back_to_themes'), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                             ]),
                           ),
                         ),
@@ -282,7 +312,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         if (recentSeries.isEmpty) return const SizedBox.shrink();
 
                         return _GenreRow(
-                          title: '► Reprendre la lecture',
+                          title: lang.t('continue_watching'),
                           items: recentSeries,
                           isFav: false,
                           onTap: (s) => _open(s).then((_) => setState(() {})),
@@ -300,7 +330,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   ),
 
                 if (_query.isNotEmpty)
-                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+                  ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                 else if (_viewMode == ViewMode.themes && _selectedGenre == null)
                   // Mode Thèmes uniquement
                   _buildThemesGrid(groups, sortedKeys)
@@ -328,6 +358,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
           );
         },
       ),
+    );
+      }
     );
   }
 
@@ -470,7 +502,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     ? SizedBox(
                         key: const ValueKey('f'),
                         width: 200, height: 40,
-                        child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...'),
+                        child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: lang.t('search_hint')),
                       )
                     : const SizedBox(key: ValueKey('e')),
                 ),
@@ -485,20 +517,20 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 const SizedBox(width: 4),
                 PopupMenuButton<ViewMode>(
                   icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
-                  tooltip: 'Mode d\'affichage',
+                  tooltip: lang.t('view_mode'),
                   color: const Color(0xFF160B25),
                   offset: const Offset(0, 50),
                   onSelected: (v) => setState(() => _viewMode = v),
                   itemBuilder: (_) => [
-                    _buildPopupItem(ViewMode.themes, Icons.list_alt_rounded, 'Thèmes (Liste)'),
-                    _buildPopupItem(ViewMode.gridSmall, Icons.grid_view_rounded, 'Grille (Petite)'),
-                    _buildPopupItem(ViewMode.gridMedium, Icons.grid_view_rounded, 'Grille (Moyenne)'),
-                    _buildPopupItem(ViewMode.gridLarge, Icons.grid_view_rounded, 'Grille (Grande)'),
+                    _buildPopupItem(ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
+                    _buildPopupItem(ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
+                    _buildPopupItem(ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
+                    _buildPopupItem(ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
                   ],
                 ),
                 const SizedBox(width: 4),
                 GestureDetector(
-                  onTap: _logout,
+                  onTap: _openSettings,
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: const CircleAvatar(
@@ -790,7 +822,7 @@ class _ErrorView extends StatelessWidget {
     children: [
       const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent),
       const SizedBox(height: 18),
-      const Text('Connexion impossible', style: TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)),
+      Text(lang.t('no_connection'), style: const TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)),
       const SizedBox(height: 10),
       Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
       const SizedBox(height: 28),
@@ -799,7 +831,7 @@ class _ErrorView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
         icon: const Icon(Icons.refresh_rounded),
-        label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold))),
+        label: Text(lang.t('retry'), style: const TextStyle(fontWeight: FontWeight.bold))),
     ],
   )));
 }
@@ -819,6 +851,10 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String seriesLabel = lang.locale.value == 'fr' 
+      ? "$count série${count > 1 ? 's' : ''}" 
+      : "$count series";
+
     return GestureDetector(
       onTap: onTap,
       child: MouseRegion(
@@ -872,7 +908,7 @@ class _CategoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "$count série${count > 1 ? 's' : ''}",
+                      seriesLabel,
                       style: TextStyle(
                         color: isFav ? _C.glow : _C.txtSub,
                         fontSize: 12,
@@ -889,4 +925,24 @@ class _CategoryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? _C.glow : _C.border),
+      ),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
+    ),
+  );
 }

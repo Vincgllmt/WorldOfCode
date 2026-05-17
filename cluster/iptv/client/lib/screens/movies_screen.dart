@@ -6,6 +6,7 @@ import '../services/credentials_service.dart';
 import '../services/progress_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
+import '../services/language_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'movie_detail_screen.dart';
@@ -144,23 +145,49 @@ class _MoviesScreenState extends State<MoviesScreen> {
     ));
   }
 
-  Future<void> _logout() async {
-    final ok = await showDialog<bool>(
+  Future<void> _openSettings() async {
+    await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF160B25),
-        title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: const Text('Vos identifiants seront supprimés de cet appareil.',
-          style: TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+        title: Text(lang.t('logout_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lang.t('language'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); Navigator.pop(ctx); }),
+                const SizedBox(width: 12),
+                _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: _C.border, height: 1),
+            const SizedBox(height: 24),
+            Text(lang.t('logout_confirm'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(lang.t('logout_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-            child: const Text('Déconnecter',
-              style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'), style: const TextStyle(color: _C.txtSub))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _logout();
+            },
+            child: Text(lang.t('logout'), style: const TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    final ok = true;
     if (ok != true || !mounted) return;
     await CredentialsService.clear();
     ApiService.invalidateCache();
@@ -173,29 +200,32 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: _C.bg,
-      extendBodyBehindAppBar: true,
-      drawer: GenreDrawer(
-        title: 'Films', genres: _genres, counts: _genreCounts, selected: _selectedGenre,
-        favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
-      ),
-      appBar: _buildAppBar(),
-      body: FutureBuilder<List<Movie>>(
-        future: _future,
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const _LoadingView(label: 'Chargement des films...');
-          }
-          if (snap.hasError) {
-            return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
-              _all = []; _filtered = []; _selectedGenre = null; _future = _load();
-            }));
-          }
-          if (_all.isEmpty) {
-            return const Center(child: Text('Aucun film disponible.', style: TextStyle(color: _C.txtSub)));
-          }
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: _C.bg,
+          extendBodyBehindAppBar: true,
+          drawer: GenreDrawer(
+            title: lang.t('movies'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
+            favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
+          ),
+          appBar: _buildAppBar(),
+          body: FutureBuilder<List<Movie>>(
+            future: _future,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return _LoadingView(label: lang.t('loading_movies'));
+              }
+              if (snap.hasError) {
+                return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
+                  _all = []; _filtered = []; _selectedGenre = null; _future = _load();
+                }));
+              }
+              if (_all.isEmpty) {
+                return Center(child: Text('Aucun film disponible.', style: const TextStyle(color: _C.txtSub)));
+              }
 
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
@@ -220,11 +250,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
-                            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('RETOUR AUX THÈMES', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                            ]),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(lang.t('back_to_themes'), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ]),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -255,7 +285,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                         if (recentMovies.isEmpty) return const SizedBox.shrink();
 
                         return _GenreRow(
-                          title: '► Reprendre la lecture',
+                          title: lang.t('continue_watching'),
                           movies: recentMovies,
                           isFav: false,
                           onTap: (m) => _open(m).then((_) => setState(() {})),
@@ -273,7 +303,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   ),
 
                 if (_query.isNotEmpty)
-                  ..._buildGridSlivers(_filtered, showTitle: true, title: 'Résultats pour "$_query"')
+                  ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                 else if (_viewMode == ViewMode.themes && _selectedGenre == null)
                   _buildThemesGrid(groups, sortedKeys)
                 else if (_selectedGenre != null)
@@ -292,6 +322,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
           );
         },
       ),
+    );
+      }
     );
   }
 
@@ -400,7 +432,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 ],
               ),
               const SizedBox(width: 4),
-              GestureDetector(onTap: _logout, child: MouseRegion(cursor: SystemMouseCursors.click, child: const CircleAvatar(radius: 16, backgroundColor: Color(0xFF8A2BE2), child: Icon(Icons.person_rounded, size: 18, color: Colors.white)))),
+              GestureDetector(onTap: _openSettings, child: MouseRegion(cursor: SystemMouseCursors.click, child: const CircleAvatar(radius: 16, backgroundColor: Color(0xFF8A2BE2), child: Icon(Icons.person_rounded, size: 18, color: Colors.white)))),
               const SizedBox(width: 4),
             ]),
           ),
@@ -408,6 +440,26 @@ class _MoviesScreenState extends State<MoviesScreen> {
       ),
     );
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? _C.glow : _C.border),
+      ),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
+    ),
+  );
 }
 
 class _GenreRow extends StatelessWidget {

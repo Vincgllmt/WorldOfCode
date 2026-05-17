@@ -6,6 +6,7 @@ import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
 import '../services/genre_favorites_service.dart';
+import '../services/language_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'player_screen.dart';
@@ -158,23 +159,48 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
-  Future<void> _logout() async {
-    final ok = await showDialog<bool>(
+  Future<void> _openSettings() async {
+    await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF160B25),
-        title: const Text('Changer de compte', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: const Text('Vos identifiants seront supprimés de cet appareil.',
-          style: TextStyle(color: _C.txtSub, fontSize: 13, height: 1.5)),
+        title: Text(lang.t('logout_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lang.t('language'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); Navigator.pop(ctx); }),
+                const SizedBox(width: 12),
+                _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: _C.border, height: 1),
+            const SizedBox(height: 24),
+            Text(lang.t('logout_confirm'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(lang.t('logout_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler', style: TextStyle(color: _C.txtSub))),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-            child: const Text('Déconnecter', style: TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'), style: const TextStyle(color: _C.txtSub))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _logout();
+            },
+            child: Text(lang.t('logout'), style: const TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+  }
+
+  Future<void> _logout() async {
     await CredentialsService.clear();
     ApiService.invalidateCache();
     if (!mounted) return;
@@ -186,52 +212,99 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: _C.bg,
-      extendBodyBehindAppBar: true,
-      drawer: GenreDrawer(
-        title: 'Live', genres: _genres, counts: _genreCounts, selected: _selectedGenre,
-        favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
-      ),
-      appBar: _AppBar(
-        searchVisible: _searchVisible, viewMode: _viewMode, searchCtrl: _searchCtrl,
-        onSearchChanged: _onSearch, onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-        onAccount: _logout, onToggleView: (v) => setState(() => _viewMode = v),
-        onToggleSearch: () => setState(() {
-          _searchVisible = !_searchVisible;
-          if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
-        }),
-      ),
-      body: FutureBuilder<List<Channel>>(
-        future: _future,
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const _LoadingView();
-          }
-          if (snap.hasError) {
-            return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
-              _allChannels = []; _filtered = []; _future = _loadChannels();
-            }));
-          }
-          if (_allChannels.isEmpty) {
-            return const Center(child: Text('Aucune chaîne disponible.', style: TextStyle(color: _C.txtSub)));
-          }
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: _C.bg,
+          extendBodyBehindAppBar: true,
+          drawer: GenreDrawer(
+            title: lang.t('live'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
+            favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
+          ),
+          appBar: _AppBar(
+            searchVisible: _searchVisible, viewMode: _viewMode, searchCtrl: _searchCtrl,
+            onSearchChanged: _onSearch, onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+            onAccount: _openSettings, onToggleView: (v) => setState(() => _viewMode = v),
+            onToggleSearch: () => setState(() {
+              _searchVisible = !_searchVisible;
+              if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
+            }),
+          ),
+          body: FutureBuilder<List<Channel>>(
+            future: _future,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const _LoadingView();
+              }
+              if (snap.hasError) {
+                return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
+                  _allChannels = []; _filtered = []; _future = _loadChannels();
+                }));
+              }
+              if (_allChannels.isEmpty) {
+                return Center(child: Text(lang.t('no_connection'), style: const TextStyle(color: _C.txtSub)));
+              }
 
-          final groups = _grouped(_filtered);
-          final sortedKeys = _sortedKeys(groups);
-          final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
+              final groups = _grouped(_filtered);
+              final sortedKeys = _sortedKeys(groups);
+              final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
 
-          return RefreshIndicator(
-            onRefresh: () => _loadChannels(force: true),
-            color: _C.accent,
-            backgroundColor: _C.bgCard,
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
-                if (_selectedGenre != null)
-                  SliverToBoxAdapter(
-                    child: Padding(
+              return RefreshIndicator(
+                onRefresh: () => _loadChannels(force: true),
+                color: _C.accent,
+                backgroundColor: _C.bgCard,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+                    if (_query.isNotEmpty)
+                      ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
+                    else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                      _buildThemesGrid(groups, sortedKeys)
+                    else if (_selectedGenre != null)
+                      ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                    else
+                      for (final key in sortedKeys)
+                        SliverToBoxAdapter(child: _CategoryRow(
+                          title: key, channels: groups[key]!, favorites: _favorites,
+                          onTap: _openPlayer, onFav: _toggleFavorite,
+                          onTitleTap: () => setState(() => _selectedGenre = key),
+                          isFavGenre: _favGenres.contains(key),
+                          onToggleFavGenre: () => _toggleFavGenre(key),
+                          viewMode: _viewMode,
+                        )),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      }
+    );
+  }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? _C.glow : _C.border),
+      ),
+      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
+    ),
+  );
+}
                       padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                       child: Row(children: [
                         GestureDetector(
@@ -377,13 +450,13 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 4),
             PopupMenuButton<ViewMode>(
               icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
-              tooltip: 'Mode d\'affichage', color: const Color(0xFF160B25), offset: const Offset(0, 50),
+              tooltip: lang.t('view_mode'), color: const Color(0xFF160B25), offset: const Offset(0, 50),
               onSelected: onToggleView,
               itemBuilder: (_) => [
-                _buildPopupItem(context, ViewMode.themes, Icons.list_alt_rounded, 'Thèmes (Liste)'),
-                _buildPopupItem(context, ViewMode.gridSmall, Icons.grid_view_rounded, 'Grille (Petite)'),
-                _buildPopupItem(context, ViewMode.gridMedium, Icons.grid_view_rounded, 'Grille (Moyenne)'),
-                _buildPopupItem(context, ViewMode.gridLarge, Icons.grid_view_rounded, 'Grille (Grande)'),
+                _buildPopupItem(context, ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
+                _buildPopupItem(context, ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
+                _buildPopupItem(context, ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
+                _buildPopupItem(context, ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
               ],
             ),
             const SizedBox(width: 4),
@@ -427,7 +500,7 @@ class _GlassSearchField extends StatelessWidget {
   Widget build(BuildContext context) => TextField(
     controller: controller, autofocus: true, onChanged: onChanged, style: const TextStyle(color: _C.txt, fontSize: 14),
     decoration: InputDecoration(
-      hintText: 'Chaîne, catégorie...', hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
+      hintText: lang.t('search_hint_live'), hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
       filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
@@ -513,7 +586,7 @@ class _ChannelCardState extends State<_ChannelCard> {
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
   @override
-  Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const SizedBox(width: 48, height: 48, child: CircularProgressIndicator(color: _C.accent, strokeWidth: 3)), const SizedBox(height: 20), const Text('Chargement des chaînes...', style: TextStyle(color: _C.txtSub, fontSize: 15))]));
+  Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const SizedBox(width: 48, height: 48, child: CircularProgressIndicator(color: _C.accent, strokeWidth: 3)), const SizedBox(height: 20), Text(lang.t('loading_channels'), style: const TextStyle(color: _C.txtSub, fontSize: 15))]));
 }
 
 class _ErrorView extends StatelessWidget {
@@ -521,7 +594,7 @@ class _ErrorView extends StatelessWidget {
   final VoidCallback onRetry;
   const _ErrorView({required this.message, required this.onRetry});
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent), const SizedBox(height: 18), const Text('Connexion impossible', style: TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 10), Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis), const SizedBox(height: 28), ElevatedButton.icon(onPressed: onRetry, style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.refresh_rounded), label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold)))])));
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent), const SizedBox(height: 18), Text(lang.t('no_connection'), style: const TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 10), Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis), const SizedBox(height: 28), ElevatedButton.icon(onPressed: onRetry, style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.refresh_rounded), label: Text(lang.t('retry'), style: const TextStyle(fontWeight: FontWeight.bold)))])));
 }
 
 class _CategoryCard extends StatelessWidget {
@@ -531,5 +604,11 @@ class _CategoryCard extends StatelessWidget {
   final VoidCallback onTap;
   const _CategoryCard({required this.title, required this.count, required this.isFav, required this.onTap});
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text("$count chaîne${count > 1 ? 's' : ''}", style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
+  Widget build(BuildContext context) {
+    final String channelsLabel = lang.locale.value == 'fr' 
+      ? "$count chaîne${count > 1 ? 's' : ''}" 
+      : "$count channel${count > 1 ? 's' : ''}";
+    
+    return GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(channelsLabel, style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
+  }
 }
