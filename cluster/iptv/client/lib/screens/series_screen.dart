@@ -71,7 +71,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
     setState(() {
       var result = _all;
       if (_selectedGenre != null) {
-        result = result.where((s) => (s.group ?? 'Autres') == _selectedGenre).toList();
+        result = result.where((s) => (s.group ?? lang.t('other')) == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
         final lq = normalize(_query);
@@ -98,14 +98,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   List<String> get _genres {
     final set = <String>{};
-    for (final s in _all) { set.add(s.group ?? 'Autres'); }
+    for (final s in _all) { set.add(s.group ?? lang.t('other')); }
     return set.toList()..sort();
   }
 
   Map<String, int> get _genreCounts {
     final map = <String, int>{};
     for (final s in _all) {
-      final g = s.group ?? 'Autres';
+      final g = s.group ?? lang.t('other');
       map[g] = (map[g] ?? 0) + 1;
     }
     return map;
@@ -115,7 +115,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
     if (_cachedGroups != null) return _cachedGroups!;
     final m = <String, List<SeriesItem>>{};
     for (final s in items) {
-      (m[s.group ?? 'Autres'] ??= []).add(s);
+      (m[s.group ?? lang.t('other')] ??= []).add(s);
     }
     _cachedGroups = m;
     return m;

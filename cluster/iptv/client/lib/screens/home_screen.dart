@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       var result = _allChannels;
       if (_selectedGenre != null) {
-        result = result.where((c) => (c.group ?? 'Autres') == _selectedGenre).toList();
+        result = result.where((c) => (c.group ?? lang.t('other')) == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
         final lq = normalize(_query);
@@ -105,14 +105,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> get _genres {
     final set = <String>{};
-    for (final c in _allChannels) { set.add(c.group ?? 'Autres'); }
+    for (final c in _allChannels) { set.add(c.group ?? lang.t('other')); }
     return set.toList()..sort();
   }
 
   Map<String, int> get _genreCounts {
     final map = <String, int>{};
     for (final c in _allChannels) {
-      final g = c.group ?? 'Autres';
+      final g = c.group ?? lang.t('other');
       map[g] = (map[g] ?? 0) + 1;
     }
     return map;
@@ -137,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_cachedGroups != null) return _cachedGroups!;
     final Map<String, List<Channel>> m = {};
     for (final ch in channels) {
-      (m[ch.group ?? 'Autres'] ??= []).add(ch);
+      (m[ch.group ?? lang.t('other')] ??= []).add(ch);
     }
     _cachedGroups = m;
     return m;

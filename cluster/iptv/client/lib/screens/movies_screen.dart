@@ -71,7 +71,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
     setState(() {
       var result = _all;
       if (_selectedGenre != null) {
-        result = result.where((m) => (m.group ?? 'Autres') == _selectedGenre).toList();
+        result = result.where((m) => (m.group ?? lang.t('other')) == _selectedGenre).toList();
       }
       if (_query.isNotEmpty) {
         final lq = normalize(_query);
@@ -98,14 +98,14 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   List<String> get _genres {
     final set = <String>{};
-    for (final m in _all) { set.add(m.group ?? 'Autres'); }
+    for (final m in _all) { set.add(m.group ?? lang.t('other')); }
     return set.toList()..sort();
   }
 
   Map<String, int> get _genreCounts {
     final map = <String, int>{};
     for (final m in _all) {
-      final g = m.group ?? 'Autres';
+      final g = m.group ?? lang.t('other');
       map[g] = (map[g] ?? 0) + 1;
     }
     return map;
@@ -123,7 +123,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
     if (_cachedGroups != null) return _cachedGroups!;
     final m = <String, List<Movie>>{};
     for (final mv in movies) {
-      (m[mv.group ?? 'Autres'] ??= []).add(mv);
+      (m[mv.group ?? lang.t('other')] ??= []).add(mv);
     }
     _cachedGroups = m;
     return m;

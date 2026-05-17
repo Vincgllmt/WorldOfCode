@@ -4,6 +4,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
+import '../services/language_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String name;
@@ -156,6 +157,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
           bottomButtonBar: const [
+            MaterialPlayOrPauseButton(),
             MaterialPositionIndicator(),
             Spacer(),
             MaterialFullscreenButton(),
@@ -173,6 +175,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
             bottomButtonBar: const [
+              MaterialDesktopPlayOrPauseButton(),
               MaterialDesktopPositionIndicator(),
               Spacer(),
               MaterialDesktopFullscreenButton(),
@@ -220,13 +223,13 @@ class _SpeedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PopupMenuButton<double>(
     icon: const Icon(Icons.speed_rounded, color: Colors.white),
-    tooltip: 'Vitesse de lecture',
+    tooltip: lang.t('playback_speed'),
     color: const Color(0xFF1A0F2E),
     offset: const Offset(0, 40),
     initialValue: speed,
     onSelected: onSelected,
     itemBuilder: (_) => [
-      const PopupMenuItem(value: 1.0, child: Text('Normal', style: TextStyle(color: Colors.white))),
+      PopupMenuItem(value: 1.0, child: Text(lang.t('speed_normal'), style: const TextStyle(color: Colors.white))),
       const PopupMenuItem(value: 1.25, child: Text('1.25x', style: TextStyle(color: Colors.white))),
       const PopupMenuItem(value: 1.5, child: Text('1.5x', style: TextStyle(color: Colors.white))),
       const PopupMenuItem(value: 2.0, child: Text('2.0x', style: TextStyle(color: Colors.white))),
@@ -240,7 +243,7 @@ class _TrackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     icon: const Icon(Icons.tune_rounded, color: Colors.white),
-    tooltip: 'Audio / Sous-titres',
+    tooltip: lang.t('audio_subtitles'),
     onPressed: onTap,
   );
 }
@@ -329,7 +332,7 @@ class _TrackSheetState extends State<_TrackSheet> {
                     color: const Color(0xFF9D4EDD),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text('Terminé', style: TextStyle(
+                  child: Text(lang.t('done'), style: const TextStyle(
                     color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700,
                   )),
                 ),
@@ -340,7 +343,7 @@ class _TrackSheetState extends State<_TrackSheet> {
 
           // ── Audio ─────────────────────────────────────────────────────────
           if (audioTracks.length > 1) ...[
-            const _SectionHeader(icon: Icons.volume_up_rounded, label: 'Langue audio'),
+            _SectionHeader(icon: Icons.volume_up_rounded, label: lang.t('audio_language')),
             const SizedBox(height: 8),
             ...audioTracks.map((t) => _TrackTile(
               label: _audioLabel(t),
@@ -352,10 +355,10 @@ class _TrackSheetState extends State<_TrackSheet> {
 
           // ── Subtitle track ────────────────────────────────────────────────
           if (subtitleTracks.length > 1) ...[
-            const _SectionHeader(icon: Icons.subtitles_rounded, label: 'Sous-titres'),
+            _SectionHeader(icon: Icons.subtitles_rounded, label: lang.t('subtitles')),
             const SizedBox(height: 8),
             _TrackTile(
-              label: 'Désactivés',
+              label: lang.t('subtitles_disabled'),
               icon: Icons.subtitles_off_rounded,
               selected: _selSubtitle == SubtitleTrack.no(),
               onTap: () => _pickSubtitle(SubtitleTrack.no()),
@@ -371,19 +374,19 @@ class _TrackSheetState extends State<_TrackSheet> {
           ],
 
           // ── Subtitle appearance ───────────────────────────────────────────
-          const _SectionHeader(icon: Icons.text_fields_rounded, label: 'Apparence sous-titres'),
+          _SectionHeader(icon: Icons.text_fields_rounded, label: lang.t('subtitle_appearance')),
           const SizedBox(height: 14),
 
           _SettingRow(
-            label: 'Couleur',
+            label: lang.t('color'),
             chips: [
               _Chip(
-                label: 'Blanc',
+                label: lang.t('white'),
                 selected: _settings.color == SubtitleColor.white,
                 onTap: () => _update(_settings.copyWith(color: SubtitleColor.white)),
               ),
               _Chip(
-                label: 'Jaune',
+                label: lang.t('yellow'),
                 dotColor: const Color(0xFFFFE000),
                 selected: _settings.color == SubtitleColor.yellow,
                 onTap: () => _update(_settings.copyWith(color: SubtitleColor.yellow)),
@@ -393,15 +396,15 @@ class _TrackSheetState extends State<_TrackSheet> {
           const SizedBox(height: 10),
 
           _SettingRow(
-            label: 'Fond',
+            label: lang.t('background'),
             chips: [
               _Chip(
-                label: 'Aucun',
+                label: lang.t('none'),
                 selected: _settings.background == SubtitleBackground.none,
                 onTap: () => _update(_settings.copyWith(background: SubtitleBackground.none)),
               ),
               _Chip(
-                label: 'Sombre',
+                label: lang.t('dark'),
                 selected: _settings.background == SubtitleBackground.dark,
                 onTap: () => _update(_settings.copyWith(background: SubtitleBackground.dark)),
               ),
@@ -410,20 +413,20 @@ class _TrackSheetState extends State<_TrackSheet> {
           const SizedBox(height: 10),
 
           _SettingRow(
-            label: 'Taille',
+            label: lang.t('size'),
             chips: [
               _Chip(
-                label: 'Petit',
+                label: lang.t('small'),
                 selected: _settings.size == SubtitleSize.small,
                 onTap: () => _update(_settings.copyWith(size: SubtitleSize.small)),
               ),
               _Chip(
-                label: 'Normal',
+                label: lang.t('medium'),
                 selected: _settings.size == SubtitleSize.medium,
                 onTap: () => _update(_settings.copyWith(size: SubtitleSize.medium)),
               ),
               _Chip(
-                label: 'Grand',
+                label: lang.t('large'),
                 selected: _settings.size == SubtitleSize.large,
                 onTap: () => _update(_settings.copyWith(size: SubtitleSize.large)),
               ),
@@ -443,7 +446,7 @@ class _TrackSheetState extends State<_TrackSheet> {
             ),
             child: Center(
               child: Text(
-                'Aperçu des sous-titres',
+                lang.t('subtitle_preview'),
                 style: _settings.textStyle.copyWith(
                   fontSize: (_settings.fontSize * 0.33).clamp(13.0, 22.0),
                 ),
@@ -456,19 +459,19 @@ class _TrackSheetState extends State<_TrackSheet> {
   }
 
   String _audioLabel(AudioTrack t) {
-    if (t == AudioTrack.auto()) return 'Auto';
-    if (t == AudioTrack.no())   return 'Muet';
-    final lang  = t.language?.toUpperCase();
+    if (t == AudioTrack.auto()) return lang.t('auto');
+    if (t == AudioTrack.no())   return lang.t('mute');
+    final langCode  = t.language?.toUpperCase();
     final title = t.title;
-    if (lang != null && title != null) return '$lang — $title';
-    return lang ?? title ?? 'Piste ${t.id}';
+    if (langCode != null && title != null) return '$langCode — $title';
+    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
   }
 
   String _subtitleLabel(SubtitleTrack t) {
-    final lang  = t.language?.toUpperCase();
+    final langCode  = t.language?.toUpperCase();
     final title = t.title;
-    if (lang != null && title != null) return '$lang — $title';
-    return lang ?? title ?? 'Piste ${t.id}';
+    if (langCode != null && title != null) return '$langCode — $title';
+    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
   }
 }
 

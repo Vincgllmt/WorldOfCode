@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../models/movie_detail.dart';
 import '../services/api_service.dart';
+import '../services/language_service.dart';
 import 'player_screen.dart';
 
 class _C {
@@ -77,15 +78,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Synopsis
-                        const Text(
-                          'Synopsis',
-                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                        Text(
+                          lang.t('synopsis'),
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           (detail?.description != null && detail!.description!.isNotEmpty)
                             ? detail.description!
-                            : 'Aucune description disponible.',
+                            : lang.t('no_description'),
                           style: const TextStyle(color: _C.txtSub, fontSize: 14, height: 1.55),
                         ),
                         const SizedBox(height: 28),
@@ -103,9 +104,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               elevation: 0,
                             ),
                             icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                            label: const Text(
-                              'Lire le film',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            label: Text(
+                              lang.t('play_movie'),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                             ),
                           ),
                         ),
@@ -113,9 +114,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         // Cast
                         if (detail?.cast != null && detail!.cast!.isNotEmpty) ...[
                           const SizedBox(height: 28),
-                          const Text(
-                            'Avec',
-                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                          Text(
+                            lang.t('cast'),
+                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -127,9 +128,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         // Director
                         if (detail?.director != null && detail!.director!.isNotEmpty) ...[
                           const SizedBox(height: 20),
-                          const Text(
-                            'Réalisateur',
-                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+                          Text(
+                            lang.t('director'),
+                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           Text(

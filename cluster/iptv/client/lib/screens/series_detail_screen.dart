@@ -4,6 +4,7 @@ import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../services/api_service.dart';
 import '../services/progress_service.dart';
+import '../services/language_service.dart';
 import 'player_screen.dart';
 
 class _C {
@@ -65,7 +66,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               const SizedBox(height: 16),
               ElevatedButton(onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(backgroundColor: _C.accent),
-                child: const Text('Retour')),
+                child: Text(lang.t('back'))),
             ]));
           }
 
@@ -91,7 +92,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    '${sortedSeasons.length} saison${sortedSeasons.length > 1 ? 's' : ''}',
+                    '${sortedSeasons.length} ${lang.t(sortedSeasons.length > 1 ? 'seasons' : 'season').toLowerCase()}',
                     style: const TextStyle(color: _C.glow, fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -247,14 +248,14 @@ class _SeasonTile extends StatelessWidget {
                         color: isExpanded ? _C.accent : const Color(0x33FFFFFF),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text('Saison $seasonNum',
+                      child: Text('${lang.t('season')} $seasonNum',
                         style: TextStyle(
                           color: isExpanded ? Colors.white : _C.txtSub,
                           fontWeight: FontWeight.w700, fontSize: 14,
                         )),
                     ),
                     const SizedBox(width: 12),
-                    Text('${episodes.length} épisode${episodes.length > 1 ? 's' : ''}',
+                    Text('${episodes.length} ${lang.t(episodes.length > 1 ? 'episodes' : 'episode').toLowerCase()}',
                       style: const TextStyle(color: _C.txtSub, fontSize: 13)),
                     const Spacer(),
                     Icon(
