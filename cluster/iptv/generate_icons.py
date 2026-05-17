@@ -15,7 +15,7 @@ SVG = BASE / "logo.svg"
 CLIENT = BASE / "client"
 
 
-def svg_to_png(size, padding=0.0):
+def svg_to_png(size, padding=0.05):
     # Initial render at large size to maintain quality during crop
     render_size = max(size * 4, 1024)
     data = cairosvg.svg2png(url=str(SVG), output_width=render_size)
@@ -43,8 +43,7 @@ def svg_to_png(size, padding=0.0):
     square_img = Image.new("RGBA", (new_size, new_size), (0, 0, 0, 0))
     square_img.paste(img, ((new_size - w) // 2, (new_size - h) // 2))
     
-    # Add padding (5% to make it look balanced)
-    padding = 0.05
+    # Add padding
     pad = int(new_size * padding)
     padded_size = new_size + 2 * pad
     padded_img = Image.new("RGBA", (padded_size, padded_size), (0, 0, 0, 0))
@@ -54,20 +53,20 @@ def svg_to_png(size, padding=0.0):
     return padded_img.resize((size, size), Image.LANCZOS)
 
 
-def save_png(path, size):
+def save_png(path, size, padding=0.05):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    img = svg_to_png(size)
+    img = svg_to_png(size, padding=padding)
     img.save(path, "PNG")
     print(f"  {path.relative_to(BASE)} ({size}x{size})")
 
 
-def save_ico(path, sizes):
+def save_ico(path, sizes, padding=0.05):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     images = []
     for s in sizes:
-        img = svg_to_png(s)
+        img = svg_to_png(s, padding=padding)
         images.append(img)
     images[0].save(
         str(path), format="ICO",
@@ -82,13 +81,22 @@ save_png(CLIENT / "assets/images/logo.png", 512)
 shutil.copy(SVG, CLIENT / "assets/images/logo.svg")
 print(f"  client/assets/images/logo.svg (copied)")
 
-print("\n=== Android mipmap icons ===")
+print("\n=== Android mipmap icons (Legacy) ===")
 android_res = CLIENT / "android/app/src/main/res"
 save_png(android_res / "mipmap-mdpi/ic_launcher.png", 48)
 save_png(android_res / "mipmap-hdpi/ic_launcher.png", 72)
 save_png(android_res / "mipmap-xhdpi/ic_launcher.png", 96)
 save_png(android_res / "mipmap-xxhdpi/ic_launcher.png", 144)
 save_png(android_res / "mipmap-xxxhdpi/ic_launcher.png", 192)
+
+print("\n=== Android adaptive icons foreground ===")
+# Adaptive icons are 108x108dp.
+# We use 0 padding because we'll handle padding/inset in the XML
+save_png(android_res / "drawable-mdpi/ic_launcher_foreground.png", 108, padding=0)
+save_png(android_res / "drawable-hdpi/ic_launcher_foreground.png", 162, padding=0)
+save_png(android_res / "drawable-xhdpi/ic_launcher_foreground.png", 216, padding=0)
+save_png(android_res / "drawable-xxhdpi/ic_launcher_foreground.png", 324, padding=0)
+save_png(android_res / "drawable-xxxhdpi/ic_launcher_foreground.png", 432, padding=0)
 
 print("\n=== iOS app icons ===")
 ios_icons = CLIENT / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
