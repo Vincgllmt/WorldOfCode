@@ -129,22 +129,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final topBar = [
+      const SizedBox(width: 16),
+      const Icon(Icons.circle, size: 8, color: Color(0xFFFF4757)),
+      const SizedBox(width: 12),
       Expanded(
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            _AppBarTitle(name: widget.name),
-            const Spacer(),
-            if (widget.group != null) _GroupTag(group: widget.group!),
-            if (widget.type != 'live') _SpeedButton(
-              speed: _playbackSpeed,
-              onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
-            ),
-            _TrackButton(onTap: _showTrackSelector),
-            const SizedBox(width: 12),
-          ],
+        child: Text(
+          widget.name,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
+      if (widget.group != null) _GroupTag(group: widget.group!),
+      if (widget.type != 'live') _SpeedButton(
+        speed: _playbackSpeed,
+        onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
+      ),
+      _TrackButton(onTap: _showTrackSelector),
+      const SizedBox(width: 8),
     ];
 
     return Scaffold(
@@ -192,28 +193,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-}
-
-class _AppBarTitle extends StatelessWidget {
-  final String name;
-  const _AppBarTitle({required this.name});
-  @override
-  Widget build(BuildContext context) => Flexible(
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.circle, size: 8, color: Color(0xFFFF4757)),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            name,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _GroupTag extends StatelessWidget {
