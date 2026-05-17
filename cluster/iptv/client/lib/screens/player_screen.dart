@@ -130,7 +130,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final topBar = [
-      const SizedBox(width: 16),
+      IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
       const Icon(Icons.circle, size: 8, color: Color(0xFFFF4757)),
       const SizedBox(width: 12),
       Expanded(
@@ -187,10 +190,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
           ),
-          child: Video(
-            controller: _ctrl,
-            controls: AdaptiveVideoControls,
-            subtitleViewConfiguration: _subConfig,
+          child: GestureDetector(
+            onTap: () => _player.playOrPause(),
+            child: Video(
+              controller: _ctrl,
+              controls: AdaptiveVideoControls,
+              subtitleViewConfiguration: _subConfig,
+            ),
           ),
         ),
       ),
