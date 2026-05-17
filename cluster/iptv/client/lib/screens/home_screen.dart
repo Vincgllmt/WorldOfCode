@@ -7,6 +7,7 @@ import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
 import '../services/genre_favorites_service.dart';
 import '../services/language_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'player_screen.dart';
@@ -32,8 +33,6 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-enum ViewMode { themes, gridSmall, gridMedium, gridLarge }
-
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _api = ApiService();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -41,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Channel> _allChannels = [];
   List<Channel> _filtered = [];
-  ViewMode _viewMode = ViewMode.gridMedium;
   Set<String> _favorites = {};
   Set<String> _favGenres    = {};
   String  _query         = '';
@@ -215,80 +213,85 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: lang.locale,
       builder: (context, locale, _) {
-        return Scaffold(
-          key: _scaffoldKey,
-          backgroundColor: _C.bg,
-          extendBodyBehindAppBar: true,
-          drawer: GenreDrawer(
-            title: lang.t('live'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
-            favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
-          ),
-          appBar: _AppBar(
-            searchVisible: _searchVisible, viewMode: _viewMode, searchCtrl: _searchCtrl,
-            onSearchChanged: _onSearch, onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-            onAccount: _openSettings, onToggleView: (v) => setState(() => _viewMode = v),
-            onToggleSearch: () => setState(() {
-              _searchVisible = !_searchVisible;
-              if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
-            }),
-          ),
-          body: FutureBuilder<List<Channel>>(
-            future: _future,
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const _LoadingView();
-              }
-              if (snap.hasError) {
-                return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
-                  _allChannels = []; _filtered = []; _future = _loadChannels();
-                }));
-              }
-              if (_allChannels.isEmpty) {
-                return Center(child: Text(lang.t('no_connection'), style: const TextStyle(color: _C.txtSub)));
-              }
+        return ValueListenableBuilder<ViewMode>(
+          valueListenable: settings.viewMode,
+          builder: (context, viewMode, _) {
+            return Scaffold(
+              key: _scaffoldKey,
+              backgroundColor: _C.bg,
+              extendBodyBehindAppBar: true,
+              drawer: GenreDrawer(
+                title: lang.t('live'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
+                favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
+              ),
+              appBar: _AppBar(
+                searchVisible: _searchVisible, viewMode: viewMode, searchCtrl: _searchCtrl,
+                onSearchChanged: _onSearch, onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                onAccount: _openSettings, onToggleView: (v) => settings.setViewMode(v),
+                onToggleSearch: () => setState(() {
+                  _searchVisible = !_searchVisible;
+                  if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
+                }),
+              ),
+              body: FutureBuilder<List<Channel>>(
+                future: _future,
+                builder: (ctx, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const _LoadingView();
+                  }
+                  if (snap.hasError) {
+                    return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
+                      _allChannels = []; _filtered = []; _future = _loadChannels();
+                    }));
+                  }
+                  if (_allChannels.isEmpty) {
+                    return Center(child: Text(lang.t('no_connection'), style: const TextStyle(color: _C.txtSub)));
+                  }
 
-              final groups = _grouped(_filtered);
-              final sortedKeys = _sortedKeys(groups);
-              final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
+                  final groups = _grouped(_filtered);
+                  final sortedKeys = _sortedKeys(groups);
+                  final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
 
-              return RefreshIndicator(
-                onRefresh: () => _loadChannels(force: true),
-                color: _C.accent,
-                backgroundColor: _C.bgCard,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
-                    if (_query.isNotEmpty)
-                      ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
-                    else if (_viewMode == ViewMode.themes && _selectedGenre == null)
-                      _buildThemesGrid(groups, sortedKeys)
-                    else if (_selectedGenre != null)
-                      ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
-                    else
-                      for (final key in sortedKeys)
-                        SliverToBoxAdapter(child: _CategoryRow(
-                          title: key, channels: groups[key]!, favorites: _favorites,
-                          onTap: _openPlayer, onFav: _toggleFavorite,
-                          onTitleTap: () => setState(() => _selectedGenre = key),
-                          isFavGenre: _favGenres.contains(key),
-                          onToggleFavGenre: () => _toggleFavGenre(key),
-                          viewMode: _viewMode,
-                        )),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-                  ],
-                ),
-              );
-            },
-          ),
+                  return RefreshIndicator(
+                    onRefresh: () => _loadChannels(force: true),
+                    color: _C.accent,
+                    backgroundColor: _C.bgCard,
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+                        if (_query.isNotEmpty)
+                          ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
+                        else if (viewMode == ViewMode.themes && _selectedGenre == null)
+                          _buildThemesGrid(groups, sortedKeys)
+                        else if (_selectedGenre != null)
+                          ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
+                        else
+                          for (final key in sortedKeys)
+                            SliverToBoxAdapter(child: _CategoryRow(
+                              title: key, channels: groups[key]!, favorites: _favorites,
+                              onTap: _openPlayer, onFav: _toggleFavorite,
+                              onTitleTap: () => setState(() => _selectedGenre = key),
+                              isFavGenre: _favGenres.contains(key),
+                              onToggleFavGenre: () => _toggleFavGenre(key),
+                              viewMode: viewMode,
+                            )),
+                        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            );
+          }
         );
       }
     );
   }
 
-  List<Widget> _buildGridSlivers(List<Channel> channels, {bool showTitle = false, String? title}) {
+  List<Widget> _buildGridSlivers(List<Channel> channels, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 270;
     double aspectRatio = 264 / 185;
-    switch (_viewMode) {
+    switch (viewMode) {
       case ViewMode.gridSmall: maxExtent = 180; break;
       case ViewMode.gridMedium: maxExtent = 270; break;
       case ViewMode.gridLarge: maxExtent = 380; break;

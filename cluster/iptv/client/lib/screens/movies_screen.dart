@@ -7,6 +7,7 @@ import '../services/progress_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../services/language_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'movie_detail_screen.dart';
@@ -29,8 +30,6 @@ class MoviesScreen extends StatefulWidget {
   State<MoviesScreen> createState() => _MoviesScreenState();
 }
 
-enum ViewMode { themes, gridSmall, gridMedium, gridLarge }
-
 class _MoviesScreenState extends State<MoviesScreen> {
   final ApiService _api = ApiService();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -42,7 +41,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
-  ViewMode _viewMode     = ViewMode.gridMedium;
   final   _searchCtrl    = TextEditingController();
 
   Map<String, List<Movie>>? _cachedGroups;
@@ -203,29 +201,32 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: lang.locale,
       builder: (context, locale, _) {
-        return Scaffold(
-          key: _scaffoldKey,
-          backgroundColor: _C.bg,
-          extendBodyBehindAppBar: true,
-          drawer: GenreDrawer(
-            title: lang.t('movies'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
-            favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
-          ),
-          appBar: _buildAppBar(),
-          body: FutureBuilder<List<Movie>>(
-            future: _future,
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return _LoadingView(label: lang.t('loading_movies'));
-              }
-              if (snap.hasError) {
-                return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
-                  _all = []; _filtered = []; _selectedGenre = null; _future = _load();
-                }));
-              }
-              if (_all.isEmpty) {
-                return Center(child: Text('Aucun film disponible.', style: const TextStyle(color: _C.txtSub)));
-              }
+        return ValueListenableBuilder<ViewMode>(
+          valueListenable: settings.viewMode,
+          builder: (context, viewMode, _) {
+            return Scaffold(
+              key: _scaffoldKey,
+              backgroundColor: _C.bg,
+              extendBodyBehindAppBar: true,
+              drawer: GenreDrawer(
+                title: lang.t('movies'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
+                favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
+              ),
+              appBar: _buildAppBar(viewMode),
+              body: FutureBuilder<List<Movie>>(
+                future: _future,
+                builder: (ctx, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return _LoadingView(label: lang.t('loading_movies'));
+                  }
+                  if (snap.hasError) {
+                    return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
+                      _all = []; _filtered = []; _selectedGenre = null; _future = _load();
+                    }));
+                  }
+                  if (_all.isEmpty) {
+                    return Center(child: Text('Aucun film disponible.', style: const TextStyle(color: _C.txtSub)));
+                  }
 
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
@@ -295,7 +296,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           },
                           onFavToggle: () {},
                           onTitleTap: () {},
-                          viewMode: _viewMode,
+                          viewMode: viewMode,
                           isAccent: true,
                         );
                       },
@@ -303,18 +304,18 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   ),
 
                 if (_query.isNotEmpty)
-                  ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
-                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                  ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
+                else if (viewMode == ViewMode.themes && _selectedGenre == null)
                   _buildThemesGrid(groups, sortedKeys)
                 else if (_selectedGenre != null)
-                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                  ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
                 else
                   for (final key in sortedKeys)
                     SliverToBoxAdapter(child: _GenreRow(
                       title: key, movies: groups[key]!, isFav: _favGenres.contains(key),
                       onTap: _open, onFavToggle: () => _toggleFavGenre(key),
                       onTitleTap: () => setState(() => _selectedGenre = key),
-                      viewMode: _viewMode,
+                      viewMode: viewMode,
                     )),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
@@ -323,14 +324,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
         },
       ),
     );
+          }
+        );
       }
     );
   }
 
-  List<Widget> _buildGridSlivers(List<Movie> movies, {bool showTitle = false, String? title}) {
+  List<Widget> _buildGridSlivers(List<Movie> movies, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 155;
     double aspectRatio = 135 / 235;
-    switch (_viewMode) {
+    switch (viewMode) {
       case ViewMode.gridSmall: maxExtent = 115; break;
       case ViewMode.gridMedium: maxExtent = 155; break;
       case ViewMode.gridLarge: maxExtent = 220; break;
@@ -351,7 +354,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
           gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: maxExtent, mainAxisSpacing: 24, crossAxisSpacing: 12, childAspectRatio: aspectRatio),
           delegate: SliverChildBuilderDelegate((_, i) => _PosterCard(
             name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating,
-            onTap: () => _open(movies[i]), viewMode: _viewMode,
+            onTap: () => _open(movies[i]), viewMode: viewMode,
           ), childCount: movies.length),
         ),
       ),
@@ -384,8 +387,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
     );
   }
 
-  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode v, IconData icon, String label) {
-    final selected = _viewMode == v;
+  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode viewMode, ViewMode v, IconData icon, String label) {
+    final selected = viewMode == v;
     return PopupMenuItem(
       value: v,
       child: Row(children: [
@@ -396,7 +399,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(ViewMode viewMode) {
     return PreferredSize(
       preferredSize: const Size.fromHeight(70),
       child: Container(
@@ -422,13 +425,13 @@ class _MoviesScreenState extends State<MoviesScreen> {
               const SizedBox(width: 4),
               PopupMenuButton<ViewMode>(
                 icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
-                tooltip: 'Mode d\'affichage', color: const Color(0xFF160B25), offset: const Offset(0, 50),
-                onSelected: (v) => setState(() => _viewMode = v),
+                tooltip: lang.t('view_mode'), color: const Color(0xFF160B25), offset: const Offset(0, 50),
+                onSelected: (v) => settings.setViewMode(v),
                 itemBuilder: (_) => [
-                  _buildPopupItem(ViewMode.themes, Icons.list_alt_rounded, 'Thèmes (Liste)'),
-                  _buildPopupItem(ViewMode.gridSmall, Icons.grid_view_rounded, 'Grille (Petite)'),
-                  _buildPopupItem(ViewMode.gridMedium, Icons.grid_view_rounded, 'Grille (Moyenne)'),
-                  _buildPopupItem(ViewMode.gridLarge, Icons.grid_view_rounded, 'Grille (Grande)'),
+                  _buildPopupItem(viewMode, ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
+                  _buildPopupItem(viewMode, ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
+                  _buildPopupItem(viewMode, ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
+                  _buildPopupItem(viewMode, ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
                 ],
               ),
               const SizedBox(width: 4),

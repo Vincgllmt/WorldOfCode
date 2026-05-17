@@ -4,11 +4,13 @@ import 'screens/main_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/credentials_service.dart';
 import 'services/language_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   await lang.init();
+  await settings.init();
   final hasCredentials = await CredentialsService.load() != null;
   runApp(IptvApp(startWithSetup: !hasCredentials));
 }

@@ -7,6 +7,7 @@ import '../services/progress_service.dart';
 import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../services/language_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'series_detail_screen.dart';
@@ -29,8 +30,6 @@ class SeriesScreen extends StatefulWidget {
   State<SeriesScreen> createState() => _SeriesScreenState();
 }
 
-enum ViewMode { themes, gridSmall, gridMedium, gridLarge }
-
 class _SeriesScreenState extends State<SeriesScreen> {
   final ApiService _api = ApiService();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -42,7 +41,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
   String  _query         = '';
   String? _selectedGenre;
   bool    _searchVisible = false;
-  ViewMode _viewMode     = ViewMode.gridMedium;
   final   _searchCtrl    = TextEditingController();
 
   @override
@@ -203,39 +201,42 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return ValueListenableBuilder<String>(
       valueListenable: lang.locale,
       builder: (context, locale, _) {
-        return Scaffold(
-          key: _scaffoldKey,
-          backgroundColor: _C.bg,
-          extendBodyBehindAppBar: true,
-          drawer: GenreDrawer(
-            title: lang.t('series'),
-            genres: _genres,
-            counts: _genreCounts,
-            selected: _selectedGenre,
-            favGenres: _favGenres,
-            onSelect: _onGenreSelect,
-            onToggleFav: _toggleFavGenre,
-          ),
-          appBar: _buildAppBar(),
-          body: FutureBuilder<List<SeriesItem>>(
-            future: _future,
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return _LoadingView(label: lang.t('loading_series'));
-              }
-              if (snap.hasError) {
-                return _ErrorView(
-                  message: snap.error.toString(),
-                  onRetry: () => setState(() {
-                    _all = []; _filtered = [];
-                    _selectedGenre = null;
-                    _future = _load();
-                  }),
-                );
-              }
-              if (_all.isEmpty) {
-                return const Center(child: Text('Aucune série disponible.', style: TextStyle(color: _C.txtSub)));
-              }
+        return ValueListenableBuilder<ViewMode>(
+          valueListenable: settings.viewMode,
+          builder: (context, viewMode, _) {
+            return Scaffold(
+              key: _scaffoldKey,
+              backgroundColor: _C.bg,
+              extendBodyBehindAppBar: true,
+              drawer: GenreDrawer(
+                title: lang.t('series'),
+                genres: _genres,
+                counts: _genreCounts,
+                selected: _selectedGenre,
+                favGenres: _favGenres,
+                onSelect: _onGenreSelect,
+                onToggleFav: _toggleFavGenre,
+              ),
+              appBar: _buildAppBar(viewMode),
+              body: FutureBuilder<List<SeriesItem>>(
+                future: _future,
+                builder: (ctx, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return _LoadingView(label: lang.t('loading_series'));
+                  }
+                  if (snap.hasError) {
+                    return _ErrorView(
+                      message: snap.error.toString(),
+                      onRetry: () => setState(() {
+                        _all = []; _filtered = [];
+                        _selectedGenre = null;
+                        _future = _load();
+                      }),
+                    );
+                  }
+                  if (_all.isEmpty) {
+                    return const Center(child: Text('Aucune série disponible.', style: TextStyle(color: _C.txtSub)));
+                  }
 
           final groups = _grouped(_filtered);
           final sortedKeys = _sortedKeys(groups);
@@ -322,7 +323,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           },
                           onFavToggle: () {},
                           onTitleTap: () {},
-                          viewMode: _viewMode,
+                          viewMode: viewMode,
                           isAccent: true,
                         );
                       },
@@ -330,13 +331,13 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   ),
 
                 if (_query.isNotEmpty)
-                  ..._buildGridSlivers(_filtered, showTitle: true, title: '${lang.t('results_for')} "$_query"')
-                else if (_viewMode == ViewMode.themes && _selectedGenre == null)
+                  ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
+                else if (viewMode == ViewMode.themes && _selectedGenre == null)
                   // Mode Thèmes uniquement
                   _buildThemesGrid(groups, sortedKeys)
                 else if (_selectedGenre != null)
                   // Un seul thème sélectionné
-                  ..._buildGridSlivers(groups[_selectedGenre]!, showTitle: false)
+                  ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
                 else
                   // Mode Images normal : On laisse les thèmes en lignes !
                   for (final key in sortedKeys)
@@ -348,7 +349,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         onTap: _open,
                         onFavToggle: () => _toggleFavGenre(key),
                         onTitleTap: () => setState(() => _selectedGenre = key),
-                        viewMode: _viewMode,
+                        viewMode: viewMode,
                       ),
                     ),
 
@@ -359,15 +360,17 @@ class _SeriesScreenState extends State<SeriesScreen> {
         },
       ),
     );
+          }
+        );
       }
     );
   }
 
-  List<Widget> _buildGridSlivers(List<SeriesItem> items, {bool showTitle = false, String? title}) {
+  List<Widget> _buildGridSlivers(List<SeriesItem> items, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 150;
     double aspectRatio = 130 / 220;
     
-    switch (_viewMode) {
+    switch (viewMode) {
       case ViewMode.gridSmall:
         maxExtent = 115;
         break;
@@ -416,7 +419,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
               cover: items[i].cover,
               rating: items[i].rating,
               onTap: () => _open(items[i]),
-              viewMode: _viewMode,
+              viewMode: viewMode,
             ),
             childCount: items.length,
           ),
@@ -454,8 +457,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 
-  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode v, IconData icon, String label) {
-    final selected = _viewMode == v;
+  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode viewMode, ViewMode v, IconData icon, String label) {
+    final selected = viewMode == v;
     return PopupMenuItem(
       value: v,
       child: Row(
@@ -520,12 +523,12 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   tooltip: lang.t('view_mode'),
                   color: const Color(0xFF160B25),
                   offset: const Offset(0, 50),
-                  onSelected: (v) => setState(() => _viewMode = v),
+                  onSelected: (v) => settings.setViewMode(v),
                   itemBuilder: (_) => [
-                    _buildPopupItem(ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
-                    _buildPopupItem(ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
-                    _buildPopupItem(ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
-                    _buildPopupItem(ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
+                    _buildPopupItem(viewMode, ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
+                    _buildPopupItem(viewMode, ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
+                    _buildPopupItem(viewMode, ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
+                    _buildPopupItem(viewMode, ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
                   ],
                 ),
                 const SizedBox(width: 4),
