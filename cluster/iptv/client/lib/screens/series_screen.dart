@@ -475,7 +475,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(ViewMode viewMode) {
     return PreferredSize(
       preferredSize: const Size.fromHeight(70),
       child: Container(
