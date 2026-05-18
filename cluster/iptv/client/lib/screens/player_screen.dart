@@ -254,38 +254,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
-          bottomButtonBar: [
-            const MaterialPlayOrPauseButton(),
-            const MaterialPositionIndicator(),
-            const Spacer(),
-            _ComboSelector(
-              tracks: _tracks,
-              currentTrack: _track,
-              onSelect: (a, s) {
-                _player.setAudioTrack(a);
-                _player.setSubtitleTrack(s);
-              },
-            ),
-            const MaterialFullscreenButton(),
+          bottomButtonBar: const [
+            MaterialPlayOrPauseButton(),
+            MaterialPositionIndicator(),
+            Spacer(),
+            MaterialFullscreenButton(),
           ],
         ),
         fullscreen: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
-          bottomButtonBar: [
-            const MaterialPlayOrPauseButton(),
-            const MaterialPositionIndicator(),
-            const Spacer(),
-            _ComboSelector(
-              tracks: _tracks,
-              currentTrack: _track,
-              onSelect: (a, s) {
-                _player.setAudioTrack(a);
-                _player.setSubtitleTrack(s);
-              },
-            ),
-            const MaterialFullscreenButton(),
+          bottomButtonBar: const [
+            MaterialPlayOrPauseButton(),
+            MaterialPositionIndicator(),
+            Spacer(),
+            MaterialFullscreenButton(),
           ],
         ),
         child: MaterialDesktopVideoControlsTheme(
@@ -294,19 +278,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
             topButtonBarMargin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
-            bottomButtonBar: [
-              const MaterialDesktopPlayOrPauseButton(),
-              const MaterialDesktopPositionIndicator(),
-              const Spacer(),
-              _ComboSelector(
-                tracks: _tracks,
-                currentTrack: _track,
-                onSelect: (a, s) {
-                  _player.setAudioTrack(a);
-                  _player.setSubtitleTrack(s);
-                },
-              ),
-              const MaterialDesktopFullscreenButton(),
+            bottomButtonBar: const [
+              MaterialDesktopPlayOrPauseButton(),
+              MaterialDesktopPositionIndicator(),
+              Spacer(),
+              MaterialDesktopFullscreenButton(),
             ],
           ),
           fullscreen: MaterialDesktopVideoControlsThemeData(
@@ -314,19 +290,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
             topButtonBarMargin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
-            bottomButtonBar: [
-              const MaterialDesktopPlayOrPauseButton(),
-              const MaterialDesktopPositionIndicator(),
-              const Spacer(),
-              _ComboSelector(
-                tracks: _tracks,
-                currentTrack: _track,
-                onSelect: (a, s) {
-                  _player.setAudioTrack(a);
-                  _player.setSubtitleTrack(s);
-                },
-              ),
-              const MaterialDesktopFullscreenButton(),
+            bottomButtonBar: const [
+              MaterialDesktopPlayOrPauseButton(),
+              MaterialDesktopPositionIndicator(),
+              Spacer(),
+              MaterialDesktopFullscreenButton(),
             ],
           ),
           child: Stack(
@@ -337,6 +305,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 controller: _ctrl,
                 controls: AdaptiveVideoControls,
                 subtitleViewConfiguration: _subConfig,
+              ),
+              // Combo Buttons Overlay
+              Positioned(
+                bottom: 80,
+                right: 24,
+                child: _ComboSelector(
+                  tracks: _tracks,
+                  currentTrack: _track,
+                  onSelect: (a, s) {
+                    _player.setAudioTrack(a);
+                    _player.setSubtitleTrack(s);
+                  },
+                ),
               ),
               // Center Play/Pause button
               StreamBuilder<bool>(
