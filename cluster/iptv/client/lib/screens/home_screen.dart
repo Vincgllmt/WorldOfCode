@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:async';
 import '../models/channel.dart';
-import '../models/epg_program.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
@@ -155,7 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openPlayer(Channel ch) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(name: ch.name, url: ch.url, group: ch.group, type: 'live'),
+      builder: (_) => PlayerScreen(
+        name: ch.name, 
+        url: ch.url, 
+        group: ch.group, 
+        type: 'live',
+        mediaId: ch.streamId,
+      ),
     ));
   }
 
@@ -291,8 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildGridSlivers(List<Channel> channels, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 270;
-    double aspectRatio = 264 / 215; // Increased height to accommodate EPG
-    if (viewMode == ViewMode.gridSmall) aspectRatio = 264 / 185;
+    double aspectRatio = 264 / 185;
 
     switch (viewMode) {
       case ViewMode.gridSmall: maxExtent = 180; break;
@@ -464,9 +467,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double rowHeight = 225; // Increased to accommodate EPG
+    double rowHeight = 185;
     if (viewMode == ViewMode.gridSmall) rowHeight = 125;
-    if (viewMode == ViewMode.gridLarge) rowHeight = 310;
+    if (viewMode == ViewMode.gridLarge) rowHeight = 265;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 28, 12, 10), child: Row(children: [
@@ -497,41 +500,12 @@ class _ChannelCard extends StatefulWidget {
 
 class _ChannelCardState extends State<_ChannelCard> {
   bool _hovered = false;
-  List<EpgProgram>? _epg;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchEpg();
-    _timer = Timer.periodic(const Duration(minutes: 5), (_) => _fetchEpg());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _fetchEpg() async {
-    if (widget.channel.streamId == null) return;
-    try {
-      final epg = await ApiService().fetchShortEpg(widget.channel.streamId!);
-      if (mounted) setState(() => _epg = epg);
-    } catch (_) {}
-  }
 
   @override
   Widget build(BuildContext context) {
     double w = 248;
     if (widget.viewMode == ViewMode.gridSmall) w = 160;
     if (widget.viewMode == ViewMode.gridLarge) w = 380;
-
-    final nowProgram = _epg?.where((p) => p.isNow).firstOrNull;
-    final nextProgram = _epg?.where((p) {
-      if (nowProgram == null) return false;
-      return p.start.isAtSameMomentAs(nowProgram.stop) || p.start.isAfter(nowProgram.start);
-    }).where((p) => !p.isNow).firstOrNull;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click, 
@@ -545,7 +519,7 @@ class _ChannelCardState extends State<_ChannelCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200), 
             curve: Curves.easeOut, 
-            transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
+            transform: _hovered ? (Matrix4.identity()....scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
             transformAlignment: Alignment.center, 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, 
@@ -558,50 +532,14 @@ class _ChannelCardState extends State<_ChannelCard> {
                 const SizedBox(height: 7),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2), 
-                  child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : Colors.white, fontSize: 13, fontWeight: FontWeight.w700))
+                  child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
                 ),
-                
-                // EPG Info
-                if (widget.viewMode != ViewMode.gridSmall) ...[
-                  const SizedBox(height: 5),
-                  if (nowProgram != null) ...[
-                    _EpgRow(
-                      label: lang.t('epg_now'),
-                      title: nowProgram.title,
-                      progress: _calculateProgress(nowProgram),
-                      isNow: true,
-                    ),
-                    if (nextProgram != null) 
-                      _EpgRow(
-                        label: lang.t('epg_next'),
-                        title: nextProgram.title,
-                        isNow: false,
-                      ),
-                  ] else if (_epg != null && _epg!.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(lang.t('epg_no_info'), style: const TextStyle(color: Color(0x44B0AEC8), fontSize: 10, fontStyle: FontStyle.italic)),
-                    )
-                  else
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: SizedBox(height: 2, width: 40, child: LinearProgressIndicator(backgroundColor: Color(0x05FFFFFF), color: Color(0x11FFFFFF))),
-                    ),
-                ],
               ],
             ),
           )
         )
       )
     );
-  }
-
-  double _calculateProgress(EpgProgram p) {
-    final now = DateTime.now();
-    final total = p.stop.difference(p.start).inSeconds;
-    final elapsed = now.difference(p.start).inSeconds;
-    if (total <= 0) return 0;
-    return (elapsed / total).clamp(0.0, 1.0);
   }
 
   Widget _buildThumbnail() {
@@ -611,46 +549,6 @@ class _ChannelCardState extends State<_ChannelCard> {
   }
   Widget _shimmer() => Container(color: _C.bgCard, child: const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))));
   Widget _fallback() => Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)])), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.live_tv_rounded, color: Color(0x779D4EDD), size: 28), const SizedBox(height: 5), Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 10)))]));
-}
-
-class _EpgRow extends StatelessWidget {
-  final String label;
-  final String title;
-  final double? progress;
-  final bool isNow;
-
-  const _EpgRow({required this.label, required this.title, this.progress, required this.isNow});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('$label : ', style: TextStyle(color: isNow ? _C.glow : _C.txtSub.withValues(alpha: 0.5), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-              Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isNow ? Colors.white : _C.txtSub.withValues(alpha: 0.8), fontSize: 10, fontWeight: isNow ? FontWeight.w600 : FontWeight.normal))),
-            ],
-          ),
-          if (progress != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 3, bottom: 1),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 1.5,
-                  backgroundColor: Colors.white.withValues(alpha: 0.05),
-                  color: _C.accent,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _LoadingView extends StatelessWidget {

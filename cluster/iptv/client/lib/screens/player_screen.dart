@@ -7,7 +7,9 @@ import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
 import '../services/download_service.dart';
+import '../services/api_service.dart';
 import '../models/series_detail.dart';
+import '../models/epg_program.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String name;
@@ -61,11 +63,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _overlayTimer;
   int _lastPositionSeconds = -1;
 
+  List<EpgProgram>? _epg;
+  Timer? _epgTimer;
+
   void _resetOverlayTimer() {
     if (!mounted) return;
     if (!_showOverlay) setState(() => _showOverlay = true);
     _overlayTimer?.cancel();
-    _overlayTimer = Timer(const Duration(seconds: 3), () {
+    _overlayTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _showOverlay = false);
     });
   }
@@ -79,6 +84,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
     _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
+
+    if (widget.type == 'live' && widget.mediaId != null) {
+      _fetchEpg();
+      _epgTimer = Timer.periodic(const Duration(minutes: 2), (_) => _fetchEpg());
+    }
 
     _player.stream.duration.listen((duration) {
       if (!_hasSeeked && widget.type != null && widget.type != 'live' && duration.inSeconds > 0) {
@@ -103,6 +113,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (widget.type != null && widget.type != 'live') {
       _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
     }
+  }
+
+  Future<void> _fetchEpg() async {
+    if (widget.mediaId == null) return;
+    try {
+      final epg = await ApiService().fetchShortEpg(widget.mediaId!);
+      if (mounted) setState(() => _epg = epg);
+    } catch (_) {}
   }
 
   String get _currentUrl => (widget.episodes != null && _currentEpisodeIndex != null)
@@ -159,7 +177,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _hasSeeked = false;
     });
 
-    // On récupère l'URL mise à jour via le getter qui utilise _currentEpisodeIndex
     _player.open(_buildMedia(_currentUrl));
   }
 
@@ -167,7 +184,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final progress = await ProgressService.getProgress(_currentUrl);
     if (progress != null && !progress.isCompleted) {
       final target = Duration(seconds: progress.positionSeconds);
-      // Attend que le lecteur soit prêt à recevoir le seek
       await Future.delayed(const Duration(milliseconds: 800));
       _player.seek(target);
     }
@@ -194,10 +210,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  // HLS streams (TF1, M6, France TV…) validate User-Agent and sometimes
-  // Referer. Passing a browser UA dramatically increases playback success.
   Media _buildMedia(String url) {
-    // Check if we have a local version
     final download = downloadService.getItem(_currentMediaId ?? -1, widget.type ?? '');
     if (download != null && download.status == DownloadStatus.completed && download.filePath != null) {
       final file = File(download.filePath!);
@@ -219,6 +232,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _overlayTimer?.cancel();
+    _epgTimer?.cancel();
     _progressTimer?.cancel();
     _saveProgress();
     _player.dispose();
@@ -334,6 +348,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     controls: AdaptiveVideoControls,
                     subtitleViewConfiguration: _subConfig,
                   ),
+
+                  // EPG Info Overlay (Bottom Left)
+                  if (widget.type == 'live' && _epg != null && _epg!.isNotEmpty)
+                    Positioned(
+                      bottom: 80,
+                      left: 24,
+                      child: IgnorePointer(
+                        ignoring: !_showOverlay,
+                        child: AnimatedOpacity(
+                          opacity: _showOverlay ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 300),
+                          child: _EpgOverlay(epg: _epg!),
+                        ),
+                      ),
+                    ),
+
                   // Combo Buttons Overlay
                   Positioned(
                     bottom: 80,
@@ -405,6 +435,98 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 }
 
+class _EpgOverlay extends StatelessWidget {
+  final List<EpgProgram> epg;
+  const _EpgOverlay({required this.epg});
+
+  @override
+  Widget build(BuildContext context) {
+    final nowProg = epg.where((p) => p.isNow).firstOrNull;
+    final nextProg = epg.where((p) {
+      if (nowProg == null) return false;
+      return p.start.isAtSameMomentAs(nowProg.stop) || p.start.isAfter(nowProg.start);
+    }).where((p) => !p.isNow).firstOrNull;
+
+    if (nowProg == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      constraints: const BoxConstraints(maxWidth: 350),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: const Color(0xFFFF4757), borderRadius: BorderRadius.circular(4)),
+                child: Text(lang.t('epg_now'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(nowProg.title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _ProgressBar(program: nowProg),
+          if (nextProg != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text('${lang.t('epg_next')} : ', style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 10, fontWeight: FontWeight.w900)),
+                Expanded(child: Text(nextProg.title, style: const TextStyle(color: Colors.white70, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressBar extends StatelessWidget {
+  final EpgProgram program;
+  const _ProgressBar({required this.program});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final total = program.stop.difference(program.start).inSeconds;
+    final elapsed = now.difference(program.start).inSeconds;
+    final double progress = (total > 0) ? (elapsed / total).clamp(0.0, 1.0) : 0.0;
+    
+    final startTime = '${program.start.hour.toString().padLeft(2, '0')}:${program.start.minute.toString().padLeft(2, '0')}';
+    final endTime = '${program.stop.hour.toString().padLeft(2, '0')}:${program.stop.minute.toString().padLeft(2, '0')}';
+
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 4,
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            color: const Color(0xFF9D4EDD),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(startTime, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+            Text(endTime, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _NextEpisodeOverlay extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onCancel;
@@ -420,7 +542,6 @@ class _NextEpisodeOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Max duration for the countdown is 40s
     final double progress = (remainingSeconds / 40).clamp(0.0, 1.0);
 
     return Positioned(
@@ -468,7 +589,6 @@ class _NextEpisodeOverlay extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Stylish Countdown Circle
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -593,7 +713,6 @@ class _TrackSheetState extends State<_TrackSheet> {
       ),
       child: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
             decoration: const BoxDecoration(
@@ -637,7 +756,6 @@ class _TrackSheetState extends State<_TrackSheet> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Audio Column
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,9 +779,7 @@ class _TrackSheetState extends State<_TrackSheet> {
             ],
           ),
         ),
-        // Divider
         Container(width: 1, color: const Color(0x1AFFFFFF), margin: const EdgeInsets.symmetric(vertical: 40)),
-        // Subtitles Column
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,7 +873,6 @@ class _TrackSheetState extends State<_TrackSheet> {
             ],
           ),
           const SizedBox(height: 40),
-          // Preview
           Text(lang.t('subtitle_preview').toUpperCase(), style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
           const SizedBox(height: 12),
           Container(
@@ -943,7 +1058,7 @@ class _TrackButton extends StatelessWidget {
   const _TrackButton({required this.onTap});
   @override
   Widget build(BuildContext context) => IconButton(
-    icon: const Icon(Icons. tune_rounded, color: Colors.white),
+    icon: const Icon(Icons.tune_rounded, color: Colors.white),
     tooltip: lang.t('audio_subtitles'),
     onPressed: onTap,
   );
@@ -1003,7 +1118,6 @@ class _ComboSelector extends StatelessWidget {
       combos['VO'] = () => onSelect(voAudio!, noSub);
     }
 
-    // Fallback: If no combos were detected (or only one), but there are multiple tracks.
     if (combos.length <= 1) {
       combos.clear();
       if (audioList.length == 1 && subList.isNotEmpty) {
@@ -1054,4 +1168,3 @@ class _ComboSelector extends StatelessWidget {
     );
   }
 }
-
