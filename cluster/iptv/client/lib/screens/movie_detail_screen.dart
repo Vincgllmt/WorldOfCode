@@ -176,7 +176,6 @@ class _Header extends StatelessWidget {
     final rating   = detail?.rating ?? movie.rating;
     final genre    = detail?.genre;
     final duration = detail?.duration;
-    final alRating = detail?.allocineRating;
 
     return Stack(
       children: [
@@ -235,12 +234,6 @@ class _Header extends StatelessWidget {
                     _Badge(text: year, color: _C.card),
                   if (rating != null && rating.isNotEmpty)
                     _Badge(text: '★  $rating', color: const Color(0xFF332800)),
-                  if (alRating != null && alRating.isNotEmpty)
-                    _Badge(
-                      text: 'ALLOCINÉ  $alRating', 
-                      color: const Color(0xFFFFD100).withValues(alpha: 0.15),
-                      textColor: const Color(0xFFFFD100),
-                    ),
                   if (genre != null && genre.isNotEmpty)
                     _Badge(text: genre, color: _C.card),
                   if (duration != null && duration.isNotEmpty)
@@ -269,8 +262,7 @@ class _Header extends StatelessWidget {
 class _Badge extends StatelessWidget {
   final String text;
   final Color color;
-  final Color? textColor;
-  const _Badge({required this.text, required this.color, this.textColor});
+  const _Badge({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -279,6 +271,6 @@ class _Badge extends StatelessWidget {
       color: color,
       borderRadius: BorderRadius.circular(6),
     ),
-    child: Text(text, style: TextStyle(color: textColor ?? _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
+    child: Text(text, style: const TextStyle(color: _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
   );
 }

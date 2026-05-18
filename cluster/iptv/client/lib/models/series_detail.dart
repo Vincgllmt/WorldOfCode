@@ -47,10 +47,9 @@ class SeriesDetail {
   final String name;
   final String? cover;
   final String? plot;
-  final String? allocineRating;
   final Map<String, List<Episode>> seasons;
 
-  SeriesDetail({required this.id, required this.name, this.cover, this.plot, this.allocineRating, required this.seasons});
+  SeriesDetail({required this.id, required this.name, this.cover, this.plot, required this.seasons});
 
   factory SeriesDetail.fromJson(Map<String, dynamic> j) {
     final rawSeasons = j['seasons'] as Map<String, dynamic>? ?? {};
@@ -63,7 +62,6 @@ class SeriesDetail {
       name: j['name'] as String,
       cover: j['cover'] as String?,
       plot: j['plot'] as String?,
-      allocineRating: j['allocine_rating'] as String?,
       seasons: seasons,
     );
   }
@@ -73,7 +71,6 @@ class SeriesDetail {
     'name': name,
     'cover': cover,
     'plot': plot,
-    'allocine_rating': allocineRating,
     'seasons': seasons.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList())),
   };
 }
