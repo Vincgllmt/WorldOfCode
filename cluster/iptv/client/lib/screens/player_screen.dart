@@ -254,11 +254,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
-          bottomButtonBar: const [
-            MaterialPlayOrPauseButton(),
-            MaterialPositionIndicator(),
-            Spacer(),
-            MaterialFullscreenButton(),
+          bottomButtonBar: [
+            const MaterialPlayOrPauseButton(),
+            const MaterialPositionIndicator(),
+            const Spacer(),
+            _ComboSelector(
+              tracks: _tracks,
+              currentTrack: _track,
+              onSelect: (a, s) {
+                _player.setAudioTrack(a);
+                _player.setSubtitleTrack(s);
+              },
+            ),
+            const MaterialFullscreenButton(),
           ],
         ),
         fullscreen: MaterialVideoControlsThemeData(
@@ -272,11 +280,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
             topButtonBarMargin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
-            bottomButtonBar: const [
-              MaterialDesktopPlayOrPauseButton(),
-              MaterialDesktopPositionIndicator(),
-              Spacer(),
-              MaterialDesktopFullscreenButton(),
+            bottomButtonBar: [
+              const MaterialDesktopPlayOrPauseButton(),
+              const MaterialDesktopPositionIndicator(),
+              const Spacer(),
+              _ComboSelector(
+                tracks: _tracks,
+                currentTrack: _track,
+                onSelect: (a, s) {
+                  _player.setAudioTrack(a);
+                  _player.setSubtitleTrack(s);
+                },
+              ),
+              const MaterialDesktopFullscreenButton(),
             ],
           ),
           fullscreen: MaterialDesktopVideoControlsThemeData(
@@ -875,3 +891,86 @@ class _TrackButton extends StatelessWidget {
     onPressed: onTap,
   );
 }
+
+class _ComboSelector extends StatelessWidget {
+  final Tracks tracks;
+  final Track currentTrack;
+  final void Function(AudioTrack, SubtitleTrack) onSelect;
+
+  const _ComboSelector({
+    required this.tracks,
+    required this.currentTrack,
+    required this.onSelect,
+  });
+
+  bool _isFrench(String? lang) {
+    if (lang == null) return false;
+    final l = lang.toLowerCase();
+    return l.contains('fr') || l == 'fre' || l == 'fra';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    AudioTrack? vfAudio;
+    AudioTrack? voAudio;
+    SubtitleTrack? frSub;
+
+    for (final a in tracks.audio) {
+      if (a.id == 'auto' || a.id == 'no') continue;
+      if (_isFrench(a.language) || _isFrench(a.title)) {
+        vfAudio ??= a;
+      } else {
+        voAudio ??= a;
+      }
+    }
+
+    for (final s in tracks.subtitle) {
+      if (s.id == 'auto' || s.id == 'no') continue;
+      if (_isFrench(s.language) || _isFrench(s.title)) {
+        frSub ??= s;
+      }
+    }
+
+    final noSub = SubtitleTrack.no();
+
+    final combos = <String, void Function()>{};
+
+    if (vfAudio != null) {
+      combos['VF'] = () => onSelect(vfAudio!, noSub);
+    }
+    if (voAudio != null && frSub != null) {
+      combos['VOSTFR'] = () => onSelect(voAudio!, frSub!);
+    }
+    if (voAudio != null) {
+      combos['VO'] = () => onSelect(voAudio!, noSub);
+    }
+
+    if (combos.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: combos.entries.map((e) {
+        // Check if this combo is selected
+        // We evaluate by matching closures or we can check states.
+        // For simplicity, let's just make them buttons.
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              backgroundColor: const Color(0xFFBB86FC).withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Color(0x33BB86FC)),
+              ),
+              minimumSize: const Size(0, 32),
+            ),
+            onPressed: e.value,
+            child: Text(e.key, style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
