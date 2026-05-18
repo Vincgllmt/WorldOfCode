@@ -353,6 +353,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         sliver: SliverGrid(
           gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: maxExtent, mainAxisSpacing: 24, crossAxisSpacing: 12, childAspectRatio: aspectRatio),
           delegate: SliverChildBuilderDelegate((_, i) => _PosterCard(
+            key: ValueKey(movies[i].cover ?? movies[i].name),
             name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating,
             onTap: () => _open(movies[i]), viewMode: viewMode,
           ), childCount: movies.length),
@@ -500,7 +501,7 @@ class _GenreRow extends StatelessWidget {
         ]))),
         if (!isAccent) GestureDetector(onTap: onFavToggle, child: Padding(padding: const EdgeInsets.all(8), child: Icon(isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 18, color: isFav ? _C.accent : _C.txtSub.withValues(alpha: 0.35)))),
       ])),
-      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), onRemove: onRemove != null ? () => onRemove!(movies[i]) : null, viewMode: viewMode)))),
+      SizedBox(height: rowHeight, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: movies.length, itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(key: ValueKey(movies[i].cover ?? movies[i].name), name: movies[i].name, cover: movies[i].cover, rating: movies[i].rating, onTap: () => onTap(movies[i]), onRemove: onRemove != null ? () => onRemove!(movies[i]) : null, viewMode: viewMode)))),
     ]);
   }
 }
@@ -512,7 +513,7 @@ class _PosterCard extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onRemove;
   final ViewMode viewMode;
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onRemove, required this.viewMode});
+  const _PosterCard({super.key, required this.name, this.cover, this.rating, required this.onTap, this.onRemove, required this.viewMode});
   @override
   State<_PosterCard> createState() => _PosterCardState();
 }
@@ -555,7 +556,7 @@ class _PosterCardState extends State<_PosterCard> {
     ])))));
   }
   Widget _buildCover() {
-    if (widget.cover != null && widget.cover!.isNotEmpty) return CachedNetworkImage(imageUrl: widget.cover!, fit: BoxFit.cover, memCacheWidth: 250, placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
+    if (widget.cover != null && widget.cover!.isNotEmpty) return CachedNetworkImage(imageUrl: widget.cover!, fit: BoxFit.cover, fadeInDuration: const Duration(milliseconds: 150), placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
     return _fallback();
   }
   Widget _shimmer() => _ShimmerLoader();

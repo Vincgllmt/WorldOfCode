@@ -415,6 +415,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
           ),
           delegate: SliverChildBuilderDelegate(
             (_, i) => _PosterCard(
+              key: ValueKey(items[i].cover ?? items[i].name),
               name: items[i].name,
               cover: items[i].cover,
               rating: items[i].rating,
@@ -617,6 +618,7 @@ class _GenreRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: items.length,
             itemBuilder: (_, i) => RepaintBoundary(child: _PosterCard(
+              key: ValueKey(items[i].cover ?? items[i].name),
               name: items[i].name,
               cover: items[i].cover,
               rating: items[i].rating,
@@ -639,7 +641,7 @@ class _PosterCard extends StatefulWidget {
   final VoidCallback? onRemove;
   final ViewMode viewMode;
 
-  const _PosterCard({required this.name, this.cover, this.rating, required this.onTap, this.onRemove, required this.viewMode});
+  const _PosterCard({super.key, required this.name, this.cover, this.rating, required this.onTap, this.onRemove, required this.viewMode});
 
   @override
   State<_PosterCard> createState() => _PosterCardState();
@@ -734,7 +736,7 @@ class _PosterCardState extends State<_PosterCard> {
       return CachedNetworkImage(
         imageUrl: widget.cover!,
         fit: BoxFit.cover,
-        memCacheWidth: 250, // Optimize memory for vertical posters
+        fadeInDuration: const Duration(milliseconds: 150),
         placeholder: (_, __) => _shimmer(),
         errorWidget: (_, __, ___) => _fallback(),
       );
