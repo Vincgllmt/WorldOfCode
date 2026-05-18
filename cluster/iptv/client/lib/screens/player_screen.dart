@@ -126,6 +126,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _hasSeeked = false;
     });
 
+    // On récupère l'URL mise à jour via le getter qui utilise _currentEpisodeIndex
     _player.open(_buildMedia(_currentUrl));
   }
 
