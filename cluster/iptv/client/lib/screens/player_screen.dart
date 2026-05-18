@@ -103,17 +103,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _currentEpisodeIndex != null && 
       _currentEpisodeIndex! + 1 < widget.episodes!.length;
 
+  int _lastRemainingSeconds = -1;
+
   void _checkNextEpisodeSuggestion(Duration pos) {
     final dur = _player.state.duration;
     if (dur.inSeconds > 0 && _hasNextEpisode) {
       final remaining = dur - pos;
-      // Show suggestion in the last 40 seconds
-      final shouldShow = remaining.inSeconds <= 40 && remaining.inSeconds > 2;
-      if (shouldShow != _showNextEpisodeSuggestion) {
-        setState(() => _showNextEpisodeSuggestion = shouldShow);
+      final remSecs = remaining.inSeconds;
+      final shouldShow = remSecs <= 40 && remSecs > 1;
+      
+      if (shouldShow != _showNextEpisodeSuggestion || (shouldShow && remSecs != _lastRemainingSeconds)) {
+        setState(() {
+          _showNextEpisodeSuggestion = shouldShow;
+          _lastRemainingSeconds = remSecs;
+        });
       }
     } else if (_showNextEpisodeSuggestion) {
-      setState(() => _showNextEpisodeSuggestion = false);
+      setState(() {
+        _showNextEpisodeSuggestion = false;
+        _lastRemainingSeconds = -1;
+      });
     }
   }
 
