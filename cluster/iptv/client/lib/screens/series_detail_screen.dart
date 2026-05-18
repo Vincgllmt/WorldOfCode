@@ -34,7 +34,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     _future = _api.fetchSeriesDetail(widget.series.id);
   }
 
-  void _play(Episode ep) {
+  void _play(Episode ep, List<Episode> allEpisodes) {
+    final index = allEpisodes.indexOf(ep);
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => PlayerScreen(
         name: ep.title, 
@@ -44,6 +45,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         mediaId: ep.id,
         seriesId: widget.series.id,
         cover: ep.cover ?? widget.series.cover,
+        episodes: allEpisodes,
+        initialEpisodeIndex: index,
       ),
     )).then((_) => setState(() {})); // trigger refresh when coming back to update progress indicators
   }
@@ -82,6 +85,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           final sortedSeasons = detail!.seasons.keys.toList()
             ..sort((a, b) => int.tryParse(a)!.compareTo(int.tryParse(b)!));
 
+          final allEpisodes = <Episode>[];
+          for (final sKey in sortedSeasons) {
+            allEpisodes.addAll(detail.seasons[sKey] ?? []);
+          }
+
           return CustomScrollView(
             slivers: [
               // Cover + back button
@@ -110,7 +118,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       episodes: episodes,
                       isExpanded: isExpanded,
                       onToggle: () => setState(() => _expandedSeason = isExpanded ? -1 : sNum),
-                      onPlayEpisode: _play,
+                      onPlayEpisode: (ep) => _play(ep, allEpisodes),
                     );
                   },
                   childCount: sortedSeasons.length,

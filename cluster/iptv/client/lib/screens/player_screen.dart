@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
+import '../models/series_detail.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String name;
@@ -14,8 +15,21 @@ class PlayerScreen extends StatefulWidget {
   final int? mediaId;
   final int? seriesId;
   final String? cover;
+  final List<Episode>? episodes;
+  final int? initialEpisodeIndex;
 
-  const PlayerScreen({super.key, required this.name, required this.url, this.group, this.type, this.mediaId, this.seriesId, this.cover});
+  const PlayerScreen({
+    super.key, 
+    required this.name, 
+    required this.url, 
+    this.group, 
+    this.type, 
+    this.mediaId, 
+    this.seriesId, 
+    this.cover,
+    this.episodes,
+    this.initialEpisodeIndex,
+  });
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -33,9 +47,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _hasSeeked = false;
   double _playbackSpeed = 1.0;
 
+  int? _currentEpisodeIndex;
+  bool _showNextEpisodeSuggestion = false;
+
   @override
-  void initState() {    super.initState();
-    _player.open(_buildMedia(widget.url));
+  void initState() {
+    super.initState();
+    _currentEpisodeIndex = widget.initialEpisodeIndex;
+    _player.open(_buildMedia(_currentUrl));
     _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
     _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
@@ -47,13 +66,71 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     });
 
+    _player.stream.position.listen((pos) {
+      if (mounted) _checkNextEpisodeSuggestion(pos);
+    });
+
+    _player.stream.completed.listen((completed) {
+      if (completed && mounted && _hasNextEpisode) {
+        _playEpisode(_currentEpisodeIndex! + 1);
+      }
+    });
+
     if (widget.type != null && widget.type != 'live') {
       _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
     }
   }
 
+  String get _currentUrl => (widget.episodes != null && _currentEpisodeIndex != null)
+      ? widget.episodes![_currentEpisodeIndex!].url
+      : widget.url;
+
+  String get _currentName => (widget.episodes != null && _currentEpisodeIndex != null)
+      ? widget.episodes![_currentEpisodeIndex!].title
+      : widget.name;
+
+  int? get _currentMediaId => (widget.episodes != null && _currentEpisodeIndex != null)
+      ? widget.episodes![_currentEpisodeIndex!].id
+      : widget.mediaId;
+
+  String? get _currentCover => (widget.episodes != null && _currentEpisodeIndex != null)
+      ? (widget.episodes![_currentEpisodeIndex!].cover ?? widget.cover)
+      : widget.cover;
+
+  bool get _hasNextEpisode => widget.episodes != null && 
+      _currentEpisodeIndex != null && 
+      _currentEpisodeIndex! + 1 < widget.episodes!.length;
+
+  void _checkNextEpisodeSuggestion(Duration pos) {
+    final dur = _player.state.duration;
+    if (dur.inSeconds > 0 && _hasNextEpisode) {
+      final remaining = dur - pos;
+      // Show suggestion in the last 40 seconds
+      final shouldShow = remaining.inSeconds <= 40 && remaining.inSeconds > 2;
+      if (shouldShow != _showNextEpisodeSuggestion) {
+        setState(() => _showNextEpisodeSuggestion = shouldShow);
+      }
+    } else if (_showNextEpisodeSuggestion) {
+      setState(() => _showNextEpisodeSuggestion = false);
+    }
+  }
+
+  void _playEpisode(int index) {
+    if (widget.episodes == null || index < 0 || index >= widget.episodes!.length) return;
+    
+    _saveProgress();
+    
+    setState(() {
+      _currentEpisodeIndex = index;
+      _showNextEpisodeSuggestion = false;
+      _hasSeeked = false;
+    });
+
+    _player.open(_buildMedia(_currentUrl));
+  }
+
   Future<void> _resumeProgress() async {
-    final progress = await ProgressService.getProgress(widget.url);
+    final progress = await ProgressService.getProgress(_currentUrl);
     if (progress != null && !progress.isCompleted) {
       final target = Duration(seconds: progress.positionSeconds);
       // Attend que le lecteur soit prêt à recevoir le seek
@@ -63,19 +140,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _saveProgress() {
-    if (widget.type == null || widget.type == 'live' || widget.mediaId == null) return;
+    if (widget.type == null || widget.type == 'live' || _currentMediaId == null) return;
     
     final pos = _player.state.position;
     final dur = _player.state.duration;
     
     if (pos.inSeconds > 0) {
       ProgressService.saveProgress(MediaProgress(
-        url: widget.url,
-        title: widget.name,
+        url: _currentUrl,
+        title: _currentName,
         type: widget.type!,
-        mediaId: widget.mediaId!,
+        mediaId: _currentMediaId!,
         seriesId: widget.seriesId,
-        cover: widget.cover,
+        cover: _currentCover,
         positionSeconds: pos.inSeconds,
         durationSeconds: dur.inSeconds,
         timestamp: DateTime.now().millisecondsSinceEpoch,
@@ -138,7 +215,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       const SizedBox(width: 12),
       Expanded(
         child: Text(
-          widget.name,
+          _currentName,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -220,6 +297,77 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   );
                 },
               ),
+
+              if (_showNextEpisodeSuggestion)
+                _NextEpisodeOverlay(
+                  onTap: () => _playEpisode(_currentEpisodeIndex! + 1),
+                  nextEpisode: widget.episodes![_currentEpisodeIndex! + 1],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextEpisodeOverlay extends StatelessWidget {
+  final VoidCallback onTap;
+  final Episode nextEpisode;
+
+  const _NextEpisodeOverlay({required this.onTap, required this.nextEpisode});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 100,
+      right: 24,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF9D4EDD), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF9D4EDD).withValues(alpha: 0.3),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.skip_next_rounded, color: Color(0xFFBB86FC), size: 28),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    lang.t('next_episode').toUpperCase(),
+                    style: const TextStyle(
+                      color: Color(0xFFBB86FC),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    nextEpisode.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
             ],
           ),
         ),

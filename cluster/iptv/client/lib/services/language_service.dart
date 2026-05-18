@@ -86,6 +86,7 @@ class LanguageService {
       'seasons': 'Saisons',
       'episode': 'Épisode',
       'episodes': 'Épisodes',
+      'next_episode': 'Épisode suivant',
     },
     'en': {
       'live': 'Live TV',
@@ -164,6 +165,7 @@ class LanguageService {
       'seasons': 'Seasons',
       'episode': 'Episode',
       'episodes': 'Episodes',
+      'next_episode': 'Next Episode',
     }
   };
 
