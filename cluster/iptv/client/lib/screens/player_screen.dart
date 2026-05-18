@@ -513,7 +513,7 @@ class _TrackSheetState extends State<_TrackSheet> {
     final double vh = MediaQuery.of(context).size.height;
 
     return Container(
-      height: vh * 0.85,
+      height: vh * 0.65,
       decoration: const BoxDecoration(
         color: Color(0xFF0C0714),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -538,13 +538,7 @@ class _TrackSheetState extends State<_TrackSheet> {
                   style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
                 ),
                 const Spacer(),
-                if (!_showSettings)
-                  TextButton.icon(
-                    onPressed: () => setState(() => _showSettings = true),
-                    icon: const Icon(Icons.settings_outlined, size: 18, color: Color(0xFFBB86FC)),
-                    label: Text(lang.t('settings'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 13, fontWeight: FontWeight.bold)),
-                  )
-                else
+                if (_showSettings)
                   TextButton(
                     onPressed: () => setState(() => _showSettings = false),
                     child: Text(lang.t('back'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 13, fontWeight: FontWeight.bold)),
@@ -602,9 +596,19 @@ class _TrackSheetState extends State<_TrackSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(32, 24, 16, 12),
-                child: Text(lang.t('subtitles').toUpperCase(), 
-                  style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                padding: const EdgeInsets.fromLTRB(32, 12, 16, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(lang.t('subtitles').toUpperCase(), 
+                      style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _showSettings = true),
+                      icon: const Icon(Icons.settings_outlined, size: 16, color: Color(0xFFBB86FC)),
+                      label: Text(lang.t('settings'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: ListView(
@@ -793,23 +797,29 @@ class _ModernChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF9D4EDD) : const Color(0xFF1F1235),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xFF9D4EDD) : const Color(0xFF1F1235),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: selected ? [BoxShadow(color: const Color(0xFF9D4EDD).withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)] : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(30),
-          boxShadow: selected ? [BoxShadow(color: const Color(0xFF9D4EDD).withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)] : [],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (dotColor != null)
-              Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-            Text(label, style: TextStyle(color: selected ? Colors.white : const Color(0xFFB0AEC8), fontSize: 13, fontWeight: FontWeight.w700)),
-          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (dotColor != null)
+                  Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+                Text(label, style: TextStyle(color: selected ? Colors.white : const Color(0xFFB0AEC8), fontSize: 13, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
         ),
       ),
     );
