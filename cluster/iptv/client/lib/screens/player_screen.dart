@@ -906,17 +906,21 @@ class _ComboSelector extends StatelessWidget {
   bool _isFrench(String? lang) {
     if (lang == null) return false;
     final l = lang.toLowerCase();
-    return l.contains('fr') || l == 'fre' || l == 'fra';
+    return l.contains('fr') || l == 'fre' || l == 'fra' || l.contains('vf');
   }
 
   @override
   Widget build(BuildContext context) {
+    final audioList = tracks.audio.where((a) => a.id != 'auto' && a.id != 'no').toList();
+    final subList = tracks.subtitle.where((s) => s.id != 'auto' && s.id != 'no').toList();
+
+    if (audioList.isEmpty) return const SizedBox.shrink();
+
     AudioTrack? vfAudio;
     AudioTrack? voAudio;
     SubtitleTrack? frSub;
 
-    for (final a in tracks.audio) {
-      if (a.id == 'auto' || a.id == 'no') continue;
+    for (final a in audioList) {
       if (_isFrench(a.language) || _isFrench(a.title)) {
         vfAudio ??= a;
       } else {
@@ -924,15 +928,13 @@ class _ComboSelector extends StatelessWidget {
       }
     }
 
-    for (final s in tracks.subtitle) {
-      if (s.id == 'auto' || s.id == 'no') continue;
+    for (final s in subList) {
       if (_isFrench(s.language) || _isFrench(s.title)) {
         frSub ??= s;
       }
     }
 
     final noSub = SubtitleTrack.no();
-
     final combos = <String, void Function()>{};
 
     if (vfAudio != null) {
@@ -945,28 +947,43 @@ class _ComboSelector extends StatelessWidget {
       combos['VO'] = () => onSelect(voAudio!, noSub);
     }
 
-    if (combos.isEmpty) return const SizedBox.shrink();
+    // Fallback: If no combos were detected (or only one), but there are multiple tracks.
+    if (combos.length <= 1) {
+      combos.clear();
+      if (audioList.length == 1 && subList.isNotEmpty) {
+        combos['AUDIO'] = () => onSelect(audioList.first, noSub);
+        combos['AUDIO+ST'] = () => onSelect(audioList.first, subList.first);
+      } else if (audioList.length >= 2) {
+        combos['AUDIO 1'] = () => onSelect(audioList[0], noSub);
+        combos['AUDIO 2'] = () => onSelect(audioList[1], noSub);
+        if (subList.isNotEmpty) {
+          combos['A1+ST'] = () => onSelect(audioList[0], subList.first);
+        }
+      }
+    }
+
+    if (combos.length < 2) return const SizedBox.shrink();
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: combos.entries.map((e) {
-        // Check if this combo is selected
-        // We evaluate by matching closures or we can check states.
-        // For simplicity, let's just make them buttons.
+        final isSelected = currentTrack.audio == (e.key.contains('2') && audioList.length > 1 ? audioList[1] : (e.key.contains('VF') ? vfAudio : (voAudio ?? audioList.first))) &&
+                           currentTrack.subtitle == (e.key.contains('ST') ? (frSub ?? subList.first) : noSub);
+                           
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: TextButton(
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              backgroundColor: const Color(0xFFBB86FC).withValues(alpha: 0.1),
+              backgroundColor: isSelected ? const Color(0xFF9D4EDD) : const Color(0xFFBB86FC).withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Color(0x33BB86FC)),
+                side: BorderSide(color: isSelected ? Colors.transparent : const Color(0x33BB86FC)),
               ),
               minimumSize: const Size(0, 32),
             ),
             onPressed: e.value,
-            child: Text(e.key, style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            child: Text(e.key, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFFBB86FC), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
           ),
         );
       }).toList(),
