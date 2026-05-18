@@ -1008,19 +1008,27 @@ class _ComboSelector extends StatelessWidget {
                            currentTrack.subtitle == (e.key.contains('ST') ? (frSub ?? subList.first) : noSub);
                            
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(horizontal: 6.0),
           child: TextButton(
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              backgroundColor: isSelected ? const Color(0xFF9D4EDD) : const Color(0xFFBB86FC).withValues(alpha: 0.1),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: isSelected ? const Color(0xFF9D4EDD) : const Color(0xFFBB86FC).withValues(alpha: 0.15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: isSelected ? Colors.transparent : const Color(0x33BB86FC)),
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: isSelected ? Colors.transparent : const Color(0x44BB86FC), width: 1.5),
               ),
-              minimumSize: const Size(0, 32),
+              minimumSize: const Size(80, 48),
             ),
             onPressed: e.value,
-            child: Text(e.key, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFFBB86FC), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            child: Text(
+              e.key, 
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFFBB86FC), 
+                fontSize: 16, 
+                fontWeight: FontWeight.w900, 
+                letterSpacing: 1.0
+              )
+            ),
           ),
         );
       }).toList(),
