@@ -8,6 +8,7 @@ import '../models/movie.dart';
 import '../models/movie_detail.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
+import '../models/epg_program.dart';
 import 'credentials_service.dart';
 import 'cache_service.dart';
 
@@ -136,6 +137,8 @@ class ApiService {
         url: '$host/live/$user/$pass/${s['stream_id']}.ts',
         logo: s['stream_icon'],
         group: catMap[catId] ?? "Autres",
+        streamId: int.tryParse(s['stream_id'].toString()),
+        epgId: s['epg_channel_id']?.toString(),
       );
     }).toList();
   }
@@ -323,5 +326,22 @@ class ApiService {
       return detail;
     }
     throw Exception('Erreur lors du chargement du détail de la série');
+  }
+
+  Future<List<EpgProgram>> fetchShortEpg(int streamId) async {
+    final c = await _getCreds();
+    final url = _buildUrl(c, action: 'get_short_epg', other: '&stream_id=$streamId');
+    
+    try {
+      final res = await _client.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final listings = data['epg_listings'] as List?;
+        if (listings != null) {
+          return listings.map((e) => EpgProgram.fromJson(e)).toList();
+        }
+      }
+    } catch (_) {}
+    return [];
   }
 }

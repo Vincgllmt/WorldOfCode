@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
@@ -250,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   final groups = _grouped(_filtered);
                   final sortedKeys = _sortedKeys(groups);
-                  final favChannels = _selectedGenre == null ? _allChannels.where((c) => _favorites.contains(c.url)).toList() : <Channel>[];
 
                   return RefreshIndicator(
                     onRefresh: () => _loadChannels(force: true),
@@ -290,7 +291,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildGridSlivers(List<Channel> channels, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 270;
-    double aspectRatio = 264 / 185;
+    double aspectRatio = 264 / 215; // Increased height to accommodate EPG
+    if (viewMode == ViewMode.gridSmall) aspectRatio = 264 / 185;
+
     switch (viewMode) {
       case ViewMode.gridSmall: maxExtent = 180; break;
       case ViewMode.gridMedium: maxExtent = 270; break;
@@ -313,6 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
           delegate: SliverChildBuilderDelegate((_, i) => _ChannelCard(
             channel: channels[i], isFavorite: _favorites.contains(channels[i].url),
             onTap: () => _openPlayer(channels[i]), onFav: () => _toggleFavorite(channels[i]),
+            viewMode: viewMode,
           ), childCount: channels.length),
         ),
       ),
@@ -460,9 +464,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double rowHeight = 185;
+    double rowHeight = 225; // Increased to accommodate EPG
     if (viewMode == ViewMode.gridSmall) rowHeight = 125;
-    if (viewMode == ViewMode.gridLarge) rowHeight = 265;
+    if (viewMode == ViewMode.gridLarge) rowHeight = 310;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 28, 12, 10), child: Row(children: [
@@ -493,22 +497,113 @@ class _ChannelCard extends StatefulWidget {
 
 class _ChannelCardState extends State<_ChannelCard> {
   bool _hovered = false;
+  List<EpgProgram>? _epg;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEpg();
+    _timer = Timer.periodic(const Duration(minutes: 5), (_) => _fetchEpg());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchEpg() async {
+    if (widget.channel.streamId == null) return;
+    try {
+      final epg = await ApiService().fetchShortEpg(widget.channel.streamId!);
+      if (mounted) setState(() => _epg = epg);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     double w = 248;
     if (widget.viewMode == ViewMode.gridSmall) w = 160;
     if (widget.viewMode == ViewMode.gridLarge) w = 380;
 
-    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 8), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Stack(children: [
-        AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
-        Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _hovered || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),
-        Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
-      ]),
-      const SizedBox(height: 7),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))),
-    ])))));
+    final nowProgram = _epg?.where((p) => p.isNow).firstOrNull;
+    final nextProgram = _epg?.where((p) {
+      if (nowProgram == null) return false;
+      return p.start.isAtSameMomentAs(nowProgram.stop) || p.start.isAfter(nowProgram.start);
+    }).where((p) => !p.isNow).firstOrNull;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click, 
+      onEnter: (_) => setState(() => _hovered = true), 
+      onExit: (_) => setState(() => _hovered = false), 
+      child: GestureDetector(
+        onTap: widget.onTap, 
+        child: Container(
+          width: w, 
+          margin: const EdgeInsets.symmetric(horizontal: 8), 
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200), 
+            curve: Curves.easeOut, 
+            transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
+            transformAlignment: Alignment.center, 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                Stack(children: [
+                  AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
+                  Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _hovered || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),
+                  Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
+                ]),
+                const SizedBox(height: 7),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2), 
+                  child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : Colors.white, fontSize: 13, fontWeight: FontWeight.w700))
+                ),
+                
+                // EPG Info
+                if (widget.viewMode != ViewMode.gridSmall) ...[
+                  const SizedBox(height: 5),
+                  if (nowProgram != null) ...[
+                    _EpgRow(
+                      label: lang.t('epg_now'),
+                      title: nowProgram.title,
+                      progress: _calculateProgress(nowProgram),
+                      isNow: true,
+                    ),
+                    if (nextProgram != null) 
+                      _EpgRow(
+                        label: lang.t('epg_next'),
+                        title: nextProgram.title,
+                        isNow: false,
+                      ),
+                  ] else if (_epg != null && _epg!.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(lang.t('epg_no_info'), style: const TextStyle(color: Color(0x44B0AEC8), fontSize: 10, fontStyle: FontStyle.italic)),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: SizedBox(height: 2, width: 40, child: LinearProgressIndicator(backgroundColor: Color(0x05FFFFFF), color: Color(0x11FFFFFF))),
+                    ),
+                ],
+              ],
+            ),
+          )
+        )
+      )
+    );
   }
+
+  double _calculateProgress(EpgProgram p) {
+    final now = DateTime.now();
+    final total = p.stop.difference(p.start).inSeconds;
+    final elapsed = now.difference(p.start).inSeconds;
+    if (total <= 0) return 0;
+    return (elapsed / total).clamp(0.0, 1.0);
+  }
+
   Widget _buildThumbnail() {
     final logo = widget.channel.logo;
     if (logo != null && logo.isNotEmpty) return CachedNetworkImage(imageUrl: logo, fit: BoxFit.cover, memCacheWidth: 400, placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
@@ -516,6 +611,46 @@ class _ChannelCardState extends State<_ChannelCard> {
   }
   Widget _shimmer() => Container(color: _C.bgCard, child: const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))));
   Widget _fallback() => Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)])), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.live_tv_rounded, color: Color(0x779D4EDD), size: 28), const SizedBox(height: 5), Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 10)))]));
+}
+
+class _EpgRow extends StatelessWidget {
+  final String label;
+  final String title;
+  final double? progress;
+  final bool isNow;
+
+  const _EpgRow({required this.label, required this.title, this.progress, required this.isNow});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('$label : ', style: TextStyle(color: isNow ? _C.glow : _C.txtSub.withValues(alpha: 0.5), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isNow ? Colors.white : _C.txtSub.withValues(alpha: 0.8), fontSize: 10, fontWeight: isNow ? FontWeight.w600 : FontWeight.normal))),
+            ],
+          ),
+          if (progress != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 3, bottom: 1),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 1.5,
+                  backgroundColor: Colors.white.withValues(alpha: 0.05),
+                  color: _C.accent,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _LoadingView extends StatelessWidget {

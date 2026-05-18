@@ -89,6 +89,9 @@ class LanguageService {
       'large': 'Grand',
       'playback_speed': 'Vitesse de lecture',
       'speed_normal': 'Normale',
+      'epg_now': 'EN DIRECT',
+      'epg_next': 'À SUIVRE',
+      'epg_no_info': 'Aucun programme disponible',
     },
     'en': {
       'live': 'Live TV',
@@ -170,6 +173,9 @@ class LanguageService {
       'large': 'Large',
       'playback_speed': 'Playback Speed',
       'speed_normal': 'Normal',
+      'epg_now': 'NOW',
+      'epg_next': 'NEXT',
+      'epg_no_info': 'No program information',
     }
   };
 
