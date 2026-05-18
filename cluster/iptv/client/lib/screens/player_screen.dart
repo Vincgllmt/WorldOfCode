@@ -272,6 +272,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             alignment: Alignment.center,
             children: [
               Video(
+                key: ValueKey(_currentUrl),
                 controller: _ctrl,
                 controls: AdaptiveVideoControls,
                 subtitleViewConfiguration: _subConfig,
