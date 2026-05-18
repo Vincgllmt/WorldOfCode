@@ -519,7 +519,7 @@ class _ChannelCardState extends State<_ChannelCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200), 
             curve: Curves.easeOut, 
-            transform: _hovered ? (Matrix4.identity()....scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
+            transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
             transformAlignment: Alignment.center, 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, 
