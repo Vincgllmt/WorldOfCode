@@ -52,10 +52,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
   int? _currentEpisodeIndex;
   bool _showNextEpisodeSuggestion = false;
 
+  bool _showOverlay = true;
+  Timer? _overlayTimer;
+
+  void _resetOverlayTimer() {
+    if (!mounted) return;
+    if (!_showOverlay) setState(() => _showOverlay = true);
+    _overlayTimer?.cancel();
+    _overlayTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _showOverlay = false);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _currentEpisodeIndex = widget.initialEpisodeIndex;
+    _resetOverlayTimer();
     _player.open(_buildMedia(_currentUrl));
     _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
     _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
@@ -196,6 +209,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _overlayTimer?.cancel();
     _progressTimer?.cancel();
     _saveProgress();
     _player.dispose();
@@ -297,29 +311,42 @@ class _PlayerScreenState extends State<PlayerScreen> {
               MaterialDesktopFullscreenButton(),
             ],
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Video(
-                key: ValueKey(_currentUrl),
-                controller: _ctrl,
-                controls: AdaptiveVideoControls,
-                subtitleViewConfiguration: _subConfig,
-              ),
-              // Combo Buttons Overlay
-              Positioned(
-                bottom: 80,
-                right: 24,
-                child: _ComboSelector(
-                  tracks: _tracks,
-                  currentTrack: _track,
-                  onSelect: (a, s) {
-                    _player.setAudioTrack(a);
-                    _player.setSubtitleTrack(s);
-                  },
-                ),
-              ),
-              // Center Play/Pause button
+          child: MouseRegion(
+            onHover: (_) => _resetOverlayTimer(),
+            child: GestureDetector(
+              onTap: _resetOverlayTimer,
+              onPanUpdate: (_) => _resetOverlayTimer(),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Video(
+                    key: ValueKey(_currentUrl),
+                    controller: _ctrl,
+                    controls: AdaptiveVideoControls,
+                    subtitleViewConfiguration: _subConfig,
+                  ),
+                  // Combo Buttons Overlay
+                  Positioned(
+                    bottom: 80,
+                    right: 24,
+                    child: IgnorePointer(
+                      ignoring: !_showOverlay,
+                      child: AnimatedOpacity(
+                        opacity: _showOverlay ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: _ComboSelector(
+                          tracks: _tracks,
+                          currentTrack: _track,
+                          onSelect: (a, s) {
+                            _player.setAudioTrack(a);
+                            _player.setSubtitleTrack(s);
+                            _resetOverlayTimer();
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Center Play/Pause button
               StreamBuilder<bool>(
                 stream: _player.stream.playing,
                 builder: (context, snapshot) {
@@ -350,6 +377,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   remainingSeconds: (_player.state.duration - _player.state.position).inSeconds,
                 ),
             ],
+          ),
+            ),
           ),
         ),
       ),
@@ -937,10 +966,9 @@ class _ComboSelector extends StatelessWidget {
       }
     }
 
-    for (final s in subList) {
-      if (_isFrench(s.language) || _isFrench(s.title)) {
-        frSub ??= s;
-      }
+    final frenchSubs = subList.where((s) => _isFrench(s.language) || _isFrench(s.title)).toList();
+    if (frenchSubs.isNotEmpty) {
+      frSub = frenchSubs.length > 1 ? frenchSubs[1] : frenchSubs.first;
     }
 
     final noSub = SubtitleTrack.no();
