@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import '../models/channel.dart';
@@ -56,14 +57,14 @@ class ApiService {
   static final RegExp _multiSpaces = RegExp(r'\s{2,}');
   static final RegExp _catFilter = RegExp(r'[^\w\s\-/éèêëàâùûüîïôœç]', unicode: true);
 
-  String _cleanName(String name) {
+  static String _cleanName(String name) {
     String cleaned = name.replaceAll(_displayTags, '').trim();
     cleaned = cleaned.replaceAll(_specialChars, '').trim();
     cleaned = cleaned.replaceAll(_multiSpaces, ' ');
     return cleaned.isEmpty ? name.trim() : cleaned;
   }
 
-  String _cleanCat(String name) {
+  static String _cleanCat(String name) {
     String cleaned = name.replaceAll(_catFilter, '').trim();
     cleaned = cleaned.replaceAll(_multiSpaces, ' ');
     return cleaned.isEmpty ? "Autres" : cleaned;
@@ -105,28 +106,38 @@ class ApiService {
       throw Exception('Erreur lors du chargement des chaînes');
     }
 
-    final List catsData = json.decode(results[0].body);
-    final List streamsData = json.decode(results[1].body);
+    _channelsCache = await compute(_parseChannels, {
+      'cats': results[0].body,
+      'streams': results[1].body,
+      'host': c.host,
+      'user': c.user,
+      'pass': c.pass,
+    });
+
+    CacheService.save('channels', _channelsCache!.map((e) => e.toJson()).toList());
+    return _channelsCache!;
+  }
+
+  static List<Channel> _parseChannels(Map<String, dynamic> params) {
+    final List catsData = json.decode(params['cats']);
+    final List streamsData = json.decode(params['streams']);
+    final String host = params['host'];
+    final String user = params['user'];
+    final String pass = params['pass'];
 
     final Map<String, String> catMap = {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
-    final List<Map<String, dynamic>> rawData = [];
-    _channelsCache = streamsData.map((s) {
+    return streamsData.map((s) {
       final catId = s['category_id'].toString();
-      final channel = Channel(
+      return Channel(
         name: _cleanName(s['name']),
-        url: '${c.host}/live/${c.user}/${c.pass}/${s['stream_id']}.ts',
+        url: '$host/live/$user/$pass/${s['stream_id']}.ts',
         logo: s['stream_icon'],
         group: catMap[catId] ?? "Autres",
       );
-      rawData.add(channel.toJson());
-      return channel;
     }).toList();
-
-    CacheService.save('channels', rawData);
-    return _channelsCache!;
   }
 
   Future<List<Movie>> fetchMovies({bool forceRefresh = false}) async {
@@ -150,31 +161,41 @@ class ApiService {
       throw Exception('Erreur lors du chargement des films');
     }
 
-    final List catsData = json.decode(results[0].body);
-    final List streamsData = json.decode(results[1].body);
+    _moviesCache = await compute(_parseMovies, {
+      'cats': results[0].body,
+      'streams': results[1].body,
+      'host': c.host,
+      'user': c.user,
+      'pass': c.pass,
+    });
+
+    CacheService.save('movies', _moviesCache!.map((e) => e.toJson()).toList());
+    return _moviesCache!;
+  }
+
+  static List<Movie> _parseMovies(Map<String, dynamic> params) {
+    final List catsData = json.decode(params['cats']);
+    final List streamsData = json.decode(params['streams']);
+    final String host = params['host'];
+    final String user = params['user'];
+    final String pass = params['pass'];
 
     final Map<String, String> catMap = {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
-    final List<Map<String, dynamic>> rawData = [];
-    _moviesCache = streamsData.map((s) {
+    return streamsData.map((s) {
       final catId = s['category_id'].toString();
       final ext = s['container_extension'] ?? 'mp4';
-      final movie = Movie(
+      return Movie(
         id: int.parse(s['stream_id'].toString()),
         name: _cleanName(s['name']),
-        url: '${c.host}/movie/${c.user}/${c.pass}/${s['stream_id']}.$ext',
+        url: '$host/movie/$user/$pass/${s['stream_id']}.$ext',
         cover: s['stream_icon'],
         group: catMap[catId] ?? "Autres",
         rating: s['rating']?.toString(),
       );
-      rawData.add(movie.toJson());
-      return movie;
     }).toList();
-
-    CacheService.save('movies', rawData);
-    return _moviesCache!;
   }
 
   Future<MovieDetail> fetchMovieDetail(int id) async {
@@ -231,29 +252,33 @@ class ApiService {
       throw Exception('Erreur lors du chargement des séries');
     }
 
-    final List catsData = json.decode(results[0].body);
-    final List streamsData = json.decode(results[1].body);
+    _seriesCache = await compute(_parseSeries, {
+      'cats': results[0].body,
+      'streams': results[1].body,
+    });
+
+    CacheService.save('series', _seriesCache!.map((e) => e.toJson()).toList());
+    return _seriesCache!;
+  }
+
+  static List<SeriesItem> _parseSeries(Map<String, dynamic> params) {
+    final List catsData = json.decode(params['cats']);
+    final List streamsData = json.decode(params['streams']);
 
     final Map<String, String> catMap = {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
-    final List<Map<String, dynamic>> rawData = [];
-    _seriesCache = streamsData.map((s) {
+    return streamsData.map((s) {
       final catId = s['category_id'].toString();
-      final series = SeriesItem(
+      return SeriesItem(
         id: int.parse(s['series_id'].toString()),
         name: _cleanName(s['name']),
         cover: s['cover'],
         group: catMap[catId] ?? "Autres",
         rating: s['rating']?.toString(),
       );
-      rawData.add(series.toJson());
-      return series;
     }).toList();
-
-    CacheService.save('series', rawData);
-    return _seriesCache!;
   }
 
   Future<SeriesDetail> fetchSeriesDetail(int seriesId) async {

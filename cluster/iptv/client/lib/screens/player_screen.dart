@@ -39,7 +39,12 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late final Player _player = Player();
-  late final VideoController _ctrl = VideoController(_player);
+  late final VideoController _ctrl = VideoController(
+    _player,
+    configuration: const VideoControllerConfiguration(
+      enableHardwareAcceleration: true,
+    ),
+  );
 
   Tracks _tracks = const Tracks();
   Track  _track  = const Track();
@@ -54,6 +59,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   bool _showOverlay = true;
   Timer? _overlayTimer;
+  int _lastPositionSeconds = -1;
 
   void _resetOverlayTimer() {
     if (!mounted) return;
@@ -82,7 +88,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
 
     _player.stream.position.listen((pos) {
-      if (mounted) _checkNextEpisodeSuggestion(pos);
+      if (mounted && pos.inSeconds != _lastPositionSeconds) {
+        _lastPositionSeconds = pos.inSeconds;
+        _checkNextEpisodeSuggestion(pos);
+      }
     });
 
     _player.stream.completed.listen((completed) {
@@ -347,27 +356,37 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                   ),
                   // Center Play/Pause button
-              StreamBuilder<bool>(
-                stream: _player.stream.playing,
-                builder: (context, snapshot) {
-                  final isPlaying = snapshot.data ?? false;
-                  return GestureDetector(
-                    onTap: () => _player.playOrPause(),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: Colors.black26,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        size: 80,
-                        color: Colors.white.withValues(alpha: 0.7),
+                  IgnorePointer(
+                    ignoring: !_showOverlay,
+                    child: AnimatedOpacity(
+                      opacity: _showOverlay ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: StreamBuilder<bool>(
+                        stream: _player.stream.playing,
+                        builder: (context, snapshot) {
+                          final isPlaying = snapshot.data ?? false;
+                          return GestureDetector(
+                            onTap: () {
+                              _player.playOrPause();
+                              _resetOverlayTimer();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                color: Colors.black26,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                size: 80,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
 
               if (_showNextEpisodeSuggestion)
                 _NextEpisodeOverlay(

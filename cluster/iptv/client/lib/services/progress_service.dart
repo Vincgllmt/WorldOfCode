@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MediaProgress {
@@ -80,24 +81,31 @@ class ProgressService {
       all.removeRange(100, all.length);
     }
 
+    final jsonList = await compute(_encodeProgressList, all);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, all.map((e) => json.encode(e.toJson())).toList());
+    await prefs.setStringList(_key, jsonList);
     _cache = all;
+  }
+
+  static List<String> _encodeProgressList(List<MediaProgress> list) {
+    return list.map((e) => json.encode(e.toJson())).toList();
   }
 
   static Future<void> removeByMediaId(int mediaId, String type) async {
     final all = await getAll();
     all.removeWhere((p) => p.mediaId == mediaId && p.type == type);
+    final jsonList = await compute(_encodeProgressList, all);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, all.map((e) => json.encode(e.toJson())).toList());
+    await prefs.setStringList(_key, jsonList);
     _cache = all;
   }
 
   static Future<void> removeBySeriesId(int seriesId) async {
     final all = await getAll();
     all.removeWhere((p) => p.seriesId == seriesId && p.type == 'series');
+    final jsonList = await compute(_encodeProgressList, all);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, all.map((e) => json.encode(e.toJson())).toList());
+    await prefs.setStringList(_key, jsonList);
     _cache = all;
   }
 

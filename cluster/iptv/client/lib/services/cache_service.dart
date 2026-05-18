@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CacheService {
@@ -10,7 +11,8 @@ class CacheService {
 
   static Future<void> save(String key, dynamic data) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_prefix$key', json.encode(data));
+    final jsonStr = await compute(json.encode, data);
+    await prefs.setString('$_prefix$key', jsonStr);
     await prefs.setInt('$_timestampPrefix$key', DateTime.now().millisecondsSinceEpoch);
   }
 
@@ -27,7 +29,11 @@ class CacheService {
       return null;
     }
 
-    return json.decode(jsonStr);
+    try {
+      return await compute(json.decode, jsonStr);
+    } catch (e) {
+      return null;
+    }
   }
 
   static Future<void> clear() async {
