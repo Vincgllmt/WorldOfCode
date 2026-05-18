@@ -4,6 +4,7 @@ import '../models/movie.dart';
 import '../models/movie_detail.dart';
 import '../services/api_service.dart';
 import '../services/language_service.dart';
+import '../widgets/download_button.dart';
 import 'player_screen.dart';
 
 class _C {
@@ -91,24 +92,35 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         ),
                         const SizedBox(height: 28),
 
-                        // Play button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _play(playUrl),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _C.accent,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
+                        // Action Buttons (Play + Download)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _play(playUrl),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _C.accent,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                                label: Text(
+                                  lang.t('play_movie'),
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                              ),
                             ),
-                            icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                            label: Text(
-                              lang.t('play_movie'),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            const SizedBox(width: 12),
+                            DownloadButton(
+                              id: widget.movie.id,
+                              title: widget.movie.name,
+                              url: widget.movie.url,
+                              type: 'movie',
+                              cover: widget.movie.cover,
                             ),
-                          ),
+                          ],
                         ),
 
                         // Cast
@@ -180,7 +192,7 @@ class _Header extends StatelessWidget {
               )
             : _fallback(),
         ),
-        // Gradient overlay (no BackdropFilter — crashes Linux OpenGL)
+        // Gradient overlay
         Container(
           height: 340,
           decoration: const BoxDecoration(

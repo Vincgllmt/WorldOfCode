@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
+import 'downloads_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,6 +21,7 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     MoviesScreen(),
     SeriesScreen(),
+    DownloadsScreen(),
   ];
 
   @override
@@ -44,6 +46,7 @@ class _MainScreenState extends State<MainScreen> {
           (icon: Icons.live_tv_outlined,  activeIcon: Icons.live_tv_rounded,  label: lang.t('live')),
           (icon: Icons.movie_outlined,    activeIcon: Icons.movie_rounded,     label: lang.t('movies')),
           (icon: Icons.tv_outlined,       activeIcon: Icons.tv_rounded,        label: lang.t('series')),
+          (icon: Icons.download_outlined, activeIcon: Icons.download_rounded,  label: lang.t('downloads')),
         ];
 
         return Scaffold(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
+import '../services/download_service.dart';
 import '../models/series_detail.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -164,6 +166,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   // HLS streams (TF1, M6, France TV…) validate User-Agent and sometimes
   // Referer. Passing a browser UA dramatically increases playback success.
   Media _buildMedia(String url) {
+    // Check if we have a local version
+    final download = downloadService.getItem(_currentMediaId ?? -1, widget.type ?? '');
+    if (download != null && download.status == DownloadStatus.completed && download.filePath != null) {
+      final file = File(download.filePath!);
+      if (file.existsSync()) {
+        return Media(download.filePath!);
+      }
+    }
+
     final origin = Uri.parse(url).origin;
     return Media(url, httpHeaders: {
       'User-Agent':

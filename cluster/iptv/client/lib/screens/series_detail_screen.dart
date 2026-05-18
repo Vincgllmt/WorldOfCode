@@ -5,6 +5,7 @@ import '../models/series_detail.dart';
 import '../services/api_service.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
+import '../widgets/download_button.dart';
 import 'player_screen.dart';
 
 class _C {
@@ -114,6 +115,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     final episodes = detail.seasons[sKey] ?? [];
                     final isExpanded = _expandedSeason == sNum;
                     return _SeasonTile(
+                      seriesId: widget.series.id,
                       seasonNum: sNum,
                       episodes: episodes,
                       isExpanded: isExpanded,
@@ -218,6 +220,7 @@ class _Header extends StatelessWidget {
 }
 
 class _SeasonTile extends StatelessWidget {
+  final int seriesId;
   final int seasonNum;
   final List<Episode> episodes;
   final bool isExpanded;
@@ -225,7 +228,7 @@ class _SeasonTile extends StatelessWidget {
   final void Function(Episode) onPlayEpisode;
 
   const _SeasonTile({
-    required this.seasonNum, required this.episodes,
+    required this.seriesId, required this.seasonNum, required this.episodes,
     required this.isExpanded, required this.onToggle,
     required this.onPlayEpisode,
   });
@@ -282,7 +285,11 @@ class _SeasonTile extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: episodes.length,
                 separatorBuilder: (_, __) => const Divider(color: Color(0x11FFFFFF), height: 1),
-                itemBuilder: (_, i) => _EpisodeTile(ep: episodes[i], onPlay: () => onPlayEpisode(episodes[i])),
+                itemBuilder: (_, i) => _EpisodeTile(
+                  seriesId: seriesId,
+                  ep: episodes[i], 
+                  onPlay: () => onPlayEpisode(episodes[i]),
+                ),
               ),
           ],
         ),
@@ -292,9 +299,10 @@ class _SeasonTile extends StatelessWidget {
 }
 
 class _EpisodeTile extends StatefulWidget {
+  final int seriesId;
   final Episode ep;
   final VoidCallback onPlay;
-  const _EpisodeTile({required this.ep, required this.onPlay});
+  const _EpisodeTile({required this.seriesId, required this.ep, required this.onPlay});
 
   @override
   State<_EpisodeTile> createState() => _EpisodeTileState();
@@ -363,6 +371,17 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  DownloadButton(
+                    id: widget.ep.id,
+                    title: widget.ep.title,
+                    url: widget.ep.url,
+                    type: 'series',
+                    cover: widget.ep.cover,
+                    seriesId: widget.seriesId,
+                    size: 34,
+                  ),
+                  const SizedBox(width: 12),
                   if (isCompleted)
                     const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 20)
                   else
