@@ -145,6 +145,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = detail?.name ?? series.name;
     final plot = detail?.plot;
+    final rating = series.rating;
+    final alRating = detail?.allocineRating;
 
     return Stack(
       children: [
@@ -183,12 +185,23 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(name, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1)),
-              if (series.rating != null && series.rating!.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text('★ ${series.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 13)),
-              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  if (rating != null && rating.isNotEmpty)
+                    _Badge(text: '★  $rating', color: const Color(0xFF332800)),
+                  if (alRating != null && alRating.isNotEmpty)
+                    _Badge(
+                      text: 'ALLOCINÉ  $alRating', 
+                      color: const Color(0xFFFFD100).withValues(alpha: 0.15),
+                      textColor: const Color(0xFFFFD100),
+                    ),
+                ],
+              ),
               if (plot != null && plot.isNotEmpty) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Text(plot, maxLines: 3, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: _C.txtSub, fontSize: 13, height: 1.4)),
               ],
@@ -217,6 +230,23 @@ class _Header extends StatelessWidget {
       begin: Alignment.topLeft, end: Alignment.bottomRight,
       colors: [Color(0xFF2D1B4E), Color(0xFF0C0714)])),
     child: const Center(child: Icon(Icons.tv_rounded, size: 80, color: Color(0x449D4EDD))));
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+  final Color color;
+  final Color? textColor;
+  const _Badge({required this.text, required this.color, this.textColor});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(text, style: TextStyle(color: textColor ?? _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
+  );
 }
 
 class _SeasonTile extends StatelessWidget {

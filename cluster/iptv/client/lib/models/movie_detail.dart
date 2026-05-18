@@ -11,6 +11,7 @@ class MovieDetail {
   final String? director;
   final String? year;
   final String? rating;
+  final String? allocineRating;
 
   const MovieDetail({
     required this.id,
@@ -25,6 +26,7 @@ class MovieDetail {
     this.director,
     this.year,
     this.rating,
+    this.allocineRating,
   });
 
   factory MovieDetail.fromJson(Map<String, dynamic> j) => MovieDetail(
@@ -40,6 +42,7 @@ class MovieDetail {
     director: j['director'] as String?,
     year: j['year'] as String?,
     rating: j['rating'] as String?,
+    allocineRating: j['allocine_rating'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -55,5 +58,6 @@ class MovieDetail {
     'director': director,
     'year': year,
     'rating': rating,
+    'allocine_rating': allocineRating,
   };
 }

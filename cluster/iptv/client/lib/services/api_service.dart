@@ -10,6 +10,7 @@ import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import 'credentials_service.dart';
 import 'cache_service.dart';
+import 'allocine_service.dart';
 
 class ApiService {
   // In-memory cache so we don't hit secure storage on every request.
@@ -210,10 +211,14 @@ class ApiService {
       final info = data['info'] ?? {};
       final movieData = data['movie_data'] ?? {};
       final ext = movieData['container_extension'] ?? 'mp4';
+      final name = _cleanName(movieData['name'] ?? "");
+
+      // Fetch Allocine rating in parallel
+      final allocineRating = await allocine.getRating(name);
 
       final detail = MovieDetail(
         id: id,
-        name: _cleanName(movieData['name'] ?? ""),
+        name: name,
         url: '${c.host}/movie/${c.user}/${c.pass}/${movieData['stream_id']}.$ext',
         cover: info['movie_image'],
         coverBig: info['movie_image'],
@@ -224,6 +229,7 @@ class ApiService {
         director: info['director'],
         year: info['releasedate'],
         rating: info['rating']?.toString(),
+        allocineRating: allocineRating,
       );
       CacheService.save('movie_detail_$id', detail.toJson());
       return detail;
@@ -292,6 +298,10 @@ class ApiService {
       final data = json.decode(res.body);
       final info = data['info'] ?? {};
       final episodesData = data['episodes'] as Map<String, dynamic>? ?? {};
+      final name = _cleanName(info['name'] ?? "");
+
+      // Fetch Allocine rating in parallel
+      final allocineRating = await allocine.getRating(name);
 
       final Map<String, List<Episode>> seasons = {};
 
@@ -314,9 +324,10 @@ class ApiService {
 
       final detail = SeriesDetail(
         id: seriesId,
-        name: _cleanName(info['name'] ?? ""),
+        name: name,
         cover: info['cover'],
         plot: info['plot'],
+        allocineRating: allocineRating,
         seasons: seasons,
       );
       CacheService.save('series_detail_$seriesId', detail.toJson());
