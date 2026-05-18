@@ -14,4 +14,12 @@ class SeriesItem {
     group: j['group'] as String?,
     rating: j['rating'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'cover': cover,
+    'group': group,
+    'rating': rating,
+  };
 }

@@ -41,4 +41,19 @@ class MovieDetail {
     year: j['year'] as String?,
     rating: j['rating'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'url': url,
+    'cover': cover,
+    'cover_big': coverBig,
+    'description': description,
+    'duration': duration,
+    'genre': genre,
+    'cast': cast,
+    'director': director,
+    'year': year,
+    'rating': rating,
+  };
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/language_service.dart';
+import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
@@ -13,12 +14,26 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _index = 0;
+  final ApiService _api = ApiService();
 
   static const _screens = <Widget>[
     HomeScreen(),
     MoviesScreen(),
     SeriesScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _warmupCache();
+  }
+
+  void _warmupCache() {
+    // Fetch data in background to fill caches
+    _api.fetchChannels();
+    _api.fetchMovies();
+    _api.fetchSeries();
+  }
 
   @override
   Widget build(BuildContext context) {

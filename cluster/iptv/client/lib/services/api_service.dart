@@ -8,6 +8,7 @@ import '../models/movie_detail.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import 'credentials_service.dart';
+import 'cache_service.dart';
 
 class ApiService {
   // In-memory cache so we don't hit secure storage on every request.
@@ -32,6 +33,7 @@ class ApiService {
     _channelsCache = null;
     _moviesCache = null;
     _seriesCache = null;
+    CacheService.clear();
   }
 
   Future<Credentials> _getCreds() async {
@@ -82,7 +84,14 @@ class ApiService {
   }
 
   Future<List<Channel>> fetchChannels({bool forceRefresh = false}) async {
-    if (!forceRefresh && _channelsCache != null) return _channelsCache!;
+    if (!forceRefresh) {
+      if (_channelsCache != null) return _channelsCache!;
+      final cached = await CacheService.get('channels');
+      if (cached != null) {
+        _channelsCache = (cached as List).map((e) => Channel.fromJson(e)).toList();
+        return _channelsCache!;
+      }
+    }
 
     final c = await _getCreds();
     
@@ -103,21 +112,32 @@ class ApiService {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
+    final List<Map<String, dynamic>> rawData = [];
     _channelsCache = streamsData.map((s) {
       final catId = s['category_id'].toString();
-      return Channel(
+      final channel = Channel(
         name: _cleanName(s['name']),
         url: '${c.host}/live/${c.user}/${c.pass}/${s['stream_id']}.ts',
         logo: s['stream_icon'],
         group: catMap[catId] ?? "Autres",
       );
+      rawData.add(channel.toJson());
+      return channel;
     }).toList();
 
+    CacheService.save('channels', rawData);
     return _channelsCache!;
   }
 
   Future<List<Movie>> fetchMovies({bool forceRefresh = false}) async {
-    if (!forceRefresh && _moviesCache != null) return _moviesCache!;
+    if (!forceRefresh) {
+      if (_moviesCache != null) return _moviesCache!;
+      final cached = await CacheService.get('movies');
+      if (cached != null) {
+        _moviesCache = (cached as List).map((e) => Movie.fromJson(e)).toList();
+        return _moviesCache!;
+      }
+    }
 
     final c = await _getCreds();
     
@@ -137,10 +157,11 @@ class ApiService {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
+    final List<Map<String, dynamic>> rawData = [];
     _moviesCache = streamsData.map((s) {
       final catId = s['category_id'].toString();
       final ext = s['container_extension'] ?? 'mp4';
-      return Movie(
+      final movie = Movie(
         id: int.parse(s['stream_id'].toString()),
         name: _cleanName(s['name']),
         url: '${c.host}/movie/${c.user}/${c.pass}/${s['stream_id']}.$ext',
@@ -148,12 +169,18 @@ class ApiService {
         group: catMap[catId] ?? "Autres",
         rating: s['rating']?.toString(),
       );
+      rawData.add(movie.toJson());
+      return movie;
     }).toList();
 
+    CacheService.save('movies', rawData);
     return _moviesCache!;
   }
 
   Future<MovieDetail> fetchMovieDetail(int id) async {
+    final cached = await CacheService.get('movie_detail_$id');
+    if (cached != null) return MovieDetail.fromJson(cached);
+
     final c = await _getCreds();
     final res = await _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_info', other: '&vod_id=$id')));
     
@@ -163,7 +190,7 @@ class ApiService {
       final movieData = data['movie_data'] ?? {};
       final ext = movieData['container_extension'] ?? 'mp4';
 
-      return MovieDetail(
+      final detail = MovieDetail(
         id: id,
         name: _cleanName(movieData['name'] ?? ""),
         url: '${c.host}/movie/${c.user}/${c.pass}/${movieData['stream_id']}.$ext',
@@ -177,12 +204,21 @@ class ApiService {
         year: info['releasedate'],
         rating: info['rating']?.toString(),
       );
+      CacheService.save('movie_detail_$id', detail.toJson());
+      return detail;
     }
     throw Exception('Erreur lors du chargement du détail du film');
   }
 
   Future<List<SeriesItem>> fetchSeries({bool forceRefresh = false}) async {
-    if (!forceRefresh && _seriesCache != null) return _seriesCache!;
+    if (!forceRefresh) {
+      if (_seriesCache != null) return _seriesCache!;
+      final cached = await CacheService.get('series');
+      if (cached != null) {
+        _seriesCache = (cached as List).map((e) => SeriesItem.fromJson(e)).toList();
+        return _seriesCache!;
+      }
+    }
 
     final c = await _getCreds();
     
@@ -202,21 +238,28 @@ class ApiService {
       for (var item in catsData) item['category_id'].toString(): _cleanCat(item['category_name'])
     };
 
+    final List<Map<String, dynamic>> rawData = [];
     _seriesCache = streamsData.map((s) {
       final catId = s['category_id'].toString();
-      return SeriesItem(
+      final series = SeriesItem(
         id: int.parse(s['series_id'].toString()),
         name: _cleanName(s['name']),
         cover: s['cover'],
         group: catMap[catId] ?? "Autres",
         rating: s['rating']?.toString(),
       );
+      rawData.add(series.toJson());
+      return series;
     }).toList();
 
+    CacheService.save('series', rawData);
     return _seriesCache!;
   }
 
   Future<SeriesDetail> fetchSeriesDetail(int seriesId) async {
+    final cached = await CacheService.get('series_detail_$seriesId');
+    if (cached != null) return SeriesDetail.fromJson(cached);
+
     final c = await _getCreds();
     final res = await _client.get(Uri.parse(_buildUrl(c, action: 'get_series_info', other: '&series_id=$seriesId')));
     
@@ -244,13 +287,15 @@ class ApiService {
         }).toList();
       });
 
-      return SeriesDetail(
+      final detail = SeriesDetail(
         id: seriesId,
         name: _cleanName(info['name'] ?? ""),
         cover: info['cover'],
         plot: info['plot'],
         seasons: seasons,
       );
+      CacheService.save('series_detail_$seriesId', detail.toJson());
+      return detail;
     }
     throw Exception('Erreur lors du chargement du détail de la série');
   }

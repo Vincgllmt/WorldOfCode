@@ -16,4 +16,13 @@ class Movie {
     group: j['group'] as String?,
     rating: j['rating'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'url': url,
+    'cover': cover,
+    'group': group,
+    'rating': rating,
+  };
 }

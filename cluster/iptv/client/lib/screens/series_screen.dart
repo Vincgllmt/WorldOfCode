@@ -742,10 +742,7 @@ class _PosterCardState extends State<_PosterCard> {
     return _fallback();
   }
 
-  Widget _shimmer() => Container(
-    color: _C.bgCard,
-    child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))),
-  );
+  Widget _shimmer() => _ShimmerLoader();
 
   Widget _fallback() => Container(
     decoration: const BoxDecoration(
@@ -767,6 +764,48 @@ class _PosterCardState extends State<_PosterCard> {
       ],
     ),
   );
+}
+
+class _ShimmerLoader extends StatefulWidget {
+  @override
+  State<_ShimmerLoader> createState() => _ShimmerLoaderState();
+}
+
+class _ShimmerLoaderState extends State<_ShimmerLoader> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+  }
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: [
+                (_ctrl.value - 0.3).clamp(0.0, 1.0),
+                _ctrl.value.clamp(0.0, 1.0),
+                (_ctrl.value + 0.3).clamp(0.0, 1.0),
+              ],
+              colors: [
+                const Color(0xFF1A0F2E),
+                const Color(0xFF2D1B4E),
+                const Color(0xFF1A0F2E),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ─── Shared ───────────────────────────────────────────────────────────────────

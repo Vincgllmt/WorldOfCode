@@ -29,6 +29,17 @@ class Episode {
     cover: j['cover'] as String?,
     duration: j['duration'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'season': season,
+    'episode_num': episodeNum,
+    'url': url,
+    'plot': plot,
+    'cover': cover,
+    'duration': duration,
+  };
 }
 
 class SeriesDetail {
@@ -54,4 +65,12 @@ class SeriesDetail {
       seasons: seasons,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'cover': cover,
+    'plot': plot,
+    'seasons': seasons.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList())),
+  };
 }

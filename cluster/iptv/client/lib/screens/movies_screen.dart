@@ -558,8 +558,50 @@ class _PosterCardState extends State<_PosterCard> {
     if (widget.cover != null && widget.cover!.isNotEmpty) return CachedNetworkImage(imageUrl: widget.cover!, fit: BoxFit.cover, memCacheWidth: 250, placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
     return _fallback();
   }
-  Widget _shimmer() => Container(color: _C.bgCard, child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _C.border))));
+  Widget _shimmer() => _ShimmerLoader();
   Widget _fallback() => Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1A0F2E), Color(0xFF2D1B4E)])), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.movie_rounded, color: Color(0x779D4EDD), size: 32), const SizedBox(height: 6), Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(widget.name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Color(0x99FFFFFF), fontSize: 9)))]));
+}
+
+class _ShimmerLoader extends StatefulWidget {
+  @override
+  State<_ShimmerLoader> createState() => _ShimmerLoaderState();
+}
+
+class _ShimmerLoaderState extends State<_ShimmerLoader> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+  }
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: [
+                (_ctrl.value - 0.3).clamp(0.0, 1.0),
+                _ctrl.value.clamp(0.0, 1.0),
+                (_ctrl.value + 0.3).clamp(0.0, 1.0),
+              ],
+              colors: [
+                const Color(0xFF1A0F2E),
+                const Color(0xFF2D1B4E),
+                const Color(0xFF1A0F2E),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _IconBtn extends StatelessWidget {

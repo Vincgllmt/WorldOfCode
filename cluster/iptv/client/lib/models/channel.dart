@@ -14,4 +14,11 @@ class Channel {
       group: json['group'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'url': url,
+    'logo': logo,
+    'group': group,
+  };
 }
