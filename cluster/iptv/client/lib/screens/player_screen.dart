@@ -209,11 +209,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void _showTrackSelector() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A0F2E),
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (_) => _TrackSheet(
         tracks: _tracks,
         current: _track,
@@ -458,6 +455,367 @@ class _NextEpisodeOverlay extends StatelessWidget {
   }
 }
 
+class _TrackSheet extends StatefulWidget {
+  final Tracks tracks;
+  final Track current;
+  final SubtitleSettings subSettings;
+  final void Function(AudioTrack) onAudio;
+  final void Function(SubtitleTrack) onSubtitle;
+  final ValueChanged<SubtitleSettings> onSubSettings;
+
+  const _TrackSheet({
+    required this.tracks,
+    required this.current,
+    required this.subSettings,
+    required this.onAudio,
+    required this.onSubtitle,
+    required this.onSubSettings,
+  });
+
+  @override
+  State<_TrackSheet> createState() => _TrackSheetState();
+}
+
+class _TrackSheetState extends State<_TrackSheet> {
+  late SubtitleSettings _settings;
+  AudioTrack?    _selAudio;
+  SubtitleTrack? _selSubtitle;
+  bool _showSettings = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings    = widget.subSettings;
+    _selAudio    = widget.current.audio;
+    _selSubtitle = widget.current.subtitle;
+  }
+
+  void _update(SubtitleSettings s) {
+    setState(() => _settings = s);
+    widget.onSubSettings(s);
+    s.save();
+  }
+
+  void _pickAudio(AudioTrack t) {
+    setState(() => _selAudio = t);
+    widget.onAudio(t);
+  }
+
+  void _pickSubtitle(SubtitleTrack t) {
+    setState(() => _selSubtitle = t);
+    widget.onSubtitle(t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final audioTracks    = widget.tracks.audio;
+    final subtitleTracks = widget.tracks.subtitle;
+    final double vh = MediaQuery.of(context).size.height;
+
+    return Container(
+      height: vh * 0.85,
+      decoration: const BoxDecoration(
+        color: Color(0xFF0C0714),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0x1AFFFFFF))),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _showSettings ? lang.t('subtitle_appearance').toUpperCase() : lang.t('audio_subtitles').toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                ),
+                const Spacer(),
+                if (!_showSettings)
+                  TextButton.icon(
+                    onPressed: () => setState(() => _showSettings = true),
+                    icon: const Icon(Icons.settings_outlined, size: 18, color: Color(0xFFBB86FC)),
+                    label: Text(lang.t('settings'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 13, fontWeight: FontWeight.bold)),
+                  )
+                else
+                  TextButton(
+                    onPressed: () => setState(() => _showSettings = false),
+                    child: Text(lang.t('back'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _showSettings 
+                ? _buildAppearanceSettings() 
+                : _buildTrackSelection(audioTracks, subtitleTracks),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrackSelection(List<AudioTrack> audio, List<SubtitleTrack> subs) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Audio Column
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 24, 16, 12),
+                child: Text(lang.t('audio_language').toUpperCase(), 
+                  style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: audio.length,
+                  itemBuilder: (_, i) => _NetflixTile(
+                    label: _audioLabel(audio[i]),
+                    selected: _selAudio == audio[i],
+                    onTap: () => _pickAudio(audio[i]),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Divider
+        Container(width: 1, color: const Color(0x1AFFFFFF), margin: const EdgeInsets.symmetric(vertical: 40)),
+        // Subtitles Column
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 24, 16, 12),
+                child: Text(lang.t('subtitles').toUpperCase(), 
+                  style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _NetflixTile(
+                      label: lang.t('subtitles_disabled'),
+                      selected: _selSubtitle == SubtitleTrack.no(),
+                      onTap: () => _pickSubtitle(SubtitleTrack.no()),
+                    ),
+                    ...subs
+                      .where((t) => t != SubtitleTrack.auto() && t != SubtitleTrack.no())
+                      .map((t) => _NetflixTile(
+                        label: _subtitleLabel(t),
+                        selected: _selSubtitle == t,
+                        onTap: () => _pickSubtitle(t),
+                      )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceSettings() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SettingGroup(
+            label: lang.t('color'),
+            children: [
+              _ModernChip(
+                label: lang.t('white'),
+                selected: _settings.color == SubtitleColor.white,
+                onTap: () => _update(_settings.copyWith(color: SubtitleColor.white)),
+              ),
+              _ModernChip(
+                label: lang.t('yellow'),
+                dotColor: const Color(0xFFFFE000),
+                selected: _settings.color == SubtitleColor.yellow,
+                onTap: () => _update(_settings.copyWith(color: SubtitleColor.yellow)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          _SettingGroup(
+            label: lang.t('background'),
+            children: [
+              _ModernChip(
+                label: lang.t('none'),
+                selected: _settings.background == SubtitleBackground.none,
+                onTap: () => _update(_settings.copyWith(background: SubtitleBackground.none)),
+              ),
+              _ModernChip(
+                label: lang.t('dark'),
+                selected: _settings.background == SubtitleBackground.dark,
+                onTap: () => _update(_settings.copyWith(background: SubtitleBackground.dark)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          _SettingGroup(
+            label: lang.t('size'),
+            children: [
+              _ModernChip(label: lang.t('small'), selected: _settings.size == SubtitleSize.small, onTap: () => _update(_settings.copyWith(size: SubtitleSize.small))),
+              _ModernChip(label: lang.t('medium'), selected: _settings.size == SubtitleSize.medium, onTap: () => _update(_settings.copyWith(size: SubtitleSize.medium))),
+              _ModernChip(label: lang.t('large'), selected: _settings.size == SubtitleSize.large, onTap: () => _update(_settings.copyWith(size: SubtitleSize.large))),
+            ],
+          ),
+          const SizedBox(height: 40),
+          // Preview
+          Text(lang.t('subtitle_preview').toUpperCase(), style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0x1AFFFFFF)),
+            ),
+            child: Center(
+              child: Text(
+                lang.t('subtitle_preview'),
+                style: _settings.textStyle.copyWith(
+                  fontSize: (_settings.fontSize * 0.33).clamp(14.0, 24.0),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _audioLabel(AudioTrack t) {
+    if (t == AudioTrack.auto()) return lang.t('auto');
+    if (t == AudioTrack.no())   return lang.t('mute');
+    final langCode  = t.language?.toUpperCase();
+    final title = t.title;
+    if (langCode != null && title != null) return '$langCode — $title';
+    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
+  }
+
+  String _subtitleLabel(SubtitleTrack t) {
+    final langCode  = t.language?.toUpperCase();
+    final title = t.title;
+    if (langCode != null && title != null) return '$langCode — $title';
+    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
+  }
+}
+
+class _NetflixTile extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NetflixTile({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFBB86FC).withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            if (selected)
+              const Icon(Icons.check_rounded, color: Color(0xFFBB86FC), size: 20)
+            else
+              const SizedBox(width: 20),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : const Color(0xFFB0AEC8),
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingGroup extends StatelessWidget {
+  final String label;
+  final List<Widget> children;
+  const _SettingGroup({required this.label, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label.toUpperCase(), style: const TextStyle(color: Color(0x77FFFFFF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        const SizedBox(height: 16),
+        Wrap(spacing: 12, runSpacing: 12, children: children),
+      ],
+    );
+  }
+}
+
+class _ModernChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? dotColor;
+
+  const _ModernChip({required this.label, required this.selected, required this.onTap, this.dotColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF9D4EDD) : const Color(0xFF1F1235),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: selected ? [BoxShadow(color: const Color(0xFF9D4EDD).withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)] : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dotColor != null)
+              Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+            Text(label, style: TextStyle(color: selected ? Colors.white : const Color(0xFFB0AEC8), fontSize: 13, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GroupTag extends StatelessWidget {
   final String group;
   const _GroupTag({required this.group});
@@ -502,351 +860,8 @@ class _TrackButton extends StatelessWidget {
   const _TrackButton({required this.onTap});
   @override
   Widget build(BuildContext context) => IconButton(
-    icon: const Icon(Icons.tune_rounded, color: Colors.white),
+    icon: const Icon(Icons. tune_rounded, color: Colors.white),
     tooltip: lang.t('audio_subtitles'),
     onPressed: onTap,
-  );
-}
-
-// ─── Track + subtitle settings sheet ─────────────────────────────────────────
-class _TrackSheet extends StatefulWidget {
-  final Tracks tracks;
-  final Track current;
-  final SubtitleSettings subSettings;
-  final void Function(AudioTrack) onAudio;
-  final void Function(SubtitleTrack) onSubtitle;
-  final ValueChanged<SubtitleSettings> onSubSettings;
-
-  const _TrackSheet({
-    required this.tracks,
-    required this.current,
-    required this.subSettings,
-    required this.onAudio,
-    required this.onSubtitle,
-    required this.onSubSettings,
-  });
-
-  @override
-  State<_TrackSheet> createState() => _TrackSheetState();
-}
-
-class _TrackSheetState extends State<_TrackSheet> {
-  late SubtitleSettings _settings;
-  AudioTrack?    _selAudio;
-  SubtitleTrack? _selSubtitle;
-
-  @override
-  void initState() {
-    super.initState();
-    _settings    = widget.subSettings;
-    _selAudio    = widget.current.audio;
-    _selSubtitle = widget.current.subtitle;
-  }
-
-  void _update(SubtitleSettings s) {
-    setState(() => _settings = s);
-    widget.onSubSettings(s);
-    s.save();
-  }
-
-  void _pickAudio(AudioTrack t) {
-    setState(() => _selAudio = t);
-    widget.onAudio(t);
-  }
-
-  void _pickSubtitle(SubtitleTrack t) {
-    setState(() => _selSubtitle = t);
-    widget.onSubtitle(t);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final audioTracks    = widget.tracks.audio;
-    final subtitleTracks = widget.tracks.subtitle;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle + Terminé button
-          Row(
-            children: [
-              const Spacer(),
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF9D4EDD),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(lang.t('done'), style: const TextStyle(
-                    color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700,
-                  )),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // ── Audio ─────────────────────────────────────────────────────────
-          if (audioTracks.length > 1) ...[
-            _SectionHeader(icon: Icons.volume_up_rounded, label: lang.t('audio_language')),
-            const SizedBox(height: 8),
-            ...audioTracks.map((t) => _TrackTile(
-              label: _audioLabel(t),
-              selected: _selAudio == t,
-              onTap: () => _pickAudio(t),
-            )),
-            const SizedBox(height: 20),
-          ],
-
-          // ── Subtitle track ────────────────────────────────────────────────
-          if (subtitleTracks.length > 1) ...[
-            _SectionHeader(icon: Icons.subtitles_rounded, label: lang.t('subtitles')),
-            const SizedBox(height: 8),
-            _TrackTile(
-              label: lang.t('subtitles_disabled'),
-              icon: Icons.subtitles_off_rounded,
-              selected: _selSubtitle == SubtitleTrack.no(),
-              onTap: () => _pickSubtitle(SubtitleTrack.no()),
-            ),
-            ...subtitleTracks
-              .where((t) => t != SubtitleTrack.auto() && t != SubtitleTrack.no())
-              .map((t) => _TrackTile(
-                label: _subtitleLabel(t),
-                selected: _selSubtitle == t,
-                onTap: () => _pickSubtitle(t),
-              )),
-            const SizedBox(height: 20),
-          ],
-
-          // ── Subtitle appearance ───────────────────────────────────────────
-          _SectionHeader(icon: Icons.text_fields_rounded, label: lang.t('subtitle_appearance')),
-          const SizedBox(height: 14),
-
-          _SettingRow(
-            label: lang.t('color'),
-            chips: [
-              _Chip(
-                label: lang.t('white'),
-                selected: _settings.color == SubtitleColor.white,
-                onTap: () => _update(_settings.copyWith(color: SubtitleColor.white)),
-              ),
-              _Chip(
-                label: lang.t('yellow'),
-                dotColor: const Color(0xFFFFE000),
-                selected: _settings.color == SubtitleColor.yellow,
-                onTap: () => _update(_settings.copyWith(color: SubtitleColor.yellow)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          _SettingRow(
-            label: lang.t('background'),
-            chips: [
-              _Chip(
-                label: lang.t('none'),
-                selected: _settings.background == SubtitleBackground.none,
-                onTap: () => _update(_settings.copyWith(background: SubtitleBackground.none)),
-              ),
-              _Chip(
-                label: lang.t('dark'),
-                selected: _settings.background == SubtitleBackground.dark,
-                onTap: () => _update(_settings.copyWith(background: SubtitleBackground.dark)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          _SettingRow(
-            label: lang.t('size'),
-            chips: [
-              _Chip(
-                label: lang.t('small'),
-                selected: _settings.size == SubtitleSize.small,
-                onTap: () => _update(_settings.copyWith(size: SubtitleSize.small)),
-              ),
-              _Chip(
-                label: lang.t('medium'),
-                selected: _settings.size == SubtitleSize.medium,
-                onTap: () => _update(_settings.copyWith(size: SubtitleSize.medium)),
-              ),
-              _Chip(
-                label: lang.t('large'),
-                selected: _settings.size == SubtitleSize.large,
-                onTap: () => _update(_settings.copyWith(size: SubtitleSize.large)),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Preview
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0x229D4EDD)),
-            ),
-            child: Center(
-              child: Text(
-                lang.t('subtitle_preview'),
-                style: _settings.textStyle.copyWith(
-                  fontSize: (_settings.fontSize * 0.33).clamp(13.0, 22.0),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _audioLabel(AudioTrack t) {
-    if (t == AudioTrack.auto()) return lang.t('auto');
-    if (t == AudioTrack.no())   return lang.t('mute');
-    final langCode  = t.language?.toUpperCase();
-    final title = t.title;
-    if (langCode != null && title != null) return '$langCode — $title';
-    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
-  }
-
-  String _subtitleLabel(SubtitleTrack t) {
-    final langCode  = t.language?.toUpperCase();
-    final title = t.title;
-    if (langCode != null && title != null) return '$langCode — $title';
-    return langCode ?? title ?? '${lang.t('track')} ${t.id}';
-  }
-}
-
-// ─── Shared widgets ───────────────────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _SectionHeader({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Row(children: [
-    Icon(icon, color: const Color(0xFF9D4EDD), size: 18),
-    const SizedBox(width: 8),
-    Text(label, style: const TextStyle(
-      color: Color(0xFFBB86FC), fontSize: 14,
-      fontWeight: FontWeight.w700, letterSpacing: 0.5,
-    )),
-  ]);
-}
-
-class _TrackTile extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  const _TrackTile({required this.label, required this.selected, required this.onTap, this.icon});
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(8),
-    child: Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0x339D4EDD) : Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: selected ? const Color(0xFF9D4EDD) : Colors.transparent),
-      ),
-      child: Row(children: [
-        if (icon != null) ...[
-          Icon(icon, size: 16, color: selected ? const Color(0xFFBB86FC) : const Color(0xFFB0AEC8)),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Text(label, style: TextStyle(
-            color: selected ? Colors.white : const Color(0xFFB0AEC8),
-            fontSize: 14,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-          )),
-        ),
-        if (selected)
-          const Icon(Icons.check_rounded, color: Color(0xFF9D4EDD), size: 18),
-      ]),
-    ),
-  );
-}
-
-class _SettingRow extends StatelessWidget {
-  final String label;
-  final List<Widget> chips;
-  const _SettingRow({required this.label, required this.chips});
-
-  @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      SizedBox(
-        width: 68,
-        child: Text(label, style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12)),
-      ),
-      Expanded(child: Wrap(spacing: 8, runSpacing: 6, children: chips)),
-    ],
-  );
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color? dotColor;
-
-  const _Chip({required this.label, required this.selected, required this.onTap, this.dotColor});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0x339D4EDD) : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selected ? const Color(0xFF9D4EDD) : Colors.white.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (dotColor != null) ...[
-            Container(
-              width: 9, height: 9,
-              margin: const EdgeInsets.only(right: 5),
-              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-            ),
-          ],
-          Text(label, style: TextStyle(
-            color: selected ? Colors.white : const Color(0xFFB0AEC8),
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-          )),
-        ],
-      ),
-    ),
   );
 }
