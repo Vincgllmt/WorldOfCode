@@ -43,12 +43,18 @@ class _SeriesScreenState extends State<SeriesScreen> {
   bool    _searchVisible = false;
   final   _searchCtrl    = TextEditingController();
 
+  Map<String, List<SeriesItem>> _groups = {};
+  List<String> _sortedKeys = [];
+
   @override
   void initState() {
     super.initState();
     _future = _load();
     GenreFavoritesService.load('series').then((favs) {
-      if (mounted) setState(() => _favGenres = favs);
+      if (mounted) {
+        setState(() => _favGenres = favs);
+        _applyFilters();
+      }
     });
   }
 
@@ -60,30 +66,41 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   Future<List<SeriesItem>> _load({bool force = false}) async {
     final series = await _api.fetchSeries(forceRefresh: force);
-    if (mounted) setState(() { _all = series; _filtered = series; });
+    if (mounted) {
+      setState(() { _all = series; });
+      _applyFilters();
+    }
     return series;
   }
 
-  Map<String, List<SeriesItem>>? _cachedGroups;
-  List<String>? _cachedSortedKeys;
-
   void _applyFilters() {
-    setState(() {
-      var result = _all;
-      if (_selectedGenre != null) {
-        result = result.where((s) => (s.group ?? lang.t('other')) == _selectedGenre).toList();
-      }
-      if (_query.isNotEmpty) {
-        final lq = normalize(_query);
-        result = result.where((s) =>
-          normalize(s.name).contains(lq) ||
-          normalize(s.group ?? '').contains(lq),
-        ).toList();
-      }
-      _filtered = result;
-      _cachedGroups = null;
-      _cachedSortedKeys = null;
-    });
+    var result = _all;
+    if (_selectedGenre != null) {
+      result = result.where((s) => (s.group ?? lang.t('other')) == _selectedGenre).toList();
+    }
+    if (_query.isNotEmpty) {
+      final lq = normalize(_query);
+      result = result.where((s) =>
+        normalize(s.name).contains(lq) ||
+        normalize(s.group ?? '').contains(lq),
+      ).toList();
+    }
+
+    final m = <String, List<SeriesItem>>{};
+    for (final s in result) {
+      (m[s.group ?? lang.t('other')] ??= []).add(s);
+    }
+    
+    final fav   = m.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = m.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    
+    if (mounted) {
+      setState(() {
+        _filtered = result;
+        _groups = m;
+        _sortedKeys = [...fav, ...other];
+      });
+    }
   }
 
   void _onSearch(String q) {
@@ -111,30 +128,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return map;
   }
 
-  Map<String, List<SeriesItem>> _grouped(List<SeriesItem> items) {
-    if (_cachedGroups != null) return _cachedGroups!;
-    final m = <String, List<SeriesItem>>{};
-    for (final s in items) {
-      (m[s.group ?? lang.t('other')] ??= []).add(s);
-    }
-    _cachedGroups = m;
-    return m;
-  }
-
   void _toggleFavGenre(String genre) {
-    setState(() {
-      if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
-      _cachedSortedKeys = null;
-    });
+    if (_favGenres.contains(genre)) { 
+      _favGenres.remove(genre); 
+    } else { 
+      _favGenres.add(genre); 
+    }
     GenreFavoritesService.save('series', _favGenres);
-  }
-
-  List<String> _sortedKeys(Map<String, List<SeriesItem>> groups) {
-    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
-    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
-    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    _cachedSortedKeys = [...fav, ...other];
-    return _cachedSortedKeys!;
+    _applyFilters();
   }
 
   Future<void> _open(SeriesItem s) {
@@ -185,8 +186,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
   }
 
   Future<void> _logout() async {
-    final ok = true;
-    if (ok != true || !mounted) return;
     await CredentialsService.clear();
     ApiService.invalidateCache();
     if (!mounted) return;
@@ -221,10 +220,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
               body: FutureBuilder<List<SeriesItem>>(
                 future: _future,
                 builder: (ctx, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
+                  if (snap.connectionState == ConnectionState.waiting && _all.isEmpty) {
                     return _LoadingView(label: lang.t('loading_series'));
                   }
-                  if (snap.hasError) {
+                  if (snap.hasError && _all.isEmpty) {
                     return _ErrorView(
                       message: snap.error.toString(),
                       onRetry: () => setState(() {
@@ -234,33 +233,25 @@ class _SeriesScreenState extends State<SeriesScreen> {
                       }),
                     );
                   }
-                  if (_all.isEmpty) {
+                  if (_all.isEmpty && snap.connectionState == ConnectionState.done) {
                     return const Center(child: Text('Aucune série disponible.', style: TextStyle(color: _C.txtSub)));
                   }
 
-          final groups = _grouped(_filtered);
-          final sortedKeys = _sortedKeys(groups);
-
           return RefreshIndicator(
-            onRefresh: () {
-              setState(() {});
-              return _load(force: true);
-            },
+            onRefresh: () => _load(force: true),
             color: _C.accent,
             backgroundColor: _C.bgCard,
             child: CustomScrollView(
               slivers: [
-                // Increased spacer at the top to clear the AppBar (70px + status bar)
                 SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
 
-                // Active genre badge / Back button
                 if (_selectedGenre != null)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                       child: Row(children: [
                         GestureDetector(
-                          onTap: () => setState(() => _selectedGenre = null),
+                          onTap: () => setState(() { _selectedGenre = null; _applyFilters(); }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
@@ -282,76 +273,38 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     ),
                   ),
 
-                // Reprendre la lecture
                 if (_query.isEmpty && _selectedGenre == null)
-                  SliverToBoxAdapter(
-                    child: FutureBuilder<List<MediaProgress>>(
-                      future: ProgressService.getAll(),
-                      builder: (ctx, snap) {
-                        final progresses = (snap.data ?? [])
-                            .where((p) => p.type == 'series' && !p.isCompleted && p.seriesId != null)
-                            .toList();
-                        
-                        if (progresses.isEmpty) return const SizedBox.shrink();
-
-                        // Match progress with actual series objects (to get full details and allow navigation)
-                        // Group by seriesId to only show the series once even if multiple episodes are in progress
-                        final Map<int, SeriesItem> seriesMap = { for (final s in _all) s.id: s };
-                        final Set<int> addedSeries = {};
-                        final List<SeriesItem> recentSeries = [];
-
-                        for (final p in progresses) {
-                          if (!addedSeries.contains(p.seriesId)) {
-                            final s = seriesMap[p.seriesId];
-                            if (s != null) {
-                              recentSeries.add(s);
-                              addedSeries.add(p.seriesId!);
-                            }
-                          }
-                        }
-
-                        if (recentSeries.isEmpty) return const SizedBox.shrink();
-
-                        return _GenreRow(
-                          title: lang.t('continue_watching'),
-                          items: recentSeries,
-                          isFav: false,
-                          onTap: (s) => _open(s).then((_) => setState(() {})),
-                          onRemove: (s) async {
-                            await ProgressService.removeBySeriesId(s.id);
-                            setState(() {});
-                          },
-                          onFavToggle: () {},
-                          onTitleTap: () {},
-                          viewMode: viewMode,
-                          isAccent: true,
-                        );
-                      },
-                    ),
+                  _ContinueWatchingSliver(
+                    onOpen: (s) => _open(s).then((_) => setState(() {})),
+                    allSeries: _all,
+                    viewMode: viewMode,
                   ),
 
                 if (_query.isNotEmpty)
                   ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                 else if (viewMode == ViewMode.themes && _selectedGenre == null)
-                  // Mode Thèmes uniquement
-                  _buildThemesGrid(groups, sortedKeys)
+                  _buildThemesGrid(_groups, _sortedKeys)
                 else if (_selectedGenre != null)
-                  // Un seul thème sélectionné
-                  ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
+                  ..._buildGridSlivers(_groups[_selectedGenre]!, viewMode, showTitle: false)
                 else
-                  // Mode Images normal : On laisse les thèmes en lignes !
-                  for (final key in sortedKeys)
-                    SliverToBoxAdapter(
-                      child: _GenreRow(
-                        title: key,
-                        items: groups[key]!,
-                        isFav: _favGenres.contains(key),
-                        onTap: _open,
-                        onFavToggle: () => _toggleFavGenre(key),
-                        onTitleTap: () => setState(() => _selectedGenre = key),
-                        viewMode: viewMode,
-                      ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final key = _sortedKeys[index];
+                        return _GenreRow(
+                          key: ValueKey('genre_$key'),
+                          title: key,
+                          items: _groups[key]!,
+                          isFav: _favGenres.contains(key),
+                          onTap: _open,
+                          onFavToggle: () => _toggleFavGenre(key),
+                          onTitleTap: () => setState(() { _selectedGenre = key; _applyFilters(); }),
+                          viewMode: viewMode,
+                        );
+                      },
+                      childCount: _sortedKeys.length,
                     ),
+                  ),
 
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
@@ -371,17 +324,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
     double aspectRatio = 130 / 220;
     
     switch (viewMode) {
-      case ViewMode.gridSmall:
-        maxExtent = 115;
-        break;
-      case ViewMode.gridMedium:
-        maxExtent = 155;
-        break;
-      case ViewMode.gridLarge:
-        maxExtent = 220;
-        break;
-      default:
-        maxExtent = 155;
+      case ViewMode.gridSmall: maxExtent = 115; break;
+      case ViewMode.gridMedium: maxExtent = 155; break;
+      case ViewMode.gridLarge: maxExtent = 220; break;
+      default: maxExtent = 155;
     }
 
     return [
@@ -449,7 +395,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
               title: key,
               count: groups[key]!.length,
               isFav: _favGenres.contains(key),
-              onTap: () => setState(() => _selectedGenre = key),
+              onTap: () => setState(() { _selectedGenre = key; _applyFilters(); }),
             );
           },
           childCount: sortedKeys.length,
@@ -566,6 +512,7 @@ class _GenreRow extends StatelessWidget {
   final bool isAccent;
 
   const _GenreRow({
+    super.key,
     required this.title, required this.items, required this.onTap, this.onRemove,
     required this.isFav, required this.onFavToggle, required this.onTitleTap, 
     required this.viewMode, this.isAccent = false,
@@ -768,48 +715,6 @@ class _PosterCardState extends State<_PosterCard> {
   );
 }
 
-class _ShimmerLoader extends StatefulWidget {
-  @override
-  State<_ShimmerLoader> createState() => _ShimmerLoaderState();
-}
-
-class _ShimmerLoaderState extends State<_ShimmerLoader> with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
-  }
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              stops: [
-                (_ctrl.value - 0.3).clamp(0.0, 1.0),
-                _ctrl.value.clamp(0.0, 1.0),
-                (_ctrl.value + 0.3).clamp(0.0, 1.0),
-              ],
-              colors: [
-                const Color(0xFF1A0F2E),
-                const Color(0xFF2D1B4E),
-                const Color(0xFF1A0F2E),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 // ─── Shared ───────────────────────────────────────────────────────────────────
 class _IconBtn extends StatelessWidget {
   final IconData icon;
@@ -936,29 +841,11 @@ class _CategoryCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text(
-                      seriesLabel,
-                      style: TextStyle(
-                        color: isFav ? _C.glow : _C.txtSub,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(seriesLabel, style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -989,4 +876,122 @@ class _LangBtn extends StatelessWidget {
       child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
     ),
   );
+}
+
+class _ShimmerLoader extends StatefulWidget {
+  @override
+  State<_ShimmerLoader> createState() => _ShimmerLoaderState();
+}
+
+class _ShimmerLoaderState extends State<_ShimmerLoader> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+  }
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: [
+                (_ctrl.value - 0.3).clamp(0.0, 1.0),
+                _ctrl.value.clamp(0.0, 1.0),
+                (_ctrl.value + 0.3).clamp(0.0, 1.0),
+              ],
+              colors: [
+                const Color(0xFF1A0F2E),
+                const Color(0xFF2D1B4E),
+                const Color(0xFF1A0F2E),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ContinueWatchingSliver extends StatefulWidget {
+  final Function(SeriesItem) onOpen;
+  final List<SeriesItem> allSeries;
+  final ViewMode viewMode;
+
+  const _ContinueWatchingSliver({
+    required this.onOpen,
+    required this.allSeries,
+    required this.viewMode,
+  });
+
+  @override
+  State<_ContinueWatchingSliver> createState() => _ContinueWatchingSliverState();
+}
+
+class _ContinueWatchingSliverState extends State<_ContinueWatchingSliver> {
+  late Future<List<SeriesItem>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _fetchRecent();
+  }
+
+  Future<List<SeriesItem>> _fetchRecent() async {
+    final progresses = (await ProgressService.getAll())
+        .where((p) => p.type == 'series' && !p.isCompleted && p.seriesId != null)
+        .toList();
+    
+    if (progresses.isEmpty) return [];
+
+    final Map<int, SeriesItem> seriesMap = { for (final s in widget.allSeries) s.id: s };
+    final Set<int> addedSeries = {};
+    final List<SeriesItem> recentSeries = [];
+
+    for (final p in progresses) {
+      if (!addedSeries.contains(p.seriesId)) {
+        final s = seriesMap[p.seriesId];
+        if (s != null) {
+          recentSeries.add(s);
+          addedSeries.add(p.seriesId!);
+        }
+      }
+    }
+    return recentSeries;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<SeriesItem>>(
+      future: _future,
+      builder: (ctx, snap) {
+        final recentSeries = snap.data ?? [];
+        if (recentSeries.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverToBoxAdapter(
+          child: _GenreRow(
+            title: lang.t('continue_watching'),
+            items: recentSeries,
+            isFav: false,
+            onTap: widget.onOpen,
+            onRemove: (s) async {
+              await ProgressService.removeBySeriesId(s.id);
+              setState(() { _future = _fetchRecent(); });
+            },
+            onFavToggle: () {},
+            onTitleTap: () {},
+            viewMode: widget.viewMode,
+            isAccent: true,
+          ),
+        );
+      },
+    );
+  }
 }

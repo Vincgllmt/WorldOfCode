@@ -43,15 +43,18 @@ class _MoviesScreenState extends State<MoviesScreen> {
   bool    _searchVisible = false;
   final   _searchCtrl    = TextEditingController();
 
-  Map<String, List<Movie>>? _cachedGroups;
-  List<String>? _cachedSortedKeys;
+  Map<String, List<Movie>> _groups = {};
+  List<String> _sortedKeys = [];
 
   @override
   void initState() {
     super.initState();
     _future = _load();
     GenreFavoritesService.load('films').then((favs) {
-      if (mounted) setState(() => _favGenres = favs);
+      if (mounted) {
+        setState(() => _favGenres = favs);
+        _applyFilters();
+      }
     });
   }
 
@@ -63,27 +66,41 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   Future<List<Movie>> _load({bool force = false}) async {
     final movies = await _api.fetchMovies(forceRefresh: force);
-    if (mounted) setState(() { _all = movies; _filtered = movies; });
+    if (mounted) {
+      setState(() { _all = movies; });
+      _applyFilters();
+    }
     return movies;
   }
 
   void _applyFilters() {
-    setState(() {
-      var result = _all;
-      if (_selectedGenre != null) {
-        result = result.where((m) => (m.group ?? lang.t('other')) == _selectedGenre).toList();
-      }
-      if (_query.isNotEmpty) {
-        final lq = normalize(_query);
-        result = result.where((m) =>
-          normalize(m.name).contains(lq) ||
-          normalize(m.group ?? '').contains(lq),
-        ).toList();
-      }
-      _filtered = result;
-      _cachedGroups = null;
-      _cachedSortedKeys = null;
-    });
+    var result = _all;
+    if (_selectedGenre != null) {
+      result = result.where((m) => (m.group ?? lang.t('other')) == _selectedGenre).toList();
+    }
+    if (_query.isNotEmpty) {
+      final lq = normalize(_query);
+      result = result.where((m) =>
+        normalize(m.name).contains(lq) ||
+        normalize(m.group ?? '').contains(lq),
+      ).toList();
+    }
+
+    final m = <String, List<Movie>>{};
+    for (final mv in result) {
+      (m[mv.group ?? lang.t('other')] ??= []).add(mv);
+    }
+    
+    final fav   = m.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = m.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    
+    if (mounted) {
+      setState(() {
+        _filtered = result;
+        _groups = m;
+        _sortedKeys = [...fav, ...other];
+      });
+    }
   }
 
   void _onSearch(String q) {
@@ -112,29 +129,13 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   void _toggleFavGenre(String genre) {
-    setState(() {
-      if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
-      _cachedSortedKeys = null;
-    });
-    GenreFavoritesService.save('films', _favGenres);
-  }
-
-  Map<String, List<Movie>> _grouped(List<Movie> movies) {
-    if (_cachedGroups != null) return _cachedGroups!;
-    final m = <String, List<Movie>>{};
-    for (final mv in movies) {
-      (m[mv.group ?? lang.t('other')] ??= []).add(mv);
+    if (_favGenres.contains(genre)) { 
+      _favGenres.remove(genre); 
+    } else { 
+      _favGenres.add(genre); 
     }
-    _cachedGroups = m;
-    return m;
-  }
-
-  List<String> _sortedKeys(Map<String, List<Movie>> groups) {
-    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
-    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
-    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    _cachedSortedKeys = [...fav, ...other];
-    return _cachedSortedKeys!;
+    GenreFavoritesService.save('films', _favGenres);
+    _applyFilters();
   }
 
   Future<void> _open(Movie m) {
@@ -185,8 +186,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Future<void> _logout() async {
-    final ok = true;
-    if (ok != true || !mounted) return;
     await CredentialsService.clear();
     ApiService.invalidateCache();
     if (!mounted) return;
@@ -216,26 +215,20 @@ class _MoviesScreenState extends State<MoviesScreen> {
               body: FutureBuilder<List<Movie>>(
                 future: _future,
                 builder: (ctx, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
+                  if (snap.connectionState == ConnectionState.waiting && _all.isEmpty) {
                     return _LoadingView(label: lang.t('loading_movies'));
                   }
-                  if (snap.hasError) {
+                  if (snap.hasError && _all.isEmpty) {
                     return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
                       _all = []; _filtered = []; _selectedGenre = null; _future = _load();
                     }));
                   }
-                  if (_all.isEmpty) {
+                  if (_all.isEmpty && snap.connectionState == ConnectionState.done) {
                     return Center(child: Text('Aucun film disponible.', style: const TextStyle(color: _C.txtSub)));
                   }
 
-          final groups = _grouped(_filtered);
-          final sortedKeys = _sortedKeys(groups);
-
           return RefreshIndicator(
-            onRefresh: () {
-              setState(() {});
-              return _load(force: true);
-            },
+            onRefresh: () => _load(force: true),
             color: _C.accent,
             backgroundColor: _C.bgCard,
             child: CustomScrollView(
@@ -247,7 +240,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                       child: Row(children: [
                         GestureDetector(
-                          onTap: () => setState(() => _selectedGenre = null),
+                          onTap: () => setState(() { _selectedGenre = null; _applyFilters(); }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.accent)),
@@ -264,59 +257,37 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     ),
                   ),
 
-                // Reprendre la lecture
                 if (_query.isEmpty && _selectedGenre == null)
-                  SliverToBoxAdapter(
-                    child: FutureBuilder<List<MediaProgress>>(
-                      future: ProgressService.getAll(),
-                      builder: (ctx, snap) {
-                        final progresses = (snap.data ?? [])
-                            .where((p) => p.type == 'movie' && !p.isCompleted)
-                            .toList();
-                        
-                        if (progresses.isEmpty) return const SizedBox.shrink();
-
-                        // Match progress with actual movie objects (to get full details and allow navigation)
-                        final Map<int, Movie> movieMap = { for (final m in _all) m.id: m };
-                        final recentMovies = progresses
-                            .map((p) => movieMap[p.mediaId])
-                            .whereType<Movie>()
-                            .toList();
-
-                        if (recentMovies.isEmpty) return const SizedBox.shrink();
-
-                        return _GenreRow(
-                          title: lang.t('continue_watching'),
-                          movies: recentMovies,
-                          isFav: false,
-                          onTap: (m) => _open(m).then((_) => setState(() {})),
-                          onRemove: (m) async {
-                            await ProgressService.removeByMediaId(m.id, 'movie');
-                            setState(() {});
-                          },
-                          onFavToggle: () {},
-                          onTitleTap: () {},
-                          viewMode: viewMode,
-                          isAccent: true,
-                        );
-                      },
-                    ),
+                  _ContinueWatchingSliver(
+                    onOpen: (m) => _open(m).then((_) => setState(() {})),
+                    allMovies: _all,
+                    viewMode: viewMode,
                   ),
 
                 if (_query.isNotEmpty)
                   ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                 else if (viewMode == ViewMode.themes && _selectedGenre == null)
-                  _buildThemesGrid(groups, sortedKeys)
+                  _buildThemesGrid(_groups, _sortedKeys)
                 else if (_selectedGenre != null)
-                  ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
+                  ..._buildGridSlivers(_groups[_selectedGenre]!, viewMode, showTitle: false)
                 else
-                  for (final key in sortedKeys)
-                    SliverToBoxAdapter(child: _GenreRow(
-                      title: key, movies: groups[key]!, isFav: _favGenres.contains(key),
-                      onTap: _open, onFavToggle: () => _toggleFavGenre(key),
-                      onTitleTap: () => setState(() => _selectedGenre = key),
-                      viewMode: viewMode,
-                    )),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final key = _sortedKeys[index];
+                        return _GenreRow(
+                          key: ValueKey('genre_$key'),
+                          title: key, 
+                          movies: _groups[key]!, 
+                          isFav: _favGenres.contains(key),
+                          onTap: _open, onFavToggle: () => _toggleFavGenre(key),
+                          onTitleTap: () => setState(() { _selectedGenre = key; _applyFilters(); }),
+                          viewMode: viewMode,
+                        );
+                      },
+                      childCount: _sortedKeys.length,
+                    ),
+                  ),
                 const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
               ],
             ),
@@ -364,8 +335,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   Widget _buildThemesGrid(Map<String, List<Movie>> groups, List<String> sortedKeys) {
     final width = MediaQuery.of(context).size.width;
-    // On mobile (width < 600), we want 1 column. 
-    // Since MaxCrossAxisExtent uses "max", setting it to a large value or width ensures 1 column.
     final maxExtent = width < 600 ? width : 350.0;
     
     return SliverPadding(
@@ -381,7 +350,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
           final key = sortedKeys[i];
           return _CategoryCard(
             title: key, count: groups[key]!.length, isFav: _favGenres.contains(key),
-            onTap: () => setState(() => _selectedGenre = key),
+            onTap: () => setState(() { _selectedGenre = key; _applyFilters(); }),
           );
         }, childCount: sortedKeys.length),
       ),
@@ -478,6 +447,7 @@ class _GenreRow extends StatelessWidget {
   final bool isAccent;
 
   const _GenreRow({
+    super.key,
     required this.title, required this.movies, required this.onTap, this.onRemove,
     required this.isFav, required this.onFavToggle, required this.onTitleTap, 
     required this.viewMode, this.isAccent = false,
@@ -654,4 +624,71 @@ class _CategoryCard extends StatelessWidget {
   const _CategoryCard({required this.title, required this.count, required this.isFav, required this.onTap});
   @override
   Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.movie_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text("$count film${count > 1 ? 's' : ''}", style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
+}
+
+class _ContinueWatchingSliver extends StatefulWidget {
+  final Function(Movie) onOpen;
+  final List<Movie> allMovies;
+  final ViewMode viewMode;
+
+  const _ContinueWatchingSliver({
+    required this.onOpen,
+    required this.allMovies,
+    required this.viewMode,
+  });
+
+  @override
+  State<_ContinueWatchingSliver> createState() => _ContinueWatchingSliverState();
+}
+
+class _ContinueWatchingSliverState extends State<_ContinueWatchingSliver> {
+  late Future<List<Movie>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _fetchRecent();
+  }
+
+  Future<List<Movie>> _fetchRecent() async {
+    final progresses = (await ProgressService.getAll())
+        .where((p) => p.type == 'movie' && !p.isCompleted)
+        .toList();
+    
+    if (progresses.isEmpty) return [];
+
+    final Map<int, Movie> movieMap = { for (final m in widget.allMovies) m.id: m };
+    return progresses
+        .map((p) => movieMap[p.mediaId])
+        .whereType<Movie>()
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Movie>>(
+      future: _future,
+      builder: (ctx, snap) {
+        final recentMovies = snap.data ?? [];
+        if (recentMovies.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverToBoxAdapter(
+          child: _GenreRow(
+            title: lang.t('continue_watching'),
+            movies: recentMovies,
+            isFav: false,
+            onTap: widget.onOpen,
+            onRemove: (m) async {
+              await ProgressService.removeByMediaId(m.id, 'movie');
+              setState(() { _future = _fetchRecent(); });
+            },
+            onFavToggle: () {},
+            onTitleTap: () {},
+            viewMode: widget.viewMode,
+            isAccent: true,
+          ),
+        );
+      },
+    );
+  }
 }
