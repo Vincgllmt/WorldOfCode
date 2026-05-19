@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:window_manager/window_manager.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
@@ -63,14 +64,36 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _overlayTimer;
   int _lastPositionSeconds = -1;
   int _saveCount = 0;
+  bool _isPip = false;
 
   void _resetOverlayTimer() {
-    if (!mounted) return;
+    if (!mounted || _isPip) return;
     _overlayVisible.value = true;
     _overlayTimer?.cancel();
     _overlayTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) _overlayVisible.value = false;
     });
+  }
+
+  Future<void> _togglePip() async {
+    if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) return;
+
+    setState(() => _isPip = !_isPip);
+
+    if (_isPip) {
+      await windowManager.setAlwaysOnTop(true);
+      await windowManager.setHasShadow(false);
+      // Small PiP window size
+      await windowManager.setSize(const Size(480, 270));
+      // Position bottom right (rough estimate, window_manager has better ways but this is a start)
+      // For a real implementation we should get screen size
+      _overlayVisible.value = false;
+    } else {
+      await windowManager.setAlwaysOnTop(false);
+      await windowManager.setHasShadow(true);
+      await windowManager.maximize();
+      _resetOverlayTimer();
+    }
   }
 
   @override
@@ -230,6 +253,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    if (_isPip) {
+      windowManager.setAlwaysOnTop(false);
+      windowManager.maximize();
+    }
     _overlayTimer?.cancel();
     _progressTimer?.cancel();
     ProgressService.syncToDisk();
@@ -279,6 +306,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
         speed: _playbackSpeed,
         onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
       ),
+      if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+        IconButton(
+          icon: Icon(_isPip ? Icons.picture_in_picture_alt_rounded : Icons.picture_in_picture_rounded, color: Colors.white),
+          tooltip: 'PiP',
+          onPressed: _togglePip,
+        ),
       _TrackButton(onTap: _showTrackSelector),
       const SizedBox(width: 8),
     ];
@@ -345,50 +378,61 @@ class _PlayerScreenState extends State<PlayerScreen> {
             bottomButtonBar: bottomBarDesktop,
           ),
           child: MouseRegion(
-            onHover: (_) => _resetOverlayTimer(),
-            onEnter: (_) => _resetOverlayTimer(),
+            onHover: (_) => _isPip ? null : _resetOverlayTimer(),
+            onEnter: (_) => _isPip ? null : _resetOverlayTimer(),
             child: GestureDetector(
-              onTap: _resetOverlayTimer,
-              onPanUpdate: (_) => _resetOverlayTimer(),
+              onTap: _isPip ? _togglePip : _resetOverlayTimer,
+              onPanUpdate: (_) => _isPip ? null : _resetOverlayTimer(),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   Video(
                     key: ValueKey(_currentUrl),
                     controller: _ctrl,
-                    controls: AdaptiveVideoControls,
+                    controls: _isPip ? NoVideoControls : AdaptiveVideoControls,
                     subtitleViewConfiguration: _subConfig,
                   ),
 
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _overlayVisible,
-                    builder: (context, visible, child) {
-                      return IgnorePointer(
-                        ignoring: !visible,
-                        child: AnimatedOpacity(
-                          opacity: visible ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 300),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Stack(
-                      children: [
-                        if (widget.type == 'live' && widget.mediaId != null)
-                          Positioned(
-                            bottom: 80,
-                            left: 24,
-                            child: _EpgWrapper(player: _player, mediaId: widget.mediaId!),
+                  if (!_isPip)
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _overlayVisible,
+                      builder: (context, visible, child) {
+                        return IgnorePointer(
+                          ignoring: !visible,
+                          child: AnimatedOpacity(
+                            opacity: visible ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 300),
+                            child: child,
                           ),
-                      ],
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          if (widget.type == 'live' && widget.mediaId != null)
+                            Positioned(
+                              bottom: 80,
+                              left: 24,
+                              child: _EpgWrapper(player: _player, mediaId: widget.mediaId!),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  if (_hasNextEpisode)
+                  if (!_isPip && _hasNextEpisode)
                     _NextEpisodeWrapper(
                       player: _player,
                       nextEpisode: widget.episodes![_currentEpisodeIndex! + 1],
                       onPlay: () => _playEpisode(_currentEpisodeIndex! + 1),
+                    ),
+                  
+                  if (_isPip)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: IconButton(
+                        icon: const Icon(Icons.close_fullscreen_rounded, color: Colors.white70),
+                        onPressed: _togglePip,
+                      ),
                     ),
                 ],
               ),

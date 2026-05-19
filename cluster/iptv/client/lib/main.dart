@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:window_manager/window_manager.dart';
 import 'screens/main_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/credentials_service.dart';
@@ -9,6 +10,7 @@ import 'services/download_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   MediaKit.ensureInitialized();
   await lang.init();
   await settings.init();
