@@ -131,50 +131,45 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             // Secondary Actions Row
                             Row(
                               children: [
-                                Expanded(
-                                  child: Material(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: InkWell(
-                                      onTap: () => _play(playUrl, forceRestart: true),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.replay_rounded, color: _C.txtSub, size: 20),
-                                            const SizedBox(width: 8),
-                                            Flexible(
-                                              child: Text(
-                                                lang.t('play_from_beginning'),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  color: Colors.white, 
-                                                  fontSize: 14, 
-                                                  fontWeight: FontWeight.w600
-                                                ),
-                                              ),
+                                Material(
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    onTap: () => _play(playUrl, forceRestart: true),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.replay_rounded, color: Colors.white, size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            lang.t('play_from_beginning').toUpperCase(),
+                                            style: const TextStyle(
+                                              color: Colors.white, 
+                                              fontSize: 11, 
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.8,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const Spacer(),
                                 DownloadButton(
                                   id: widget.movie.id,
                                   title: widget.movie.name,
                                   url: widget.movie.url,
                                   type: 'movie',
                                   cover: widget.movie.cover,
-                                  size: 52,
+                                  size: 44,
                                 ),
                               ],
                             ),
