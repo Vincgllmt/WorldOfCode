@@ -94,53 +94,89 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         const SizedBox(height: 28),
 
                         // Action Buttons (Play + Download)
-                        Row(
+                        Column(
                           children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _play(playUrl),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _C.accent,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
-                                ),
-                                icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                                label: Text(
-                                  lang.t('play_movie'),
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            // Primary Play Button
+                            Material(
+                              color: _C.accent,
+                              borderRadius: BorderRadius.circular(16),
+                              elevation: 8,
+                              shadowColor: _C.accent.withValues(alpha: 0.4),
+                              child: InkWell(
+                                onTap: () => _play(playUrl),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 18),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        lang.t('play_movie').toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Colors.white, 
+                                          fontSize: 16, 
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _play(playUrl, forceRestart: true),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(color: _C.accent, width: 1.5),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            const SizedBox(height: 16),
+                            // Secondary Actions Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Material(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      onTap: () => _play(playUrl, forceRestart: true),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(Icons.replay_rounded, color: _C.txtSub, size: 20),
+                                            const SizedBox(width: 8),
+                                            Flexible(
+                                              child: Text(
+                                                lang.t('play_from_beginning'),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.white, 
+                                                  fontSize: 14, 
+                                                  fontWeight: FontWeight.w600
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                icon: const Icon(Icons.replay_rounded, size: 22),
-                                label: Text(
-                                  lang.t('play_from_beginning'),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                const SizedBox(width: 12),
+                                DownloadButton(
+                                  id: widget.movie.id,
+                                  title: widget.movie.name,
+                                  url: widget.movie.url,
+                                  type: 'movie',
+                                  cover: widget.movie.cover,
+                                  size: 52,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            DownloadButton(
-                              id: widget.movie.id,
-                              title: widget.movie.name,
-                              url: widget.movie.url,
-                              type: 'movie',
-                              cover: widget.movie.cover,
+                              ],
                             ),
                           ],
                         ),

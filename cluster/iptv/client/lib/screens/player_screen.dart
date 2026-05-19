@@ -1252,21 +1252,33 @@ class _CenterPlayPause extends StatelessWidget {
       stream: player.stream.playing,
       builder: (context, snapshot) {
         final isPlaying = snapshot.data ?? false;
-        return GestureDetector(
-          onTap: () {
-            player.playOrPause();
-            onTap?.call();
-          },
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.black26,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              size: 80,
-              color: Colors.white.withValues(alpha: 0.7),
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              player.playOrPause();
+              onTap?.call();
+            },
+            customBorder: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF9D4EDD).withValues(alpha: 0.15),
+                border: Border.all(color: const Color(0xFF9D4EDD).withValues(alpha: 0.25), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF9D4EDD).withValues(alpha: 0.1),
+                    blurRadius: 25,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: Icon(
+                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                size: 64,
+                color: Colors.white,
+              ),
             ),
           ),
         );
@@ -1282,17 +1294,29 @@ class _SeekButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(
-        forward ? Icons.forward_10_rounded : Icons.replay_10_rounded,
-        color: Colors.white.withValues(alpha: 0.7),
-        size: 48,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final pos = player.state.position;
+          final delta = Duration(seconds: forward ? 10 : -10);
+          player.seek(pos + delta);
+        },
+        customBorder: const CircleBorder(),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.05),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+          ),
+          child: Icon(
+            forward ? Icons.forward_10_rounded : Icons.replay_10_rounded,
+            color: Colors.white,
+            size: 32,
+          ),
+        ),
       ),
-      onPressed: () {
-        final pos = player.state.position;
-        final delta = Duration(seconds: forward ? 10 : -10);
-        player.seek(pos + delta);
-      },
     );
   }
 }
