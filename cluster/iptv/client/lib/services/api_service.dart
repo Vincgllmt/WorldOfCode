@@ -9,6 +9,7 @@ import '../models/movie_detail.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../models/epg_program.dart';
+import '../utils/text_utils.dart';
 import 'credentials_service.dart';
 import 'cache_service.dart';
 import 'm3u_parser_service.dart';
@@ -81,16 +82,18 @@ class ApiService {
   static final RegExp _catFilter = RegExp(r'[^\w\s\-/éèêëàâùûüîïôœç]', unicode: true);
 
   static String _cleanName(String name) {
-    String cleaned = name.replaceAll(_displayTags, '').trim();
+    final decoded = decodeIfNeeded(name);
+    String cleaned = decoded.replaceAll(_displayTags, '').trim();
     cleaned = cleaned.replaceAll(_specialChars, '').trim();
     cleaned = cleaned.replaceAll(_multiSpaces, ' ');
-    return cleaned.isEmpty ? name.trim() : cleaned;
+    return cleaned.isEmpty ? decoded.trim() : cleaned;
   }
 
   static String _cleanCat(String name) {
-    String cleaned = name.replaceAll(_catFilter, '').trim();
+    final decoded = decodeIfNeeded(name);
+    String cleaned = decoded.replaceAll(_catFilter, '').trim();
     cleaned = cleaned.replaceAll(_multiSpaces, ' ');
-    return cleaned.isEmpty ? "Autres" : cleaned;
+    return cleaned.isEmpty ? (decoded.isNotEmpty ? decoded : "Autres") : cleaned;
   }
 
   // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -131,10 +134,10 @@ class ApiService {
     if (!c.isXtream) {
       final m3u = await _fetchM3u(c);
       _channelsCache = m3u.where((i) => i.type == 'live').map((i) => Channel(
-        name: i.name,
+        name: _cleanName(i.name),
         url: i.url,
         logo: i.logo,
-        group: i.group ?? "Autres",
+        group: i.group != null ? _cleanCat(i.group!) : "Autres",
       )).toList();
     } else {
       // Fetch categories and streams in parallel
@@ -201,10 +204,10 @@ class ApiService {
       int idCounter = 1;
       _moviesCache = m3u.where((i) => i.type == 'movie').map((i) => Movie(
         id: idCounter++,
-        name: i.name,
+        name: _cleanName(i.name),
         url: i.url,
         cover: i.logo,
-        group: i.group ?? "Autres",
+        group: i.group != null ? _cleanCat(i.group!) : "Autres",
       )).toList();
     } else {
       final results = await Future.wait([
@@ -285,7 +288,7 @@ class ApiService {
         url: '${c.host}/movie/${c.user}/${c.pass}/${movieData['stream_id']}.$ext',
         cover: info['movie_image'],
         coverBig: info['movie_image'],
-        description: info['plot'],
+        description: info['plot'] != null ? decodeIfNeeded(info['plot']) : null,
         duration: info['duration'],
         genre: info['genre'],
         cast: info['cast'],
@@ -316,9 +319,9 @@ class ApiService {
       int idCounter = 1;
       _seriesCache = m3u.where((i) => i.type == 'series').map((i) => SeriesItem(
         id: idCounter++,
-        name: i.name,
+        name: _cleanName(i.name),
         cover: i.logo,
-        group: i.group ?? "Autres",
+        group: i.group != null ? _cleanCat(i.group!) : "Autres",
       )).toList();
     } else {
       final results = await Future.wait([
@@ -391,13 +394,14 @@ class ApiService {
         final List epsList = episodes as List;
         seasons[seasonNum] = epsList.map<Episode>((e) {
           final ext = e['container_extension'] ?? 'mp4';
+          final title = e['title'] != null ? _cleanName(e['title']) : "Épisode ${e['episode_num']}";
           return Episode(
             id: int.tryParse(e['id'].toString()) ?? 0,
-            title: e['title'] ?? "Épisode ${e['episode_num']}",
+            title: title,
             season: int.tryParse(seasonNum) ?? 0,
             episodeNum: int.tryParse(e['episode_num'].toString()) ?? 0,
             url: '${c.host}/series/${c.user}/${c.pass}/${e['id']}.$ext',
-            plot: e['info']?['plot'],
+            plot: e['info']?['plot'] != null ? decodeIfNeeded(e['info']!['plot']) : null,
             cover: e['info']?['movie_image'],
             duration: e['info']?['duration'],
           );

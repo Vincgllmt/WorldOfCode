@@ -2,6 +2,7 @@ import 'dart:io';
 import '../models/channel.dart';
 import '../models/movie.dart';
 import '../models/series_item.dart';
+import '../utils/text_utils.dart';
 
 class M3uItem {
   final String name;
@@ -27,7 +28,7 @@ class M3uParserService {
       if (line.startsWith('#EXTINF:')) {
         // Extraction du nom
         final nameMatch = RegExp(r',([^,]*)$').firstMatch(line);
-        currentName = nameMatch?.group(1)?.trim() ?? "Inconnu";
+        currentName = decodeIfNeeded(nameMatch?.group(1)?.trim() ?? "Inconnu");
 
         // Extraction du logo
         final logoMatch = RegExp(r'tvg-logo="([^"]*)"').firstMatch(line);
@@ -35,7 +36,7 @@ class M3uParserService {
 
         // Extraction du groupe
         final groupMatch = RegExp(r'group-title="([^"]*)"').firstMatch(line);
-        currentGroup = groupMatch?.group(1);
+        currentGroup = groupMatch != null ? decodeIfNeeded(groupMatch.group(1)!) : null;
       } else if (line.isNotEmpty && !line.startsWith('#')) {
         if (currentName != null) {
           // Détection basique du type (souvent les liens M3U IPTV ont des patterns)
