@@ -92,6 +92,8 @@ class LanguageService {
       'epg_now': 'EN DIRECT',
       'epg_next': 'À SUIVRE',
       'epg_no_info': 'Aucun programme disponible',
+      'restart_from_beginning': 'Recommencer au début',
+      'play_from_beginning': 'Reprendre du début',
     },
     'en': {
       'live': 'Live TV',
@@ -176,6 +178,8 @@ class LanguageService {
       'epg_now': 'NOW',
       'epg_next': 'NEXT',
       'epg_no_info': 'No program information',
+      'restart_from_beginning': 'Restart from beginning',
+      'play_from_beginning': 'Play from beginning',
     }
   };
 

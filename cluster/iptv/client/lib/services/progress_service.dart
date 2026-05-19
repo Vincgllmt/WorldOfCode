@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MediaProgress {
@@ -55,6 +54,7 @@ class MediaProgress {
 class ProgressService {
   static const String _key = 'media_progress_cache';
   static List<MediaProgress>? _cache;
+  static bool _isDirty = false;
 
   static Future<List<MediaProgress>> getAll({bool force = false}) async {
     if (!force && _cache != null) return _cache!;
@@ -64,8 +64,9 @@ class ProgressService {
     return _cache!;
   }
 
-  static Future<void> saveProgress(MediaProgress progress) async {
-    if (progress.type == 'live') return; // Don't track live TV
+  /// Updates progress in memory and optionally persists to disk.
+  static Future<void> saveProgress(MediaProgress progress, {bool persist = false}) async {
+    if (progress.type == 'live') return;
     
     final all = await getAll();
     final index = all.indexWhere((p) => p.url == progress.url);
@@ -75,38 +76,45 @@ class ProgressService {
       all.add(progress);
     }
     
-    // Keep only the most recent 100 items to save space
+    _cache = all;
+    _isDirty = true;
+
+    if (persist) {
+      await syncToDisk();
+    }
+  }
+
+  /// Physically writes the memory cache to the disk.
+  static Future<void> syncToDisk() async {
+    if (!_isDirty || _cache == null) return;
+    
+    final all = _cache!;
+    // Sort and limit
     all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     if (all.length > 100) {
       all.removeRange(100, all.length);
     }
 
-    final jsonList = await compute(_encodeProgressList, all);
+    final jsonList = all.map((e) => json.encode(e.toJson())).toList();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_key, jsonList);
-    _cache = all;
-  }
-
-  static List<String> _encodeProgressList(List<MediaProgress> list) {
-    return list.map((e) => json.encode(e.toJson())).toList();
+    _isDirty = false;
   }
 
   static Future<void> removeByMediaId(int mediaId, String type) async {
     final all = await getAll();
     all.removeWhere((p) => p.mediaId == mediaId && p.type == type);
-    final jsonList = await compute(_encodeProgressList, all);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, jsonList);
     _cache = all;
+    _isDirty = true;
+    await syncToDisk();
   }
 
   static Future<void> removeBySeriesId(int seriesId) async {
     final all = await getAll();
     all.removeWhere((p) => p.seriesId == seriesId && p.type == 'series');
-    final jsonList = await compute(_encodeProgressList, all);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, jsonList);
     _cache = all;
+    _isDirty = true;
+    await syncToDisk();
   }
 
   static Future<MediaProgress?> getProgress(String url) async {

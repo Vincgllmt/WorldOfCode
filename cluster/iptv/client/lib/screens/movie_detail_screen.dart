@@ -32,7 +32,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _future = _api.fetchMovieDetail(widget.movie.id);
   }
 
-  void _play(String url) {
+  void _play(String url, {bool forceRestart = false}) {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => PlayerScreen(
         name: widget.movie.name, 
@@ -41,6 +41,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         type: 'movie',
         mediaId: widget.movie.id,
         cover: widget.movie.cover,
+        forceRestart: forceRestart,
       ),
     ));
   }
@@ -109,6 +110,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                 label: Text(
                                   lang.t('play_movie'),
                                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _play(playUrl, forceRestart: true),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: _C.accent, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.replay_rounded, size: 22),
+                                label: Text(
+                                  lang.t('play_from_beginning'),
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ),

@@ -21,6 +21,7 @@ class PlayerScreen extends StatefulWidget {
   final String? cover;
   final List<Episode>? episodes;
   final int? initialEpisodeIndex;
+  final bool forceRestart;
 
   const PlayerScreen({
     super.key, 
@@ -33,6 +34,7 @@ class PlayerScreen extends StatefulWidget {
     this.cover,
     this.episodes,
     this.initialEpisodeIndex,
+    this.forceRestart = false,
   });
 
   @override
@@ -48,8 +50,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     ),
   );
 
-  Tracks _tracks = const Tracks();
-  Track  _track  = const Track();
   SubtitleSettings _subSettings = const SubtitleSettings();
 
   Timer? _progressTimer;
@@ -59,19 +59,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   int? _currentEpisodeIndex;
   bool _showNextEpisodeSuggestion = false;
 
-  bool _showOverlay = true;
+  final ValueNotifier<bool> _overlayVisible = ValueNotifier(true);
   Timer? _overlayTimer;
   int _lastPositionSeconds = -1;
-
-  List<EpgProgram>? _epg;
-  Timer? _epgTimer;
+  int _saveCount = 0;
 
   void _resetOverlayTimer() {
     if (!mounted) return;
-    if (!_showOverlay) setState(() => _showOverlay = true);
+    _overlayVisible.value = true;
     _overlayTimer?.cancel();
     _overlayTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _showOverlay = false);
+      if (mounted) _overlayVisible.value = false;
     });
   }
 
@@ -81,19 +79,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _currentEpisodeIndex = widget.initialEpisodeIndex;
     _resetOverlayTimer();
     _player.open(_buildMedia(_currentUrl));
-    _player.stream.tracks.listen((t) { if (mounted) setState(() => _tracks = t); });
-    _player.stream.track.listen((t)  { if (mounted) setState(() => _track  = t); });
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
-
-    if (widget.type == 'live' && widget.mediaId != null) {
-      _fetchEpg();
-      _epgTimer = Timer.periodic(const Duration(minutes: 2), (_) => _fetchEpg());
-    }
 
     _player.stream.duration.listen((duration) {
       if (!_hasSeeked && widget.type != null && widget.type != 'live' && duration.inSeconds > 0) {
         _hasSeeked = true;
-        _resumeProgress();
+        if (!widget.forceRestart) {
+          _resumeProgress();
+        }
+      }
+    });
+
+    _player.stream.playing.listen((playing) {
+      if (!playing) {
+        ProgressService.syncToDisk();
+        _overlayVisible.value = true;
+        _overlayTimer?.cancel();
+      } else {
+        _resetOverlayTimer();
       }
     });
 
@@ -111,16 +114,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
 
     if (widget.type != null && widget.type != 'live') {
-      _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
+      _progressTimer = Timer.periodic(const Duration(seconds: 15), (_) => _saveProgress());
     }
-  }
-
-  Future<void> _fetchEpg() async {
-    if (widget.mediaId == null) return;
-    try {
-      final epg = await ApiService().fetchShortEpg(widget.mediaId!);
-      if (mounted) setState(() => _epg = epg);
-    } catch (_) {}
   }
 
   String get _currentUrl => (widget.episodes != null && _currentEpisodeIndex != null)
@@ -196,6 +191,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final dur = _player.state.duration;
     
     if (pos.inSeconds > 0) {
+      _saveCount++;
+      final shouldPersist = _saveCount >= 8; 
+      if (shouldPersist) _saveCount = 0;
+
       ProgressService.saveProgress(MediaProgress(
         url: _currentUrl,
         title: _currentName,
@@ -206,7 +205,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         positionSeconds: pos.inSeconds,
         durationSeconds: dur.inSeconds,
         timestamp: DateTime.now().millisecondsSinceEpoch,
-      ));
+      ), persist: shouldPersist);
     }
   }
 
@@ -232,9 +231,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _overlayTimer?.cancel();
-    _epgTimer?.cancel();
     _progressTimer?.cancel();
-    _saveProgress();
+    ProgressService.syncToDisk();
     _player.dispose();
     super.dispose();
   }
@@ -249,8 +247,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _TrackSheet(
-        tracks: _tracks,
-        current: _track,
+        tracks: _player.state.tracks,
+        current: _player.state.track,
         subSettings: _subSettings,
         onAudio:       (t) => _player.setAudioTrack(t),
         onSubtitle:    (t) => _player.setSubtitleTrack(t),
@@ -276,12 +274,40 @@ class _PlayerScreenState extends State<PlayerScreen> {
         ),
       ),
       if (widget.group != null) _GroupTag(group: widget.group!),
+      if (widget.type != 'live') _RestartButton(player: _player),
       if (widget.type != 'live') _SpeedButton(
         speed: _playbackSpeed,
         onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
       ),
       _TrackButton(onTap: _showTrackSelector),
       const SizedBox(width: 8),
+    ];
+
+    final bottomBarMobile = [
+      const MaterialPlayOrPauseButton(),
+      const MaterialPositionIndicator(),
+      const Spacer(),
+      _ComboSelectorWrapper(player: _player),
+      const MaterialFullscreenButton(),
+    ];
+
+    final bottomBarDesktop = [
+      const MaterialDesktopSkipPreviousButton(),
+      const MaterialDesktopPlayOrPauseButton(),
+      const MaterialDesktopSkipNextButton(),
+      const MaterialDesktopVolumeButton(),
+      const MaterialDesktopPositionIndicator(),
+      const Spacer(),
+      _ComboSelectorWrapper(player: _player),
+      const MaterialDesktopFullscreenButton(),
+    ];
+
+    final centerButton = [
+      if (widget.type != 'live') _SeekButton(player: _player, forward: false),
+      if (widget.type != 'live') const SizedBox(width: 40),
+      _CenterPlayPause(player: _player, onTap: _resetOverlayTimer),
+      if (widget.type != 'live') const SizedBox(width: 40),
+      if (widget.type != 'live') _SeekButton(player: _player, forward: true),
     ];
 
     return Scaffold(
@@ -291,23 +317,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
-          bottomButtonBar: const [
-            MaterialPlayOrPauseButton(),
-            MaterialPositionIndicator(),
-            Spacer(),
-            MaterialFullscreenButton(),
-          ],
+          primaryButtonBar: centerButton,
+          bottomButtonBar: bottomBarMobile,
         ),
         fullscreen: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
           padding: EdgeInsets.zero,
-          bottomButtonBar: const [
-            MaterialPlayOrPauseButton(),
-            MaterialPositionIndicator(),
-            Spacer(),
-            MaterialFullscreenButton(),
-          ],
+          primaryButtonBar: centerButton,
+          bottomButtonBar: bottomBarMobile,
         ),
         child: MaterialDesktopVideoControlsTheme(
           normal: MaterialDesktopVideoControlsThemeData(
@@ -315,27 +333,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
             topButtonBarMargin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
-            bottomButtonBar: const [
-              MaterialDesktopPlayOrPauseButton(),
-              MaterialDesktopPositionIndicator(),
-              Spacer(),
-              MaterialDesktopFullscreenButton(),
-            ],
+            primaryButtonBar: centerButton,
+            bottomButtonBar: bottomBarDesktop,
           ),
           fullscreen: MaterialDesktopVideoControlsThemeData(
             topButtonBar: topBar,
             topButtonBarMargin: EdgeInsets.zero,
             padding: EdgeInsets.zero,
             controlsHoverDuration: const Duration(seconds: 3),
-            bottomButtonBar: const [
-              MaterialDesktopPlayOrPauseButton(),
-              MaterialDesktopPositionIndicator(),
-              Spacer(),
-              MaterialDesktopFullscreenButton(),
-            ],
+            primaryButtonBar: centerButton,
+            bottomButtonBar: bottomBarDesktop,
           ),
           child: MouseRegion(
             onHover: (_) => _resetOverlayTimer(),
+            onEnter: (_) => _resetOverlayTimer(),
             child: GestureDetector(
               onTap: _resetOverlayTimer,
               onPanUpdate: (_) => _resetOverlayTimer(),
@@ -349,84 +360,38 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     subtitleViewConfiguration: _subConfig,
                   ),
 
-                  // EPG Info Overlay (Bottom Left)
-                  if (widget.type == 'live' && _epg != null && _epg!.isNotEmpty)
-                    Positioned(
-                      bottom: 80,
-                      left: 24,
-                      child: IgnorePointer(
-                        ignoring: !_showOverlay,
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _overlayVisible,
+                    builder: (context, visible, child) {
+                      return IgnorePointer(
+                        ignoring: !visible,
                         child: AnimatedOpacity(
-                          opacity: _showOverlay ? 1.0 : 0.0,
+                          opacity: visible ? 1.0 : 0.0,
                           duration: const Duration(milliseconds: 300),
-                          child: _EpgOverlay(epg: _epg!),
+                          child: child,
                         ),
-                      ),
-                    ),
-
-                  // Combo Buttons Overlay
-                  Positioned(
-                    bottom: 80,
-                    right: 24,
-                    child: IgnorePointer(
-                      ignoring: !_showOverlay,
-                      child: AnimatedOpacity(
-                        opacity: _showOverlay ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        child: _ComboSelector(
-                          tracks: _tracks,
-                          currentTrack: _track,
-                          onSelect: (a, s) {
-                            _player.setAudioTrack(a);
-                            _player.setSubtitleTrack(s);
-                            _resetOverlayTimer();
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Center Play/Pause button
-                  IgnorePointer(
-                    ignoring: !_showOverlay,
-                    child: AnimatedOpacity(
-                      opacity: _showOverlay ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: StreamBuilder<bool>(
-                        stream: _player.stream.playing,
-                        builder: (context, snapshot) {
-                          final isPlaying = snapshot.data ?? false;
-                          return GestureDetector(
-                            onTap: () {
-                              _player.playOrPause();
-                              _resetOverlayTimer();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: const BoxDecoration(
-                                color: Colors.black26,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                size: 80,
-                                color: Colors.white.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      );
+                    },
+                    child: Stack(
+                      children: [
+                        if (widget.type == 'live' && widget.mediaId != null)
+                          Positioned(
+                            bottom: 80,
+                            left: 24,
+                            child: _EpgWrapper(player: _player, mediaId: widget.mediaId!),
+                          ),
+                      ],
                     ),
                   ),
 
-              if (_showNextEpisodeSuggestion)
-                _NextEpisodeOverlay(
-                  onTap: () => _playEpisode(_currentEpisodeIndex! + 1),
-                  onCancel: () => setState(() => _showNextEpisodeSuggestion = false),
-                  nextEpisode: widget.episodes![_currentEpisodeIndex! + 1],
-                  remainingSeconds: (_player.state.duration - _player.state.position).inSeconds,
-                ),
-            ],
-          ),
+                  if (_hasNextEpisode)
+                    _NextEpisodeWrapper(
+                      player: _player,
+                      nextEpisode: widget.episodes![_currentEpisodeIndex! + 1],
+                      onPlay: () => _playEpisode(_currentEpisodeIndex! + 1),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1165,6 +1130,183 @@ class _ComboSelector extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ComboSelectorWrapper extends StatelessWidget {
+  final Player player;
+  const _ComboSelectorWrapper({required this.player});
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Tracks>(
+      stream: player.stream.tracks,
+      builder: (context, snapshot) {
+        return StreamBuilder<Track>(
+          stream: player.stream.track,
+          builder: (context, snapshot2) {
+            return _ComboSelector(
+              tracks: player.state.tracks,
+              currentTrack: player.state.track,
+              onSelect: (a, s) {
+                player.setAudioTrack(a);
+                player.setSubtitleTrack(s);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _EpgWrapper extends StatefulWidget {
+  final Player player;
+  final int mediaId;
+  const _EpgWrapper({required this.player, required this.mediaId});
+  @override
+  State<_EpgWrapper> createState() => _EpgWrapperState();
+}
+
+class _EpgWrapperState extends State<_EpgWrapper> {
+  List<EpgProgram>? _epg;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+    _timer = Timer.periodic(const Duration(minutes: 2), (_) => _fetch());
+  }
+
+  @override
+  void dispose() { _timer?.cancel(); super.dispose(); }
+
+  Future<void> _fetch() async {
+    try {
+      final epg = await ApiService().fetchShortEpg(widget.mediaId);
+      if (mounted) setState(() => _epg = epg);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_epg == null || _epg!.isEmpty) return const SizedBox.shrink();
+    return _EpgOverlay(epg: _epg!);
+  }
+}
+
+class _NextEpisodeWrapper extends StatefulWidget {
+  final Player player;
+  final Episode nextEpisode;
+  final VoidCallback onPlay;
+  const _NextEpisodeWrapper({required this.player, required this.nextEpisode, required this.onPlay});
+  @override
+  State<_NextEpisodeWrapper> createState() => _NextEpisodeWrapperState();
+}
+
+class _NextEpisodeWrapperState extends State<_NextEpisodeWrapper> {
+  bool _show = false;
+  int _rem = -1;
+  StreamSubscription? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = widget.player.stream.position.listen((pos) {
+      if (!mounted) return;
+      final dur = widget.player.state.duration;
+      if (dur.inSeconds > 0) {
+        final r = (dur - pos).inSeconds;
+        final s = r <= 40 && r > 1;
+        if (s != _show || (s && r != _rem)) {
+          setState(() { _show = s; _rem = r; });
+        }
+      } else if (_show) { setState(() => _show = false); }
+    });
+  }
+
+  @override
+  void dispose() { _sub?.cancel(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_show) return const SizedBox.shrink();
+    return _NextEpisodeOverlay(
+      onTap: widget.onPlay,
+      onCancel: () { setState(() => _show = false); _sub?.cancel(); },
+      nextEpisode: widget.nextEpisode,
+      remainingSeconds: _rem,
+    );
+  }
+}
+
+class _CenterPlayPause extends StatelessWidget {
+  final Player player;
+  final VoidCallback? onTap;
+  const _CenterPlayPause({required this.player, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: player.stream.playing,
+      builder: (context, snapshot) {
+        final isPlaying = snapshot.data ?? false;
+        return GestureDetector(
+          onTap: () {
+            player.playOrPause();
+            onTap?.call();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.black26,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              size: 80,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SeekButton extends StatelessWidget {
+  final Player player;
+  final bool forward;
+  const _SeekButton({required this.player, required this.forward});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(
+        forward ? Icons.forward_10_rounded : Icons.replay_10_rounded,
+        color: Colors.white.withValues(alpha: 0.7),
+        size: 48,
+      ),
+      onPressed: () {
+        final pos = player.state.position;
+        final delta = Duration(seconds: forward ? 10 : -10);
+        player.seek(pos + delta);
+      },
+    );
+  }
+}
+
+class _RestartButton extends StatelessWidget {
+  final Player player;
+  const _RestartButton({required this.player});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.restart_alt_rounded, color: Colors.white),
+      tooltip: lang.t('restart_from_beginning'),
+      onPressed: () => player.seek(Duration.zero),
     );
   }
 }
