@@ -11,6 +11,7 @@ import '../models/series_detail.dart';
 import '../models/epg_program.dart';
 import 'credentials_service.dart';
 import 'cache_service.dart';
+import 'm3u_parser_service.dart';
 
 class ApiService {
   // In-memory cache so we don't hit secure storage on every request.
@@ -20,6 +21,7 @@ class ApiService {
   static List<Channel>? _channelsCache;
   static List<Movie>? _moviesCache;
   static List<SeriesItem>? _seriesCache;
+  static List<M3uItem>? _m3uDataCache;
 
   // Custom HTTP client that ignores SSL certificate errors (common on IPTV servers)
   late final http.Client _client;
@@ -35,6 +37,7 @@ class ApiService {
     _channelsCache = null;
     _moviesCache = null;
     _seriesCache = null;
+    _m3uDataCache = null;
     CacheService.clear();
   }
 
@@ -49,6 +52,25 @@ class ApiService {
     if (action != null) url += '&action=$action';
     if (other != null) url += other;
     return url;
+  }
+
+  Future<List<M3uItem>> _fetchM3u(Credentials c) async {
+    if (_m3uDataCache != null) return _m3uDataCache!;
+    
+    String content;
+    if (c.host.startsWith('http')) {
+      final res = await _client.get(Uri.parse(c.host));
+      if (res.statusCode != 200) throw Exception('Impossible de télécharger le fichier M3U');
+      content = res.body;
+    } else {
+      // Local file
+      final file = File(c.host);
+      if (!await file.exists()) throw Exception('Fichier local introuvable');
+      content = await file.readAsString();
+    }
+    
+    _m3uDataCache = M3uParserService.parse(content);
+    return _m3uDataCache!;
   }
 
   // ─── Cleaning Logic (Translated from Python) ───────────────────────────────
@@ -75,6 +97,15 @@ class ApiService {
 
   Future<bool> validate(Credentials creds) async {
     try {
+      if (!creds.isXtream) {
+        // Simple check if URL/File is accessible
+        if (creds.host.startsWith('http')) {
+          final res = await _client.head(Uri.parse(creds.host)).timeout(const Duration(seconds: 5));
+          return res.statusCode == 200;
+        } else {
+          return await File(creds.host).exists();
+        }
+      }
       final url = _buildUrl(creds);
       final res = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       if (res.statusCode != 200) return false;
@@ -96,24 +127,34 @@ class ApiService {
     }
 
     final c = await _getCreds();
-    
-    // Fetch categories and streams in parallel
-    final results = await Future.wait([
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_live_categories'))),
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_live_streams'))),
-    ]);
 
-    if (results[0].statusCode != 200 || results[1].statusCode != 200) {
-      throw Exception('Erreur lors du chargement des chaînes');
+    if (!c.isXtream) {
+      final m3u = await _fetchM3u(c);
+      _channelsCache = m3u.where((i) => i.type == 'live').map((i) => Channel(
+        name: i.name,
+        url: i.url,
+        logo: i.logo,
+        group: i.group ?? "Autres",
+      )).toList();
+    } else {
+      // Fetch categories and streams in parallel
+      final results = await Future.wait([
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_live_categories'))),
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_live_streams'))),
+      ]);
+
+      if (results[0].statusCode != 200 || results[1].statusCode != 200) {
+        throw Exception('Erreur lors du chargement des chaînes');
+      }
+
+      _channelsCache = await compute(_parseChannels, {
+        'cats': results[0].body,
+        'streams': results[1].body,
+        'host': c.host,
+        'user': c.user,
+        'pass': c.pass,
+      });
     }
-
-    _channelsCache = await compute(_parseChannels, {
-      'cats': results[0].body,
-      'streams': results[1].body,
-      'host': c.host,
-      'user': c.user,
-      'pass': c.pass,
-    });
 
     CacheService.save('channels', _channelsCache!.map((e) => e.toJson()).toList());
     return _channelsCache!;
@@ -154,23 +195,35 @@ class ApiService {
     }
 
     final c = await _getCreds();
-    
-    final results = await Future.wait([
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_categories'))),
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_streams'))),
-    ]);
 
-    if (results[0].statusCode != 200 || results[1].statusCode != 200) {
-      throw Exception('Erreur lors du chargement des films');
+    if (!c.isXtream) {
+      final m3u = await _fetchM3u(c);
+      int idCounter = 1;
+      _moviesCache = m3u.where((i) => i.type == 'movie').map((i) => Movie(
+        id: idCounter++,
+        name: i.name,
+        url: i.url,
+        cover: i.logo,
+        group: i.group ?? "Autres",
+      )).toList();
+    } else {
+      final results = await Future.wait([
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_categories'))),
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_streams'))),
+      ]);
+
+      if (results[0].statusCode != 200 || results[1].statusCode != 200) {
+        throw Exception('Erreur lors du chargement des films');
+      }
+
+      _moviesCache = await compute(_parseMovies, {
+        'cats': results[0].body,
+        'streams': results[1].body,
+        'host': c.host,
+        'user': c.user,
+        'pass': c.pass,
+      });
     }
-
-    _moviesCache = await compute(_parseMovies, {
-      'cats': results[0].body,
-      'streams': results[1].body,
-      'host': c.host,
-      'user': c.user,
-      'pass': c.pass,
-    });
 
     CacheService.save('movies', _moviesCache!.map((e) => e.toJson()).toList());
     return _moviesCache!;
@@ -202,10 +255,22 @@ class ApiService {
   }
 
   Future<MovieDetail> fetchMovieDetail(int id) async {
+    final c = await _getCreds();
+    if (!c.isXtream) {
+      // For M3U, detail is just the item from the cache
+      final movies = await fetchMovies();
+      final movie = movies.firstWhere((m) => m.id == id);
+      return MovieDetail(
+        id: movie.id,
+        name: movie.name,
+        url: movie.url,
+        cover: movie.cover,
+      );
+    }
+
     final cached = await CacheService.get('movie_detail_$id');
     if (cached != null) return MovieDetail.fromJson(cached);
 
-    final c = await _getCreds();
     final res = await _client.get(Uri.parse(_buildUrl(c, action: 'get_vod_info', other: '&vod_id=$id')));
     
     if (res.statusCode == 200) {
@@ -245,20 +310,31 @@ class ApiService {
     }
 
     final c = await _getCreds();
-    
-    final results = await Future.wait([
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_series_categories'))),
-      _client.get(Uri.parse(_buildUrl(c, action: 'get_series'))),
-    ]);
 
-    if (results[0].statusCode != 200 || results[1].statusCode != 200) {
-      throw Exception('Erreur lors du chargement des séries');
+    if (!c.isXtream) {
+      final m3u = await _fetchM3u(c);
+      int idCounter = 1;
+      _seriesCache = m3u.where((i) => i.type == 'series').map((i) => SeriesItem(
+        id: idCounter++,
+        name: i.name,
+        cover: i.logo,
+        group: i.group ?? "Autres",
+      )).toList();
+    } else {
+      final results = await Future.wait([
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_series_categories'))),
+        _client.get(Uri.parse(_buildUrl(c, action: 'get_series'))),
+      ]);
+
+      if (results[0].statusCode != 200 || results[1].statusCode != 200) {
+        throw Exception('Erreur lors du chargement des séries');
+      }
+
+      _seriesCache = await compute(_parseSeries, {
+        'cats': results[0].body,
+        'streams': results[1].body,
+      });
     }
-
-    _seriesCache = await compute(_parseSeries, {
-      'cats': results[0].body,
-      'streams': results[1].body,
-    });
 
     CacheService.save('series', _seriesCache!.map((e) => e.toJson()).toList());
     return _seriesCache!;
@@ -285,10 +361,23 @@ class ApiService {
   }
 
   Future<SeriesDetail> fetchSeriesDetail(int seriesId) async {
+    final c = await _getCreds();
+    if (!c.isXtream) {
+      final series = await fetchSeries();
+      final item = series.firstWhere((s) => s.id == seriesId);
+      // We don't have episode info for Raw M3U unless we parse more, 
+      // but usually raw M3Us have episodes as separate entries.
+      return SeriesDetail(
+        id: seriesId,
+        name: item.name,
+        cover: item.cover,
+        seasons: {},
+      );
+    }
+
     final cached = await CacheService.get('series_detail_$seriesId');
     if (cached != null) return SeriesDetail.fromJson(cached);
 
-    final c = await _getCreds();
     final res = await _client.get(Uri.parse(_buildUrl(c, action: 'get_series_info', other: '&series_id=$seriesId')));
     
     if (res.statusCode == 200) {
@@ -330,6 +419,8 @@ class ApiService {
 
   Future<List<EpgProgram>> fetchShortEpg(int streamId) async {
     final c = await _getCreds();
+    if (!c.isXtream) return [];
+    
     final url = _buildUrl(c, action: 'get_short_epg', other: '&stream_id=$streamId');
     
     try {

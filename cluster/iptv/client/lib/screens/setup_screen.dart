@@ -23,7 +23,7 @@ class _SetupScreenState extends State<SetupScreen> {
   static const _border = Color(0x449D4EDD);
   static const _err    = Color(0xFFCF6679);
 
-  bool _manualMode = false;
+  int _modeIndex = 0; // 0: M3U Link, 1: Credentials, 2: File
   bool _loading    = false;
   String? _error;
 
@@ -31,6 +31,7 @@ class _SetupScreenState extends State<SetupScreen> {
   final _hostCtrl = TextEditingController();
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _fileCtrl = TextEditingController();
   bool  _passVisible = false;
 
   @override
@@ -39,6 +40,7 @@ class _SetupScreenState extends State<SetupScreen> {
     _hostCtrl.dispose();
     _userCtrl.dispose();
     _passCtrl.dispose();
+    _fileCtrl.dispose();
     super.dispose();
   }
 
@@ -47,7 +49,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
     Credentials? creds;
 
-    if (_manualMode) {
+    if (_modeIndex == 1) {
       final host = _hostCtrl.text.trim();
       final user = _userCtrl.text.trim();
       final pass = _passCtrl.text.trim();
@@ -59,8 +61,9 @@ class _SetupScreenState extends State<SetupScreen> {
         host: host.endsWith('/') ? host.substring(0, host.length - 1) : host,
         user: user,
         pass: pass,
+        type: PlaylistType.xtream,
       );
-    } else {
+    } else if (_modeIndex == 0) {
       final raw = _urlCtrl.text.trim();
       if (raw.isEmpty) {
         setState(() { _loading = false; _error = lang.t('setup_err_enter_m3u'); });
@@ -74,6 +77,13 @@ class _SetupScreenState extends State<SetupScreen> {
         });
         return;
       }
+    } else {
+      final path = _fileCtrl.text.trim();
+      if (path.isEmpty) {
+        setState(() { _loading = false; _error = lang.t('setup_err_all_fields'); });
+        return;
+      }
+      creds = Credentials(host: path, type: PlaylistType.m3u);
     }
 
     try {
@@ -155,16 +165,18 @@ class _SetupScreenState extends State<SetupScreen> {
                               border: Border.all(color: _border),
                             ),
                             child: Row(children: [
-                              _Tab(label: lang.t('setup_m3u_tab'), active: !_manualMode,
-                                onTap: () => setState(() { _manualMode = false; _error = null; })),
-                              _Tab(label: lang.t('setup_manual_tab'),   active: _manualMode,
-                                onTap: () => setState(() { _manualMode = true;  _error = null; })),
+                              _Tab(label: lang.t('setup_m3u_tab'), active: _modeIndex == 0,
+                                onTap: () => setState(() { _modeIndex = 0; _error = null; })),
+                              _Tab(label: lang.t('setup_manual_tab'),   active: _modeIndex == 1,
+                                onTap: () => setState(() { _modeIndex = 1;  _error = null; })),
+                              _Tab(label: lang.t('setup_file_tab'),   active: _modeIndex == 2,
+                                onTap: () => setState(() { _modeIndex = 2;  _error = null; })),
                             ]),
                           ),
                           const SizedBox(height: 24),
 
                           // Fields
-                          if (!_manualMode) ...[
+                          if (_modeIndex == 0) ...[
                             _Field(
                               ctrl: _urlCtrl,
                               hint: 'http://host:port/get.php?username=X&password=Y',
@@ -172,7 +184,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               icon: Icons.link_rounded,
                               onSubmitted: (_) => _submit(),
                             ),
-                          ] else ...[
+                          ] else if (_modeIndex == 1) ...[
                             _Field(
                               ctrl: _hostCtrl,
                               hint: 'http://host:port',
@@ -202,10 +214,18 @@ class _SetupScreenState extends State<SetupScreen> {
                               ),
                               onSubmitted: (_) => _submit(),
                             ),
+                          ] else ...[
+                            _Field(
+                              ctrl: _fileCtrl,
+                              hint: lang.t('setup_file_hint'),
+                              label: lang.t('setup_file_label'),
+                              icon: Icons.file_present_rounded,
+                              onSubmitted: (_) => _submit(),
+                            ),
                           ],
 
                           // Collez le lien info
-                          if (!_manualMode) ...[
+                          if (_modeIndex == 0) ...[
                             const SizedBox(height: 10),
                             Align(
                               alignment: Alignment.centerLeft,
