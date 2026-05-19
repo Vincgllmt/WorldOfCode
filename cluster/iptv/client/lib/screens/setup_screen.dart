@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../services/language_service.dart';
@@ -26,12 +27,12 @@ class _SetupScreenState extends State<SetupScreen> {
   int _modeIndex = 0; // 0: M3U Link, 1: Credentials, 2: File
   bool _loading    = false;
   String? _error;
+  String? _selectedFilePath;
 
   final _urlCtrl  = TextEditingController();
   final _hostCtrl = TextEditingController();
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _fileCtrl = TextEditingController();
   bool  _passVisible = false;
 
   @override
@@ -40,8 +41,25 @@ class _SetupScreenState extends State<SetupScreen> {
     _hostCtrl.dispose();
     _userCtrl.dispose();
     _passCtrl.dispose();
-    _fileCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['m3u', 'm3u8'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _selectedFilePath = result.files.single.path;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      setState(() => _error = "Erreur lors de la sélection du fichier : $e");
+    }
   }
 
   Future<void> _submit() async {
@@ -78,12 +96,11 @@ class _SetupScreenState extends State<SetupScreen> {
         return;
       }
     } else {
-      final path = _fileCtrl.text.trim();
-      if (path.isEmpty) {
+      if (_selectedFilePath == null) {
         setState(() { _loading = false; _error = lang.t('setup_err_all_fields'); });
         return;
       }
-      creds = Credentials(host: path, type: PlaylistType.m3u);
+      creds = Credentials(host: _selectedFilePath!, type: PlaylistType.m3u);
     }
 
     try {
@@ -215,12 +232,55 @@ class _SetupScreenState extends State<SetupScreen> {
                               onSubmitted: (_) => _submit(),
                             ),
                           ] else ...[
-                            _Field(
-                              ctrl: _fileCtrl,
-                              hint: lang.t('setup_file_hint'),
-                              label: lang.t('setup_file_label'),
-                              icon: Icons.file_present_rounded,
-                              onSubmitted: (_) => _submit(),
+                            // File Picker Button
+                            InkWell(
+                              onTap: _pickFile,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: _bgCard,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: _selectedFilePath != null ? _accent : _border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.file_present_rounded, color: _accent, size: 20),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            lang.t('setup_file_label'),
+                                            style: const TextStyle(color: _txtSub, fontSize: 13),
+                                          ),
+                                          if (_selectedFilePath != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                _selectedFilePath!.split('/').last,
+                                                style: const TextStyle(color: _txt, fontSize: 14, fontWeight: FontWeight.bold),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            )
+                                          else
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                lang.t('setup_file_hint'),
+                                                style: TextStyle(color: _txtSub.withValues(alpha: 0.3), fontSize: 12),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (_selectedFilePath != null)
+                                      const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
 
