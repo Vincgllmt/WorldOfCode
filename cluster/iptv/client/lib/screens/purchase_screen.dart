@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import '../services/language_service.dart';
 import '../services/credentials_service.dart';
 
 class PurchaseScreen extends StatefulWidget {
