@@ -135,7 +135,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: Column(
-                    mainAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Large Logo as in SetupScreen
                       Image.asset(
