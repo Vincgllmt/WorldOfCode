@@ -190,7 +190,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   const SizedBox(height: 40),
                   
                   // Benefits list
-                  _BenefitItem(icon: Icons.infinity, text: 'Accès illimité à toutes les chaînes'),
+                  _BenefitItem(icon: Icons.all_inclusive_rounded, text: 'Accès illimité à toutes les chaînes'),
                   _BenefitItem(icon: Icons.movie_filter_rounded, text: 'Films et Séries en 4K/UHD'),
                   _BenefitItem(icon: Icons.download_done_rounded, text: 'Téléchargements illimités'),
                   _BenefitItem(icon: Icons.devices_other_rounded, text: 'Multi-écrans activé'),
