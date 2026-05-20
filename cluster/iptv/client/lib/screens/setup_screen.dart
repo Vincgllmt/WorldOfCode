@@ -339,37 +339,59 @@ class _SetupScreenState extends State<SetupScreen> {
                                 final isPro = remaining > 10; // TrialService returns 999 for pro
 
                                 if (isPro) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFFFD700).withOpacity(0.3),
-                                          blurRadius: 20,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.stars_rounded, color: Colors.black, size: 28),
-                                        const SizedBox(width: 12),
-                                        Text(
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ShaderMask(
+                                        shaderCallback: (bounds) => const LinearGradient(
+                                          colors: [
+                                            Color(0xFFB8860B), // Dark Goldenrod
+                                            Color(0xFFFFD700), // Gold
+                                            Color(0xFFFFFACD), // Lemon Chiffon (brillance)
+                                            Color(0xFFFFD700), 
+                                            Color(0xFFB8860B),
+                                          ],
+                                          stops: [0.0, 0.25, 0.5, 0.75, 1.0],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ).createShader(bounds),
+                                        child: Text(
                                           'PREMIUM',
                                           style: GoogleFonts.nunito(
-                                            color: Colors.black,
-                                            fontSize: 22,
+                                            color: Colors.white, // Sera remplacé par le shader
+                                            fontSize: 32,
                                             fontWeight: FontWeight.w900,
-                                            letterSpacing: 3,
+                                            letterSpacing: 8,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black.withOpacity(0.5),
+                                                offset: const Offset(2, 2),
+                                                blurRadius: 4,
+                                              ),
+                                              Shadow(
+                                                color: const Color(0xFFFFD700).withOpacity(0.3),
+                                                offset: const Offset(0, 0),
+                                                blurRadius: 20,
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        width: 120,
+                                        height: 1.5,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.transparent,
+                                              const Color(0xFFFFD700).withOpacity(0.5),
+                                              Colors.transparent,
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 }
 
