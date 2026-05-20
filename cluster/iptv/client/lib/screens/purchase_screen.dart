@@ -129,83 +129,93 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           ),
           
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  const Icon(Icons.diamond_rounded, color: Color(0xFFBB86FC), size: 64),
-                  const SizedBox(height: 16),
-                  Text(
-                    lang.t('premium_title'),
-                    style: GoogleFonts.nunito(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    lang.t('premium_subtitle'),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 40),
-                  
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 340),
-                    child: Column(
-                      children: [
-                        // Monthly
-                        _PriceCard(
-                          title: lang.t('plan_monthly'),
-                          price: lang.t('price_monthly'),
-                          period: lang.t('period_monthly'),
-                          onTap: () => _handlePurchase('monthly'),
-                          isLoading: _isPurchasing,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    mainAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Large Logo as in SetupScreen
+                      Image.asset(
+                        'assets/images/logo.png',
+                        height: 180,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        lang.t('premium_title'),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.nunito(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 2,
                         ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Yearly
-                        _PriceCard(
-                          title: lang.t('plan_yearly'),
-                          price: lang.t('price_yearly'),
-                          period: lang.t('period_yearly'),
-                          badge: lang.t('save_percent'),
-                          isPopular: false,
-                          onTap: () => _handlePurchase('yearly'),
-                          isLoading: _isPurchasing,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        lang.t('premium_subtitle'),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
+                      ),
+                      const SizedBox(height: 48),
+                      
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: Column(
+                          children: [
+                            // Monthly
+                            _PriceCard(
+                              title: lang.t('plan_monthly'),
+                              price: lang.t('price_monthly'),
+                              period: lang.t('period_monthly'),
+                              onTap: () => _handlePurchase('monthly'),
+                              isLoading: _isPurchasing,
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Yearly
+                            _PriceCard(
+                              title: lang.t('plan_yearly'),
+                              price: lang.t('price_yearly'),
+                              period: lang.t('period_yearly'),
+                              badge: lang.t('save_percent'),
+                              isPopular: false,
+                              onTap: () => _handlePurchase('yearly'),
+                              isLoading: _isPurchasing,
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Lifetime (The HERO)
+                            _PriceCard(
+                              title: lang.t('plan_lifetime'),
+                              price: lang.t('price_lifetime'),
+                              period: lang.t('period_lifetime'),
+                              badge: lang.t('limited_offer'),
+                              isHero: true,
+                              onTap: () => _handlePurchase('lifetime'),
+                              isLoading: _isPurchasing,
+                            ),
+                          ],
                         ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Lifetime (The HERO)
-                        _PriceCard(
-                          title: lang.t('plan_lifetime'),
-                          price: lang.t('price_lifetime'),
-                          period: lang.t('period_lifetime'),
-                          badge: lang.t('limited_offer'),
-                          isHero: true,
-                          onTap: () => _handlePurchase('lifetime'),
-                          isLoading: _isPurchasing,
+                      ),
+                      
+                      const SizedBox(height: 48),
+                      
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          lang.t('later'),
+                          style: TextStyle(color: Colors.white.withOpacity(0.3), decoration: TextDecoration.underline),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  
-                  const SizedBox(height: 60),
-                  
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      lang.t('later'),
-                      style: TextStyle(color: Colors.white.withOpacity(0.3), decoration: TextDecoration.underline),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             ),
           ),
