@@ -134,7 +134,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 64),
+                  const Icon(Icons.diamond_rounded, color: Color(0xFFBB86FC), size: 64),
                   const SizedBox(height: 16),
                   Text(
                     lang.t('premium_title'),
@@ -153,39 +153,46 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   ),
                   const SizedBox(height: 40),
                   
-                  // Monthly
-                  _PriceCard(
-                    title: lang.t('plan_monthly'),
-                    price: lang.t('price_monthly'),
-                    period: lang.t('period_monthly'),
-                    onTap: () => _handlePurchase('monthly'),
-                    isLoading: _isPurchasing,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Yearly
-                  _PriceCard(
-                    title: lang.t('plan_yearly'),
-                    price: lang.t('price_yearly'),
-                    period: lang.t('period_yearly'),
-                    badge: lang.t('save_percent'),
-                    isPopular: false,
-                    onTap: () => _handlePurchase('yearly'),
-                    isLoading: _isPurchasing,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Lifetime (The HERO)
-                  _PriceCard(
-                    title: lang.t('plan_lifetime'),
-                    price: lang.t('price_lifetime'),
-                    period: lang.t('period_lifetime'),
-                    badge: lang.t('limited_offer'),
-                    isHero: true,
-                    onTap: () => _handlePurchase('lifetime'),
-                    isLoading: _isPurchasing,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    child: Column(
+                      children: [
+                        // Monthly
+                        _PriceCard(
+                          title: lang.t('plan_monthly'),
+                          price: lang.t('price_monthly'),
+                          period: lang.t('period_monthly'),
+                          onTap: () => _handlePurchase('monthly'),
+                          isLoading: _isPurchasing,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Yearly
+                        _PriceCard(
+                          title: lang.t('plan_yearly'),
+                          price: lang.t('price_yearly'),
+                          period: lang.t('period_yearly'),
+                          badge: lang.t('save_percent'),
+                          isPopular: false,
+                          onTap: () => _handlePurchase('yearly'),
+                          isLoading: _isPurchasing,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Lifetime (The HERO)
+                        _PriceCard(
+                          title: lang.t('plan_lifetime'),
+                          price: lang.t('price_lifetime'),
+                          period: lang.t('period_lifetime'),
+                          badge: lang.t('limited_offer'),
+                          isHero: true,
+                          onTap: () => _handlePurchase('lifetime'),
+                          isLoading: _isPurchasing,
+                        ),
+                      ],
+                    ),
                   ),
                   
                   const SizedBox(height: 60),
