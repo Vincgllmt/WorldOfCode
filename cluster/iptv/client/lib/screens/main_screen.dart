@@ -77,8 +77,8 @@ class _MainScreenState extends State<MainScreen> {
                           Expanded(
                             child: Text(
                               remaining > 0 
-                                ? 'Essai gratuit : $remaining jour${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''}.'
-                                : 'Votre essai expire aujourd\'hui !',
+                                ? lang.t('trial_remaining').replaceFirst('{}', remaining.toString())
+                                : lang.t('trial_expires_today'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -94,7 +94,7 @@ class _MainScreenState extends State<MainScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                               minimumSize: const Size(0, 30),
                             ),
-                            child: const Text('ACTIVER', style: TextStyle(fontSize: 11)),
+                            child: Text(lang.t('activate'), style: const TextStyle(fontSize: 11)),
                           ),
                         ],
                       ),

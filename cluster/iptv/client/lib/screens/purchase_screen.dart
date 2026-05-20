@@ -22,13 +22,13 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     String message = "";
     if (type == 'monthly') {
       await trialService.activateSubscription(const Duration(days: 30));
-      message = "Profitez de Purple IPTV en illimité pendant 30 jours !";
+      message = lang.t('success_monthly');
     } else if (type == 'yearly') {
       await trialService.activateSubscription(const Duration(days: 365));
-      message = "Profitez de Purple IPTV en illimité pendant 1 an !";
+      message = lang.t('success_yearly');
     } else {
       await trialService.setPro();
-      message = "Profitez de Purple IPTV en illimité et à vie !";
+      message = lang.t('success_lifetime');
     }
 
     final hasCredentials = await CredentialsService.load() != null;
@@ -68,7 +68,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'ACCÈS ACTIVÉ !',
+                  lang.t('activated_title'),
                   style: GoogleFonts.nunito(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -99,7 +99,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('C\'EST PARTI !', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(lang.t('lets_go'), style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -136,7 +136,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 64),
                   const SizedBox(height: 16),
                   Text(
-                    'PASSEZ AU PREMIUM',
+                    lang.t('premium_title'),
                     style: GoogleFonts.nunito(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
@@ -146,7 +146,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Débloquez tout le potentiel de Purple IPTV',
+                    lang.t('premium_subtitle'),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
                   ),
@@ -154,9 +154,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   
                   // Monthly
                   _PriceCard(
-                    title: 'Mensuel',
-                    price: '0,99 €',
-                    period: '/ mois',
+                    title: lang.t('plan_monthly'),
+                    price: lang.t('price_monthly'),
+                    period: lang.t('period_monthly'),
                     onTap: () => _handlePurchase('monthly'),
                     isLoading: _isPurchasing,
                   ),
@@ -165,10 +165,10 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   
                   // Yearly
                   _PriceCard(
-                    title: 'Annuel',
-                    price: '4,99 €',
-                    period: '/ an',
-                    badge: 'ÉCONOMISEZ 58%',
+                    title: lang.t('plan_yearly'),
+                    price: lang.t('price_yearly'),
+                    period: lang.t('period_yearly'),
+                    badge: lang.t('save_percent'),
                     isPopular: false,
                     onTap: () => _handlePurchase('yearly'),
                     isLoading: _isPurchasing,
@@ -178,29 +178,21 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   
                   // Lifetime (The HERO)
                   _PriceCard(
-                    title: 'À VIE',
-                    price: '9,99 €',
-                    period: 'une seule fois',
-                    badge: 'OFFRE LIMITÉE',
+                    title: lang.t('plan_lifetime'),
+                    price: lang.t('price_lifetime'),
+                    period: lang.t('period_lifetime'),
+                    badge: lang.t('limited_offer'),
                     isHero: true,
                     onTap: () => _handlePurchase('lifetime'),
                     isLoading: _isPurchasing,
                   ),
                   
-                  const SizedBox(height: 40),
-                  
-                  // Benefits list
-                  _BenefitItem(icon: Icons.all_inclusive_rounded, text: 'Accès illimité à toutes les chaînes'),
-                  _BenefitItem(icon: Icons.movie_filter_rounded, text: 'Films et Séries en 4K/UHD'),
-                  _BenefitItem(icon: Icons.download_done_rounded, text: 'Téléchargements illimités'),
-                  _BenefitItem(icon: Icons.devices_other_rounded, text: 'Multi-écrans activé'),
-                  
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 60),
                   
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      'Plus tard',
+                      lang.t('later'),
                       style: TextStyle(color: Colors.white.withOpacity(0.3), decoration: TextDecoration.underline),
                     ),
                   ),
