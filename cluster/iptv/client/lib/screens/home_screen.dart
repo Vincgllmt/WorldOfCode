@@ -401,6 +401,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     return Container(
       decoration: const BoxDecoration(color: Color(0xF00C0714), border: Border(bottom: BorderSide(color: _C.border, width: 1))),
       child: SafeArea(
