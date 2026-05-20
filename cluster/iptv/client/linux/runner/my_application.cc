@@ -46,11 +46,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Joga Bonito IPTV");
+    gtk_header_bar_set_title(header_bar, "Purple IPTV");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Joga Bonito IPTV");
+    gtk_window_set_title(window, "Purple IPTV");
   }
 
   // Load icon from file next to executable (icon name lookup requires system install)

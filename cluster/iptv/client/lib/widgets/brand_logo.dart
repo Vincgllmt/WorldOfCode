@@ -26,41 +26,31 @@ class BrandLogo extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Image.asset(
+                'assets/images/logo.png',
+                height: fontSize * 1.1,
+                width: fontSize * 1.0,
+                fit: BoxFit.contain,
+              ),
+            ),
             Text(
-              'J',
+              'PURPLE',
               style: GoogleFonts.nunito(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w900,
                 color: primaryAccent,
-                letterSpacing: -2,
+                letterSpacing: -1,
                 height: 1.0,
                 shadows: [
                   Shadow(color: primaryAccent.withValues(alpha: 0.3), blurRadius: 12),
                 ],
               ),
             ),
-            Image.asset(
-              'assets/images/logo.png',
-              height: fontSize * 1.2,
-              width: fontSize * 1.0,
-              fit: BoxFit.contain,
-            ),
+            const SizedBox(width: 10),
             Text(
-              'GA',
-              style: GoogleFonts.nunito(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w900,
-                color: primaryAccent,
-                letterSpacing: -2,
-                height: 1.0,
-                shadows: [
-                  Shadow(color: primaryAccent.withValues(alpha: 0.3), blurRadius: 12),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'BONITO',
+              'IPTV',
               style: GoogleFonts.nunito(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w900,

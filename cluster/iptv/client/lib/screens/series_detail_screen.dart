@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import '../models/series_item.dart';
 import '../models/series_detail.dart';
 import '../services/api_service.dart';
@@ -7,6 +9,7 @@ import '../services/progress_service.dart';
 import '../services/language_service.dart';
 import '../widgets/download_button.dart';
 import 'player_screen.dart';
+import 'remote_control_screen.dart';
 
 class _C {
   static const bg     = Color(0xFF160B25);
@@ -36,6 +39,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   void _play(Episode ep, List<Episode> allEpisodes) {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+      if (isConnected) {
+        _cast(ep, allEpisodes);
+        return;
+      }
+    }
+
     final index = allEpisodes.indexOf(ep);
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => PlayerScreen(
@@ -50,6 +61,81 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         initialEpisodeIndex: index,
       ),
     )).then((_) => setState(() {})); // trigger refresh when coming back to update progress indicators
+  }
+
+  void _cast(Episode ep, List<Episode> allEpisodes) {
+    final isHls = ep.url.toLowerCase().contains('.m3u8') || ep.url.toLowerCase().contains('.ts');
+
+    GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
+      contentId: ep.url,
+      streamType: CastMediaStreamType.buffered,
+      contentType: isHls ? 'application/x-mpegURL' : 'video/mp4',
+      metadata: GoogleCastMovieMediaMetadata(
+        title: ep.title,
+        subtitle: widget.series.name,
+        images: (ep.cover ?? widget.series.cover) != null ? [GoogleCastImage(url: Uri.parse(ep.cover ?? widget.series.cover!))] : null,
+      ),
+    ));
+    
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => RemoteControlScreen(
+        title: ep.title,
+        subtitle: widget.series.name,
+        image: ep.cover ?? widget.series.cover,
+      ),
+    ));
+  }
+
+  void _showCastPicker() {
+    GoogleCastDiscoveryManager.instance.startDiscovery();
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: const Color(0xFF1A0F2E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Text('Sélectionner un appareil', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              StreamBuilder<List<GoogleCastDevice>>(
+                stream: GoogleCastDiscoveryManager.instance.devicesStream,
+                builder: (context, snapshot) {
+                  final devices = snapshot.data ?? [];
+                  if (devices.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      final device = devices[index];
+                      return ListTile(
+                        leading: const Icon(Icons.cast, color: Colors.white),
+                        title: Text(device.friendlyName, style: const TextStyle(color: Colors.white)),
+                        subtitle: Text(device.modelName ?? '', style: const TextStyle(color: Colors.white70)),
+                        onTap: () {
+                          GoogleCastSessionManager.instance.startSessionWithDevice(device);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) => GoogleCastDiscoveryManager.instance.stopDiscovery());
   }
 
   @override
@@ -176,6 +262,26 @@ class _Header extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
         ),
+        // Cast button
+        if (Platform.isAndroid || Platform.isIOS)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: StreamBuilder<GoogleCastSession?>(
+              stream: GoogleCastSessionManager.instance.currentSessionStream,
+              builder: (context, snapshot) {
+                final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+                return IconButton(
+                  icon: Icon(isConnected ? Icons.cast_connected : Icons.cast, color: isConnected ? _C.accent : Colors.white),
+                  onPressed: isConnected ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
+                    title: series.name,
+                    subtitle: null,
+                    image: series.cover,
+                  ))) : (context.findAncestorStateOfType<_SeriesDetailScreenState>()?._showCastPicker),
+                );
+              },
+            ),
+          ),
         // Info
         Positioned(
           bottom: 24, left: 24, right: 24,

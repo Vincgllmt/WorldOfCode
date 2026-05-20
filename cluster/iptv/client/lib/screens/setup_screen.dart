@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
+import '../main.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../services/language_service.dart';
@@ -138,15 +139,33 @@ class _SetupScreenState extends State<SetupScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Huge Logo
-                          Image.asset(
-                            'assets/images/logo.png',
-                            height: 240,
-                            fit: BoxFit.contain,
+                          // Huge Logo with Secret Tap for Testing
+                          GestureDetector(
+                            onDoubleTap: () async {
+                              await trialService.debugSetExpired();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('DEBUG: Essai expiré (Redémarrez l\'app)')),
+                                );
+                              }
+                            },
+                            onLongPress: () async {
+                              await trialService.resetAll();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('DEBUG: Données réinitialisées !')),
+                                );
+                              }
+                            },
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              height: 240,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                           const SizedBox(height: 24),
                           
-                          // Styled encadré for "JOGA BONITO IPTV"
+                          // Styled encadré for "PURPLE IPTV"
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                             decoration: BoxDecoration(
@@ -310,6 +329,35 @@ class _SetupScreenState extends State<SetupScreen> {
                                 style: const TextStyle(color: _err, fontSize: 13, height: 1.4)),
                             ),
                           ],
+
+                          // Trial & Purchase info box
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF9D4EDD).withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF9D4EDD).withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: Color(0xFFBB86FC), size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    lang.locale.value == 'fr' 
+                                      ? 'Essai gratuit de 3 jours inclus. Activation à vie ensuite pour seulement 0,99€.'
+                                      : '3-day free trial included. Lifetime activation for only 0.99€ afterwards.',
+                                    style: GoogleFonts.nunito(
+                                      color: const Color(0xFFB0AEC8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                           const SizedBox(height: 36),
 

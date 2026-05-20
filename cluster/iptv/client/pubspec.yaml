@@ -44,6 +44,8 @@ dependencies:
   path_provider: ^2.1.5
   file_picker: ^8.1.7
   window_manager: ^0.5.1
+  in_app_purchase: ^3.2.0
+  flutter_chrome_cast: ^1.2.1
 
 dev_dependencies:
   flutter_test:
@@ -61,7 +63,7 @@ flutter_launcher_icons:
   ios: true
   linux: true
   image_path: "assets/images/logo.png"
-  adaptive_icon_background: "#3D4751"
+  adaptive_icon_background: "#4B0082"
   adaptive_icon_foreground: "assets/images/logo.png"
   min_sdk_android: 21
 

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
+import '../main.dart';
 import '../services/language_service.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
 import 'downloads_screen.dart';
+import 'remote_control_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -50,11 +54,145 @@ class _MainScreenState extends State<MainScreen> {
         ];
 
         return Scaffold(
-          body: IndexedStack(index: _index, children: _screens),
-          bottomNavigationBar: _BottomNav(
-            index: _index,
-            items: items,
-            onTap: (i) => setState(() => _index = i),
+          body: Column(
+            children: [
+              FutureBuilder<int>(
+                future: trialService.getRemainingDays(),
+                builder: (context, snapshot) {
+                  final remaining = snapshot.data ?? 3;
+                  final isPro = remaining > 10; // TrialService returns 999 for pro
+
+                  if (isPro) return const SizedBox.shrink();
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: const Color(0xFF9D4EDD),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.timer_outlined, size: 16, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              remaining > 0 
+                                ? 'Essai gratuit : $remaining jour${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''}.'
+                                : 'Votre essai expire aujourd\'hui !',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pushNamed('/purchase'),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.2),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                              minimumSize: const Size(0, 30),
+                            ),
+                            child: const Text('ACTIVER', style: TextStyle(fontSize: 11)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              Expanded(
+                child: IndexedStack(index: _index, children: _screens),
+              ),
+            ],
+          ),
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (Platform.isAndroid || Platform.isIOS)
+                StreamBuilder<GoogleCastSession?>(
+                  stream: GoogleCastSessionManager.instance.currentSessionStream,
+                  builder: (context, snapshot) {
+                    final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+                    if (!isConnected) return const SizedBox.shrink();
+                    
+                    return StreamBuilder<GoggleCastMediaStatus?>(
+                      stream: GoogleCastRemoteMediaClient.instance.mediaStatusStream,
+                      builder: (context, mediaSnap) {
+                        final status = mediaSnap.data ?? GoogleCastRemoteMediaClient.instance.mediaStatus;
+                        if (status == null || status.playerState == CastMediaPlayerState.idle) return const SizedBox.shrink();
+                        
+                        final metadata = status.mediaInformation?.metadata;
+                        String? title;
+                        String? subtitle;
+                        if (metadata is GoogleCastMovieMediaMetadata) {
+                          title = metadata.title;
+                          subtitle = metadata.subtitle;
+                        }
+                        
+                        final displayTitle = title ?? 'En cours de lecture';
+                        
+                        return GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
+                            title: displayTitle,
+                            subtitle: subtitle,
+                            image: metadata?.images?.isNotEmpty == true ? metadata!.images!.first.url.toString() : null,
+                          ))),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF1A0F2E),
+                              border: Border(top: BorderSide(color: Color(0xFF9D4EDD), width: 1)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.cast_connected, color: Color(0xFF9D4EDD), size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Casting : $displayTitle',
+                                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        'Appuyez pour contrôler',
+                                        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    status.playerState == CastMediaPlayerState.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    if (status.playerState == CastMediaPlayerState.playing) {
+                                      GoogleCastRemoteMediaClient.instance.pause();
+                                    } else {
+                                      GoogleCastRemoteMediaClient.instance.play();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              _BottomNav(
+                index: _index,
+                items: items,
+                onTap: (i) => setState(() => _index = i),
+              ),
+            ],
           ),
         );
       }

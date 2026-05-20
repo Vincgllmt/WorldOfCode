@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
@@ -66,6 +67,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   int _saveCount = 0;
   bool _isPip = false;
 
+  StreamSubscription? _castSessionSubscription;
+  StreamSubscription? _castSessionEndedSubscription;
+
   void _resetOverlayTimer() {
     if (!mounted || _isPip) return;
     _overlayVisible.value = true;
@@ -78,21 +82,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _togglePip() async {
     if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) return;
 
-    setState(() => _isPip = !_isPip);
+    try {
+      final newPip = !_isPip;
+      
+      if (newPip) {
+        if (await windowManager.isFullScreen()) {
+          await windowManager.setFullScreen(false);
+        }
+        
+        await windowManager.setAlwaysOnTop(true);
+        
+        if (await windowManager.isMaximized()) {
+          await windowManager.unmaximize();
+        }
 
-    if (_isPip) {
-      await windowManager.setAlwaysOnTop(true);
-      await windowManager.setHasShadow(false);
-      // Small PiP window size
-      await windowManager.setSize(const Size(480, 270));
-      // Position bottom right (rough estimate, window_manager has better ways but this is a start)
-      // For a real implementation we should get screen size
-      _overlayVisible.value = false;
-    } else {
-      await windowManager.setAlwaysOnTop(false);
-      await windowManager.setHasShadow(true);
-      await windowManager.maximize();
-      _resetOverlayTimer();
+        await Future.delayed(const Duration(milliseconds: 100));
+        await windowManager.setSize(const Size(480, 270));
+        _overlayVisible.value = false;
+      } else {
+        await windowManager.setAlwaysOnTop(false);
+        await windowManager.maximize();
+        _resetOverlayTimer();
+      }
+      
+      setState(() => _isPip = newPip);
+    } catch (e) {
+      debugPrint('PiP Error: $e');
     }
   }
 
@@ -103,6 +118,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _resetOverlayTimer();
     _player.open(_buildMedia(_currentUrl));
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      _castSessionSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
+        if (session != null && GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected) {
+          _player.pause();
+          final remoteClient = GoogleCastRemoteMediaClient.instance;
+          remoteClient.loadMedia(GoogleCastMediaInformation(
+            contentId: _currentUrl,
+            streamType: widget.type == 'live' ? CastMediaStreamType.live : CastMediaStreamType.buffered,
+            contentType: widget.type == 'live' ? 'application/x-mpegURL' : 'video/mp4',
+            metadata: GoogleCastMovieMediaMetadata(
+              title: _currentName,
+              subtitle: widget.group ?? '',
+              images: _currentCover != null ? [GoogleCastImage(url: Uri.parse(_currentCover!))] : null,
+            ),
+          ));
+        }
+      });
+
+      _castSessionEndedSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
+        if (session == null && mounted) {
+          _player.play();
+        }
+      });
+    }
 
     _player.stream.duration.listen((duration) {
       if (!_hasSeeked && widget.type != null && widget.type != 'live' && duration.inSeconds > 0) {
@@ -259,6 +299,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     _overlayTimer?.cancel();
     _progressTimer?.cancel();
+    _castSessionSubscription?.cancel();
+    _castSessionEndedSubscription?.cancel();
     ProgressService.syncToDisk();
     _player.dispose();
     super.dispose();
@@ -284,9 +326,63 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
+  void _showCastPicker() {
+    GoogleCastDiscoveryManager.instance.startDiscovery();
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: const Color(0xFF1A0F2E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Text('Sélectionner un appareil', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              StreamBuilder<List<GoogleCastDevice>>(
+                stream: GoogleCastDiscoveryManager.instance.devicesStream,
+                builder: (context, snapshot) {
+                  final devices = snapshot.data ?? [];
+                  if (devices.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      final device = devices[index];
+                      return ListTile(
+                        leading: const Icon(Icons.cast, color: Colors.white),
+                        title: Text(device.friendlyName, style: const TextStyle(color: Colors.white)),
+                        subtitle: Text(device.modelName ?? '', style: const TextStyle(color: Colors.white70)),
+                        onTap: () {
+                          GoogleCastSessionManager.instance.startSessionWithDevice(device);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) => GoogleCastDiscoveryManager.instance.stopDiscovery());
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final topBar = [
+    Widget build(BuildContext context) {
+    final bool isMobile = MediaQuery.of(context).size.width < 600;
+
+    final List<Widget> topBar = [
       IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.pop(context),
@@ -297,15 +393,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
         child: Text(
           _currentName,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(color: Colors.white, fontSize: isMobile ? 14 : 16, fontWeight: FontWeight.w600),
         ),
       ),
-      if (widget.group != null) _GroupTag(group: widget.group!),
+      if (widget.group != null && !isMobile) _GroupTag(group: widget.group!),
       if (widget.type != 'live') _RestartButton(player: _player),
-      if (widget.type != 'live') _SpeedButton(
+      if (widget.type != 'live' && !isMobile) _SpeedButton(
         speed: _playbackSpeed,
         onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
       ),
+      if (Platform.isAndroid || Platform.isIOS) 
+        StreamBuilder<GoogleCastSession?>(
+          stream: GoogleCastSessionManager.instance.currentSessionStream,
+          builder: (context, snapshot) {
+            final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+            return IconButton(
+              icon: Icon(isConnected ? Icons.cast_connected : Icons.cast, color: isConnected ? const Color(0xFF9D4EDD) : Colors.white),
+              onPressed: isConnected ? () => GoogleCastSessionManager.instance.endSessionAndStopCasting() : _showCastPicker,
+            );
+          },
+        ),
       if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
         IconButton(
           icon: Icon(_isPip ? Icons.picture_in_picture_alt_rounded : Icons.picture_in_picture_rounded, color: Colors.white),
@@ -316,15 +423,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
       const SizedBox(width: 8),
     ];
 
-    final bottomBarMobile = [
+    final List<Widget> bottomBarMobile = [
       const MaterialPlayOrPauseButton(),
       const MaterialPositionIndicator(),
       const Spacer(),
-      _ComboSelectorWrapper(player: _player),
+      _ComboSelectorWrapper(player: _player, isMobile: true),
       const MaterialFullscreenButton(),
     ];
 
-    final bottomBarDesktop = [
+    final List<Widget> bottomBarDesktop = [
       const MaterialDesktopSkipPreviousButton(),
       const MaterialDesktopPlayOrPauseButton(),
       const MaterialDesktopSkipNextButton(),
@@ -335,12 +442,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
       const MaterialDesktopFullscreenButton(),
     ];
 
-    final centerButton = [
-      if (widget.type != 'live') _SeekButton(player: _player, forward: false),
-      if (widget.type != 'live') const SizedBox(width: 40),
-      _CenterPlayPause(player: _player, onTap: _resetOverlayTimer),
-      if (widget.type != 'live') const SizedBox(width: 40),
-      if (widget.type != 'live') _SeekButton(player: _player, forward: true),
+    final List<Widget> centerButton = [
+      if (widget.type != 'live') _SeekButton(player: _player, forward: false, isMobile: isMobile),
+      if (widget.type != 'live') SizedBox(width: isMobile ? 20 : 40),
+      _CenterPlayPause(player: _player, onTap: _resetOverlayTimer, isMobile: isMobile),
+      if (widget.type != 'live') SizedBox(width: isMobile ? 20 : 40),
+      if (widget.type != 'live') _SeekButton(player: _player, forward: true, isMobile: isMobile),
     ];
 
     return Scaffold(
@@ -349,16 +456,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
         normal: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
-          padding: EdgeInsets.zero,
+          padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
+          bottomButtonBarMargin: isMobile ? const EdgeInsets.only(bottom: 8) : EdgeInsets.zero,
         ),
         fullscreen: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
           topButtonBarMargin: EdgeInsets.zero,
-          padding: EdgeInsets.zero,
+          padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
+          bottomButtonBarMargin: isMobile ? const EdgeInsets.only(bottom: 8) : EdgeInsets.zero,
         ),
         child: MaterialDesktopVideoControlsTheme(
           normal: MaterialDesktopVideoControlsThemeData(
@@ -461,9 +570,9 @@ class _EpgOverlay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
+        color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       constraints: const BoxConstraints(maxWidth: 350),
       child: Column(
@@ -519,7 +628,7 @@ class _ProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 4,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            backgroundColor: Colors.white.withOpacity(0.1),
             color: const Color(0xFF9D4EDD),
           ),
         ),
@@ -584,12 +693,12 @@ class _NextEpisodeOverlay extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.85),
+                color: Colors.black.withOpacity(0.85),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFF9D4EDD), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF9D4EDD).withValues(alpha: 0.4),
+                    color: const Color(0xFF9D4EDD).withOpacity(0.4),
                     blurRadius: 15,
                     spreadRadius: 2,
                   ),
@@ -607,7 +716,7 @@ class _NextEpisodeOverlay extends StatelessWidget {
                           value: progress,
                           strokeWidth: 3,
                           color: const Color(0xFFBB86FC),
-                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          backgroundColor: Colors.white.withOpacity(0.1),
                         ),
                       ),
                       Text(
@@ -939,7 +1048,7 @@ class _NetflixTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFBB86FC).withValues(alpha: 0.1) : Colors.transparent,
+          color: selected ? const Color(0xFFBB86FC).withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -999,7 +1108,7 @@ class _ModernChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: selected ? const Color(0xFF9D4EDD) : const Color(0xFF1F1235),
         borderRadius: BorderRadius.circular(30),
-        boxShadow: selected ? [BoxShadow(color: const Color(0xFF9D4EDD).withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)] : [],
+        boxShadow: selected ? [BoxShadow(color: const Color(0xFF9D4EDD).withOpacity(0.4), blurRadius: 10, spreadRadius: 1)] : [],
       ),
       child: Material(
         color: Colors.transparent,
@@ -1077,11 +1186,13 @@ class _ComboSelector extends StatelessWidget {
   final Tracks tracks;
   final Track currentTrack;
   final void Function(AudioTrack, SubtitleTrack) onSelect;
+  final bool isMobile;
 
   const _ComboSelector({
     required this.tracks,
     required this.currentTrack,
     required this.onSelect,
+    this.isMobile = false,
   });
 
   bool _isFrench(String? lang) {
@@ -1150,23 +1261,23 @@ class _ComboSelector extends StatelessWidget {
                            currentTrack.subtitle == (e.key.contains('ST') ? (frSub ?? subList.first) : noSub);
                            
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6.0),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 3.0 : 6.0),
           child: TextButton(
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              backgroundColor: isSelected ? const Color(0xFF9D4EDD) : const Color(0xFFBB86FC).withValues(alpha: 0.15),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 8 : 12),
+              backgroundColor: isSelected ? const Color(0xFF9D4EDD) : const Color(0xFFBB86FC).withOpacity(0.15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
                 side: BorderSide(color: isSelected ? Colors.transparent : const Color(0x44BB86FC), width: 1.5),
               ),
-              minimumSize: const Size(80, 48),
+              minimumSize: Size(isMobile ? 60 : 80, isMobile ? 36 : 48),
             ),
             onPressed: e.value,
             child: Text(
               e.key, 
               style: TextStyle(
                 color: isSelected ? Colors.white : const Color(0xFFBB86FC), 
-                fontSize: 16, 
+                fontSize: isMobile ? 12 : 16, 
                 fontWeight: FontWeight.w900, 
                 letterSpacing: 1.0
               )
@@ -1180,7 +1291,8 @@ class _ComboSelector extends StatelessWidget {
 
 class _ComboSelectorWrapper extends StatelessWidget {
   final Player player;
-  const _ComboSelectorWrapper({required this.player});
+  final bool isMobile;
+  const _ComboSelectorWrapper({required this.player, this.isMobile = false});
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Tracks>(
@@ -1192,6 +1304,7 @@ class _ComboSelectorWrapper extends StatelessWidget {
             return _ComboSelector(
               tracks: player.state.tracks,
               currentTrack: player.state.track,
+              isMobile: isMobile,
               onSelect: (a, s) {
                 player.setAudioTrack(a);
                 player.setSubtitleTrack(s);
@@ -1288,7 +1401,8 @@ class _NextEpisodeWrapperState extends State<_NextEpisodeWrapper> {
 class _CenterPlayPause extends StatelessWidget {
   final Player player;
   final VoidCallback? onTap;
-  const _CenterPlayPause({required this.player, this.onTap});
+  final bool isMobile;
+  const _CenterPlayPause({required this.player, this.onTap, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1296,6 +1410,9 @@ class _CenterPlayPause extends StatelessWidget {
       stream: player.stream.playing,
       builder: (context, snapshot) {
         final isPlaying = snapshot.data ?? false;
+        final double size = isMobile ? 48 : 64;
+        final double padding = isMobile ? 16 : 24;
+        
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -1305,14 +1422,14 @@ class _CenterPlayPause extends StatelessWidget {
             },
             customBorder: const CircleBorder(),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(padding),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF9D4EDD).withValues(alpha: 0.15),
-                border: Border.all(color: const Color(0xFF9D4EDD).withValues(alpha: 0.25), width: 2),
+                color: const Color(0xFF9D4EDD).withOpacity(0.15),
+                border: Border.all(color: const Color(0xFF9D4EDD).withOpacity(0.25), width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF9D4EDD).withValues(alpha: 0.1),
+                    color: const Color(0xFF9D4EDD).withOpacity(0.1),
                     blurRadius: 25,
                     spreadRadius: 8,
                   ),
@@ -1320,7 +1437,7 @@ class _CenterPlayPause extends StatelessWidget {
               ),
               child: Icon(
                 isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                size: 64,
+                size: size,
                 color: Colors.white,
               ),
             ),
@@ -1334,10 +1451,14 @@ class _CenterPlayPause extends StatelessWidget {
 class _SeekButton extends StatelessWidget {
   final Player player;
   final bool forward;
-  const _SeekButton({required this.player, required this.forward});
+  final bool isMobile;
+  const _SeekButton({required this.player, required this.forward, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
+    final double iconSize = isMobile ? 24 : 32;
+    final double padding = isMobile ? 12 : 16;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1348,16 +1469,16 @@ class _SeekButton extends StatelessWidget {
         },
         customBorder: const CircleBorder(),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.05),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+            color: Colors.white.withOpacity(0.05),
+            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
           ),
           child: Icon(
             forward ? Icons.forward_10_rounded : Icons.replay_10_rounded,
             color: Colors.white,
-            size: 32,
+            size: iconSize,
           ),
         ),
       ),
