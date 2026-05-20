@@ -457,7 +457,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         : EdgeInsets.zero;
         
     final bottomMargin = isMobileDevice
-        ? EdgeInsets.only(bottom: safePadding.bottom > 0 ? safePadding.bottom + 12 : 30, left: safePadding.left, right: safePadding.right)
+        ? EdgeInsets.only(bottom: safePadding.bottom > 0 ? safePadding.bottom + 24 : 45, left: safePadding.left, right: safePadding.right)
         : EdgeInsets.zero;
 
     return Scaffold(
@@ -470,7 +470,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
           bottomButtonBarMargin: bottomMargin,
-          seekBarMargin: isMobileDevice ? const EdgeInsets.only(bottom: 12, left: 16, right: 16) : const EdgeInsets.symmetric(horizontal: 16),
+          seekBarMargin: isMobileDevice ? const EdgeInsets.only(bottom: 24, left: 16, right: 16) : const EdgeInsets.symmetric(horizontal: 16),
         ),
         fullscreen: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
@@ -479,7 +479,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
           bottomButtonBarMargin: bottomMargin,
-          seekBarMargin: isMobileDevice ? const EdgeInsets.only(bottom: 12, left: 16, right: 16) : const EdgeInsets.symmetric(horizontal: 16),
+          seekBarMargin: isMobileDevice ? const EdgeInsets.only(bottom: 24, left: 16, right: 16) : const EdgeInsets.symmetric(horizontal: 16),
         ),
         child: MaterialDesktopVideoControlsTheme(
           normal: MaterialDesktopVideoControlsThemeData(
