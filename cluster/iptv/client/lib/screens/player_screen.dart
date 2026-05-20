@@ -381,6 +381,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
     Widget build(BuildContext context) {
     final bool isMobile = MediaQuery.of(context).size.width < 600;
+    final bool isMobileDevice = Platform.isAndroid || Platform.isIOS;
+    final EdgeInsets safePadding = MediaQuery.of(context).padding;
 
     final List<Widget> topBar = [
       IconButton(
@@ -402,7 +404,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         speed: _playbackSpeed,
         onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
       ),
-      if (Platform.isAndroid || Platform.isIOS) 
+      if (isMobileDevice) 
         StreamBuilder<GoogleCastSession?>(
           stream: GoogleCastSessionManager.instance.currentSessionStream,
           builder: (context, snapshot) {
@@ -443,31 +445,39 @@ class _PlayerScreenState extends State<PlayerScreen> {
     ];
 
     final List<Widget> centerButton = [
-      if (widget.type != 'live') _SeekButton(player: _player, forward: false, isMobile: isMobile),
-      if (widget.type != 'live') SizedBox(width: isMobile ? 20 : 40),
-      _CenterPlayPause(player: _player, onTap: _resetOverlayTimer, isMobile: isMobile),
-      if (widget.type != 'live') SizedBox(width: isMobile ? 20 : 40),
-      if (widget.type != 'live') _SeekButton(player: _player, forward: true, isMobile: isMobile),
+      if (widget.type != 'live') _SeekButton(player: _player, forward: false, isMobile: isMobile || isMobileDevice),
+      if (widget.type != 'live') SizedBox(width: (isMobile || isMobileDevice) ? 20 : 40),
+      _CenterPlayPause(player: _player, onTap: _resetOverlayTimer, isMobile: isMobile || isMobileDevice),
+      if (widget.type != 'live') SizedBox(width: (isMobile || isMobileDevice) ? 20 : 40),
+      if (widget.type != 'live') _SeekButton(player: _player, forward: true, isMobile: isMobile || isMobileDevice),
     ];
+
+    final topMargin = isMobileDevice 
+        ? EdgeInsets.only(top: safePadding.top > 0 ? safePadding.top : 16, left: safePadding.left, right: safePadding.right)
+        : EdgeInsets.zero;
+        
+    final bottomMargin = isMobileDevice
+        ? EdgeInsets.only(bottom: safePadding.bottom > 0 ? safePadding.bottom : 16, left: safePadding.left, right: safePadding.right)
+        : EdgeInsets.zero;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: MaterialVideoControlsTheme(
         normal: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
-          topButtonBarMargin: EdgeInsets.zero,
-          padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
+          topButtonBarMargin: topMargin,
+          padding: (isMobile || isMobileDevice) ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
-          bottomButtonBarMargin: isMobile ? const EdgeInsets.only(bottom: 8) : EdgeInsets.zero,
+          bottomButtonBarMargin: bottomMargin,
         ),
         fullscreen: MaterialVideoControlsThemeData(
           topButtonBar: topBar,
-          topButtonBarMargin: EdgeInsets.zero,
-          padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
+          topButtonBarMargin: topMargin,
+          padding: (isMobile || isMobileDevice) ? const EdgeInsets.symmetric(horizontal: 8) : EdgeInsets.zero,
           primaryButtonBar: centerButton,
           bottomButtonBar: bottomBarMobile,
-          bottomButtonBarMargin: isMobile ? const EdgeInsets.only(bottom: 8) : EdgeInsets.zero,
+          bottomButtonBarMargin: bottomMargin,
         ),
         child: MaterialDesktopVideoControlsTheme(
           normal: MaterialDesktopVideoControlsThemeData(
