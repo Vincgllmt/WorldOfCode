@@ -370,6 +370,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(ViewMode viewMode) {
+    final width = MediaQuery.of(context).size.width;
     return PreferredSize(
       preferredSize: const Size.fromHeight(70),
       child: Container(
@@ -378,14 +379,23 @@ class _MoviesScreenState extends State<MoviesScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
-              _IconBtn(icon: Icons.menu_rounded, onTap: () => _scaffoldKey.currentState?.openDrawer()),
-              const SizedBox(width: 8),
-              const BrandLogo(fontSize: 22, showSubtitle: false),
+              if (!(_searchVisible && width < 600)) ...[
+                _IconBtn(icon: Icons.menu_rounded, onTap: () => _scaffoldKey.currentState?.openDrawer()),
+                const SizedBox(width: 8),
+                const BrandLogo(fontSize: 22, showSubtitle: false),
+              ],
               const Spacer(),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 280),
                 transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child)),
-                child: _searchVisible ? SizedBox(key: const ValueKey('f'), width: 200, height: 40, child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...')) : const SizedBox(key: ValueKey('e')),
+                child: _searchVisible 
+                  ? SizedBox(
+                      key: const ValueKey('f'), 
+                      width: width < 600 ? width * 0.7 : 200, 
+                      height: 40, 
+                      child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: 'Titre, genre...')
+                    ) 
+                  : const SizedBox(key: ValueKey('e')),
               ),
               const SizedBox(width: 6),
               _IconBtn(icon: _searchVisible ? Icons.close_rounded : Icons.search_rounded, onTap: () => setState(() {

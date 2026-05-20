@@ -435,12 +435,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                _IconBtn(
-                  icon: Icons.menu_rounded,
-                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                const SizedBox(width: 8),
-                const BrandLogo(fontSize: 22, showSubtitle: false),
+                if (!(_searchVisible && MediaQuery.of(context).size.width < 600)) ...[
+                  _IconBtn(
+                    icon: Icons.menu_rounded,
+                    onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                  ),
+                  const SizedBox(width: 8),
+                  const BrandLogo(fontSize: 22, showSubtitle: false),
+                ],
                 const Spacer(),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
@@ -451,7 +453,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   child: _searchVisible
                     ? SizedBox(
                         key: const ValueKey('f'),
-                        width: 200, height: 40,
+                        width: MediaQuery.of(context).size.width < 600 ? MediaQuery.of(context).size.width * 0.7 : 200, 
+                        height: 40,
                         child: _SearchField(controller: _searchCtrl, onChanged: _onSearch, hint: lang.t('search_hint')),
                       )
                     : const SizedBox(key: ValueKey('e')),

@@ -407,14 +407,23 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(children: [
-            _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
-            const SizedBox(width: 8),
-            const BrandLogo(fontSize: 22, showSubtitle: false),
+            if (!(searchVisible && width < 600)) ...[
+              _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
+              const SizedBox(width: 8),
+              const BrandLogo(fontSize: 22, showSubtitle: false),
+            ],
             const Spacer(),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 280),
               transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child)),
-              child: searchVisible ? SizedBox(key: const ValueKey('field'), width: 200, height: 40, child: _GlassSearchField(controller: searchCtrl, onChanged: onSearchChanged)) : const SizedBox(key: ValueKey('empty')),
+              child: searchVisible 
+                ? SizedBox(
+                    key: const ValueKey('field'), 
+                    width: width < 600 ? width * 0.7 : 200, 
+                    height: 40, 
+                    child: _GlassSearchField(controller: searchCtrl, onChanged: onSearchChanged)
+                  ) 
+                : const SizedBox(key: ValueKey('empty')),
             ),
             const SizedBox(width: 6),
             _AppBarIcon(icon: searchVisible ? Icons.close_rounded : Icons.search_rounded, onTap: onToggleSearch),
