@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
-import '../widgets/brand_logo.dart';
 import '../services/credentials_service.dart';
 
 class PurchaseScreen extends StatefulWidget {
@@ -14,13 +13,24 @@ class PurchaseScreen extends StatefulWidget {
 class _PurchaseScreenState extends State<PurchaseScreen> {
   bool _isPurchasing = false;
 
-  Future<void> _handlePurchase() async {
+  Future<void> _handlePurchase(String type) async {
     setState(() => _isPurchasing = true);
     
     // Simulation de l'achat (In-App Purchase)
     await Future.delayed(const Duration(seconds: 2));
     
-    await trialService.setPro();
+    String message = "";
+    if (type == 'monthly') {
+      await trialService.activateSubscription(const Duration(days: 30));
+      message = "Profitez de Purple IPTV en illimité pendant 30 jours !";
+    } else if (type == 'yearly') {
+      await trialService.activateSubscription(const Duration(days: 365));
+      message = "Profitez de Purple IPTV en illimité pendant 1 an !";
+    } else {
+      await trialService.setPro();
+      message = "Profitez de Purple IPTV en illimité et à vie !";
+    }
+
     final hasCredentials = await CredentialsService.load() != null;
     
     if (mounted) {
@@ -67,10 +77,10 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Merci pour votre confiance. Profitez de Purple IPTV en illimité et à vie !',
+                Text(
+                  message,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+                  style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -103,82 +113,223 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A0F2E), Color(0xFF0C0714)],
+      backgroundColor: const Color(0xFF0C0714),
+      body: Stack(
+        children: [
+          // Gradient Background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -0.5),
+                radius: 1.2,
+                colors: [Color(0xFF2D1B4E), Color(0xFF0C0714)],
+              ),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const BrandLogo(fontSize: 40, showSubtitle: false),
-            const SizedBox(height: 40),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+          
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  Text(
-                    'Essai gratuit terminé',
-                    style: GoogleFonts.nunito(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  const SizedBox(height: 20),
+                  const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 64),
                   const SizedBox(height: 16),
                   Text(
-                    'Profitez de Purple IPTV sans limites avec un accès à vie pour seulement 0,99€.',
-                    textAlign: TextAlign.center,
+                    'PASSEZ AU PREMIUM',
                     style: GoogleFonts.nunito(
-                      fontSize: 16,
-                      color: Colors.white70,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 2,
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  if (_isPurchasing)
-                    const CircularProgressIndicator()
-                  else
-                    Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _handlePurchase,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9D4EDD),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 8,
-                              shadowColor: const Color(0xFF9D4EDD).withOpacity(0.5),
-                            ),
-                            child: const Text(
-                              'ACTIVER L\'ACCÈS À VIE - 0,99€',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        TextButton(
-                          onPressed: () {
-                            // Plus tard : Logique de restauration
-                          },
-                          child: const Text(
-                            'Restaurer mon achat',
-                            style: TextStyle(color: Colors.white54, decoration: TextDecoration.underline),
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Débloquez tout le potentiel de Purple IPTV',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
+                  ),
+                  const SizedBox(height: 40),
+                  
+                  // Monthly
+                  _PriceCard(
+                    title: 'Mensuel',
+                    price: '0,99 €',
+                    period: '/ mois',
+                    onTap: () => _handlePurchase('monthly'),
+                    isLoading: _isPurchasing,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Yearly
+                  _PriceCard(
+                    title: 'Annuel',
+                    price: '4,99 €',
+                    period: '/ an',
+                    badge: 'ÉCONOMISEZ 58%',
+                    isPopular: false,
+                    onTap: () => _handlePurchase('yearly'),
+                    isLoading: _isPurchasing,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Lifetime (The HERO)
+                  _PriceCard(
+                    title: 'À VIE',
+                    price: '9,99 €',
+                    period: 'une seule fois',
+                    badge: 'OFFRE LIMITÉE',
+                    isHero: true,
+                    onTap: () => _handlePurchase('lifetime'),
+                    isLoading: _isPurchasing,
+                  ),
+                  
+                  const SizedBox(height: 40),
+                  
+                  // Benefits list
+                  _BenefitItem(icon: Icons.infinity, text: 'Accès illimité à toutes les chaînes'),
+                  _BenefitItem(icon: Icons.movie_filter_rounded, text: 'Films et Séries en 4K/UHD'),
+                  _BenefitItem(icon: Icons.download_done_rounded, text: 'Téléchargements illimités'),
+                  _BenefitItem(icon: Icons.devices_other_rounded, text: 'Multi-écrans activé'),
+                  
+                  const SizedBox(height: 40),
+                  
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Plus tard',
+                      style: TextStyle(color: Colors.white.withOpacity(0.3), decoration: TextDecoration.underline),
                     ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
+          ),
+          
+          if (_isPurchasing)
+            Container(
+              color: Colors.black.withOpacity(0.7),
+              child: const Center(child: CircularProgressIndicator(color: Color(0xFFBB86FC))),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceCard extends StatelessWidget {
+  final String title;
+  final String price;
+  final String period;
+  final String? badge;
+  final bool isHero;
+  final bool isPopular;
+  final VoidCallback onTap;
+  final bool isLoading;
+
+  const _PriceCard({
+    required this.title,
+    required this.price,
+    required this.period,
+    this.badge,
+    this.isHero = false,
+    this.isPopular = false,
+    required this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isHero ? const Color(0xFF9D4EDD).withOpacity(0.15) : const Color(0xFF1F1235),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isHero ? const Color(0xFFFFD700) : (isPopular ? const Color(0xFFBB86FC) : Colors.white.withOpacity(0.1)),
+            width: isHero ? 2.5 : 1.5,
+          ),
+          boxShadow: isHero ? [
+            BoxShadow(color: const Color(0xFFFFD700).withOpacity(0.1), blurRadius: 20, spreadRadius: 2)
+          ] : [],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (badge != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isHero ? const Color(0xFFFFD700) : const Color(0xFFBB86FC),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge!,
+                        style: TextStyle(color: isHero ? Colors.black : Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  Text(
+                    title,
+                    style: GoogleFonts.nunito(
+                      color: isHero ? const Color(0xFFFFD700) : Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  price,
+                  style: GoogleFonts.nunito(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  period,
+                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            Icon(Icons.chevron_right_rounded, color: isHero ? const Color(0xFFFFD700) : Colors.white24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BenefitItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _BenefitItem({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFFBB86FC), size: 20),
+          const SizedBox(width: 12),
+          Text(text, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        ],
       ),
     );
   }

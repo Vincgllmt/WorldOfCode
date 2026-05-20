@@ -331,33 +331,76 @@ class _SetupScreenState extends State<SetupScreen> {
                             
                             const SizedBox(height: 24),
 
-                            // Trial & Purchase info box
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF9D4EDD).withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF9D4EDD).withOpacity(0.2)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.info_outline_rounded, color: Color(0xFFBB86FC), size: 20),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      lang.locale.value == 'fr' 
-                                        ? 'Essai gratuit de 3 jours inclus. Activation à vie ensuite pour seulement 0,99€.'
-                                        : '3-day free trial included. Lifetime activation for only 0.99€ afterwards.',
-                                      style: GoogleFonts.nunito(
-                                        color: const Color(0xFFB0AEC8),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.4,
+                            // PREMIUM Badge or Trial Info
+                            FutureBuilder<int>(
+                              future: trialService.getRemainingDays(),
+                              builder: (context, snapshot) {
+                                final remaining = snapshot.data ?? 0;
+                                final isPro = remaining > 10; // TrialService returns 999 for pro
+
+                                if (isPro) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
                                       ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFFFD700).withOpacity(0.3),
+                                          blurRadius: 20,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
                                     ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.stars_rounded, color: Colors.black, size: 28),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'PREMIUM',
+                                          style: GoogleFonts.nunito(
+                                            color: Colors.black,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                return Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF9D4EDD).withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFF9D4EDD).withOpacity(0.2)),
                                   ),
-                                ],
-                              ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline_rounded, color: Color(0xFFBB86FC), size: 20),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          lang.locale.value == 'fr' 
+                                            ? 'Essai gratuit de 3 jours inclus. Activation Premium ensuite dès 0,99€.'
+                                            : '3-day free trial included. Premium activation from 0.99€ afterwards.',
+                                          style: GoogleFonts.nunito(
+                                            color: const Color(0xFFB0AEC8),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
 
                             const SizedBox(height: 36),
