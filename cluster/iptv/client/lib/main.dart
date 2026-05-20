@@ -12,11 +12,15 @@ import 'services/language_service.dart';
 import 'services/settings_service.dart';
 import 'services/download_service.dart';
 import 'services/trial_service.dart';
+import 'services/review_service.dart';
 
 final trialService = TrialService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Track launch for review dialog
+  unawaited(ReviewService.trackLaunch());
   
   if (Platform.isAndroid || Platform.isIOS) {
     // Initialisation non-bloquante pour éviter de figer le démarrage si le service Cast est lent

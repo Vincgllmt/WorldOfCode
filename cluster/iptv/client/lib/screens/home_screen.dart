@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io';
 import '../models/channel.dart';
+import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
+import '../main.dart';
+import '../services/language_service.dart';
+import '../services/review_service.dart';
 import '../services/api_service.dart';
 import '../services/credentials_service.dart';
 import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
 import '../services/genre_favorites_service.dart';
-import '../services/language_service.dart';
 import '../services/settings_service.dart';
+import '../services/review_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'player_screen.dart';
@@ -182,6 +187,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
               ],
             ),
+            if (Platform.isAndroid || Platform.isIOS) ...[
+              const SizedBox(height: 24),
+              const Divider(color: _C.border, height: 1),
+              const SizedBox(height: 24),
+              Text(lang.t('rate_app'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(lang.t('rate_app_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ReviewService.requestReview();
+                  },
+                  icon: const Icon(Icons.star_rounded, color: Colors.white),
+                  label: Text(lang.t('rate_app').toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _C.accent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             const Divider(color: _C.border, height: 1),
             const SizedBox(height: 24),

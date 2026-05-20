@@ -46,6 +46,7 @@ dependencies:
   window_manager: ^0.5.1
   in_app_purchase: ^3.2.0
   flutter_chrome_cast: ^1.2.1
+  in_app_review: ^2.0.9
 
 dev_dependencies:
   flutter_test:
