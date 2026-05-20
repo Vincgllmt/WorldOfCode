@@ -431,6 +431,20 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
             const SizedBox(width: 4),
+            if (Platform.isAndroid || Platform.isIOS) ...[
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => ReviewService.requestReview(),
+                  child: Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: _C.accent.withValues(alpha: 0.3))),
+                    child: const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 22)
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             GestureDetector(
               onTap: onAccount,
               child: MouseRegion(cursor: SystemMouseCursors.click, child: CircleAvatar(radius: 16, backgroundColor: _C.accentAlt, child: const Icon(Icons.person_rounded, size: 18, color: Colors.white))),
