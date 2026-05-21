@@ -232,9 +232,12 @@ class TechGroupController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $user = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$user instanceof User) {
             return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
+        // @codeCoverageIgnoreEnd
 
         try {
             $joined = $this->membershipService->join($id, $user);
@@ -265,9 +268,12 @@ class TechGroupController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $user = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$user instanceof User) {
             return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
+        // @codeCoverageIgnoreEnd
 
         try {
             $this->membershipService->leave($id, $user);

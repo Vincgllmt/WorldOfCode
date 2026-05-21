@@ -40,9 +40,13 @@ class FollowController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $follower = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut
+        // garantit qu'un User est authentifié.
         if (!$follower instanceof User) {
             throw new \LogicException('Expected User entity');
         }
+        // @codeCoverageIgnoreEnd
 
         $followed = $this->userRepo->find($id);
 

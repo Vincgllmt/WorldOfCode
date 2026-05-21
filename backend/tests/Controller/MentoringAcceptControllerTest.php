@@ -187,4 +187,50 @@ class MentoringAcceptControllerTest extends TestCase
 
         $this->assertSame(404, $response->getStatusCode());
     }
+
+    public function testAcceptReturns422WhenRequestIsRejectedOrExpired(): void
+    {
+        $mentorUser = $this->buildUser(1);
+        $juniorUser = $this->buildUser(2);
+        $profile    = $this->buildMentorProfile(10, $mentorUser);
+        $req        = $this->buildRequest(5, $juniorUser);
+        // Statut hors PENDING/PINNED/ACCEPTED → ne peut pas être accepté
+        $req->setStatus(MentoringRequestStatus::CANCELLED);
+
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('findOneBy')->willReturn($profile);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('find')->willReturn($req);
+
+        $httpRequest = new Request([], [], [], [], [], [], json_encode(['format' => 'text']));
+        $response = $this->makeController($mentorUser, $requestRepo, $mentorProfileRepo)->accept(5, $httpRequest);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('REQUEST_NOT_ACCEPTABLE', $payload['code']);
+    }
+
+    public function testAcceptReturns403WhenRequestTargetsAnotherMentor(): void
+    {
+        $mentorUser = $this->buildUser(1, 'BobMentor');
+        $otherMentor = $this->buildUser(20, 'CarolMentor');
+        $juniorUser = $this->buildUser(2);
+        $profile    = $this->buildMentorProfile(10, $mentorUser);
+        $otherProfile = $this->buildMentorProfile(20, $otherMentor);
+        $req        = $this->buildRequest(5, $juniorUser);
+        // Demande ciblée vers un autre mentor
+        $req->setTargetMentor($otherProfile);
+
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('findOneBy')->willReturn($profile);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('find')->willReturn($req);
+
+        $httpRequest = new Request([], [], [], [], [], [], json_encode(['format' => 'text']));
+        $response = $this->makeController($mentorUser, $requestRepo, $mentorProfileRepo)->accept(5, $httpRequest);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
 }

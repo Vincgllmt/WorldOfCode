@@ -205,6 +205,39 @@ class AdminPostControllerTest extends TestCase
         $this->assertSame([], $payload['lastComments']);
     }
 
+    public function testDetailIncludesSharedExcerptWhenPostIsAShare(): void
+    {
+        $admin  = $this->buildAdmin();
+        $author = $this->buildAdmin(2, 'GLaDOS');
+
+        // Post original avec un contenu > 80 caractères pour déclencher
+        // la troncature de l'excerpt partagé (lignes 130-131).
+        $longContent = str_repeat('Cake is a lie. ', 10); // ~150 chars
+        $originalPost = new Post();
+        $originalPost->setAuthor($author)->setContent($longContent);
+        $originalPost->onCreate();
+        (new \ReflectionProperty(Post::class, 'id'))->setValue($originalPost, 100);
+
+        $post = $this->buildPost(42, $author);
+        $post->setSharedFrom($originalPost);
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->with(42)->willReturn($post);
+
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('findBy')->willReturn([]);
+
+        $response = $this->makeController($admin, $postRepo, $reportRepo)->detail(42);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('sharedFromExcerpt', $payload);
+        $this->assertNotNull($payload['sharedFromExcerpt']);
+        $this->assertStringEndsWith('…', $payload['sharedFromExcerpt']);
+        // 80 chars + 1 char ellipsis
+        $this->assertSame(81, mb_strlen($payload['sharedFromExcerpt']));
+    }
+
     public function testDetailReturns404WhenPostNotFound(): void
     {
         $admin    = $this->buildAdmin();

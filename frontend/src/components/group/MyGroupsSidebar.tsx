@@ -81,8 +81,8 @@ export default function MyGroupsSidebar() {
                     Aucun groupe trouvé.
                 </p>
             ) : (
-                <nav className="space-y-0.5">
-                    {filteredGroups.slice(0, 8).map((group) => (
+                <nav className="space-y-0.5 max-h-[200px] overflow-y-auto pr-1 -mr-1 scrollbar-thin">
+                    {filteredGroups.map((group) => (
                         <Link
                             key={group.id}
                             href={`/group/${group.id}`}

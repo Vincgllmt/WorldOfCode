@@ -182,7 +182,11 @@ final class AdminGroupController extends AbstractController
             'authorUsername' => $row['authorUsername'],
             'createdAt'      => $row['createdAt'] instanceof \DateTimeInterface
                                     ? $row['createdAt']->format(\DateTimeInterface::ATOM)
+                                    // @codeCoverageIgnoreStart
+                                    // Fallback défensif : la requête Doctrine renvoie toujours
+                                    // un DateTime, mais on cast en string si jamais ce n'était pas le cas.
                                     : (string) $row['createdAt'],
+                                    // @codeCoverageIgnoreEnd
             'likesCount'    => (int) $row['likesCount'],
             'commentsCount' => (int) $row['commentsCount'],
         ], $recentPosts);

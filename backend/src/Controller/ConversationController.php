@@ -68,9 +68,12 @@ class ConversationController extends AbstractController
 
         /** @var User $currentUser */
         $currentUser = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$currentUser instanceof \App\Entity\User) {
             throw new \LogicException('Expected current user to be an instance of App\Entity\User');
         }
+        // @codeCoverageIgnoreEnd
 
         $existingConv = $this->repo->findDirectConversationBetween(
             $currentUser->getId(),
@@ -119,9 +122,12 @@ class ConversationController extends AbstractController
 
         /** @var \App\Entity\User $currentUser */
         $currentUser = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$currentUser instanceof \App\Entity\User) {
             throw new \LogicException('Expected current user to be an instance of App\Entity\User');
         }
+        // @codeCoverageIgnoreEnd
 
         $convs = $this->repo->findByUserId($currentUser->getId());
 

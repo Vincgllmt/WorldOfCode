@@ -266,6 +266,32 @@ class CommentControllerTest extends TestCase
         $this->assertSame(400, $response->getStatusCode());
     }
 
+    public function testCreateCommentReturns422WhenContentRejectedByModeration(): void
+    {
+        $jack = $this->buildUser(1);
+
+        $commentRepo = $this->createMock(CommentRepository::class);
+        // Le commentaire ne doit jamais être sauvegardé
+        $commentRepo->expects($this->never())->method('save');
+
+        $moderation = $this->createMock(TextModerationService::class);
+        $moderation->method('checkOrThrow')->willThrowException(
+            new \App\Service\Moderation\ContentRejectedException('Contenu offensant détecté.')
+        );
+
+        $request = new Request(content: json_encode([
+            'content' => 'contenu insultant',
+            'postId'  => 1,
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($jack, $commentRepo, null, false, null, $moderation)->create($request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('content_rejected', $payload['code']);
+        $this->assertSame('Contenu offensant détecté.', $payload['error']);
+    }
+
     public function testCreateCommentFailsWhenPostNotFound(): void
     {
         $jack = $this->buildUser(1);
@@ -306,6 +332,33 @@ class CommentControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('A lighthouse… a city… a man.', $payload['content']);
+    }
+
+    public function testUpdateCommentReturns422WhenContentRejectedByModeration(): void
+    {
+        $jack    = $this->buildUser(1);
+        $post    = $this->buildPost($jack);
+        $comment = $this->buildComment($jack, $post, 'Old content');
+
+        $commentRepo = $this->createMock(CommentRepository::class);
+        $commentRepo->method('find')->willReturn($comment);
+        // Le commentaire ne doit pas être sauvegardé après rejet
+        $commentRepo->expects($this->never())->method('save');
+
+        $moderation = $this->createMock(TextModerationService::class);
+        $moderation->method('checkOrThrow')->willThrowException(
+            new \App\Service\Moderation\ContentRejectedException('Contenu modifié inacceptable.')
+        );
+
+        $request = new Request(content: json_encode(['content' => 'contenu offensant en édition'], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($jack, $commentRepo, null, false, null, $moderation)->update(1, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('content_rejected', $payload['code']);
+        // Le contenu d'origine doit être inchangé
+        $this->assertSame('Old content', $comment->getContent());
     }
 
     public function testUpdateCommentFailsWhenCommentNotFound(): void

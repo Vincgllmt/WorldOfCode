@@ -221,6 +221,37 @@ class AdminStatsControllerTest extends TestCase
         $this->assertContains($payload[0]['type'], ['new_user', 'new_post', 'new_report']);
     }
 
+    public function testRecentActivityTruncatesLongPostContent(): void
+    {
+        $admin      = $this->buildAdmin();
+        $userRepo   = $this->createMock(UserRepository::class);
+        $postRepo   = $this->createMock(PostRepository::class);
+        $reportRepo = $this->createMock(ReportRepository::class);
+
+        $userRepo->method('findBy')->willReturn([]);
+
+        // Contenu > 50 caractères → doit déclencher la branche de troncature
+        $longContent = str_repeat('a', 80);
+        $postUser = $this->buildAdmin(3, 'LongPoster');
+        $post = $this->createMock(\App\Entity\Post::class);
+        $post->method('getContent')->willReturn($longContent);
+        $post->method('getAuthor')->willReturn($postUser);
+        $post->method('getCreatedAt')->willReturn(new \DateTime('-1 hour'));
+        $postRepo->method('findBy')->willReturn([$post]);
+
+        $reportRepo->method('findBy')->willReturn([]);
+
+        $response = $this->makeController($admin, $userRepo, $postRepo, reportRepo: $reportRepo)->recentActivity();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        // L'excerpt doit être tronqué à 50 chars + ellipsis
+        $postEvent = array_values(array_filter($payload, fn($e) => $e['type'] === 'new_post'))[0] ?? null;
+        $this->assertNotNull($postEvent);
+        $this->assertStringEndsWith('…', $postEvent['excerpt']);
+        $this->assertSame(51, mb_strlen($postEvent['excerpt'])); // 50 + 1 ellipsis
+    }
+
     public function testRecentActivityDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();

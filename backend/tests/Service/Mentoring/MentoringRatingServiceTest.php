@@ -205,9 +205,7 @@ class MentoringRatingServiceTest extends TestCase
         $query->method('setParameter')->willReturnSelf();
         $query->method('getSingleScalarResult')->willReturn(4.0);
 
-        $em = $this->getMockBuilder(EntityManagerInterface::class)
-            ->addMethods(['createQuery'])
-            ->getMock();
+        $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->atLeastOnce())->method('flush');
         $em->method('createQuery')->willReturn($query);
 

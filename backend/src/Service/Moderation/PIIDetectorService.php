@@ -112,9 +112,14 @@ class PIIDetectorService
         foreach ($matches[0] ?? [] as $candidate) {
             $clean = preg_replace('/\s+/', '', $candidate) ?? '';
             $len = strlen($clean);
+            // @codeCoverageIgnoreStart
+            // Défensif : la regex contraint déjà 15-34 caractères alphanumériques,
+            // donc cette branche est inatteignable. Conservée par sécurité au cas
+            // où le motif évoluerait.
             if ($len < 15 || $len > 34) {
                 continue;
             }
+            // @codeCoverageIgnoreEnd
             // Garder la première occurrence trimée comme représentation
             $trimmed = trim($candidate);
             if (!isset($valid[$clean])) {

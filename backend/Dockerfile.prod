@@ -5,7 +5,9 @@ WORKDIR /var/www/backend
 # 1. Installation des dépendances système
 RUN apt-get update && apt-get install -y \
     git unzip libicu-dev libzip-dev libonig-dev \
- && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring
+    libpng-dev libjpeg62-turbo-dev libwebp-dev libfreetype6-dev \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+ && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring gd exif
 
 # Augmenter les limites d'upload PHP
 RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \

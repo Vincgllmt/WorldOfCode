@@ -286,6 +286,25 @@ class SessionAppointmentControllerTest extends TestCase
         $this->assertSame(403, $response->getStatusCode());
     }
 
+    public function testCreateReturns422WhenScheduledAtHasInvalidFormat(): void
+    {
+        $mentorUser = $this->buildUser(1, 'MentorBob');
+        $junior     = $this->buildUser(2, 'AliceJunior');
+        $profile    = $this->buildMentorProfile(10, $mentorUser);
+        $session    = $this->buildSession(5, $profile, $junior);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        // Format de date invalide → DateTime jette une Exception
+        $request  = $this->makeJsonRequest(['scheduledAt' => 'pas-une-date-du-tout']);
+        $response = $this->makeController($mentorUser, $sessionRepo)->create(5, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Format de date invalide.', $payload['error']);
+    }
+
     public function testCreateReturns404WhenSessionNotFound(): void
     {
         $sessionRepo = $this->createMock(MentoringSessionRepository::class);

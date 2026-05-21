@@ -8,6 +8,10 @@ RUN apt-get update && \
     libicu-dev \
     libzip-dev \
     libxml2-dev \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libwebp-dev \
+    libfreetype6-dev \
     iputils-ping \
     ca-certificates \
     curl \
@@ -15,7 +19,8 @@ RUN apt-get update && \
     sqlite3 \
     libsqlite3-dev \
     cron \
-    && docker-php-ext-install intl pdo pdo_mysql pdo_sqlite zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) intl pdo pdo_mysql pdo_sqlite zip gd exif \
     && rm -rf /var/lib/apt/lists/* \
     && pecl install pcov \
     && docker-php-ext-enable pcov
