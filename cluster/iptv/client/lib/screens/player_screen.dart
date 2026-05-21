@@ -49,7 +49,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player,
     configuration: const VideoControllerConfiguration(
       enableHardwareAcceleration: true,
-      enablePictureInPicture: true,
     ),
   );
 
@@ -81,15 +80,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _togglePip() async {
-    if (Platform.isAndroid || Platform.isIOS) {
-      try {
-        await _ctrl.enterPictureInPicture();
-      } catch (e) {
-        debugPrint('Mobile PiP Error: $e');
-      }
-      return;
-    }
-
     if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) return;
 
     try {
