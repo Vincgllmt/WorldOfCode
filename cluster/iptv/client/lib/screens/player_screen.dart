@@ -49,6 +49,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player,
     configuration: const VideoControllerConfiguration(
       enableHardwareAcceleration: true,
+      enablePictureInPicture: true,
     ),
   );
 
@@ -80,6 +81,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _togglePip() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        await _ctrl.enterPictureInPicture();
+      } catch (e) {
+        debugPrint('Mobile PiP Error: $e');
+      }
+      return;
+    }
+
     if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) return;
 
     try {
@@ -400,7 +410,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
       if (widget.group != null && !isMobile) _GroupTag(group: widget.group!),
       if (widget.type != 'live') _RestartButton(player: _player),
-      if (widget.type != 'live' && !isMobile) _SpeedButton(
+      if (widget.type != 'live') _SpeedButton(
         speed: _playbackSpeed,
         onSelected: (s) { setState(() => _playbackSpeed = s); _player.setRate(s); },
       ),
@@ -415,7 +425,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             );
           },
         ),
-      if (Platform.isLinux || Platform.isWindows || Platform.isMacOS)
+      if (Platform.isLinux || Platform.isWindows || Platform.isMacOS || Platform.isAndroid || Platform.isIOS)
         IconButton(
           icon: Icon(_isPip ? Icons.picture_in_picture_alt_rounded : Icons.picture_in_picture_rounded, color: Colors.white),
           tooltip: 'PiP',
