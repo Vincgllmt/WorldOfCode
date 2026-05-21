@@ -1,0 +1,10 @@
+  📺 Optimisations Android TV
+   * Navigation à la télécommande : Refonte complète de la gestion du focus. Les éléments interactifs (chaînes, films, menus) sont désormais clairement mis en
+     évidence lors de la navigation au D-pad.
+   * Gestion intelligente du clavier : Sur Android TV, le clavier virtuel ne surgit plus automatiquement lors de la navigation. Il ne s'active désormais
+     qu'après un clic explicite sur un champ de recherche ou de configuration.
+   * Compatibilité Leanback : Ajout du support officiel du lanceur Android TV pour une intégration parfaite sur vos téléviseurs et box.
+
+  ✨ Améliorations de l'Interface
+   * Retour visuel : Ajout d'effets de surbrillance et d'agrandissement sur les vignettes pour une expérience plus fluide.
+   * Barre de navigation : Amélioration de l'accessibilité des onglets principaux via les touches directionnelles.

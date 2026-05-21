@@ -121,6 +121,7 @@ class LanguageService {
       'trial_remaining': 'Essai gratuit : {} jours restants.',
       'trial_expires_today': 'Votre essai expire aujourd\'hui !',
       'activate': 'ACTIVER',
+      'favorites': 'Favoris',
     },
     'en': {
       'live': 'Live TV',
@@ -234,6 +235,7 @@ class LanguageService {
       'trial_remaining': 'Free trial: {} days remaining.',
       'trial_expires_today': 'Your trial expires today!',
       'activate': 'ACTIVATE',
+      'favorites': 'Favorites',
     }
   };
 

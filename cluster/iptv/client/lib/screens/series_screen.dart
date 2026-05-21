@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/series_item.dart';
 import '../services/api_service.dart';
@@ -599,6 +600,8 @@ class _PosterCard extends StatefulWidget {
 
 class _PosterCardState extends State<_PosterCard> {
   bool _hovered = false;
+  bool _focused = false;
+  bool get _active => _hovered || _focused;
 
   @override
   Widget build(BuildContext context) {
@@ -606,80 +609,86 @@ class _PosterCardState extends State<_PosterCard> {
     if (widget.viewMode == ViewMode.gridSmall) w = 100;
     if (widget.viewMode == ViewMode.gridLarge) w = 180;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit:  (_) => setState(() => _hovered = false),
-      child: GestureDetector(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: widget.onTap,
-        child: Container(
-          width: w,
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(),
-            transformAlignment: Alignment.center,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: w,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2),
-                      boxShadow: _hovered
-                        ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
-                        : [],
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: _buildCover(),
-                        ),
-                        if (widget.onRemove != null)
-                          Positioned(
-                            top: 4, right: 4,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                                color: Colors.white,
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
-                                  padding: const EdgeInsets.all(4),
-                                  minimumSize: const Size(24, 24),
+        onFocusChange: (v) => setState(() => _focused = v),
+        borderRadius: BorderRadius.circular(8),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit:  (_) => setState(() => _hovered = false),
+          child: Container(
+            width: w,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              transform: _active ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(),
+              transformAlignment: Alignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: w,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _active ? _C.accent : Colors.transparent, width: 2),
+                        boxShadow: _active
+                          ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
+                          : [],
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: _buildCover(),
+                          ),
+                          if (widget.onRemove != null)
+                            Positioned(
+                              top: 4, right: 4,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 16),
+                                  color: Colors.white,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
+                                    padding: const EdgeInsets.all(4),
+                                    minimumSize: const Size(24, 24),
+                                  ),
+                                  onPressed: widget.onRemove,
                                 ),
-                                onPressed: widget.onRemove,
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500)),
-                ),
-                if (widget.rating != null && widget.rating!.isNotEmpty)
+                  const SizedBox(height: 6),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Text('★ ${widget.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                    child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: _active ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500)),
                   ),
-              ],
+                  if (widget.rating != null && widget.rating!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Text('★ ${widget.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
 
   Widget _buildCover() {
     if (widget.cover != null && widget.cover!.isNotEmpty) {
@@ -719,31 +728,82 @@ class _PosterCardState extends State<_PosterCard> {
 }
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
-class _IconBtn extends StatelessWidget {
+class _IconBtn extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
   const _IconBtn({required this.icon, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    child: GestureDetector(onTap: onTap,
-      child: Container(width: 36, height: 36,
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: Colors.white, size: 20))),
+  State<_IconBtn> createState() => _IconBtnState();
+}
+
+class _IconBtnState extends State<_IconBtn> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: _focused ? _C.accent.withOpacity(0.3) : Colors.white.withValues(alpha: 0.07), 
+            borderRadius: BorderRadius.circular(8),
+            border: _focused ? Border.all(color: Colors.white, width: 1.5) : null,
+          ),
+          child: Icon(widget.icon, color: Colors.white, size: 20))),
+    ),
   );
 }
 
-class _SearchField extends StatelessWidget {
+class _SearchField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final String hint;
   const _SearchField({required this.controller, required this.onChanged, required this.hint});
+
+  @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  late FocusNode _focusNode;
+  bool _readOnly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        setState(() => _readOnly = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => TextField(
-    controller: controller, autofocus: true, onChanged: onChanged,
+    controller: widget.controller, 
+    focusNode: _focusNode,
+    autofocus: true, 
+    onChanged: widget.onChanged,
     style: const TextStyle(color: _C.txt, fontSize: 14),
+    readOnly: Platform.isAndroid ? _readOnly : false,
+    onTap: () {
+      if (_readOnly) setState(() => _readOnly = false);
+    },
     decoration: InputDecoration(
-      hintText: hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
+      hintText: widget.hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13),
       prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
       filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
@@ -788,7 +848,7 @@ class _ErrorView extends StatelessWidget {
   )));
 }
 
-class _CategoryCard extends StatelessWidget {
+class _CategoryCard extends StatefulWidget {
   final String title;
   final int count;
   final bool isFav;
@@ -802,58 +862,73 @@ class _CategoryCard extends StatelessWidget {
   });
 
   @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard> {
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
     final String seriesLabel = lang.locale.value == 'fr' 
-      ? "$count série${count > 1 ? 's' : ''}" 
-      : "$count series";
+      ? "$widget.count série${widget.count > 1 ? 's' : ''}" 
+      : "$widget.count series";
 
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          decoration: BoxDecoration(
-            color: _C.bgCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                _C.bgCard,
-                isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        onFocusChange: (v) => setState(() => _focused = v),
+        borderRadius: BorderRadius.circular(12),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            decoration: BoxDecoration(
+              color: _C.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), 
+                width: (widget.isFav || _focused) ? 1.5 : 1
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _C.bgCard,
+                  (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235),
+                ],
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    widget.isFav ? Icons.bookmark_rounded : Icons.folder_open_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 2),
+                      Text(seriesLabel, style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
               ],
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: isFav ? _C.accent : const Color(0xFF2D1B4E),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  isFav ? Icons.bookmark_rounded : Icons.folder_open_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text(seriesLabel, style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
-            ],
           ),
         ),
       ),
@@ -861,22 +936,35 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-class _LangBtn extends StatelessWidget {
+class _LangBtn extends StatefulWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
   const _LangBtn({required this.label, required this.active, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: active ? _C.glow : _C.border),
+  State<_LangBtn> createState() => _LangBtnState();
+}
+
+class _LangBtnState extends State<_LangBtn> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: widget.active ? _C.accent : (_focused ? Colors.white.withOpacity(0.15) : Colors.white.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: widget.active ? _C.glow : (_focused ? Colors.white : _C.border), width: _focused ? 2.0 : 1.0),
+        ),
+        child: Text(widget.label, style: TextStyle(color: widget.active ? Colors.white : (_focused ? Colors.white : _C.txtSub), fontWeight: FontWeight.bold)),
       ),
-      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
     ),
   );
 }

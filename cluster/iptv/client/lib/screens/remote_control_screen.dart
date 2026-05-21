@@ -141,36 +141,40 @@ class RemoteControlScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 30),
-                  GestureDetector(
-                    onTap: () {
-                      if (isPlaying || isBuffering) {
-                        GoogleCastRemoteMediaClient.instance.pause();
-                      } else {
-                        GoogleCastRemoteMediaClient.instance.play();
-                      }
-                    },
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF9D4EDD),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (isBuffering)
-                            const SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        if (isPlaying || isBuffering) {
+                          GoogleCastRemoteMediaClient.instance.pause();
+                        } else {
+                          GoogleCastRemoteMediaClient.instance.play();
+                        }
+                      },
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF9D4EDD),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (isBuffering)
+                              const SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                              ),
+                            Icon(
+                              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 48,
                             ),
-                          Icon(
-                            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 48,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

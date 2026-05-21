@@ -408,10 +408,9 @@ class _SetupScreenState extends State<SetupScreen> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
-                                          lang.locale.value == 'fr' 
-                                            ? 'Essai gratuit de 3 jours inclus. Activation Premium ensuite dès 0,99€.'
-                                            : '3-day free trial included. Premium activation from 0.99€ afterwards.',
-                                          style: GoogleFonts.nunito(
+                                          lang.locale.value == 'fr'
+                                            ? 'Essai gratuit de 3 jours inclus. Activation Premium disponible ensuite.'
+                                            : '3-day free trial included. Premium activation available afterwards.',                                          style: GoogleFonts.nunito(
                                             color: const Color(0xFFB0AEC8),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
@@ -475,36 +474,62 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 }
 
-class _LangBtn extends StatelessWidget {
+class _LangBtn extends StatefulWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
   const _LangBtn({required this.label, required this.active, required this.onTap});
+
+  @override
+  State<_LangBtn> createState() => _LangBtnState();
+}
+
+class _LangBtnState extends State<_LangBtn> {
+  bool _isFocused = false;
+
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.transparent,
     child: InkWell(
-      onTap: onTap,
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _isFocused = v),
       borderRadius: BorderRadius.circular(8),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF9D4EDD) : Colors.white.withOpacity(0.05),
+          color: widget.active ? const Color(0xFF9D4EDD) : (_isFocused ? Colors.white.withOpacity(0.15) : Colors.white.withOpacity(0.05)),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: active ? const Color(0xFFBB86FC) : const Color(0x449D4EDD)),
+          border: Border.all(
+            color: widget.active ? const Color(0xFFBB86FC) : (_isFocused ? Colors.white : const Color(0x449D4EDD)),
+            width: _isFocused ? 2.0 : 1.0,
+          ),
         ),
-        child: Text(label, style: TextStyle(color: active ? Colors.white : const Color(0xFFB0AEC8), fontWeight: FontWeight.bold, fontSize: 12)),
+        child: Text(
+          widget.label, 
+          style: TextStyle(
+            color: widget.active ? Colors.white : (_isFocused ? Colors.white : const Color(0xFFB0AEC8)), 
+            fontWeight: FontWeight.bold, 
+            fontSize: 12
+          )
+        ),
       ),
     ),
   );
 }
 
-class _Tab extends StatelessWidget {
+class _Tab extends StatefulWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
   const _Tab({required this.label, required this.active, required this.onTap});
 
+  @override
+  State<_Tab> createState() => _TabState();
+}
+
+class _TabState extends State<_Tab> {
+  bool _isFocused = false;
   static const _accent = Color(0xFF9D4EDD);
   static const _glow   = Color(0xFFBB86FC);
   static const _txtSub = Color(0xFFB0AEC8);
@@ -514,21 +539,25 @@ class _Tab extends StatelessWidget {
     child: Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
+        onFocusChange: (v) => setState(() => _isFocused = v),
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: active ? const Color(0x339D4EDD) : Colors.transparent,
+            color: widget.active ? const Color(0x339D4EDD) : (_isFocused ? Colors.white.withOpacity(0.1) : Colors.transparent),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: active ? _accent : Colors.transparent),
+            border: Border.all(
+              color: widget.active ? _accent : (_isFocused ? Colors.white.withOpacity(0.8) : Colors.transparent),
+              width: _isFocused ? 1.5 : 1.0,
+            ),
           ),
           alignment: Alignment.center,
-          child: Text(label, style: TextStyle(
-            color: active ? _glow : _txtSub,
+          child: Text(widget.label, style: TextStyle(
+            color: widget.active ? _glow : (_isFocused ? Colors.white : _txtSub),
             fontSize: 13,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+            fontWeight: widget.active ? FontWeight.w800 : ( _isFocused ? FontWeight.w700 : FontWeight.w500),
           )),
         ),
       ),
@@ -536,7 +565,7 @@ class _Tab extends StatelessWidget {
   );
 }
 
-class _Field extends StatelessWidget {
+class _Field extends StatefulWidget {
   final TextEditingController ctrl;
   final String hint;
   final String label;
@@ -551,6 +580,14 @@ class _Field extends StatelessWidget {
     this.obscure = false, this.suffix, this.autofocus = false, this.onSubmitted,
   });
 
+  @override
+  State<_Field> createState() => _FieldState();
+}
+
+class _FieldState extends State<_Field> {
+  late FocusNode _focusNode;
+  bool _readOnly = true;
+
   static const _bgCard = Color(0xFF1F1235);
   static const _accent = Color(0xFF9D4EDD);
   static const _txt    = Color(0xFFFFFFFF);
@@ -558,25 +595,59 @@ class _Field extends StatelessWidget {
   static const _border = Color(0x449D4EDD);
 
   @override
-  Widget build(BuildContext context) => TextField(
-    controller: ctrl,
-    obscureText: obscure,
-    autofocus: autofocus,
-    onSubmitted: onSubmitted,
-    style: const TextStyle(color: _txt, fontSize: 14),
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: _txtSub, fontSize: 13),
-      hintText: hint,
-      hintStyle: TextStyle(color: _txtSub.withOpacity(0.3), fontSize: 12),
-      prefixIcon: Icon(icon, color: _accent, size: 20),
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: _bgCard,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _accent, width: 2.0)),
-    ),
-  );
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    // Si on perd le focus, on repasse en lecture seule pour éviter le clavier au prochain focus
+    if (!_focusNode.hasFocus) {
+      setState(() => _readOnly = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isTV = Platform.isAndroid; // On applique ce comportement sur Android (donc TV)
+
+    return TextField(
+      controller: widget.ctrl,
+      focusNode: _focusNode,
+      obscureText: widget.obscure,
+      autofocus: widget.autofocus,
+      onSubmitted: widget.onSubmitted,
+      // Sur TV, on attend un clic pour activer le clavier
+      readOnly: isTV ? _readOnly : false,
+      onTap: () {
+        if (_readOnly) {
+          setState(() => _readOnly = false);
+        }
+      },
+      style: const TextStyle(color: _txt, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: widget.label,
+        labelStyle: const TextStyle(color: _txtSub, fontSize: 13),
+        hintText: widget.hint,
+        hintStyle: TextStyle(color: _txtSub.withOpacity(0.3), fontSize: 12),
+        prefixIcon: Icon(widget.icon, color: _accent, size: 20),
+        suffixIcon: widget.suffix,
+        filled: true,
+        fillColor: _bgCard,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _accent, width: 2.0)),
+      ),
+    );
+  }
 }
+

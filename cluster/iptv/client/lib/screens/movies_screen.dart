@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/movie.dart';
 import '../services/api_service.dart';
@@ -500,41 +501,82 @@ class _PosterCard extends StatefulWidget {
 
 class _PosterCardState extends State<_PosterCard> {
   bool _hovered = false;
+  bool _focused = false;
+  bool get _active => _hovered || _focused;
+
   @override
   Widget build(BuildContext context) {
     double w = 130;
     if (widget.viewMode == ViewMode.gridSmall) w = 100;
     if (widget.viewMode == ViewMode.gridLarge) w = 180;
 
-    return MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: GestureDetector(onTap: widget.onTap, child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 6), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: w, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)] : []), child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRRect(borderRadius: BorderRadius.circular(8), child: _buildCover()),
-          if (widget.onRemove != null)
-            Positioned(
-              top: 4, right: 4,
-              child: Material(
-                color: Colors.transparent,
-                child: IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  color: Colors.white,
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
-                    padding: const EdgeInsets.all(4),
-                    minimumSize: const Size(24, 24),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        onFocusChange: (v) => setState(() => _focused = v),
+        borderRadius: BorderRadius.circular(8),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click, 
+          onEnter: (_) => setState(() => _hovered = true), 
+          onExit: (_) => setState(() => _hovered = false), 
+          child: Container(
+            width: w, 
+            margin: const EdgeInsets.symmetric(horizontal: 6), 
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200), 
+              curve: Curves.easeOut, 
+              transform: _active ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
+              transformAlignment: Alignment.center, 
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                children: [
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200), 
+                      width: w, 
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8), 
+                        border: Border.all(color: _active ? _C.accent : Colors.transparent, width: 2), 
+                        boxShadow: _active ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)] : []
+                      ), 
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(borderRadius: BorderRadius.circular(8), child: _buildCover()),
+                          if (widget.onRemove != null)
+                            Positioned(
+                              top: 4, right: 4,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 16),
+                                  color: Colors.white,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
+                                    padding: const EdgeInsets.all(4),
+                                    minimumSize: const Size(24, 24),
+                                  ),
+                                  onPressed: widget.onRemove,
+                                ),
+                              ),
+                            ),
+                        ],
+                      )
+                    )
                   ),
-                  onPressed: widget.onRemove,
-                ),
-              ),
-            ),
-        ],
-      ))),
-      const SizedBox(height: 6),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500))),
-      if (widget.rating != null && widget.rating!.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text('★ ${widget.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10))),
-    ])))));
+                  const SizedBox(height: 6),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _active ? _C.glow : _C.txtSub, fontSize: 11, fontWeight: FontWeight.w500))),
+                  if (widget.rating != null && widget.rating!.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text('★ ${widget.rating}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10))),
+                ]
+              )
+            )
+          )
+        ),
+      ),
+    );
   }
+
   Widget _buildCover() {
     if (widget.cover != null && widget.cover!.isNotEmpty) return CachedNetworkImage(imageUrl: widget.cover!, fit: BoxFit.cover, fadeInDuration: const Duration(milliseconds: 150), placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
     return _fallback();
@@ -585,24 +627,86 @@ class _ShimmerLoaderState extends State<_ShimmerLoader> with SingleTickerProvide
   }
 }
 
-class _IconBtn extends StatelessWidget {
+class _IconBtn extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
   const _IconBtn({required this.icon, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => MouseRegion(cursor: SystemMouseCursors.click, child: GestureDetector(onTap: onTap, child: Container(width: 36, height: 36, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.white, size: 20))));
+  State<_IconBtn> createState() => _IconBtnState();
 }
 
-class _SearchField extends StatelessWidget {
+class _IconBtnState extends State<_IconBtn> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click, 
+        child: Container(
+          width: 36, 
+          height: 36, 
+          decoration: BoxDecoration(
+            color: _focused ? _C.accent.withOpacity(0.3) : Colors.white.withValues(alpha: 0.07), 
+            borderRadius: BorderRadius.circular(8),
+            border: _focused ? Border.all(color: Colors.white, width: 1.5) : null,
+          ), 
+          child: Icon(widget.icon, color: Colors.white, size: 20)
+        )
+      ),
+    ),
+  );
+}
+
+class _SearchField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final String hint;
   const _SearchField({required this.controller, required this.onChanged, required this.hint});
+
+  @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  late FocusNode _focusNode;
+  bool _readOnly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        setState(() => _readOnly = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => TextField(
-    controller: controller, autofocus: true, onChanged: onChanged, style: const TextStyle(color: _C.txt, fontSize: 14),
+    controller: widget.controller, 
+    focusNode: _focusNode,
+    autofocus: true, 
+    onChanged: widget.onChanged, 
+    style: const TextStyle(color: _C.txt, fontSize: 14),
+    readOnly: Platform.isAndroid ? _readOnly : false,
+    onTap: () {
+      if (_readOnly) setState(() => _readOnly = false);
+    },
     decoration: InputDecoration(
-      hintText: hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
+      hintText: widget.hint, hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
       filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: _C.border)),
@@ -626,15 +730,58 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent), const SizedBox(height: 18), const Text('Connexion impossible', style: TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 10), Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis), const SizedBox(height: 28), ElevatedButton.icon(onPressed: onRetry, style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.refresh_rounded), label: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold)))])));
 }
 
-class _CategoryCard extends StatelessWidget {
+class _CategoryCard extends StatefulWidget {
   final String title;
   final int count;
   final bool isFav;
   final VoidCallback onTap;
   const _CategoryCard({required this.title, required this.count, required this.isFav, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.movie_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text("$count film${count > 1 ? 's' : ''}", style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
+  State<_CategoryCard> createState() => _CategoryCardState();
 }
+
+class _CategoryCardState extends State<_CategoryCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(12),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click, 
+        child: Container(
+          decoration: BoxDecoration(
+            color: _C.bgCard, 
+            borderRadius: BorderRadius.circular(12), 
+            border: Border.all(
+              color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), 
+              width: (widget.isFav || _focused) ? 1.5 : 1
+            ), 
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, 
+              end: Alignment.bottomRight, 
+              colors: [_C.bgCard, (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)]
+            )
+          ), 
+          padding: const EdgeInsets.symmetric(horizontal: 16), 
+          child: Row(
+            children: [
+              Container(width: 42, height: 42, decoration: BoxDecoration(color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(widget.isFav ? Icons.bookmark_rounded : Icons.movie_rounded, color: Colors.white, size: 20)), 
+              const SizedBox(width: 14), 
+              Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text("${widget.count} film${widget.count > 1 ? 's' : ''}", style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), 
+              Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)
+            ]
+          )
+        )
+      ),
+    ),
+  );
+}
+
 
 class _ContinueWatchingSliver extends StatefulWidget {
   final Function(Movie) onOpen;

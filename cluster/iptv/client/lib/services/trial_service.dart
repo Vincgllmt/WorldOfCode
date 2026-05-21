@@ -53,6 +53,25 @@ class TrialService {
     return remaining > 0;
   }
 
+  /// Vérifie si l'utilisateur a PAYÉ (Abonnement ou Pro)
+  Future<bool> isPremium() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Check Pro (Lifetime)
+    if (await isPro()) return true;
+
+    // Check Subscription
+    String? expiryStr = prefs.getString(_expiryDateKey);
+    expiryStr ??= await _storage.read(key: _expiryDateKey);
+    
+    if (expiryStr != null) {
+      final expiryDate = DateTime.fromMillisecondsSinceEpoch(int.parse(expiryStr));
+      return expiryDate.isAfter(DateTime.now());
+    }
+
+    return false;
+  }
+
   /// Vérifie si l'utilisateur a acheté la version complète (A VIE)
   Future<bool> isPro() async {
     final prefs = await SharedPreferences.getInstance();

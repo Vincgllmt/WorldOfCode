@@ -133,7 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _toggleFavorite(Channel ch) {
     setState(() {
-      if (_favorites.contains(ch.url)) { _favorites.remove(ch.url); } else { _favorites.add(ch.url); }
+      if (_favorites.contains(ch.url)) { 
+        _favorites.remove(ch.url); 
+      } else { 
+        _favorites.add(ch.url); 
+      }
+      _cachedGroups = null;
+      _cachedSortedKeys = null;
     });
     FavoritesService.saveFavorites(_favorites);
   }
@@ -141,6 +147,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, List<Channel>> _grouped(List<Channel> channels) {
     if (_cachedGroups != null) return _cachedGroups!;
     final Map<String, List<Channel>> m = {};
+    
+    // Extraction des favoris
+    final favList = channels.where((c) => _favorites.contains(c.url)).toList();
+    if (favList.isNotEmpty) {
+      m['__favorites__'] = favList;
+    }
+
     for (final ch in channels) {
       (m[ch.group ?? lang.t('other')] ??= []).add(ch);
     }
@@ -150,9 +163,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> _sortedKeys(Map<String, List<Channel>> groups) {
     if (_cachedSortedKeys != null) return _cachedSortedKeys!;
-    final fav   = groups.keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
-    final other = groups.keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    _cachedSortedKeys = [...fav, ...other];
+    
+    final keys = groups.keys.where((k) => k != '__favorites__').toList();
+    final fav   = keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+    final other = keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+    
+    _cachedSortedKeys = [];
+    if (groups.containsKey('__favorites__')) {
+      _cachedSortedKeys!.add('__favorites__');
+    }
+    _cachedSortedKeys!.addAll([...fav, ...other]);
+    
     return _cachedSortedKeys!;
   }
 
@@ -302,11 +323,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         else
                           for (final key in sortedKeys)
                             SliverToBoxAdapter(child: _CategoryRow(
-                              title: key, channels: groups[key]!, favorites: _favorites,
+                              title: key == '__favorites__' ? lang.t('favorites') : key, 
+                              channels: groups[key]!, 
+                              favorites: _favorites,
                               onTap: _openPlayer, onFav: _toggleFavorite,
-                              onTitleTap: () => setState(() => _selectedGenre = key),
+                              onTitleTap: key == '__favorites__' ? null : () => setState(() => _selectedGenre = key),
                               isFavGenre: _favGenres.contains(key),
-                              onToggleFavGenre: () => _toggleFavGenre(key),
+                              isAccent: key == '__favorites__',
+                              onToggleFavGenre: key == '__favorites__' ? null : () => _toggleFavGenre(key),
                               viewMode: viewMode,
                             )),
                         const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
@@ -465,21 +489,83 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _AppBarIcon extends StatelessWidget {
+class _AppBarIcon extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
   const _AppBarIcon({required this.icon, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => MouseRegion(cursor: SystemMouseCursors.click, child: GestureDetector(onTap: onTap, child: Container(width: 36, height: 36, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.white, size: 20))));
+  State<_AppBarIcon> createState() => _AppBarIconState();
 }
 
-class _GlassSearchField extends StatelessWidget {
+class _AppBarIconState extends State<_AppBarIcon> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click, 
+        child: Container(
+          width: 36, 
+          height: 36, 
+          decoration: BoxDecoration(
+            color: _focused ? _C.accent.withOpacity(0.3) : Colors.white.withValues(alpha: 0.07), 
+            borderRadius: BorderRadius.circular(8),
+            border: _focused ? Border.all(color: Colors.white, width: 1.5) : null,
+          ), 
+          child: Icon(widget.icon, color: Colors.white, size: 20)
+        )
+      ),
+    ),
+  );
+}
+
+class _GlassSearchField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   const _GlassSearchField({required this.controller, required this.onChanged});
+
+  @override
+  State<_GlassSearchField> createState() => _GlassSearchFieldState();
+}
+
+class _GlassSearchFieldState extends State<_GlassSearchField> {
+  late FocusNode _focusNode;
+  bool _readOnly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        setState(() => _readOnly = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => TextField(
-    controller: controller, autofocus: true, onChanged: onChanged, style: const TextStyle(color: _C.txt, fontSize: 14),
+    controller: widget.controller, 
+    focusNode: _focusNode,
+    autofocus: true, 
+    onChanged: widget.onChanged, 
+    style: const TextStyle(color: _C.txt, fontSize: 14),
+    readOnly: Platform.isAndroid ? _readOnly : false,
+    onTap: () {
+      if (_readOnly) setState(() => _readOnly = false);
+    },
     decoration: InputDecoration(
       hintText: lang.t('search_hint_live'), hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
       filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
@@ -539,6 +625,8 @@ class _ChannelCard extends StatefulWidget {
 
 class _ChannelCardState extends State<_ChannelCard> {
   bool _hovered = false;
+  bool _focused = false;
+  bool get _active => _hovered || _focused;
 
   @override
   Widget build(BuildContext context) {
@@ -546,40 +634,46 @@ class _ChannelCardState extends State<_ChannelCard> {
     if (widget.viewMode == ViewMode.gridSmall) w = 160;
     if (widget.viewMode == ViewMode.gridLarge) w = 380;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click, 
-      onEnter: (_) => setState(() => _hovered = true), 
-      onExit: (_) => setState(() => _hovered = false), 
-      child: GestureDetector(
-        onTap: widget.onTap, 
-        child: Container(
-          width: w, 
-          margin: const EdgeInsets.symmetric(horizontal: 8), 
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200), 
-            curve: Curves.easeOut, 
-            transform: _hovered ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
-            transformAlignment: Alignment.center, 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
-              children: [
-                Stack(children: [
-                  AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _hovered ? _C.accent : Colors.transparent, width: 2), boxShadow: _hovered ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
-                  Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _hovered || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),
-                  Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
-                ]),
-                const SizedBox(height: 7),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2), 
-                  child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _hovered ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
-                ),
-              ],
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        onFocusChange: (v) => setState(() => _focused = v),
+        borderRadius: BorderRadius.circular(10),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click, 
+          onEnter: (_) => setState(() => _hovered = true), 
+          onExit: (_) => setState(() => _hovered = false), 
+          child: Container(
+            width: w, 
+            margin: const EdgeInsets.symmetric(horizontal: 8), 
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200), 
+              curve: Curves.easeOut, 
+              transform: _active ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
+              transformAlignment: Alignment.center, 
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                children: [
+                  Stack(children: [
+                    AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _active ? _C.accent : Colors.transparent, width: 2), boxShadow: _active ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
+                    Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _active || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),
+                    Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
+                  ]),
+                  const SizedBox(height: 7),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2), 
+                    child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _active ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
+                  ),
+                ],
+              ),
+            )
           )
-        )
-      )
+        ),
+      ),
     );
   }
+
 
   Widget _buildThumbnail() {
     final logo = widget.channel.logo;
@@ -604,38 +698,103 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.wifi_off_rounded, size: 64, color: _C.accent), const SizedBox(height: 18), Text(lang.t('no_connection'), style: const TextStyle(color: _C.txt, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 10), Text(message, style: const TextStyle(color: _C.txtSub, fontSize: 12), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis), const SizedBox(height: 28), ElevatedButton.icon(onPressed: onRetry, style: ElevatedButton.styleFrom(backgroundColor: _C.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.refresh_rounded), label: Text(lang.t('retry'), style: const TextStyle(fontWeight: FontWeight.bold)))])));
 }
 
-class _CategoryCard extends StatelessWidget {
+class _CategoryCard extends StatefulWidget {
   final String title;
   final int count;
   final bool isFav;
   final VoidCallback onTap;
   const _CategoryCard({required this.title, required this.count, required this.isFav, required this.onTap});
+
+  @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard> {
+  bool _focused = false;
+
   @override
   Widget build(BuildContext context) {
     final String channelsLabel = lang.locale.value == 'fr' 
-      ? "$count chaîne${count > 1 ? 's' : ''}" 
-      : "$count channel${count > 1 ? 's' : ''}";
+      ? "$widget.count chaîne${widget.count > 1 ? 's' : ''}" 
+      : "$widget.count channel${widget.count > 1 ? 's' : ''}";
     
-    return GestureDetector(onTap: onTap, child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: isFav ? _C.accent : _C.border, width: isFav ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, isFav ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(channelsLabel, style: TextStyle(color: isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)]))));
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        onFocusChange: (v) => setState(() => _focused = v),
+        borderRadius: BorderRadius.circular(12),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click, 
+          child: Container(
+            decoration: BoxDecoration(
+              color: _C.bgCard, 
+              borderRadius: BorderRadius.circular(12), 
+              border: Border.all(
+                color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), 
+                width: (widget.isFav || _focused) ? 1.5 : 1
+              ), 
+              gradient: LinearGradient(
+                begin: Alignment.topLeft, 
+                end: Alignment.bottomRight, 
+                colors: [_C.bgCard, (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)]
+              )
+            ), 
+            padding: const EdgeInsets.symmetric(horizontal: 16), 
+            child: Row(
+              children: [
+                Container(width: 42, height: 42, decoration: BoxDecoration(color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(widget.isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), 
+                const SizedBox(width: 14), 
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, 
+                    crossAxisAlignment: CrossAxisAlignment.start, 
+                    children: [
+                      Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), 
+                      const SizedBox(height: 2), 
+                      Text(channelsLabel, style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
+                    ]
+                  )
+                ), 
+                Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)
+              ]
+            )
+          )
+        ),
+      ),
+    );
   }
 }
 
-class _LangBtn extends StatelessWidget {
+class _LangBtn extends StatefulWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
   const _LangBtn({required this.label, required this.active, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: active ? _C.accent : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: active ? _C.glow : _C.border),
+  State<_LangBtn> createState() => _LangBtnState();
+}
+
+class _LangBtnState extends State<_LangBtn> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: widget.active ? _C.accent : (_focused ? Colors.white.withOpacity(0.15) : Colors.white.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: widget.active ? _C.glow : (_focused ? Colors.white : _C.border), width: _focused ? 2.0 : 1.0),
+        ),
+        child: Text(widget.label, style: TextStyle(color: widget.active ? Colors.white : (_focused ? Colors.white : _C.txtSub), fontWeight: FontWeight.bold)),
       ),
-      child: Text(label, style: TextStyle(color: active ? Colors.white : _C.txtSub, fontWeight: FontWeight.bold)),
     ),
   );
 }

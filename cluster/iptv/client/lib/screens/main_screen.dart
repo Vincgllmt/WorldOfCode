@@ -133,53 +133,56 @@ class _MainScreenState extends State<MainScreen> {
                         
                         final displayTitle = title ?? 'En cours de lecture';
                         
-                        return GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
-                            title: displayTitle,
-                            subtitle: subtitle,
-                            image: metadata?.images?.isNotEmpty == true ? metadata!.images!.first.url.toString() : null,
-                          ))),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF1A0F2E),
-                              border: Border(top: BorderSide(color: Color(0xFF9D4EDD), width: 1)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.cast_connected, color: Color(0xFF9D4EDD), size: 20),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Casting : $displayTitle',
-                                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'Appuyez pour contrôler',
-                                        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
-                                      ),
-                                    ],
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
+                              title: displayTitle,
+                              subtitle: subtitle,
+                              image: metadata?.images?.isNotEmpty == true ? metadata!.images!.first.url.toString() : null,
+                            ))),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1A0F2E),
+                                border: Border(top: BorderSide(color: Color(0xFF9D4EDD), width: 1)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.cast_connected, color: Color(0xFF9D4EDD), size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Casting : $displayTitle',
+                                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Appuyez pour contrôler',
+                                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    status.playerState == CastMediaPlayerState.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                    color: Colors.white,
+                                  IconButton(
+                                    icon: Icon(
+                                      status.playerState == CastMediaPlayerState.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      if (status.playerState == CastMediaPlayerState.playing) {
+                                        GoogleCastRemoteMediaClient.instance.pause();
+                                      } else {
+                                        GoogleCastRemoteMediaClient.instance.play();
+                                      }
+                                    },
                                   ),
-                                  onPressed: () {
-                                    if (status.playerState == CastMediaPlayerState.playing) {
-                                      GoogleCastRemoteMediaClient.instance.pause();
-                                    } else {
-                                      GoogleCastRemoteMediaClient.instance.play();
-                                    }
-                                  },
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -220,35 +223,10 @@ class _BottomNav extends StatelessWidget {
           height: 60,
           child: Row(
             children: List.generate(items.length, (i) {
-              final selected = i == index;
-              final item = items[i];
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          selected ? item.activeIcon : item.icon,
-                          size: 24,
-                          color: selected ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                            color: selected ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              return _BottomNavItem(
+                item: items[i],
+                selected: i == index,
+                onTap: () => onTap(i),
               );
             }),
           ),
@@ -257,3 +235,58 @@ class _BottomNav extends StatelessWidget {
     );
   }
 }
+
+class _BottomNavItem extends StatefulWidget {
+  final ({IconData icon, IconData activeIcon, String label}) item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BottomNavItem({required this.item, required this.selected, required this.onTap});
+
+  @override
+  State<_BottomNavItem> createState() => _BottomNavItemState();
+}
+
+class _BottomNavItemState extends State<_BottomNavItem> {
+  bool _isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          onFocusChange: (v) => setState(() => _isFocused = v),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              color: _isFocused ? Colors.white.withOpacity(0.1) : Colors.transparent,
+              border: _isFocused ? const Border(bottom: BorderSide(color: Color(0xFFBB86FC), width: 2)) : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.selected ? widget.item.activeIcon : widget.item.icon,
+                  size: 24,
+                  color: (widget.selected || _isFocused) ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  widget.item.label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: (widget.selected || _isFocused) ? FontWeight.w700 : FontWeight.normal,
+                    color: (widget.selected || _isFocused) ? const Color(0xFFBB86FC) : const Color(0x55FFFFFF),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
