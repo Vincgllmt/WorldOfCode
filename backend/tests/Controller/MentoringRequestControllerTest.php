@@ -490,4 +490,150 @@ class MentoringRequestControllerTest extends TestCase
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertNull($payload[0]['session']);
     }
+
+    // ======================================================================
+    //  Cas restants pour couverture 100%
+    // ======================================================================
+
+    public function testCreateReturns422WhenDescriptionIsEmpty(): void
+    {
+        $alice = $this->buildUser(1);
+        $request = $this->makeJsonRequest([
+            'type'        => 'debug',
+            'title'       => 'Titre valide',
+            'techStack'   => 'PHP',
+            'description' => '',
+        ]);
+
+        $response = $this->makeController($alice)->create($request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('La description est requise.', $payload['error']);
+    }
+
+    public function testCreateReturns422WhenTargetMentorNotFound(): void
+    {
+        $alice = $this->buildUser(1);
+
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('find')->willReturn(null);
+
+        $request = $this->makeJsonRequest([
+            'type'           => 'debug',
+            'title'          => 'Demande ciblée',
+            'techStack'      => 'PHP',
+            'description'    => 'desc',
+            'targetMentorId' => 999,
+        ]);
+
+        $response = $this->makeController($alice, mentorProfileRepo: $mentorProfileRepo)->create($request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('TARGET_MENTOR_NOT_FOUND', $payload['code']);
+    }
+
+    public function testCreateNotifiesMatchingAvailableMentors(): void
+    {
+        $alice = $this->buildUser(1);
+        $bobMentor   = $this->buildUser(2, 'BobMentor');
+        $caroMentor  = $this->buildUser(3, 'CarolMentor');
+
+        // Mentor avec spécialité PHP (match) - doit recevoir notification
+        $phpSpecialty = $this->createMock(\App\Entity\Skill::class);
+        $phpSpecialty->method('getName')->willReturn('PHP');
+        $bobProfile = $this->createMock(MentorProfile::class);
+        $bobProfile->method('getUser')->willReturn($bobMentor);
+        $bobProfile->method('getSpecialties')->willReturn(new \Doctrine\Common\Collections\ArrayCollection([$phpSpecialty]));
+
+        // Mentor avec spécialité JavaScript (mismatch) - skipped
+        $jsSpecialty = $this->createMock(\App\Entity\Skill::class);
+        $jsSpecialty->method('getName')->willReturn('JavaScript');
+        $caroProfile = $this->createMock(MentorProfile::class);
+        $caroProfile->method('getUser')->willReturn($caroMentor);
+        $caroProfile->method('getSpecialties')->willReturn(new \Doctrine\Common\Collections\ArrayCollection([$jsSpecialty]));
+
+        // Mentor = soi-même → skipped (ligne 112)
+        $aliceProfile = $this->createMock(MentorProfile::class);
+        $aliceProfile->method('getUser')->willReturn($alice);
+        $aliceProfile->method('getSpecialties')->willReturn(new \Doctrine\Common\Collections\ArrayCollection([$phpSpecialty]));
+
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('findBy')->with(['isAvailable' => true])
+            ->willReturn([$aliceProfile, $bobProfile, $caroProfile]);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        // 1 MentoringRequest + 1 Notification (Bob, le seul qui match)
+        $persistedEntities = [];
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persistedEntities) {
+            $persistedEntities[] = $entity;
+            if ($entity instanceof MentoringRequest) {
+                $entity->onCreate();
+            }
+        });
+        $em->method('flush');
+
+        $request = $this->makeJsonRequest([
+            'type'        => 'debug',
+            'title'       => 'Aide PHP',
+            'techStack'   => 'PHP',
+            'description' => 'desc',
+        ]);
+
+        $response = $this->makeController($alice, mentorProfileRepo: $mentorProfileRepo, em: $em)->create($request);
+
+        $this->assertSame(201, $response->getStatusCode());
+
+        // 1 MentoringRequest + 1 Notification (seul Bob match)
+        $this->assertCount(2, $persistedEntities);
+        $notifications = array_filter($persistedEntities, fn($e) => $e instanceof \App\Entity\Notification);
+        $this->assertCount(1, $notifications);
+        $notif = array_values($notifications)[0];
+        $this->assertSame($bobMentor, $notif->getRecipient());
+    }
+
+    public function testUpdateReturns422WhenNewTitleExceeds255Chars(): void
+    {
+        $alice = $this->buildUser(1);
+        $req   = $this->buildRequest(10, $alice);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('find')->with(10)->willReturn($req);
+
+        $request  = $this->makeJsonRequest(['title' => str_repeat('a', 256)]);
+        $response = $this->makeController($alice, requestRepo: $requestRepo)->update(10, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('max 255', $payload['error']);
+    }
+
+    public function testMakePublicReturns404WhenRequestNotFound(): void
+    {
+        $alice = $this->buildUser(1);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('find')->willReturn(null);
+
+        $response = $this->makeController($alice, requestRepo: $requestRepo)->makePublic(999);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testCancelReturns422WhenRequestAlreadyCancelled(): void
+    {
+        $alice = $this->buildUser(1);
+        $req   = $this->buildRequest(10, $alice);
+        $req->setStatus(MentoringRequestStatus::CANCELLED);
+
+        $requestRepo = $this->createMock(MentoringRequestRepository::class);
+        $requestRepo->method('find')->with(10)->willReturn($req);
+
+        $response = $this->makeController($alice, requestRepo: $requestRepo)->cancel(10);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('REQUEST_NOT_CANCELLABLE', $payload['code']);
+    }
 }

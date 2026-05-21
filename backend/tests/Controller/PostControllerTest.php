@@ -238,6 +238,51 @@ class PostControllerTest extends TestCase
         $this->assertSame('Tarnished', $payload['authorUsername']);
     }
 
+    public function testCreatePostReturns400WhenPayloadIsNotJsonObject(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $postRepo  = $this->createMock(PostRepository::class);
+
+        // JSON valide mais pas un objet/tableau (string)
+        $request = new Request(content: '"just a string"');
+        $response = $this->makeController($tarnished, $postRepo)->create($request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Invalid payload', $payload['error']);
+    }
+
+    public function testCreatePostReturns400WhenContentIsWhitespaceOnly(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $postRepo  = $this->createMock(PostRepository::class);
+
+        // Contenu = espaces → après trim devient null
+        $request = new Request(content: json_encode(['content' => '   '], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($tarnished, $postRepo)->create($request);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreatePostReturns422WhenContentRejectedByModeration(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $postRepo  = $this->createMock(PostRepository::class);
+        $postRepo->expects($this->never())->method('save');
+
+        $moderation = $this->createMock(TextModerationService::class);
+        $moderation->method('checkOrThrow')->willThrowException(
+            new \App\Service\Moderation\ContentRejectedException('Contenu insultant détecté.')
+        );
+
+        $request = new Request(content: json_encode(['content' => 'message offensant'], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($tarnished, $postRepo, null, false, null, null, $moderation)->create($request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('content_rejected', $payload['code']);
+    }
+
     public function testCreatePostFailsWhenContentIsMissing(): void
     {
         $tarnished = $this->buildUser(1);
@@ -430,6 +475,46 @@ class PostControllerTest extends TestCase
         $this->assertSame('Farum Azula', $payload['techGroupName']);
     }
 
+    public function testUpdatePostReturns400WhenPayloadIsNotJsonObject(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $group     = $this->buildGroup(1);
+        $post      = $this->buildPost($tarnished, $group);
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->willReturn($post);
+
+        $request = new Request(content: '"not an object"');
+        $response = $this->makeController($tarnished, $postRepo)->update(1, $request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Invalid payload', $payload['error']);
+    }
+
+    public function testUpdatePostReturns422WhenContentRejectedByModeration(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $group     = $this->buildGroup(1);
+        $post      = $this->buildPost($tarnished, $group);
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->willReturn($post);
+        $postRepo->expects($this->never())->method('save');
+
+        $moderation = $this->createMock(TextModerationService::class);
+        $moderation->method('checkOrThrow')->willThrowException(
+            new \App\Service\Moderation\ContentRejectedException('Contenu modifié rejeté.')
+        );
+
+        $request = new Request(content: json_encode(['content' => 'message offensant en édition'], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($tarnished, $postRepo, null, false, null, null, $moderation)->update(1, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('content_rejected', $payload['code']);
+    }
+
     public function testUpdatePostFailsWhenNewGroupNotFound(): void
     {
         $tarnished = $this->buildUser(1);
@@ -548,6 +633,23 @@ class PostControllerTest extends TestCase
         $response = $this->makeController($tarnished, $postRepo)->share(99, $request);
 
         $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testSharePostReturns400WhenPayloadIsNotJsonObject(): void
+    {
+        $tarnished = $this->buildUser(1);
+        $group     = $this->buildGroup(1);
+        $original  = $this->buildPost($tarnished, $group, 'Original');
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->willReturn($original);
+
+        $request = new Request(content: '"just a string"');
+        $response = $this->makeController($tarnished, $postRepo)->share(1, $request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Invalid payload', $payload['error']);
     }
 
     public function testSharePostFailsWhenCustomGroupNotFound(): void

@@ -368,6 +368,94 @@ class AuthenticationControllerTest extends TestCase
         $this->assertSame(401, $response->getStatusCode());
     }
 
+    public function testAuthenticateBypassesTwoFAWhenDeviceIsTrusted(): void
+    {
+        // Request avec cookie de device trusted
+        $cookieName = TrustedDeviceService::getCookieName();
+        $request = new Request(
+            cookies: [$cookieName => 'trusted-device-token-xyz'],
+            content: json_encode([
+                'username' => self::CHELL_USERNAME,
+                'password' => self::CHELL_PASSWORD,
+            ], JSON_THROW_ON_ERROR),
+        );
+
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->method('isPasswordValid')->willReturn(true);
+
+        $user = new User();
+        $user->setEmail('chell@aperture.science');
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+        $jwt->method('create')->willReturn('direct.jwt.no2fa');
+
+        // Device trusted → bypass 2FA
+        $trustedDeviceService = $this->createMock(TrustedDeviceService::class);
+        $trustedDeviceService->method('isDeviceTrusted')->willReturn(true);
+
+        // recordLogin doit être appelé (ligne 208)
+        $loginNotificationService = $this->createMock(LoginNotificationService::class);
+        $loginNotificationService->expects($this->once())->method('recordLogin');
+
+        $response = $this->controller->authenticate(
+            $request,
+            $hasher,
+            $jwt,
+            $repo,
+            $this->makeRateLimiter(),
+            $this->createMock(TwoFactorService::class),
+            $trustedDeviceService,
+            $loginNotificationService,
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('direct.jwt.no2fa', $payload['token']);
+        // Pas de requires2FA ni tempToken
+        $this->assertArrayNotHasKey('requires2FA', $payload);
+        $this->assertArrayNotHasKey('tempToken', $payload);
+    }
+
+    public function testAuthenticateReturns500WhenTwoFAEmailCannotBeSent(): void
+    {
+        $request = new Request(content: json_encode([
+            'username' => self::CHELL_USERNAME,
+            'password' => self::CHELL_PASSWORD,
+        ], JSON_THROW_ON_ERROR));
+
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->method('isPasswordValid')->willReturn(true);
+
+        $user = new User();
+        $user->setEmail('chell@aperture.science');
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->willReturn($user);
+
+        $jwt = $this->createMock(JWTTokenManagerInterface::class);
+
+        // L'envoi du code 2FA jette une TransportException
+        $twoFactorService = $this->createMock(TwoFactorService::class);
+        $twoFactorService->method('generateAndSend')
+            ->willThrowException($this->createMock(TransportExceptionInterface::class));
+
+        $response = $this->controller->authenticate(
+            $request,
+            $hasher,
+            $jwt,
+            $repo,
+            $this->makeRateLimiter(),
+            $twoFactorService,
+            $this->createMock(TrustedDeviceService::class),
+            $this->createMock(LoginNotificationService::class),
+        );
+
+        $this->assertSame(500, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Unable to send verification email.', $payload['error']);
+    }
+
     public function testAuthenticateFailsWhenUserDoesNotExist(): void
     {
         $request = new Request(content: json_encode([
@@ -412,6 +500,36 @@ class AuthenticationControllerTest extends TestCase
         $response = $controller->me();
 
         $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testMeReturns400WhenUserIsUnexpectedType(): void
+    {
+        // L'utilisateur n'est pas une instance de App\Entity\User (cas défensif)
+        $nonAppUser = $this->createMock(\Symfony\Component\Security\Core\User\UserInterface::class);
+
+        $token = $this->createMock(TokenInterface::class);
+        $token->method('getUser')->willReturn($nonAppUser);
+
+        $tokenStorage = $this->createMock(TokenStorageInterface::class);
+        $tokenStorage->method('getToken')->willReturn($token);
+
+        $container = $this->createMock(ContainerInterface::class);
+        $container->method('has')->willReturnCallback(fn(string $id) => $id === 'security.token_storage');
+        $container->method('get')->willReturnCallback(
+            fn(string $id) => match ($id) {
+                'security.token_storage' => $tokenStorage,
+                default => throw new \RuntimeException("Service inattendu : $id"),
+            }
+        );
+
+        $controller = new AuthenticationController($this->userMapper, $this->userErrorLogger);
+        $controller->setContainer($container);
+
+        $response = $controller->me();
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Unexpected user type', $payload['error']);
     }
 
     // ======================================================================

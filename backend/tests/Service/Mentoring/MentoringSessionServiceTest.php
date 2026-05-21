@@ -74,9 +74,7 @@ class MentoringSessionServiceTest extends TestCase
 
     private function makeEmMock(bool $withConnection = false, ?\Doctrine\DBAL\Connection $conn = null): EntityManagerInterface
     {
-        $builder = $this->getMockBuilder(EntityManagerInterface::class)
-            ->addMethods(['createQuery', 'getConnection']);
-        $em = $builder->getMock();
+        $em = $this->createMock(EntityManagerInterface::class);
 
         // createQuery is called 3 times: avg, completed count, cancelled count
         $em->method('createQuery')->willReturnOnConsecutiveCalls(
@@ -142,5 +140,54 @@ class MentoringSessionServiceTest extends TestCase
         $service->complete($session);
 
         $this->assertSame(MentoringSessionStatus::COMPLETED, $session->getStatus());
+    }
+
+    // ── complete() avec rating moyen ET stats fiabilité (lignes 77, 103) ────
+
+    public function testCompleteUpdatesAverageRatingAndReliabilityRate(): void
+    {
+        $mentorUser = $this->buildUser(1, 'Bob');
+        $junior     = $this->buildUser(2, 'Alice');
+        $profile    = $this->buildMentorProfile(10, $mentorUser);
+        $session    = $this->buildSession(42, $profile, $junior);
+
+        // Mocks pour les 3 createQuery :
+        // - avg → 4.7 (non null → déclenche setAverageRating ligne 77)
+        // - completed count → 8
+        // - cancelled count → 2 (total = 10 > 0 → déclenche setReliabilityRate ligne 103)
+        $avgQuery = $this->createMock(\Doctrine\ORM\Query::class);
+        $avgQuery->method('setParameter')->willReturnSelf();
+        $avgQuery->method('setParameters')->willReturnSelf();
+        $avgQuery->method('getSingleScalarResult')->willReturn(4.7);
+
+        $completedQuery = $this->createMock(\Doctrine\ORM\Query::class);
+        $completedQuery->method('setParameter')->willReturnSelf();
+        $completedQuery->method('setParameters')->willReturnSelf();
+        $completedQuery->method('getSingleScalarResult')->willReturn(8);
+
+        $cancelledQuery = $this->createMock(\Doctrine\ORM\Query::class);
+        $cancelledQuery->method('setParameter')->willReturnSelf();
+        $cancelledQuery->method('setParameters')->willReturnSelf();
+        $cancelledQuery->method('getSingleScalarResult')->willReturn(2);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQuery')->willReturnOnConsecutiveCalls(
+            $avgQuery,
+            $completedQuery,
+            $cancelledQuery,
+        );
+        $em->method('persist');
+        $em->method('flush');
+
+        $service = new MentoringSessionService(
+            $em,
+            $this->createMock(MentorProfileRepository::class),
+            $this->createMock(MentoringRatingRepository::class),
+        );
+
+        $service->complete($session);
+
+        $this->assertSame(4.7, $profile->getAverageRating());
+        $this->assertSame(0.8, $profile->getReliabilityRate()); // 8/(8+2) = 0.8
     }
 }

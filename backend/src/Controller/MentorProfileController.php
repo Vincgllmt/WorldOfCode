@@ -50,9 +50,12 @@ class MentorProfileController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         /** @var User $user */
         $user = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$user instanceof User) {
             throw new \LogicException('Expected User entity');
         }
+        // @codeCoverageIgnoreEnd
 
         $existing = $this->mentorProfileRepo->findOneBy(['user' => $user]);
         if ($existing) {

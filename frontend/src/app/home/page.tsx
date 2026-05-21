@@ -50,7 +50,7 @@ export default function HomePage() {
 
         {/* Sidebar gauche — sticky sous la navbar */}
         <aside className="hidden lg:block w-[220px] shrink-0">
-          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4">
+          <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4 max-h-[calc(100vh-var(--navbar-height,64px)-40px)] overflow-y-auto pr-1 -mr-1">
             <MyGroupsSidebar />
           </div>
         </aside>
@@ -166,9 +166,9 @@ export default function HomePage() {
         <aside className="hidden xl:block w-[300px] shrink-0">
           <div className="sticky top-[calc(var(--navbar-height,64px)+40px)] pt-4 space-y-4">
             <SuggestionsSidebar />
-            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">
-                <HandHelping className="h-4 w-4 text-violet-500" />
+                <HandHelping className="h-4 w-4 text-primary" />
                 Besoin d&apos;un coup de pouce ?
               </div>
               <p className="text-xs text-muted-foreground mb-3">
@@ -176,7 +176,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/mentoring/new"
-                className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Demander de l&apos;aide
               </Link>
@@ -190,7 +190,7 @@ export default function HomePage() {
                   Mes demandes
                 </div>
                 {activeCount > 0 && (
-                  <span className="text-xs font-medium bg-violet-500/10 text-violet-500 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                     {activeCount} en cours
                   </span>
                 )}

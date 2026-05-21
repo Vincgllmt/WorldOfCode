@@ -80,9 +80,12 @@ class MessageController extends AbstractController
 
         /** @var User $currentUser */
         $currentUser = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$currentUser instanceof \App\Entity\User) {
             throw new \LogicException('Expected current user to be an instance of App\Entity\User');
         }
+        // @codeCoverageIgnoreEnd
 
         $messages = $messageRepo->findByConversationOrdered($id);
 

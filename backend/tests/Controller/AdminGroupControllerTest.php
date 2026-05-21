@@ -298,6 +298,108 @@ class AdminGroupControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
     }
 
+    public function testUpdateCreatesNewRssSourceWhenNonePreviouslyExisted(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(3, 'ElysiFields');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn($group);
+
+        // Pas de source existante → on doit en créer une (lignes 253-256)
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())->method('persist')->with($this->isInstanceOf(TechWatchSource::class));
+        $em->expects($this->once())->method('flush');
+
+        $request  = new Request(content: json_encode([
+            'name'       => 'NewElysiFields',
+            'rssFeedUrl' => 'https://new.com/feed.xml',
+        ]));
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->update(3, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUpdateModifiesExistingRssSource(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(3, 'ElysiFields');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn($group);
+
+        // Source existante → on doit la mettre à jour (lignes 249-251)
+        $source = new TechWatchSource();
+        $source->setFeedUrl('https://old.com/feed.xml')->setName('old')->setTechGroup($group);
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn($source);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->never())->method('persist'); // Pas de new entity
+        $em->expects($this->never())->method('remove');  // Pas non plus de suppression
+        $em->expects($this->once())->method('flush');
+
+        $request  = new Request(content: json_encode([
+            'name'       => 'NewName',
+            'rssFeedUrl' => 'https://updated.com/feed.xml',
+        ]));
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->update(3, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('https://updated.com/feed.xml', $source->getFeedUrl());
+        $this->assertSame('NewName', $source->getName());
+    }
+
+    public function testUpdateSyncsNameOnExistingRssSourceWhenRssNotInPayload(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(3, 'ElysiFields');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn($group);
+
+        $source = new TechWatchSource();
+        $source->setFeedUrl('https://stable.com/feed.xml')->setName('OldName')->setTechGroup($group);
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn($source);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('flush');
+
+        // Payload sans rssFeedUrl → seul le nom est synchronisé (ligne 266)
+        $request  = new Request(content: json_encode(['name' => 'NewName']));
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->update(3, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('NewName', $source->getName());
+        // L'URL ne doit pas avoir changé
+        $this->assertSame('https://stable.com/feed.xml', $source->getFeedUrl());
+    }
+
+    public function testUpdateUpdatesGroupDescriptionWhenProvided(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(3, 'ElysiFields');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn($group);
+
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('flush');
+
+        $request  = new Request(content: json_encode([
+            'name'        => 'ElysiFields',
+            'description' => '  Nouveau résumé  ',
+        ]));
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->update(3, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        // La description doit être trimée (ligne 242)
+        $this->assertSame('Nouveau résumé', $group->getDescription());
+    }
+
     public function testUpdateDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
@@ -384,6 +486,51 @@ class AdminGroupControllerTest extends TestCase
         $this->assertSame('Elysium', $payload['name']);
         $this->assertSame(0, $payload['memberCount']);
         $this->assertSame([], $payload['recentPosts']);
+    }
+
+    public function testDetailReturnsGroupWithRecentPosts(): void
+    {
+        $admin     = $this->buildAdmin();
+        $group     = $this->buildGroup(7, 'Elysium');
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->with(7)->willReturn($group);
+        $watchRepo = $this->createMock(TechWatchSourceRepository::class);
+        $watchRepo->method('findOneBy')->willReturn(null);
+
+        // Posts récents avec createdAt en DateTimeInterface (couvre la ligne 184)
+        $recentPostsRows = [
+            [
+                'id'             => 100,
+                'content'        => str_repeat('x', 120), // > 80 chars → ellipsis
+                'authorUsername' => 'JohnDoe',
+                'createdAt'      => new \DateTimeImmutable('2024-06-15T10:00:00Z'),
+                'likesCount'     => 5,
+                'commentsCount'  => 3,
+            ],
+            [
+                'id'             => 101,
+                'content'        => 'short',
+                'authorUsername' => 'JaneDoe',
+                'createdAt'      => new \DateTimeImmutable('2024-06-14T10:00:00Z'),
+                'likesCount'     => 1,
+                'commentsCount'  => 0,
+            ],
+        ];
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQueryBuilder')->willReturn($this->makeQueryBuilderMock($recentPostsRows));
+
+        $response = $this->makeController($admin, $groupRepo, $watchRepo, $em)->detail(7);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(2, $payload['recentPosts']);
+        // Le createdAt formaté ATOM (ligne 184 active)
+        $this->assertMatchesRegularExpression('/^2024-06-15T10:00:00/', $payload['recentPosts'][0]['createdAt']);
+        // L'excerpt > 80 chars doit finir par ellipsis
+        $this->assertStringEndsWith('…', $payload['recentPosts'][0]['excerpt']);
+        // Excerpt court non tronqué
+        $this->assertSame('short', $payload['recentPosts'][1]['excerpt']);
     }
 
     public function testDetailReturns404WhenGroupNotFound(): void

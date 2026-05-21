@@ -6,6 +6,8 @@ use App\Entity\TechWatchSource;
 use App\Repository\TechWatchItemRepository;
 use App\Repository\TechWatchSourceRepository;
 use App\Service\RssFetcherService;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\DBAL\Driver\Exception as DriverException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -230,6 +232,64 @@ class RssFetcherServiceTest extends TestCase
 
         $count = $this->makeService($httpClient, $itemRepo, $sourceRepo)->fetchSource($source);
 
+        $this->assertSame(0, $count);
+    }
+
+    // ======================================================================
+    //  fetchSource() — pubDate invalide (catch \Exception ligne 86)
+    // ======================================================================
+
+    public function testFetchSourceIgnoresInvalidPubDate(): void
+    {
+        $source = $this->buildSource();
+        // pubDate qui jette DateTime::__construct : chaîne non parsable
+        $xml = $this->buildRssXml([
+            ['title' => 'Article avec date pourrie', 'link' => 'https://sc2.blizzard.com/bad-date', 'pubDate' => 'pas-une-date-du-tout'],
+        ]);
+
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->method('request')->willReturn($this->mockHttpResponse($xml));
+
+        $itemRepo = $this->createMock(TechWatchItemRepository::class);
+        $itemRepo->method('existsByUrl')->willReturn(false);
+        // L'item doit quand même être sauvegardé malgré la date pourrie
+        $itemRepo->expects($this->once())->method('save');
+
+        $sourceRepo = $this->createMock(TechWatchSourceRepository::class);
+
+        $count = $this->makeService($httpClient, $itemRepo, $sourceRepo)->fetchSource($source);
+
+        $this->assertSame(1, $count);
+    }
+
+    // ======================================================================
+    //  fetchSource() — collision unique (catch UniqueConstraintViolationException lignes 93-94)
+    // ======================================================================
+
+    public function testFetchSourceReturnsZeroWhenSaveTriggersUniqueViolation(): void
+    {
+        $source = $this->buildSource();
+        $xml = $this->buildRssXml([
+            ['title' => 'Article dupliqué côté DB', 'link' => 'https://sc2.blizzard.com/duplicate'],
+        ]);
+
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->method('request')->willReturn($this->mockHttpResponse($xml));
+
+        // existsByUrl renvoie false mais save jette une UniqueConstraintViolation
+        // (race-condition typique : un autre process a inséré l'item entre les deux)
+        $itemRepo = $this->createMock(TechWatchItemRepository::class);
+        $itemRepo->method('existsByUrl')->willReturn(false);
+        $driverException = $this->createMock(DriverException::class);
+        $itemRepo->method('save')->willThrowException(
+            new UniqueConstraintViolationException($driverException, null)
+        );
+
+        $sourceRepo = $this->createMock(TechWatchSourceRepository::class);
+
+        $count = $this->makeService($httpClient, $itemRepo, $sourceRepo)->fetchSource($source);
+
+        // L'item dupliqué est ignoré → count reste à 0
         $this->assertSame(0, $count);
     }
 

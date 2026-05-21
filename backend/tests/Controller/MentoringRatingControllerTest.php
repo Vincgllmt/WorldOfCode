@@ -180,6 +180,36 @@ class MentoringRatingControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
     }
 
+    public function testSubmitRatingReturns404WhenSessionNotFound(): void
+    {
+        $mentor = $this->buildUser(1);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn(null);
+
+        $httpRequest = new Request([], [], [], [], [], [], json_encode(['score' => 4]));
+        $response = $this->makeController($mentor, $sessionRepo)->submitRating(999, $httpRequest);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testSubmitRatingReturns403WhenUserIsNotParticipant(): void
+    {
+        $mentor  = $this->buildUser(1, 'MentorBob');
+        $junior  = $this->buildUser(2, 'JuniorAlice');
+        $stranger = $this->buildUser(3, 'StrangerEve');
+        $profile = $this->buildMentorProfile(10, $mentor);
+        $session = $this->buildSession(5, $profile, $junior);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $httpRequest = new Request([], [], [], [], [], [], json_encode(['score' => 4]));
+        $response = $this->makeController($stranger, $sessionRepo)->submitRating(5, $httpRequest);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
     // ── getRatings ─────────────────────────────────────
 
     public function testGetRatingsPendingWhenOneSubmitted(): void
@@ -232,5 +262,33 @@ class MentoringRatingControllerTest extends TestCase
         $this->assertCount(2, $payload['ratings']);
         $this->assertSame(4, $payload['ratings'][0]['score']);
         $this->assertSame(5, $payload['ratings'][1]['score']);
+    }
+
+    public function testGetRatingsReturns404WhenSessionNotFound(): void
+    {
+        $mentor = $this->buildUser(1);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn(null);
+
+        $response = $this->makeController($mentor, $sessionRepo)->getRatings(999);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testGetRatingsReturns403WhenUserIsNotParticipant(): void
+    {
+        $mentor   = $this->buildUser(1, 'MentorBob');
+        $junior   = $this->buildUser(2, 'JuniorAlice');
+        $stranger = $this->buildUser(3, 'StrangerEve');
+        $profile  = $this->buildMentorProfile(10, $mentor);
+        $session  = $this->buildSession(5, $profile, $junior);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $response = $this->makeController($stranger, $sessionRepo)->getRatings(5);
+
+        $this->assertSame(403, $response->getStatusCode());
     }
 }
