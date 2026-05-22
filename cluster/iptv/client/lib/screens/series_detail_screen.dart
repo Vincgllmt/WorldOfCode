@@ -85,8 +85,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     );
   }
 
-  void _cast(Episode ep, List<Episode> allEpisodes) {
+  void _cast(Episode ep, List<Episode> allEpisodes) async {
     final isHls = ep.url.toLowerCase().contains('.m3u8') || ep.url.toLowerCase().contains('.ts');
+
+    // Get last progress
+    final progress = await ProgressService.getProgress(ep.url);
+    final startSeconds = (progress != null && !progress.isCompleted) ? progress.positionSeconds : 0;
 
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: ep.url,
@@ -98,14 +102,25 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         images: (ep.cover ?? widget.series.cover) != null ? [GoogleCastImage(url: Uri.parse(ep.cover ?? widget.series.cover!))] : null,
       ),
     ));
+
+    if (startSeconds > 0) {
+      Future.delayed(const Duration(seconds: 3), () {
+        GoogleCastRemoteMediaClient.instance.seek(GoogleCastMediaSeekOption(
+          position: Duration(seconds: startSeconds),
+          resumeState: GoogleCastMediaResumeState.play,
+        ));
+      });
+    }
     
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => RemoteControlScreen(
-        title: ep.title,
-        subtitle: widget.series.name,
-        image: ep.cover ?? widget.series.cover,
-      ),
-    ));
+    if (mounted) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => RemoteControlScreen(
+          title: ep.title,
+          subtitle: widget.series.name,
+          image: ep.cover ?? widget.series.cover,
+        ),
+      ));
+    }
   }
 
   void _showCastPicker() {
@@ -296,11 +311,25 @@ class _Header extends StatelessWidget {
                 final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
                 return IconButton(
                   icon: Icon(isConnected ? Icons.cast_connected : Icons.cast, color: isConnected ? _C.accent : Colors.white),
-                  onPressed: isConnected ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
-                    title: series.name,
-                    subtitle: null,
-                    image: series.cover,
-                  ))) : (context.findAncestorStateOfType<_SeriesDetailScreenState>()?._showCastPicker),
+                  onPressed: () {
+                    if (isConnected) {
+                      final state = context.findAncestorStateOfType<_SeriesDetailScreenState>();
+                      if (state != null) {
+                        state._api.fetchSeriesDetail(series.id).then((detail) {
+                          final sortedSeasons = detail.seasons.keys.toList()
+                            ..sort((a, b) => int.tryParse(a)!.compareTo(int.tryParse(b)!));
+                          if (sortedSeasons.isNotEmpty) {
+                            final firstSeason = detail.seasons[sortedSeasons.first];
+                            if (firstSeason != null && firstSeason.isNotEmpty) {
+                              state._cast(firstSeason.first, firstSeason);
+                            }
+                          }
+                        });
+                      }
+                    } else {
+                      context.findAncestorStateOfType<_SeriesDetailScreenState>()?._showCastPicker();
+                    }
+                  },
                 );
               },
             ),

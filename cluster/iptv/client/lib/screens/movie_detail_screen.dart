@@ -6,6 +6,7 @@ import '../models/movie.dart';
 import '../models/movie_detail.dart';
 import '../services/api_service.dart';
 import '../services/language_service.dart';
+import '../services/progress_service.dart';
 import '../widgets/download_button.dart';
 import 'player_screen.dart';
 import 'remote_control_screen.dart';
@@ -57,9 +58,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     ));
   }
 
-  void _cast(String url) {
+  void _cast(String url) async {
     final isHls = url.toLowerCase().contains('.m3u8') || url.toLowerCase().contains('.ts');
     
+    // Get last progress
+    final progress = await ProgressService.getProgress(url);
+    final startSeconds = (progress != null && !progress.isCompleted) ? progress.positionSeconds : 0;
+
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: url,
       streamType: CastMediaStreamType.buffered,
@@ -70,14 +75,25 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         images: widget.movie.cover != null ? [GoogleCastImage(url: Uri.parse(widget.movie.cover!))] : null,
       ),
     ));
+
+    if (startSeconds > 0) {
+      Future.delayed(const Duration(seconds: 3), () {
+        GoogleCastRemoteMediaClient.instance.seek(GoogleCastMediaSeekOption(
+          position: Duration(seconds: startSeconds),
+          resumeState: GoogleCastMediaResumeState.play,
+        ));
+      });
+    }
     
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => RemoteControlScreen(
-        title: widget.movie.name,
-        subtitle: widget.movie.group,
-        image: widget.movie.cover,
-      ),
-    ));
+    if (mounted) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => RemoteControlScreen(
+          title: widget.movie.name,
+          subtitle: widget.movie.group,
+          image: widget.movie.cover,
+        ),
+      ));
+    }
   }
 
   void _showCastPicker() {
@@ -363,11 +379,18 @@ class _Header extends StatelessWidget {
                 final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
                 return IconButton(
                   icon: Icon(isConnected ? Icons.cast_connected : Icons.cast, color: isConnected ? _C.accent : Colors.white),
-                  onPressed: isConnected ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => RemoteControlScreen(
-                    title: movie.name,
-                    subtitle: movie.group,
-                    image: movie.cover,
-                  ))) : (context.findAncestorStateOfType<_MovieDetailScreenState>()?._showCastPicker),
+                  onPressed: () {
+                    if (isConnected) {
+                      final state = context.findAncestorStateOfType<_MovieDetailScreenState>();
+                      if (state != null) {
+                        state._api.fetchMovieDetail(movie.id).then((detail) {
+                          state._cast(detail.url ?? movie.url);
+                        });
+                      }
+                    } else {
+                      context.findAncestorStateOfType<_MovieDetailScreenState>()?._showCastPicker();
+                    }
+                  },
                 );
               },
             ),
