@@ -84,6 +84,12 @@ class CastMiniPlayer extends StatelessWidget {
                             }
                           },
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.stop_rounded, color: Colors.white),
+                          onPressed: () {
+                            GoogleCastRemoteMediaClient.instance.stop();
+                          },
+                        ),
                       ],
                     ),
                   ),
