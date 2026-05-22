@@ -88,7 +88,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   void _cast(Episode ep, List<Episode> allEpisodes) async {
-    final isHls = ep.url.toLowerCase().contains('.m3u8') || ep.url.toLowerCase().contains('.ts');
+    final urlLower = ep.url.toLowerCase();
+    String contentType = 'video/mp4';
+    if (urlLower.contains('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
+    else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
+    else if (urlLower.contains('.mkv')) contentType = 'video/x-matroska';
 
     // Get last progress
     final progress = await ProgressService.getProgress(ep.url);
@@ -97,7 +101,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: ep.url,
       streamType: CastMediaStreamType.buffered,
-      contentType: isHls ? 'application/vnd.apple.mpegurl' : 'video/mp4', // Use more robust MIME for HLS/TS
+      contentType: contentType,
       metadata: GoogleCastMovieMediaMetadata(
         title: ep.title,
         subtitle: widget.series.name,

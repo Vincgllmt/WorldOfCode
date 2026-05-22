@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
+import 'package:flutter/services.dart';
 import '../services/subtitle_settings.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
@@ -81,15 +82,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _togglePip() async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (Platform.isAndroid) {
       try {
-        // media_kit_video 1.2+ uses enterPictureInPicture() on the controller
-        // However, if the method is not directly on _ctrl, we might need a dynamic call
-        // Let's use dynamic to be safe if it complains at build time, but we'll try direct first.
+        await const MethodChannel('pip_channel').invokeMethod('enterPiP');
+      } catch (e) {
+        debugPrint('Mobile PiP Error: $e');
+      }
+      return;
+    } else if (Platform.isIOS) {
+      try {
         dynamic c = _ctrl;
         await c.enterPictureInPicture();
       } catch (e) {
-        debugPrint('Mobile PiP Error: $e');
+        debugPrint('iOS PiP Error: $e');
       }
       return;
     }
@@ -140,8 +145,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _player.pause();
           final remoteClient = GoogleCastRemoteMediaClient.instance;
 
-          final isHls = _currentUrl.toLowerCase().contains('.m3u8') || _currentUrl.toLowerCase().contains('.ts');
-          final contentType = isHls ? 'application/vnd.apple.mpegurl' : 'video/mp4';
+          final urlLower = _currentUrl.toLowerCase();
+          String contentType = 'video/mp4';
+          if (urlLower.contains('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
+          else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
+          else if (urlLower.contains('.mkv')) contentType = 'video/x-matroska';
 
           remoteClient.loadMedia(GoogleCastMediaInformation(
             contentId: _currentUrl,
