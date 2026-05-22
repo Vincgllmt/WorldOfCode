@@ -398,12 +398,27 @@ class _SeasonTile extends StatelessWidget {
                     Text('${episodes.length} ${lang.t(episodes.length > 1 ? 'episodes' : 'episode').toLowerCase()}',
                       style: const TextStyle(color: _C.txtSub, fontSize: 13)),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.download_for_offline_rounded, color: _C.accent, size: 24),
-                      onPressed: onDownloadSeason,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: lang.t('download_season'),
+                    ListenableBuilder(
+                      listenable: downloadService,
+                      builder: (context, _) {
+                        final inQueue = downloadService.items.where((i) => i.seriesId == seriesId && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading)).length;
+                        if (inQueue > 0) {
+                          return IconButton(
+                            icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 24),
+                            onPressed: () => downloadService.cancelSeasonDownload(seriesId),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: lang.t('cancel_download'),
+                          );
+                        }
+                        return IconButton(
+                          icon: const Icon(Icons.download_for_offline_rounded, color: _C.accent, size: 24),
+                          onPressed: onDownloadSeason,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: lang.t('download_season'),
+                        );
+                      },
                     ),
                     const SizedBox(width: 16),
                     Icon(

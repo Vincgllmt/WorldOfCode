@@ -46,35 +46,21 @@ class DownloadButton extends StatelessWidget {
 
         switch (item.status) {
           case DownloadStatus.downloading:
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: size, height: size,
-                  child: CircularProgressIndicator(
-                    value: item.progress,
-                    strokeWidth: 3,
-                    color: const Color(0xFF9D4EDD),
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  ),
-                ),
-                Icon(Icons.close_rounded, size: size * 0.4, color: Colors.white70),
-              ],
+          case DownloadStatus.scheduled:
+            return _CircleBtn(
+              size: size,
+              icon: Icons.close_rounded,
+              color: const Color(0xFF9D4EDD),
+              isProgress: true,
+              progress: item.status == DownloadStatus.scheduled ? null : item.progress,
+              onTap: () => downloadService.removeDownload(id, type),
             );
           case DownloadStatus.pending:
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: size, height: size,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: const Color(0xFFBB86FC).withValues(alpha: 0.5),
-                    backgroundColor: Colors.white.withValues(alpha: 0.05),
-                  ),
-                ),
-                Icon(Icons.access_time_rounded, size: size * 0.4, color: const Color(0xFFBB86FC)),
-              ],
+            return _CircleBtn(
+              size: size,
+              icon: Icons.access_time_rounded,
+              color: const Color(0xFFBB86FC),
+              onTap: () => downloadService.removeDownload(id, type),
             );
           case DownloadStatus.completed:
             return _CircleBtn(
@@ -126,14 +112,29 @@ class _CircleBtn extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Color? color;
   final double size;
-  const _CircleBtn({required this.icon, required this.onTap, this.onLongPress, this.color, required this.size});
+  final bool isProgress;
+  final double? progress;
+
+  const _CircleBtn({
+    required this.icon,
+    required this.onTap,
+    this.onLongPress,
+    this.color,
+    required this.size,
+    this.isProgress = false,
+    this.progress,
+  });
 
   @override
   Widget build(BuildContext context) {
     final themeColor = color ?? const Color(0xFF9D4EDD);
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        // Prevent propagation to parent lists
+        onTap();
+      },
       onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         width: size, height: size,
         decoration: BoxDecoration(
@@ -141,7 +142,22 @@ class _CircleBtn extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: themeColor.withValues(alpha: 0.5)),
         ),
-        child: Icon(icon, color: color ?? Colors.white, size: size * 0.5),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isProgress)
+              SizedBox(
+                width: size, height: size,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 2,
+                  color: themeColor,
+                  backgroundColor: Colors.white.withValues(alpha: 0.05),
+                ),
+              ),
+            Icon(icon, color: color ?? Colors.white, size: size * 0.5),
+          ],
+        ),
       ),
     );
   }

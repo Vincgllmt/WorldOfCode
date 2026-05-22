@@ -34,27 +34,91 @@ class DownloadsScreen extends StatelessWidget {
             );
           }
 
-          // Sort: Downloading first, then Pending, then Error, then Completed
-          final sortedItems = List<DownloadItem>.from(items)..sort((a, b) {
-            const order = {
-              DownloadStatus.downloading: 0,
-              DownloadStatus.pending: 1,
-              DownloadStatus.error: 2,
-              DownloadStatus.completed: 3,
-              DownloadStatus.paused: 4,
-            };
-            return (order[a.status] ?? 5).compareTo(order[b.status] ?? 5);
-          });
+          // Group by seriesId if series, or use title if movie
+          final grouped = <String, List<DownloadItem>>{};
+          for (final item in items) {
+            final key = item.type == 'series' ? 'series_${item.seriesId ?? item.id}' : 'movie_${item.id}';
+            grouped.putIfAbsent(key, () => []).add(item);
+          }
+
+          final groupKeys = grouped.keys.toList();
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            itemCount: sortedItems.length,
+            itemCount: groupKeys.length,
             itemBuilder: (context, index) {
-              final item = sortedItems[index];
-              return _DownloadTile(item: item);
+              final key = groupKeys[index];
+              final groupItems = grouped[key]!;
+              return _DownloadGroup(items: groupItems);
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _DownloadGroup extends StatelessWidget {
+  final List<DownloadItem> items;
+  const _DownloadGroup({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final first = items.first;
+    final isSeries = first.type == 'series';
+    final title = isSeries ? (first.title.split(' - ').first) : first.title;
+    
+    final downloading = items.where((i) => i.status == DownloadStatus.downloading || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.pending).length;
+    final completed = items.where((i) => i.status == DownloadStatus.completed).length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  width: 40, height: 60,
+                  child: first.cover != null
+                    ? CachedNetworkImage(imageUrl: first.cover!, fit: BoxFit.cover)
+                    : Container(color: const Color(0xFF1F1235), child: const Icon(Icons.movie_rounded, size: 20, color: Color(0x339D4EDD))),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(
+                      '${items.length} ${lang.t(items.length > 1 ? 'episodes' : 'episode').toLowerCase()} ($completed fini, $downloading en cours)',
+                      style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              if (downloading > 0)
+                IconButton(
+                  icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 20),
+                  onPressed: () {
+                    if (isSeries && first.seriesId != null) {
+                      downloadService.cancelSeasonDownload(first.seriesId!);
+                    } else {
+                      for (final i in items) {
+                        if (i.status != DownloadStatus.completed) downloadService.removeDownload(i.id, i.type);
+                      }
+                    }
+                  },
+                  tooltip: lang.t('cancel_all'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...items.map((item) => _DownloadTile(item: item)),
+        ],
       ),
     );
   }
@@ -69,7 +133,7 @@ class _DownloadTile extends StatelessWidget {
     final bool isCompleted = item.status == DownloadStatus.completed;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onTap: isCompleted ? () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => PlayerScreen(
@@ -81,58 +145,43 @@ class _DownloadTile extends StatelessWidget {
             cover: item.cover,
           ),
         )) : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1F1235),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isCompleted ? const Color(0x229D4EDD) : const Color(0xFF9D4EDD).withValues(alpha: 0.5)),
+            color: const Color(0xFF1F1235).withOpacity(0.5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: isCompleted ? Colors.transparent : const Color(0x119D4EDD)),
           ),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 60, height: 90,
-                  child: item.cover != null
-                    ? CachedNetworkImage(
-                        imageUrl: item.cover!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: Colors.black26),
-                        errorWidget: (_, __, ___) => const Center(child: Icon(Icons.movie_rounded, size: 30, color: Color(0x339D4EDD))),
-                      )
-                    : const Center(child: Icon(Icons.movie_rounded, size: 30, color: Color(0x339D4EDD))),
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       item.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: isCompleted ? Colors.white : const Color(0xFFB0AEC8), fontSize: 13, fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.type == 'movie' ? lang.t('movies') : lang.t('series'),
-                      style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
                     _StatusIndicator(item: item),
                   ],
                 ),
               ),
               if (item.status == DownloadStatus.error)
                 IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.orangeAccent, size: 24),
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.orangeAccent, size: 20),
                   onPressed: () => downloadService.retryDownload(item.id, item.type),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
+              const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 24),
-                onPressed: () => _confirmDelete(context),
+                icon: Icon(isCompleted ? Icons.delete_outline_rounded : Icons.close_rounded, color: isCompleted ? Colors.redAccent : const Color(0xFFB0AEC8), size: 20),
+                onPressed: () => isCompleted ? _confirmDelete(context) : downloadService.removeDownload(item.id, item.type),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),

@@ -125,6 +125,9 @@ class LanguageService {
       'download_season': 'Télécharger la saison',
       'episodes_added_to_queue': 'épisodes ajoutés à la file d\'attente',
       'waiting': 'En attente',
+      'cancel_download': 'Annuler le téléchargement',
+      'episodes_in_queue': 'épisodes dans la file d\'attente',
+      'cancel_all': 'Tout annuler',
     },
     'en': {
       'live': 'Live TV',
@@ -242,6 +245,9 @@ class LanguageService {
       'download_season': 'Download season',
       'episodes_added_to_queue': 'episodes added to queue',
       'waiting': 'Waiting',
+      'cancel_download': 'Cancel download',
+      'episodes_in_queue': 'episodes in queue',
+      'cancel_all': 'Cancel all',
     }
   };
 

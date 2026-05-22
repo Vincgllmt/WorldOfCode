@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum DownloadStatus { pending, downloading, completed, error, paused }
+enum DownloadStatus { pending, downloading, completed, error, paused, scheduled }
 
 class DownloadItem {
   final int id;
@@ -51,7 +51,7 @@ class DownloadItem {
     cover: j['cover'] as String?,
     filePath: j['filePath'] as String?,
     progress: (j['progress'] as num).toDouble(),
-    status: DownloadStatus.values[j['status'] as int],
+    status: DownloadStatus.values[j['status'] as int >= DownloadStatus.values.length ? 0 : j['status'] as int],
     seriesId: j['seriesId'] as int?,
   );
 }
@@ -108,15 +108,27 @@ class DownloadService extends ChangeNotifier {
   }
 
   void _checkQueue() {
-    final activeCount = _items.where((i) => i.status == DownloadStatus.downloading).length;
+    final activeCount = _items.where((i) => i.status == DownloadStatus.downloading || i.status == DownloadStatus.scheduled).length;
     if (activeCount >= _maxConcurrent) return;
 
     try {
       final nextItem = _items.firstWhere((i) => i.status == DownloadStatus.pending);
+      
+      // Mark as scheduled immediately to avoid server-side concurrent connection issues
+      nextItem.status = DownloadStatus.scheduled;
+      notifyListeners();
+
       // Wait 2 seconds before starting to avoid server-side concurrent connection issues
       Timer(const Duration(seconds: 2), () => _executeDownload(nextItem));
     } catch (_) {
       // No pending items
+    }
+  }
+
+  Future<void> cancelSeasonDownload(int seriesId) async {
+    final toRemove = _items.where((i) => i.seriesId == seriesId && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading || i.status == DownloadStatus.error)).toList();
+    for (final item in toRemove) {
+      await removeDownload(item.id, item.type);
     }
   }
 
@@ -176,9 +188,9 @@ class DownloadService extends ChangeNotifier {
       _cancelTokens.remove(item.id);
     } catch (e) {
       _cancelTokens.remove(item.id);
-      debugPrint('Download Error ($item.id): $e');
+      debugPrint('Download Error (${item.id}): $e');
       if (e is DioException && CancelToken.isCancel(e)) {
-        item.status = DownloadStatus.pending; // Re-queue if cancelled/paused
+        item.status = DownloadStatus.pending; // Re-queue if cancelled
       } else {
         item.status = DownloadStatus.error;
       }
