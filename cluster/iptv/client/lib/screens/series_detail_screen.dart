@@ -63,6 +63,26 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     )).then((_) => setState(() {})); // trigger refresh when coming back to update progress indicators
   }
 
+  void _downloadSeason(List<Episode> episodes) {
+    for (final ep in episodes) {
+      downloadService.startDownload(DownloadItem(
+        id: ep.id,
+        title: ep.title,
+        url: ep.url,
+        type: 'series',
+        cover: ep.cover ?? widget.series.cover,
+        seriesId: widget.series.id,
+      ));
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${episodes.length} ${lang.t('episodes_added_to_queue')}'),
+        backgroundColor: _C.accent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _cast(Episode ep, List<Episode> allEpisodes) {
     final isHls = ep.url.toLowerCase().contains('.m3u8') || ep.url.toLowerCase().contains('.ts');
 
@@ -207,6 +227,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       isExpanded: isExpanded,
                       onToggle: () => setState(() => _expandedSeason = isExpanded ? -1 : sNum),
                       onPlayEpisode: (ep) => _play(ep, allEpisodes),
+                      onDownloadSeason: () => _downloadSeason(episodes),
                     );
                   },
                   childCount: sortedSeasons.length,
@@ -332,11 +353,12 @@ class _SeasonTile extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
   final void Function(Episode) onPlayEpisode;
+  final VoidCallback onDownloadSeason;
 
   const _SeasonTile({
     required this.seriesId, required this.seasonNum, required this.episodes,
     required this.isExpanded, required this.onToggle,
-    required this.onPlayEpisode,
+    required this.onPlayEpisode, required this.onDownloadSeason,
   });
 
   @override
@@ -375,6 +397,14 @@ class _SeasonTile extends StatelessWidget {
                     Text('${episodes.length} ${lang.t(episodes.length > 1 ? 'episodes' : 'episode').toLowerCase()}',
                       style: const TextStyle(color: _C.txtSub, fontSize: 13)),
                     const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.download_for_offline_rounded, color: _C.accent, size: 24),
+                      onPressed: onDownloadSeason,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: lang.t('download_season'),
+                    ),
+                    const SizedBox(width: 16),
                     Icon(
                       isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                       color: _C.txtSub,

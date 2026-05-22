@@ -64,6 +64,7 @@ class DownloadService extends ChangeNotifier {
   final Dio _dio = Dio();
   final List<DownloadItem> _items = [];
   final Map<int, CancelToken> _cancelTokens = {};
+  final int _maxConcurrent = 2;
 
   List<DownloadItem> get items => List.unmodifiable(_items);
 
@@ -72,6 +73,14 @@ class DownloadService extends ChangeNotifier {
     final data = prefs.getStringList('downloads_metadata') ?? [];
     _items.clear();
     _items.addAll(data.map((e) => DownloadItem.fromJson(json.decode(e))));
+    
+    // Resume pending or interrupted downloads
+    for (var item in _items) {
+      if (item.status == DownloadStatus.downloading) {
+        item.status = DownloadStatus.pending;
+      }
+    }
+    _checkQueue();
     notifyListeners();
   }
 
@@ -81,10 +90,36 @@ class DownloadService extends ChangeNotifier {
   }
 
   Future<void> startDownload(DownloadItem item) async {
-    final existing = _items.indexWhere((i) => i.id == item.id && i.type == item.type);
-    if (existing != -1) return;
+    final existingIndex = _items.indexWhere((i) => i.id == item.id && i.type == item.type);
+    if (existingIndex != -1) {
+      // If it failed or was pending, allow restarting/queuing
+      if (_items[existingIndex].status == DownloadStatus.error) {
+        _items[existingIndex].status = DownloadStatus.pending;
+        _checkQueue();
+      }
+      return;
+    }
 
     _items.add(item);
+    item.status = DownloadStatus.pending;
+    _saveMetadata();
+    _checkQueue();
+    notifyListeners();
+  }
+
+  void _checkQueue() {
+    final activeCount = _items.where((i) => i.status == DownloadStatus.downloading).length;
+    if (activeCount >= _maxConcurrent) return;
+
+    try {
+      final nextItem = _items.firstWhere((i) => i.status == DownloadStatus.pending);
+      _executeDownload(nextItem);
+    } catch (_) {
+      // No pending items
+    }
+  }
+
+  Future<void> _executeDownload(DownloadItem item) async {
     item.status = DownloadStatus.downloading;
     notifyListeners();
 
@@ -94,7 +129,6 @@ class DownloadService extends ChangeNotifier {
       final fileName = '${item.type}_${item.id}.$extension';
       final savePath = '${dir.path}/downloads/$fileName';
 
-      // Ensure directory exists
       await Directory('${dir.path}/downloads').create(recursive: true);
 
       final cancelToken = CancelToken();
@@ -116,14 +150,16 @@ class DownloadService extends ChangeNotifier {
       item.filePath = savePath;
       _cancelTokens.remove(item.id);
     } catch (e) {
+      _cancelTokens.remove(item.id);
       if (e is DioException && CancelToken.isCancel(e)) {
-        item.status = DownloadStatus.paused;
+        item.status = DownloadStatus.pending; // Re-queue if cancelled/paused
       } else {
         item.status = DownloadStatus.error;
       }
     }
 
     await _saveMetadata();
+    _checkQueue();
     notifyListeners();
   }
 
@@ -144,6 +180,7 @@ class DownloadService extends ChangeNotifier {
 
     _items.removeAt(index);
     await _saveMetadata();
+    _checkQueue();
     notifyListeners();
   }
 

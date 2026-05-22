@@ -61,6 +61,21 @@ class DownloadButton extends StatelessWidget {
                 Icon(Icons.close_rounded, size: size * 0.4, color: Colors.white70),
               ],
             );
+          case DownloadStatus.pending:
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: size, height: size,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: const Color(0xFFBB86FC).withValues(alpha: 0.5),
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+                Icon(Icons.access_time_rounded, size: size * 0.4, color: const Color(0xFFBB86FC)),
+              ],
+            );
           case DownloadStatus.completed:
             return _CircleBtn(
               size: size,

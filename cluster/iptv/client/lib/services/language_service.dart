@@ -122,6 +122,9 @@ class LanguageService {
       'trial_expires_today': 'Votre essai expire aujourd\'hui !',
       'activate': 'ACTIVER',
       'favorites': 'Favoris',
+      'download_season': 'Télécharger la saison',
+      'episodes_added_to_queue': 'épisodes ajoutés à la file d\'attente',
+      'waiting': 'En attente',
     },
     'en': {
       'live': 'Live TV',
@@ -236,6 +239,9 @@ class LanguageService {
       'trial_expires_today': 'Your trial expires today!',
       'activate': 'ACTIVATE',
       'favorites': 'Favorites',
+      'download_season': 'Download season',
+      'episodes_added_to_queue': 'episodes added to queue',
+      'waiting': 'Waiting',
     }
   };
 
