@@ -183,6 +183,16 @@ class RemoteControlScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _ControlButton(
+                      icon: Icons.stop_rounded,
+                      onTap: () {
+                        GoogleCastRemoteMediaClient.instance.stop();
+                        Navigator.pop(context);
+                      },
+                      size: 50,
+                      iconSize: 26,
+                    ),
+                    const SizedBox(width: 20),
+                    _ControlButton(
                       icon: Icons.replay_10_rounded,
                       onTap: () async {
                         final currentPos = await GoogleCastRemoteMediaClient.instance.playerPositionStream.first;
@@ -194,7 +204,7 @@ class RemoteControlScreen extends StatelessWidget {
                         );
                       },
                     ),
-                    const SizedBox(width: 25),
+                    const SizedBox(width: 20),
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -232,7 +242,7 @@ class RemoteControlScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 25),
+                    const SizedBox(width: 20),
                     _ControlButton(
                       icon: Icons.forward_10_rounded,
                       onTap: () async {
@@ -245,6 +255,8 @@ class RemoteControlScreen extends StatelessWidget {
                         );
                       },
                     ),
+                    const SizedBox(width: 20),
+                    const SizedBox(width: 50), // To balance the layout visually (stop button on the left)
                   ],
                 ),
                 
