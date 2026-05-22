@@ -35,7 +35,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _warmupCache() {
-    // Fetch data in background to fill caches
     _api.fetchChannels();
     _api.fetchMovies();
     _api.fetchSeries();
@@ -54,13 +53,27 @@ class _MainScreenState extends State<MainScreen> {
         ];
 
         return Scaffold(
+          backgroundColor: const Color(0xFF0C0714),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(items[_index].label, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -0.5)),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings_rounded, color: Colors.white),
+                hoverColor: const Color(0xFF9D4EDD).withOpacity(0.3),
+                onPressed: () => _showSettings(context),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
           body: Column(
             children: [
               FutureBuilder<int>(
                 future: trialService.getRemainingDays(),
                 builder: (context, snapshot) {
                   final remaining = snapshot.data ?? 3;
-                  final isPro = remaining > 10; // TrialService returns 999 for pro
+                  final isPro = remaining > 10;
 
                   if (isPro) return const SizedBox.shrink();
 
@@ -201,6 +214,63 @@ class _MainScreenState extends State<MainScreen> {
       }
     );
   }
+
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C0714),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => const _SettingsSheet(),
+    );
+  }
+}
+
+class _SettingsSheet extends StatelessWidget {
+  const _SettingsSheet();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 24),
+          Text(lang.t('settings').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.language_rounded, color: Color(0xFFBB86FC)),
+            title: Text(lang.t('language'), style: const TextStyle(color: Colors.white)),
+            trailing: ValueListenableBuilder<String>(
+              valueListenable: lang.locale,
+              builder: (context, locale, _) => DropdownButton<String>(
+                value: locale,
+                dropdownColor: const Color(0xFF1F1235),
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'fr', child: Text('Français', style: TextStyle(color: Colors.white))),
+                  DropdownMenuItem(value: 'en', child: Text('English', style: TextStyle(color: Colors.white))),
+                ],
+                onChanged: (v) { if (v != null) lang.setLanguage(v); },
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            title: Text(lang.t('logout'), style: const TextStyle(color: Colors.redAccent)),
+            onTap: () {
+              Navigator.pop(context);
+              // Handle logout
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BottomNav extends StatelessWidget {
@@ -257,6 +327,7 @@ class _BottomNavItemState extends State<_BottomNavItem> {
         color: Colors.transparent,
         child: InkWell(
           onTap: widget.onTap,
+          hoverColor: const Color(0xFF9D4EDD).withOpacity(0.2),
           onFocusChange: (v) => setState(() => _isFocused = v),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -289,4 +360,3 @@ class _BottomNavItemState extends State<_BottomNavItem> {
     );
   }
 }
-

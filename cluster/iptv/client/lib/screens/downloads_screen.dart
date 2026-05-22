@@ -9,50 +9,114 @@ class DownloadsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF160B25),
-      appBar: AppBar(
-        title: Text(lang.t('downloads'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-        backgroundColor: const Color(0xF00C0714),
-        surfaceTintColor: Colors.transparent,
-      ),
-      body: ListenableBuilder(
-        listenable: downloadService,
-        builder: (context, _) {
-          final items = downloadService.items;
-
-          if (items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.download_for_offline_outlined, size: 64, color: Color(0x33BB86FC)),
-                  const SizedBox(height: 16),
-                  Text(lang.t('no_downloads'), style: const TextStyle(color: Color(0xFFB0AEC8))),
-                ],
+    return ValueListenableBuilder<String>(
+      valueListenable: lang.locale,
+      builder: (context, locale, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF160B25),
+          appBar: AppBar(
+            title: Text(lang.t('downloads'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            backgroundColor: const Color(0xF00C0714),
+            surfaceTintColor: Colors.transparent,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings_rounded, color: Colors.white),
+                onPressed: () => _showSettings(context),
               ),
-            );
-          }
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: ListenableBuilder(
+            listenable: downloadService,
+            builder: (context, _) {
+              final items = downloadService.items;
 
-          // Group by seriesId if series, or use title if movie
-          final grouped = <String, List<DownloadItem>>{};
-          for (final item in items) {
-            final key = item.type == 'series' ? 'series_${item.seriesId ?? item.id}' : 'movie_${item.id}';
-            grouped.putIfAbsent(key, () => []).add(item);
-          }
+              if (items.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.download_for_offline_outlined, size: 64, color: Color(0x33BB86FC)),
+                      const SizedBox(height: 16),
+                      Text(lang.t('no_downloads'), style: const TextStyle(color: Color(0xFFB0AEC8))),
+                    ],
+                  ),
+                );
+              }
 
-          final groupKeys = grouped.keys.toList();
+              // Group by seriesId if series, or use title if movie
+              final grouped = <String, List<DownloadItem>>{};
+              for (final item in items) {
+                final key = item.type == 'series' ? 'series_${item.seriesId ?? item.id}' : 'movie_${item.id}';
+                grouped.putIfAbsent(key, () => []).add(item);
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            itemCount: groupKeys.length,
-            itemBuilder: (context, index) {
-              final key = groupKeys[index];
-              final groupItems = grouped[key]!;
-              return _DownloadGroup(items: groupItems);
+              final groupKeys = grouped.keys.toList();
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                itemCount: groupKeys.length,
+                itemBuilder: (context, index) {
+                  final key = groupKeys[index];
+                  final groupItems = grouped[key]!;
+                  return _DownloadGroup(items: groupItems);
+                },
+              );
             },
-          );
-        },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C0714),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => const _SettingsSheet(),
+    );
+  }
+}
+
+class _SettingsSheet extends StatelessWidget {
+  const _SettingsSheet();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(lang.t('logout_title').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.language_rounded, color: Color(0xFFBB86FC)),
+            title: Text(lang.t('language'), style: const TextStyle(color: Colors.white)),
+            trailing: ValueListenableBuilder<String>(
+              valueListenable: lang.locale,
+              builder: (context, locale, _) => DropdownButton<String>(
+                value: locale,
+                dropdownColor: const Color(0xFF1F1235),
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'fr', child: Text('Français', style: TextStyle(color: Colors.white))),
+                  DropdownMenuItem(value: 'en', child: Text('English', style: TextStyle(color: Colors.white))),
+                ],
+                onChanged: (v) { if (v != null) lang.setLanguage(v); },
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            title: Text(lang.t('logout'), style: const TextStyle(color: Colors.redAccent)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }
@@ -86,6 +150,7 @@ class _DownloadGroupState extends State<_DownloadGroup> {
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
             borderRadius: BorderRadius.circular(10),
+            hoverColor: const Color(0xFF9D4EDD).withOpacity(0.2),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: Row(
@@ -126,6 +191,12 @@ class _DownloadGroupState extends State<_DownloadGroup> {
                       },
                       tooltip: lang.t('cancel_all'),
                     ),
+                  if (completed > 0)
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
+                      onPressed: () => _confirmBulkDelete(context),
+                      tooltip: lang.t('clear_all'),
+                    ),
                   Icon(_expanded ? Icons.expand_less : Icons.expand_more, color: const Color(0xFFB0AEC8)),
                 ],
               ),
@@ -135,6 +206,31 @@ class _DownloadGroupState extends State<_DownloadGroup> {
             const SizedBox(height: 8),
             ...widget.items.map((item) => _DownloadTile(item: item)),
           ],
+        ],
+      ),
+    );
+  }
+
+  void _confirmBulkDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A0F2E),
+        title: Text(lang.t('clear_all'), style: const TextStyle(color: Colors.white, fontSize: 16)),
+        content: Text(lang.t('delete_all_confirm'), style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 14)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'))),
+          TextButton(
+            onPressed: () {
+              for (final item in widget.items) {
+                if (item.status == DownloadStatus.completed) {
+                  downloadService.removeDownload(item.id, item.type);
+                }
+              }
+              Navigator.pop(ctx);
+            },
+            child: Text(lang.t('delete'), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -163,6 +259,7 @@ class _DownloadTile extends StatelessWidget {
           ),
         )) : null,
         borderRadius: BorderRadius.circular(8),
+        hoverColor: const Color(0xFF9D4EDD).withOpacity(0.15),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -208,7 +305,6 @@ class _DownloadTile extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
-    // ... rest of the method unchanged
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -255,6 +351,7 @@ class _StatusIndicator extends StatelessWidget {
           ],
         );
       case DownloadStatus.pending:
+      case DownloadStatus.scheduled:
         return Row(
           children: [
             const SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFBB86FC))),

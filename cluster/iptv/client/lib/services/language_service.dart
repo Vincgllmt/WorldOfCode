@@ -128,6 +128,8 @@ class LanguageService {
       'cancel_download': 'Annuler le téléchargement',
       'episodes_in_queue': 'épisodes dans la file d\'attente',
       'cancel_all': 'Tout annuler',
+      'delete_all_confirm': 'Supprimer tous les épisodes de ce groupe ?',
+      'clear_all': 'Tout supprimer',
     },
     'en': {
       'live': 'Live TV',
@@ -248,6 +250,8 @@ class LanguageService {
       'cancel_download': 'Cancel download',
       'episodes_in_queue': 'episodes in queue',
       'cancel_all': 'Cancel all',
+      'delete_all_confirm': 'Delete all episodes from this group?',
+      'clear_all': 'Clear all',
     }
   };
 
