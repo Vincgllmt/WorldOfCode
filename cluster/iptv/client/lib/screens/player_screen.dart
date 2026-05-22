@@ -425,7 +425,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
       const SizedBox(width: 8),
     ];
 
+    final Widget? epgOverlay = (widget.type == 'live' && widget.mediaId != null)
+        ? SizedBox(
+            width: 0,
+            height: 0,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  bottom: (isMobile || isMobileDevice) ? 90 : 80,
+                  left: (isMobile || isMobileDevice) ? 16 : 24,
+                  child: _EpgWrapper(player: _player, mediaId: widget.mediaId!),
+                ),
+              ],
+            ),
+          )
+        : null;
+
     final List<Widget> bottomBarMobile = [
+      if (epgOverlay != null) epgOverlay,
       const MaterialPlayOrPauseButton(),
       const MaterialPositionIndicator(),
       const Spacer(),
@@ -434,6 +452,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     ];
 
     final List<Widget> bottomBarDesktop = [
+      if (epgOverlay != null) epgOverlay,
       const MaterialDesktopSkipPreviousButton(),
       const MaterialDesktopPlayOrPauseButton(),
       const MaterialDesktopSkipNextButton(),
@@ -513,31 +532,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     controls: _isPip ? NoVideoControls : AdaptiveVideoControls,
                     subtitleViewConfiguration: _subConfig,
                   ),
-
-                  if (!_isPip)
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _overlayVisible,
-                      builder: (context, visible, child) {
-                        return IgnorePointer(
-                          ignoring: !visible,
-                          child: AnimatedOpacity(
-                            opacity: visible ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 300),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          if (widget.type == 'live' && widget.mediaId != null)
-                            Positioned(
-                              bottom: 80,
-                              left: 24,
-                              child: _EpgWrapper(player: _player, mediaId: widget.mediaId!),
-                            ),
-                        ],
-                      ),
-                    ),
 
                   if (!_isPip && _hasNextEpisode)
                     _NextEpisodeWrapper(
