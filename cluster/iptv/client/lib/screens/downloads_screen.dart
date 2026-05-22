@@ -58,66 +58,83 @@ class DownloadsScreen extends StatelessWidget {
   }
 }
 
-class _DownloadGroup extends StatelessWidget {
+class _DownloadGroup extends StatefulWidget {
   final List<DownloadItem> items;
   const _DownloadGroup({required this.items});
 
   @override
+  State<_DownloadGroup> createState() => _DownloadGroupState();
+}
+
+class _DownloadGroupState extends State<_DownloadGroup> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final first = items.first;
+    final first = widget.items.first;
     final isSeries = first.type == 'series';
     final title = isSeries ? (first.title.split(' - ').first) : first.title;
     
-    final downloading = items.where((i) => i.status == DownloadStatus.downloading || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.pending).length;
-    final completed = items.where((i) => i.status == DownloadStatus.completed).length;
+    final downloading = widget.items.where((i) => i.status == DownloadStatus.downloading || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.pending).length;
+    final completed = widget.items.where((i) => i.status == DownloadStatus.completed).length;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox(
-                  width: 40, height: 60,
-                  child: first.cover != null
-                    ? CachedNetworkImage(imageUrl: first.cover!, fit: BoxFit.cover)
-                    : Container(color: const Color(0xFF1F1235), child: const Icon(Icons.movie_rounded, size: 20, color: Color(0x339D4EDD))),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text(
-                      '${items.length} ${lang.t(items.length > 1 ? 'episodes' : 'episode').toLowerCase()} ($completed fini, $downloading en cours)',
-                      style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12),
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      width: 40, height: 60,
+                      child: first.cover != null
+                        ? CachedNetworkImage(imageUrl: first.cover!, fit: BoxFit.cover)
+                        : Container(color: const Color(0xFF1F1235), child: const Icon(Icons.movie_rounded, size: 20, color: Color(0x339D4EDD))),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(
+                          '${widget.items.length} ${lang.t(widget.items.length > 1 ? 'episodes' : 'episode').toLowerCase()} ($completed fini, $downloading en cours)',
+                          style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (downloading > 0)
+                    IconButton(
+                      icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 20),
+                      onPressed: () {
+                        if (isSeries && first.seriesId != null) {
+                          downloadService.cancelSeasonDownload(first.seriesId!, first.seasonNum ?? 0);
+                        } else {
+                          for (final i in widget.items) {
+                            if (i.status != DownloadStatus.completed) downloadService.removeDownload(i.id, i.type);
+                          }
+                        }
+                      },
+                      tooltip: lang.t('cancel_all'),
+                    ),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more, color: const Color(0xFFB0AEC8)),
+                ],
               ),
-              if (downloading > 0)
-                IconButton(
-                  icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 20),
-                  onPressed: () {
-                    if (isSeries && first.seriesId != null) {
-                      downloadService.cancelSeasonDownload(first.seriesId!);
-                    } else {
-                      for (final i in items) {
-                        if (i.status != DownloadStatus.completed) downloadService.removeDownload(i.id, i.type);
-                      }
-                    }
-                  },
-                  tooltip: lang.t('cancel_all'),
-                ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          ...items.map((item) => _DownloadTile(item: item)),
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            ...widget.items.map((item) => _DownloadTile(item: item)),
+          ],
         ],
       ),
     );

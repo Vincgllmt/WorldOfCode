@@ -64,7 +64,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     )).then((_) => setState(() {})); // trigger refresh when coming back to update progress indicators
   }
 
-  void _downloadSeason(List<Episode> episodes) {
+  void _downloadSeason(List<Episode> episodes, int seasonNum) {
     for (final ep in episodes) {
       downloadService.startDownload(DownloadItem(
         id: ep.id,
@@ -73,6 +73,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         type: 'series',
         cover: ep.cover ?? widget.series.cover,
         seriesId: widget.series.id,
+        seasonNum: seasonNum,
       ));
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -228,7 +229,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       isExpanded: isExpanded,
                       onToggle: () => setState(() => _expandedSeason = isExpanded ? -1 : sNum),
                       onPlayEpisode: (ep) => _play(ep, allEpisodes),
-                      onDownloadSeason: () => _downloadSeason(episodes),
+                      onDownloadSeason: () => _downloadSeason(episodes, sNum),
                     );
                   },
                   childCount: sortedSeasons.length,
@@ -401,11 +402,11 @@ class _SeasonTile extends StatelessWidget {
                     ListenableBuilder(
                       listenable: downloadService,
                       builder: (context, _) {
-                        final inQueue = downloadService.items.where((i) => i.seriesId == seriesId && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading)).length;
+                        final inQueue = downloadService.items.where((i) => i.seriesId == seriesId && i.seasonNum == seasonNum && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading)).length;
                         if (inQueue > 0) {
                           return IconButton(
                             icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 24),
-                            onPressed: () => downloadService.cancelSeasonDownload(seriesId),
+                            onPressed: () => downloadService.cancelSeasonDownload(seriesId, seasonNum),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             tooltip: lang.t('cancel_download'),
@@ -531,6 +532,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                     type: 'series',
                     cover: widget.ep.cover,
                     seriesId: widget.seriesId,
+                    seasonNum: widget.ep.season,
                     size: 34,
                   ),
                   const SizedBox(width: 12),

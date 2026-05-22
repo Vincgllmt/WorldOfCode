@@ -18,6 +18,7 @@ class DownloadItem {
   double progress;
   DownloadStatus status;
   int? seriesId;
+  int? seasonNum;
 
   DownloadItem({
     required this.id,
@@ -29,6 +30,7 @@ class DownloadItem {
     this.progress = 0.0,
     this.status = DownloadStatus.pending,
     this.seriesId,
+    this.seasonNum,
   });
 
   Map<String, dynamic> toJson() => {
@@ -41,6 +43,7 @@ class DownloadItem {
     'progress': progress,
     'status': status.index,
     'seriesId': seriesId,
+    'seasonNum': seasonNum,
   };
 
   factory DownloadItem.fromJson(Map<String, dynamic> j) => DownloadItem(
@@ -53,6 +56,7 @@ class DownloadItem {
     progress: (j['progress'] as num).toDouble(),
     status: DownloadStatus.values[j['status'] as int >= DownloadStatus.values.length ? 0 : j['status'] as int],
     seriesId: j['seriesId'] as int?,
+    seasonNum: j['seasonNum'] as int?,
   );
 }
 
@@ -125,8 +129,8 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  Future<void> cancelSeasonDownload(int seriesId) async {
-    final toRemove = _items.where((i) => i.seriesId == seriesId && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading || i.status == DownloadStatus.error)).toList();
+  Future<void> cancelSeasonDownload(int seriesId, int seasonNum) async {
+    final toRemove = _items.where((i) => i.seriesId == seriesId && i.seasonNum == seasonNum && (i.status == DownloadStatus.pending || i.status == DownloadStatus.scheduled || i.status == DownloadStatus.downloading || i.status == DownloadStatus.error)).toList();
     for (final item in toRemove) {
       await removeDownload(item.id, item.type);
     }

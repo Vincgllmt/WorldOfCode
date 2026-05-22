@@ -9,6 +9,7 @@ class DownloadButton extends StatelessWidget {
   final String type;
   final String? cover;
   final int? seriesId;
+  final int? seasonNum;
   final double size;
 
   const DownloadButton({
@@ -19,6 +20,7 @@ class DownloadButton extends StatelessWidget {
     required this.type,
     this.cover,
     this.seriesId,
+    this.seasonNum,
     this.size = 44,
   });
 
@@ -40,6 +42,7 @@ class DownloadButton extends StatelessWidget {
               type: type,
               cover: cover,
               seriesId: seriesId,
+              seasonNum: seasonNum,
             )),
           );
         }
