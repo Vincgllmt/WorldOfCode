@@ -64,7 +64,7 @@ class DownloadService extends ChangeNotifier {
   final Dio _dio = Dio();
   final List<DownloadItem> _items = [];
   final Map<int, CancelToken> _cancelTokens = {};
-  final int _maxConcurrent = 2;
+  final int _maxConcurrent = 1;
 
   List<DownloadItem> get items => List.unmodifiable(_items);
 
@@ -113,7 +113,8 @@ class DownloadService extends ChangeNotifier {
 
     try {
       final nextItem = _items.firstWhere((i) => i.status == DownloadStatus.pending);
-      _executeDownload(nextItem);
+      // Wait 2 seconds before starting to avoid server-side concurrent connection issues
+      Timer(const Duration(seconds: 2), () => _executeDownload(nextItem));
     } catch (_) {
       // No pending items
     }
