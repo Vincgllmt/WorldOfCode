@@ -4,9 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../services/download_service.dart';
 import '../services/language_service.dart';
 import '../services/settings_service.dart';
+import '../services/credentials_service.dart';
+import '../services/api_service.dart';
 import '../widgets/brand_logo.dart';
 import '../utils/text_utils.dart';
 import 'player_screen.dart';
+import 'setup_screen.dart';
 
 class _C {
   static const bg        = Color(0xFF160B25);
@@ -39,12 +42,46 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     setState(() { _query = q; });
   }
 
-  void _openSettings() {
-    showModalBottomSheet(
+  Future<void> _openSettings() async {
+    await showDialog(
       context: context,
-      backgroundColor: const Color(0xFF0C0714),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => const _SettingsSheet(),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF160B25),
+        title: Text(lang.t('logout_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lang.t('language'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); Navigator.pop(ctx); }),
+                const SizedBox(width: 12),
+                _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: _C.border, height: 1),
+            const SizedBox(height: 24),
+            Text(lang.t('logout_confirm'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(lang.t('logout_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'), style: const TextStyle(color: _C.txtSub))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await CredentialsService.clear();
+              ApiService.invalidateCache();
+              Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SetupScreen()), (route) => false);
+            },
+            child: Text(lang.t('logout'), style: const TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -196,51 +233,35 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 }
 
-class _SettingsSheet extends StatelessWidget {
-  const _SettingsSheet();
+class _LangBtn extends StatefulWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.active, required this.onTap});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 24),
-          Text(lang.t('settings').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-          const SizedBox(height: 24),
-          ListTile(
-            leading: const Icon(Icons.language_rounded, color: Color(0xFFBB86FC)),
-            title: Text(lang.t('language'), style: const TextStyle(color: Colors.white)),
-            trailing: ValueListenableBuilder<String>(
-              valueListenable: lang.locale,
-              builder: (context, locale, _) => DropdownButton<String>(
-                value: locale,
-                dropdownColor: const Color(0xFF1F1235),
-                underline: const SizedBox(),
-                items: const [
-                  DropdownMenuItem(value: 'fr', child: Text('Français', style: TextStyle(color: Colors.white))),
-                  DropdownMenuItem(value: 'en', child: Text('English', style: TextStyle(color: Colors.white))),
-                ],
-                onChanged: (v) { if (v != null) lang.setLanguage(v); },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            title: Text(lang.t('logout'), style: const TextStyle(color: Colors.redAccent)),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-        ],
+  State<_LangBtn> createState() => _LangBtnState();
+}
+
+class _LangBtnState extends State<_LangBtn> {
+  bool _focused = false;
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: widget.onTap,
+      onFocusChange: (v) => setState(() => _focused = v),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: widget.active ? _C.accent : (_focused ? Colors.white.withOpacity(0.15) : Colors.white.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: widget.active ? _C.glow : (_focused ? Colors.white : _C.border), width: _focused ? 2.0 : 1.0),
+        ),
+        child: Text(widget.label, style: TextStyle(color: widget.active ? Colors.white : (_focused ? Colors.white : _C.txtSub), fontWeight: FontWeight.bold)),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _DownloadGroup extends StatefulWidget {
