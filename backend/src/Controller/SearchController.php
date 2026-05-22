@@ -4,6 +4,9 @@ namespace App\Controller;
 
 use App\Repository\UserRepository;
 use App\Repository\TechGroupRepository;
+use App\Service\Elasticsearch\SearchService;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,10 +17,16 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Search')]
 final class SearchController extends AbstractController
 {
+    private LoggerInterface $logger;
+
     public function __construct(
         private UserRepository $userRepo,
         private TechGroupRepository $groupRepo,
-    ) {}
+        private SearchService $searchService,
+        ?LoggerInterface $logger = null,
+    ) {
+        $this->logger = $logger ?? new NullLogger();
+    }
 
     #[Route('/search', name: 'search', methods: ['GET'])]
     #[OA\Get(
@@ -57,6 +66,21 @@ final class SearchController extends AbstractController
                                 type: "object"
                             )
                         ),
+                        new OA\Property(
+                            property: "posts",
+                            type: "array",
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: "id", type: "integer"),
+                                    new OA\Property(property: "authorId", type: "integer", nullable: true),
+                                    new OA\Property(property: "authorUsername", type: "string", nullable: true),
+                                    new OA\Property(property: "snippet", type: "string"),
+                                    new OA\Property(property: "createdAt", type: "string", nullable: true),
+                                    new OA\Property(property: "score", type: "number"),
+                                ],
+                                type: "object"
+                            )
+                        ),
                     ],
                     type: "object"
                 )
@@ -69,26 +93,75 @@ final class SearchController extends AbstractController
 
         $q = trim($request->query->getString('q', ''));
         if ($q === '') {
-            return $this->json(['users' => [], 'groups' => []]);
+            return $this->json(['users' => [], 'groups' => [], 'posts' => []]);
         }
 
         $limit = min($request->query->getInt('limit', 5), 50);
 
-        $users = $this->userRepo->searchByQuery($q, $limit);
-        $groups = $this->groupRepo->searchByQuery($q, $limit);
-
         return $this->json([
-            'users' => array_map(fn($u) => [
-                'id' => $u->getId(),
-                'username' => $u->getUsername(),
-                'firstname' => $u->getFirstname(),
-                'lastname' => $u->getLastname(),
-                'avatarUrl' => $u->getAvatarUrl(),
-            ], $users),
-            'groups' => array_map(fn($g) => [
-                'id' => $g->getId(),
-                'name' => $g->getName(),
-            ], $groups),
+            'users'  => $this->searchUsers($q, $limit),
+            'groups' => $this->searchGroups($q, $limit),
+            'posts'  => $this->searchPosts($q, $limit),
         ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchUsers(string $q, int $limit): array
+    {
+        try {
+            return $this->searchService->searchUsers($q, $limit);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Recherche Elasticsearch users indisponible, fallback SQL.', [
+                'query' => $q,
+                'error' => $e->getMessage(),
+            ]);
+            return array_map(fn($u) => [
+                'id'        => $u->getId(),
+                'username'  => $u->getUsername(),
+                'firstname' => $u->getFirstname(),
+                'lastname'  => $u->getLastname(),
+                'avatarUrl' => $u->getAvatarUrl(),
+                'score'     => 0.0,
+            ], $this->userRepo->searchByQuery($q, $limit));
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchGroups(string $q, int $limit): array
+    {
+        try {
+            return $this->searchService->searchGroups($q, $limit);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Recherche Elasticsearch groups indisponible, fallback SQL.', [
+                'query' => $q,
+                'error' => $e->getMessage(),
+            ]);
+            return array_map(fn($g) => [
+                'id'          => $g->getId(),
+                'name'        => $g->getName(),
+                'description' => null,
+                'score'       => 0.0,
+            ], $this->groupRepo->searchByQuery($q, $limit));
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchPosts(string $q, int $limit): array
+    {
+        try {
+            return $this->searchService->searchPosts($q, $limit);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Recherche Elasticsearch posts indisponible, posts ignorés.', [
+                'query' => $q,
+                'error' => $e->getMessage(),
+            ]);
+            return [];
+        }
     }
 }

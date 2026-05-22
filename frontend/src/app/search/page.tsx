@@ -11,8 +11,24 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Users } from 'lucide-react'
+import { Search, Users, FileText } from 'lucide-react'
 import { motion } from 'framer-motion'
+
+/**
+ * Échappe le HTML brut puis ré-autorise uniquement <mark>...</mark>
+ * pour le highlighting Elasticsearch.
+ */
+function sanitizeSnippet(snippet: string): string {
+    const escaped = snippet
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    return escaped
+        .replace(/&lt;mark&gt;/g, '<mark>')
+        .replace(/&lt;\/mark&gt;/g, '</mark>')
+}
 
 const SEARCH_LIMIT = 20
 
@@ -55,7 +71,8 @@ function SearchContent() {
 
     const users = useMemo(() => data?.users ?? [], [data])
     const groups = useMemo(() => data?.groups ?? [], [data])
-    const totalResults = users.length + groups.length
+    const posts = useMemo(() => data?.posts ?? [], [data])
+    const totalResults = users.length + groups.length + posts.length
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -76,7 +93,7 @@ function SearchContent() {
                     type="search"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Rechercher utilisateur/groupe"
+                    placeholder="Rechercher utilisateur, groupe ou publication"
                     className="pl-9 h-11"
                     autoFocus
                 />
@@ -176,6 +193,64 @@ function SearchContent() {
                         </section>
                     )}
 
+                    {posts.length > 0 && (
+                        <section className="space-y-3">
+                            <h2 className="text-sm font-semibold uppercase text-muted-foreground tracking-wide">
+                                Publications ({posts.length})
+                            </h2>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                {posts.map((post, index) => {
+                                    const date = post.createdAt ? new Date(post.createdAt) : null
+                                    const formattedDate = date && !Number.isNaN(date.getTime())
+                                        ? date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                                        : null
+                                    return (
+                                        <motion.div
+                                            key={post.id}
+                                            initial={{ opacity: 0, y: 16 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: Math.min(index * 0.04, 0.8), duration: 0.3 }}
+                                            whileHover={{ y: -3 }}
+                                        >
+                                            <Link href={`/post/${post.id}`} className="block h-full">
+                                                <Card className="h-full border border-border/50 bg-card transition-all hover:border-border hover:shadow-md cursor-pointer p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="rounded-full bg-muted flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
+                                                            <FileText className="h-5 w-5 text-muted-foreground" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1 space-y-1">
+                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                {post.authorUsername && (
+                                                                    <span className="font-medium text-foreground/80">@{post.authorUsername}</span>
+                                                                )}
+                                                                {post.groupName && (
+                                                                    <>
+                                                                        <span aria-hidden>•</span>
+                                                                        <span className="truncate">{post.groupName}</span>
+                                                                    </>
+                                                                )}
+                                                                {formattedDate && (
+                                                                    <>
+                                                                        <span aria-hidden>•</span>
+                                                                        <span>{formattedDate}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                            <p
+                                                                className="text-sm text-foreground/90 line-clamp-3 [&>mark]:bg-primary/20 [&>mark]:text-foreground [&>mark]:rounded-sm [&>mark]:px-0.5"
+                                                                dangerouslySetInnerHTML={{ __html: sanitizeSnippet(post.snippet) }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            </Link>
+                                        </motion.div>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    )}
+
                     {totalResults === 0 && (
                         <p className="text-center text-sm text-muted-foreground py-12">
                             Aucun resultat pour &laquo; {query} &raquo;
@@ -186,7 +261,7 @@ function SearchContent() {
 
             {!query && (
                 <p className="text-center text-sm text-muted-foreground py-12">
-                    Tapez un terme pour rechercher des utilisateurs ou des groupes.
+                    Tapez un terme pour rechercher des utilisateurs, des groupes ou des publications.
                 </p>
             )}
         </div>

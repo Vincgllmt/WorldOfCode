@@ -46,7 +46,7 @@
         "react-hot-toast": "^2.5.2",
         "socket.io-client": "^4.8.1",
         "tailwind-merge": "^3.3.1",
-        "tinymce": "^8.2.2",
+        "tinymce": "^7.9.3",
         "zod": "^3.25.64"
     },
     "devDependencies": {

@@ -19,12 +19,18 @@ services:
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
       MESSAGERIE_URL: http://messagerie:8081
       MAILER_DSN: smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587
+      ELASTICSEARCH_HOST: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: projet_es_dev_password
 
     volumes:
       - ./backend:/var/www/backend
       - jwt_keys:/var/www/backend/config/jwt
     depends_on:
-      - db
+      db:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     networks:
       - projet_network
     working_dir: /var/www/backend
@@ -127,6 +133,28 @@ services:
     networks:
       - projet_network
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: projet_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=projet_es_dev_password
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -u elastic:projet_es_dev_password http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - projet_network
+
   minio:
     image: minio/minio:latest
     container_name: projet_minio
@@ -162,6 +190,7 @@ volumes:
   db_data:
   minio_data:
   jwt_keys:
+  elasticsearch_data:
 
 networks:
   projet_network:
