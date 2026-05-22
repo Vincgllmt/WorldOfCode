@@ -7,6 +7,7 @@ import '../models/series_detail.dart';
 import '../services/api_service.dart';
 import '../services/progress_service.dart';
 import '../services/language_service.dart';
+import '../services/download_service.dart';
 import '../widgets/download_button.dart';
 import 'player_screen.dart';
 import 'remote_control_screen.dart';
