@@ -139,10 +139,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SubtitleSettings.load().then((s) { if (mounted) setState(() => _subSettings = s); });
 
     if (Platform.isAndroid || Platform.isIOS) {
-      _castSessionSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
+      _castSessionSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) async {
         if (session != null && GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected) {
-          final pos = _player.state.position;
+          var pos = _player.state.position;
           _player.pause();
+
+          if (pos.inSeconds == 0) {
+            final progress = await ProgressService.getProgress(_currentUrl);
+            if (progress != null && !progress.isCompleted) {
+              pos = Duration(seconds: progress.positionSeconds);
+            }
+          }
+
           final remoteClient = GoogleCastRemoteMediaClient.instance;
 
           final urlLower = _currentUrl.toLowerCase();
@@ -160,7 +168,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               seriesId: widget.seriesId,
               cover: _currentCover,
               positionSeconds: pos.inSeconds,
-              durationSeconds: _player.state.duration.inSeconds,
+              durationSeconds: _player.state.duration.inSeconds > 0 ? _player.state.duration.inSeconds : 1,
               timestamp: DateTime.now().millisecondsSinceEpoch,
             ), persist: true);
           }
