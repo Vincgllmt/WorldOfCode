@@ -8,9 +8,11 @@ import '../utils/text_utils.dart';
 import '../services/genre_favorites_service.dart';
 import '../services/language_service.dart';
 import '../services/settings_service.dart';
+import '../services/progress_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'movie_detail_screen.dart';
+import 'player_screen.dart';
 import 'setup_screen.dart';
 
 class _C {
@@ -188,6 +190,19 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     child: CustomScrollView(
                       slivers: [
                         SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.top + 90)),
+
+                        // Continue Watching Section
+                        SliverToBoxAdapter(
+                          child: FutureBuilder<List<MediaProgress>>(
+                            future: ProgressService.getAll(),
+                            builder: (context, pSnap) {
+                              final recent = (pSnap.data ?? []).where((p) => !p.isCompleted && p.type == 'movie').toList();
+                              if (recent.isEmpty) return const SizedBox.shrink();
+                              return _ContinueWatchingRow(items: recent);
+                            },
+                          ),
+                        ),
+
                         if (_query.isNotEmpty) ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                         else if (viewMode == ViewMode.themes && _selectedGenre == null) _buildThemesGrid(groups, sortedKeys)
                         else if (_selectedGenre != null) ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
@@ -438,6 +453,122 @@ class _CategoryCardState extends State<_CategoryCard> {
       child: InkWell(
         onTap: widget.onTap, onFocusChange: (v) => setState(() => _focused = v), borderRadius: BorderRadius.circular(12),
         child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), width: (widget.isFav || _focused) ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(widget.isFav ? Icons.bookmark_rounded : Icons.movie_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(moviesLabel, style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)])))
+      ),
+    );
+  }
+}
+
+class _ContinueWatchingRow extends StatelessWidget {
+  final List<MediaProgress> items;
+  const _ContinueWatchingRow({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Row(
+            children: [
+              Container(width: 4, height: 18, decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(width: 12),
+              Text(lang.t('continue_watching').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: items.length,
+            itemBuilder: (_, i) => _ContinueCard(progress: items[i]),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+}
+
+class _ContinueCard extends StatefulWidget {
+  final MediaProgress progress;
+  const _ContinueCard({required this.progress});
+  @override
+  State<_ContinueCard> createState() => _ContinueCardState();
+}
+
+class _ContinueCardState extends State<_ContinueCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.progress;
+    final percent = (p.positionSeconds / p.durationSeconds).clamp(0.0, 1.0);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => PlayerScreen(
+            name: p.title, url: p.url, type: p.type, 
+            mediaId: p.mediaId, seriesId: p.seriesId, cover: p.cover,
+          ),
+        ));
+      },
+      onHover: (v) => setState(() => _hovered = v),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 220,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F1235),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _hovered ? const Color(0xFF9D4EDD) : Colors.white10),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              if (p.cover != null)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.3,
+                    child: CachedNetworkImage(imageUrl: p.cover!, fit: BoxFit.cover),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Icon(p.type == 'movie' ? Icons.movie_rounded : Icons.tv_rounded, size: 12, color: const Color(0xFFB0AEC8)),
+                        const SizedBox(width: 6),
+                        Text(lang.t(p.type == 'movie' ? 'movies' : 'series'), style: const TextStyle(color: const Color(0xFFB0AEC8), fontSize: 10)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: percent,
+                        minHeight: 3,
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF9D4EDD)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_hovered)
+                const Center(child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40)),
+            ],
+          ),
+        ),
       ),
     );
   }

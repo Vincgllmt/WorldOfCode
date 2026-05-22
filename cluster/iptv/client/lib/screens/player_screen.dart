@@ -12,6 +12,7 @@ import '../services/download_service.dart';
 import '../services/api_service.dart';
 import '../models/series_detail.dart';
 import '../models/epg_program.dart';
+import 'remote_control_screen.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String name;
@@ -80,6 +81,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _togglePip() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        // media_kit_video 1.2+ uses enterPictureInPicture() on the controller
+        // However, if the method is not directly on _ctrl, we might need a dynamic call
+        // Let's use dynamic to be safe if it complains at build time, but we'll try direct first.
+        dynamic c = _ctrl;
+        await c.enterPictureInPicture();
+      } catch (e) {
+        debugPrint('Mobile PiP Error: $e');
+      }
+      return;
+    }
+
     if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) return;
 
     try {
@@ -122,18 +136,42 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (Platform.isAndroid || Platform.isIOS) {
       _castSessionSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
         if (session != null && GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected) {
+          final pos = _player.state.position;
           _player.pause();
           final remoteClient = GoogleCastRemoteMediaClient.instance;
+
+          final isHls = _currentUrl.toLowerCase().contains('.m3u8') || _currentUrl.toLowerCase().contains('.ts');
+          final contentType = isHls ? 'application/vnd.apple.mpegurl' : 'video/mp4';
+
           remoteClient.loadMedia(GoogleCastMediaInformation(
             contentId: _currentUrl,
             streamType: widget.type == 'live' ? CastMediaStreamType.live : CastMediaStreamType.buffered,
-            contentType: widget.type == 'live' ? 'application/x-mpegURL' : 'video/mp4',
+            contentType: contentType,
             metadata: GoogleCastMovieMediaMetadata(
               title: _currentName,
               subtitle: widget.group ?? '',
               images: _currentCover != null ? [GoogleCastImage(url: Uri.parse(_currentCover!))] : null,
             ),
           ));
+
+          if (pos.inSeconds > 0 && widget.type != 'live') {
+            Future.delayed(const Duration(seconds: 4), () {
+              remoteClient.seek(GoogleCastMediaSeekOption(
+                position: pos,
+                resumeState: GoogleCastMediaResumeState.play,
+              ));
+            });
+          }
+
+          if (mounted) {
+            Navigator.pushReplacement(context, MaterialPageRoute(
+              builder: (_) => RemoteControlScreen(
+                title: _currentName,
+                subtitle: widget.group,
+                image: _currentCover,
+              ),
+            ));
+          }
         }
       });
 
