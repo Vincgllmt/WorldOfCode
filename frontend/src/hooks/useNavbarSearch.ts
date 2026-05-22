@@ -11,6 +11,7 @@ type UseNavbarSearchArgs = {
 type UseNavbarSearchResult = {
   users: SearchResponse['users'] | undefined
   groups: SearchResponse['groups'] | undefined
+  posts: SearchResponse['posts'] | undefined
   isLoading: boolean
   isFetching: boolean
   error?: Error
@@ -45,6 +46,7 @@ export function useNavbarSearch({ query, limit = DEFAULT_LIMIT }: UseNavbarSearc
   return {
     users: searchQuery.data?.users,
     groups: searchQuery.data?.groups,
+    posts: searchQuery.data?.posts,
     isLoading: searchQuery.isLoading,
     isFetching: searchQuery.isFetching,
     error: searchQuery.error ?? undefined,

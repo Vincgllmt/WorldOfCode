@@ -71,6 +71,10 @@ else
   echo "Table 'user' absente, fixtures ignorées."
 fi
 
+# 5b) Création idempotente des indices Elasticsearch
+echo "Création des indices Elasticsearch..."
+php bin/console app:elastic:create-indices --no-interaction || echo "Avertissement : indices Elasticsearch non créés (cluster indisponible ?)."
+
 # 6) Génération automatique des clés JWT
 echo "Vérification des clés JWT..."
 

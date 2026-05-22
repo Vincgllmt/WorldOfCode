@@ -43,6 +43,12 @@ services:
       $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
       $stripeWebhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'
 
+  App\Service\Elasticsearch\ElasticClient:
+    arguments:
+      $host: '%env(ELASTICSEARCH_HOST)%'
+      $username: '%env(default::ELASTICSEARCH_USERNAME)%'
+      $password: '%env(default::ELASTICSEARCH_PASSWORD)%'
+
   App\Service\Moderation\BlocklistService:
     arguments:
       $blocklistPath: '%kernel.project_dir%/config/moderation/blocklist.yaml'
