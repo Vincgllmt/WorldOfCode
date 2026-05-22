@@ -130,6 +130,8 @@ class LanguageService {
       'cancel_all': 'Tout annuler',
       'delete_all_confirm': 'Supprimer tous les épisodes de ce groupe ?',
       'clear_all': 'Tout supprimer',
+      'cast_info_title': 'Informations sur le Cast',
+      'cast_info_desc': 'En raison des limitations techniques entre le format IPTV et Google Cast, la sélection des pistes audio ou des sous-titres n\'est souvent pas possible.\n\nDe plus, certains films utilisent des formats audio avancés (Dolby, DTS) qui ne sont pas décodés par tous les modèles de Chromecast, ce qui peut entraîner une absence de son.',
     },
     'en': {
       'live': 'Live TV',
@@ -252,6 +254,8 @@ class LanguageService {
       'cancel_all': 'Cancel all',
       'delete_all_confirm': 'Delete all episodes from this group?',
       'clear_all': 'Clear all',
+      'cast_info_title': 'Cast Information',
+      'cast_info_desc': 'Due to technical limitations between the IPTV format and Google Cast, selecting audio tracks or subtitles is often not possible.\n\nAdditionally, some movies use advanced audio formats (Dolby, DTS) that are not decoded by all Chromecast models, which may result in no sound.',
     }
   };
 

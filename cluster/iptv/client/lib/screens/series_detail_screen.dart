@@ -183,9 +183,40 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10),
-                child: Text('Sélectionner un appareil', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 8, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Sélectionner un appareil', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline_rounded, color: Colors.white70),
+                      tooltip: lang.t('cast_info_title'),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: const Color(0xFF1A0F2E),
+                            title: Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: Color(0xFF9D4EDD)),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(lang.t('cast_info_title'), style: const TextStyle(color: Colors.white, fontSize: 16))),
+                              ],
+                            ),
+                            content: Text(lang.t('cast_info_desc'), style: const TextStyle(color: Colors.white70, height: 1.4)),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('OK', style: TextStyle(color: Color(0xFF9D4EDD), fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
               StreamBuilder<List<GoogleCastDevice>>(
                 stream: GoogleCastDiscoveryManager.instance.devicesStream,
