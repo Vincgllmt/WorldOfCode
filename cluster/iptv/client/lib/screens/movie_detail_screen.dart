@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import '../models/movie.dart';
@@ -31,11 +32,30 @@ class MovieDetailScreen extends StatefulWidget {
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final ApiService _api = ApiService();
   late Future<MovieDetail> _future;
+  StreamSubscription? _castSubscription;
+  bool _waitingForCast = false;
 
   @override
   void initState() {
     super.initState();
     _future = _api.fetchMovieDetail(widget.movie.id);
+    if (Platform.isAndroid || Platform.isIOS) {
+      _castSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
+        final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+        if (isConnected && _waitingForCast) {
+          _waitingForCast = false;
+          _future.then((detail) {
+            if (mounted) _cast(detail.url ?? widget.movie.url);
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _castSubscription?.cancel();
+    super.dispose();
   }
 
   void _play(String url, {bool forceRestart = false}) {
@@ -152,6 +172,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         title: Text(device.friendlyName, style: const TextStyle(color: Colors.white)),
                         subtitle: Text(device.modelName ?? '', style: const TextStyle(color: Colors.white70)),
                         onTap: () {
+                          if (mounted) setState(() => _waitingForCast = true);
                           GoogleCastSessionManager.instance.startSessionWithDevice(device);
                           Navigator.pop(context);
                         },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import '../models/series_item.dart';
@@ -34,11 +35,37 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final ApiService _api = ApiService();
   late Future<SeriesDetail> _future;
   int _expandedSeason = -1;
+  StreamSubscription? _castSubscription;
+  bool _waitingForCast = false;
 
   @override
   void initState() {
     super.initState();
     _future = _api.fetchSeriesDetail(widget.series.id);
+    if (Platform.isAndroid || Platform.isIOS) {
+      _castSubscription = GoogleCastSessionManager.instance.currentSessionStream.listen((session) {
+        final isConnected = GoogleCastSessionManager.instance.connectionState == GoogleCastConnectState.connected;
+        if (isConnected && _waitingForCast) {
+          _waitingForCast = false;
+          _future.then((detail) {
+            final sortedSeasons = detail.seasons.keys.toList()
+              ..sort((a, b) => int.tryParse(a)!.compareTo(int.tryParse(b)!));
+            if (sortedSeasons.isNotEmpty) {
+              final firstSeason = detail.seasons[sortedSeasons.first];
+              if (firstSeason != null && firstSeason.isNotEmpty) {
+                if (mounted) _cast(firstSeason.first, firstSeason);
+              }
+            }
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _castSubscription?.cancel();
+    super.dispose();
   }
 
   void _play(Episode ep, List<Episode> allEpisodes) {
@@ -180,6 +207,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                         title: Text(device.friendlyName, style: const TextStyle(color: Colors.white)),
                         subtitle: Text(device.modelName ?? '', style: const TextStyle(color: Colors.white70)),
                         onTap: () {
+                          if (mounted) setState(() => _waitingForCast = true);
                           GoogleCastSessionManager.instance.startSessionWithDevice(device);
                           Navigator.pop(context);
                         },
