@@ -14,19 +14,20 @@ import 'services/download_service.dart';
 import 'services/trial_service.dart';
 import 'services/review_service.dart';
 import 'services/iap_service.dart';
+import 'services/cast_progress_tracker.dart';
 
 final trialService = TrialService();
 final iapService = IAPService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize In-App Purchases
   iapService.initialize();
-  
+
   // Track launch for review dialog
   unawaited(ReviewService.trackLaunch());
-  
+
   if (Platform.isAndroid || Platform.isIOS) {
     // Initialisation non-bloquante pour éviter de figer le démarrage si le service Cast est lent
     unawaited(GoogleCastContext.instance.setSharedInstanceWithOptions(
@@ -34,8 +35,9 @@ void main() async {
         ? IOSGoogleCastOptions(GoogleCastDiscoveryCriteriaInitialize.initWithApplicationID(GoogleCastDiscoveryCriteria.kDefaultApplicationId))
         : GoogleCastOptionsAndroid(appId: GoogleCastDiscoveryCriteria.kDefaultApplicationId)
     ).catchError((e) => debugPrint('Error initializing Google Cast: $e')));
-  }
 
+    CastProgressTracker.instance.init();
+  }
   if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
     await windowManager.ensureInitialized();
     windowManager.waitUntilReadyToShow(null, () async {

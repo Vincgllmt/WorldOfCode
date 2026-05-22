@@ -94,9 +94,22 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
     else if (urlLower.contains('.mkv')) contentType = 'video/x-matroska';
 
-    // Get last progress
+    // Get last progress or create initial
     final progress = await ProgressService.getProgress(ep.url);
     final startSeconds = (progress != null && !progress.isCompleted) ? progress.positionSeconds : 0;
+
+    // Save initial progress so background tracker knows type/mediaId
+    ProgressService.saveProgress(MediaProgress(
+      url: ep.url,
+      title: ep.title,
+      type: 'series',
+      mediaId: ep.id,
+      seriesId: widget.series.id,
+      cover: ep.cover ?? widget.series.cover,
+      positionSeconds: startSeconds,
+      durationSeconds: progress?.durationSeconds ?? 0,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    ), persist: true);
 
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: ep.url,

@@ -67,9 +67,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
     else if (urlLower.contains('.mkv')) contentType = 'video/x-matroska';
     
-    // Get last progress
+    // Get last progress or create initial
     final progress = await ProgressService.getProgress(url);
     final startSeconds = (progress != null && !progress.isCompleted) ? progress.positionSeconds : 0;
+
+    // Save initial progress so background tracker knows type/mediaId
+    ProgressService.saveProgress(MediaProgress(
+      url: url,
+      title: widget.movie.name,
+      type: 'movie',
+      mediaId: widget.movie.id,
+      cover: widget.movie.cover,
+      positionSeconds: startSeconds,
+      durationSeconds: progress?.durationSeconds ?? 0,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    ), persist: true);
 
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: url,

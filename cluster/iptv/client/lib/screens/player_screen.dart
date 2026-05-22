@@ -151,6 +151,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
           else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
           else if (urlLower.contains('.mkv')) contentType = 'video/x-matroska';
 
+          if (widget.type != null && widget.type != 'live' && _currentMediaId != null) {
+            ProgressService.saveProgress(MediaProgress(
+              url: _currentUrl,
+              title: _currentName,
+              type: widget.type!,
+              mediaId: _currentMediaId!,
+              seriesId: widget.seriesId,
+              cover: _currentCover,
+              positionSeconds: pos.inSeconds,
+              durationSeconds: _player.state.duration.inSeconds,
+              timestamp: DateTime.now().millisecondsSinceEpoch,
+            ), persist: true);
+          }
+
           remoteClient.loadMedia(GoogleCastMediaInformation(
             contentId: _currentUrl,
             streamType: widget.type == 'live' ? CastMediaStreamType.live : CastMediaStreamType.buffered,
