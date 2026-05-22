@@ -198,7 +198,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
                             builder: (context, pSnap) {
                               final recent = (pSnap.data ?? []).where((p) => !p.isCompleted && p.type == 'movie').toList();
                               if (recent.isEmpty) return const SizedBox.shrink();
-                              return _ContinueWatchingRow(items: recent);
+                              return _ContinueWatchingRow(
+                                items: recent,
+                                onRemove: () => setState(() {}),
+                              );
                             },
                           ),
                         ),
@@ -460,7 +463,8 @@ class _CategoryCardState extends State<_CategoryCard> {
 
 class _ContinueWatchingRow extends StatelessWidget {
   final List<MediaProgress> items;
-  const _ContinueWatchingRow({required this.items});
+  final VoidCallback onRemove;
+  const _ContinueWatchingRow({required this.items, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +487,7 @@ class _ContinueWatchingRow extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: items.length,
-            itemBuilder: (_, i) => _ContinueCard(progress: items[i]),
+            itemBuilder: (_, i) => _ContinueCard(progress: items[i], onRemove: onRemove),
           ),
         ),
         const SizedBox(height: 10),
@@ -494,7 +498,8 @@ class _ContinueWatchingRow extends StatelessWidget {
 
 class _ContinueCard extends StatefulWidget {
   final MediaProgress progress;
-  const _ContinueCard({required this.progress});
+  final VoidCallback onRemove;
+  const _ContinueCard({required this.progress, required this.onRemove});
   @override
   State<_ContinueCard> createState() => _ContinueCardState();
 }
@@ -542,7 +547,10 @@ class _ContinueCardState extends State<_ContinueCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 24), // Leave space for close button
+                      child: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
                     const Spacer(),
                     Row(
                       children: [
@@ -564,8 +572,18 @@ class _ContinueCardState extends State<_ContinueCard> {
                   ],
                 ),
               ),
+              Positioned(
+                top: 0, right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  onPressed: () async {
+                    await ProgressService.removeByMediaId(p.mediaId, p.type);
+                    widget.onRemove();
+                  },
+                ),
+              ),
               if (_hovered)
-                const Center(child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40)),
+                const Center(child: IgnorePointer(child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40))),
             ],
           ),
         ),
