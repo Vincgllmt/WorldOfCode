@@ -11,6 +11,8 @@ import '../widgets/download_button.dart';
 import 'player_screen.dart';
 import 'remote_control_screen.dart';
 
+import '../widgets/cast_mini_player.dart';
+
 class _C {
   static const bg     = Color(0xFF160B25);
   static const card   = Color(0xFF1F1235);
@@ -68,7 +70,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     GoogleCastRemoteMediaClient.instance.loadMedia(GoogleCastMediaInformation(
       contentId: url,
       streamType: CastMediaStreamType.buffered,
-      contentType: isHls ? 'application/x-mpegURL' : 'video/mp4',
+      contentType: isHls ? 'application/vnd.apple.mpegurl' : 'video/mp4', // Use more robust MIME for HLS/TS
       metadata: GoogleCastMovieMediaMetadata(
         title: widget.movie.name,
         subtitle: widget.movie.group ?? '',
@@ -76,8 +78,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       ),
     ));
 
+    // Wait for load before seeking
     if (startSeconds > 0) {
-      Future.delayed(const Duration(seconds: 3), () {
+      Future.delayed(const Duration(seconds: 4), () {
         GoogleCastRemoteMediaClient.instance.seek(GoogleCastMediaSeekOption(
           position: Duration(seconds: startSeconds),
           resumeState: GoogleCastMediaResumeState.play,
@@ -152,6 +155,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _C.bg,
+      bottomNavigationBar: const CastMiniPlayer(),
       body: FutureBuilder<MovieDetail>(
         future: _future,
         builder: (ctx, snap) {

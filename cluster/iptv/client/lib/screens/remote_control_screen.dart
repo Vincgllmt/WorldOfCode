@@ -184,12 +184,11 @@ class RemoteControlScreen extends StatelessWidget {
                   children: [
                     _ControlButton(
                       icon: Icons.replay_10_rounded,
-                      onTap: () {
-                        // Relative seek if supported, otherwise absolute
+                      onTap: () async {
+                        final currentPos = await GoogleCastRemoteMediaClient.instance.playerPositionStream.first;
                         GoogleCastRemoteMediaClient.instance.seek(
                           GoogleCastMediaSeekOption(
-                            position: const Duration(seconds: -10), 
-                            relative: true,
+                            position: Duration(seconds: (currentPos.inSeconds - 10).clamp(0, 999999)), 
                             resumeState: GoogleCastMediaResumeState.play,
                           ),
                         );
@@ -236,11 +235,11 @@ class RemoteControlScreen extends StatelessWidget {
                     const SizedBox(width: 25),
                     _ControlButton(
                       icon: Icons.forward_10_rounded,
-                      onTap: () {
+                      onTap: () async {
+                        final currentPos = await GoogleCastRemoteMediaClient.instance.playerPositionStream.first;
                         GoogleCastRemoteMediaClient.instance.seek(
                           GoogleCastMediaSeekOption(
-                            position: const Duration(seconds: 10), 
-                            relative: true,
+                            position: Duration(seconds: currentPos.inSeconds + 10), 
                             resumeState: GoogleCastMediaResumeState.play,
                           ),
                         );
@@ -249,11 +248,101 @@ class RemoteControlScreen extends StatelessWidget {
                   ],
                 ),
                 
+                const SizedBox(height: 30),
+
+                // Tracks Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _ControlButton(
+                        icon: Icons.subtitles_rounded,
+                        onTap: () => _showTrackPicker(context, status),
+                        size: 56,
+                        iconSize: 26,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(lang.t('subtitles_audio'), style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 60),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showTrackPicker(BuildContext context, GoggleCastMediaStatus? status) {
+    // Attempt to get tracks from mediaInformation
+    final dynamic info = status?.mediaInformation;
+    // We try multiple possible property names for the tracks list
+    final List<dynamic> tracks = (info != null) ? (info.mediaTracks ?? info.tracks ?? []) : [];
+
+    if (tracks.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A0F2E),
+          title: const Text('Information', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Aucune piste de sous-titre ou audio alternative n\'est exposée par le serveur pour ce contenu.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK', style: TextStyle(color: Color(0xFF9D4EDD))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A0F2E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Sous-titres & Audio', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: tracks.length,
+                itemBuilder: (context, index) {
+                  final dynamic track = tracks[index];
+                  final int trackId = track.id ?? 0;
+                  final bool isSelected = status?.activeTrackIds?.contains(trackId) ?? false;
+                  
+                  return ListTile(
+                    leading: Icon(Icons.playlist_play_rounded, color: isSelected ? const Color(0xFF9D4EDD) : Colors.white54),
+                    title: Text(track.name ?? 'Piste $trackId', style: TextStyle(color: isSelected ? const Color(0xFF9D4EDD) : Colors.white)),
+                    subtitle: Text(track.language ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    trailing: isSelected ? const Icon(Icons.check_rounded, color: Color(0xFF9D4EDD)) : null,
+                    onTap: () {
+                      if (isSelected) {
+                        GoogleCastRemoteMediaClient.instance.setActiveTrackIDs([]);
+                      } else {
+                        GoogleCastRemoteMediaClient.instance.setActiveTrackIDs([trackId]);
+                      }
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
