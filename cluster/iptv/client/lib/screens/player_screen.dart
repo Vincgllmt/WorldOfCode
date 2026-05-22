@@ -145,12 +145,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _player.pause();
           final remoteClient = GoogleCastRemoteMediaClient.instance;
 
-          String castUrl = _currentUrl;
-          if (widget.type == 'live' && castUrl.toLowerCase().endsWith('.ts')) {
-            castUrl = '${castUrl.substring(0, castUrl.length - 3)}.m3u8';
-          }
-
-          final urlLower = castUrl.toLowerCase();
+          final urlLower = _currentUrl.toLowerCase();
           String contentType = 'video/mp4';
           if (urlLower.contains('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
           else if (urlLower.contains('.ts')) contentType = 'video/mp2t';
@@ -171,7 +166,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           }
 
           remoteClient.loadMedia(GoogleCastMediaInformation(
-            contentId: castUrl,
+            contentId: _currentUrl,
             streamType: widget.type == 'live' ? CastMediaStreamType.live : CastMediaStreamType.buffered,
             contentType: contentType,
             metadata: GoogleCastMovieMediaMetadata(

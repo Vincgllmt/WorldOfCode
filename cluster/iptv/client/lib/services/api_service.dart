@@ -179,7 +179,7 @@ class ApiService {
       final catId = s['category_id'].toString();
       return Channel(
         name: _cleanName(s['name']),
-        url: '$host/live/$user/$pass/${s['stream_id']}.m3u8',
+        url: '$host/live/$user/$pass/${s['stream_id']}.ts',
         logo: s['stream_icon'],
         group: catMap[catId] ?? "Autres",
         streamId: int.tryParse(s['stream_id'].toString()),
