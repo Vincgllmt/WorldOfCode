@@ -12,25 +12,21 @@ import '../utils/text_utils.dart';
 import '../services/favorites_service.dart';
 import '../services/genre_favorites_service.dart';
 import '../services/settings_service.dart';
-import '../services/review_service.dart';
 import '../widgets/genre_drawer.dart';
 import '../widgets/brand_logo.dart';
 import 'player_screen.dart';
 import 'setup_screen.dart';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 class _C {
   static const bg        = Color(0xFF160B25);
   static const bgCard    = Color(0xFF1F1235);
   static const accent    = Color(0xFF9D4EDD);
-  static const accentAlt = Color(0xFF8A2BE2);
   static const glow      = Color(0xFFBB86FC);
   static const txt       = Color(0xFFFFFFFF);
   static const txtSub    = Color(0xFFB0AEC8);
   static const border    = Color(0x449D4EDD);
 }
 
-// ─── Home Screen ─────────────────────────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -51,9 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedGenre;
   bool    _searchVisible = false;
   final   _searchCtrl    = TextEditingController();
-
-  Map<String, List<Channel>>? _cachedGroups;
-  List<String>? _cachedSortedKeys;
 
   @override
   void initState() {
@@ -93,8 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ).toList();
       }
       _filtered = result;
-      _cachedGroups = null;
-      _cachedSortedKeys = null;
     });
   }
 
@@ -126,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleFavGenre(String genre) {
     setState(() {
       if (_favGenres.contains(genre)) { _favGenres.remove(genre); } else { _favGenres.add(genre); }
-      _cachedSortedKeys = null;
     });
     GenreFavoritesService.save('live', _favGenres);
   }
@@ -138,43 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } else { 
         _favorites.add(ch.url); 
       }
-      _cachedGroups = null;
-      _cachedSortedKeys = null;
     });
     FavoritesService.saveFavorites(_favorites);
-  }
-
-  Map<String, List<Channel>> _grouped(List<Channel> channels) {
-    if (_cachedGroups != null) return _cachedGroups!;
-    final Map<String, List<Channel>> m = {};
-    
-    // Extraction des favoris
-    final favList = channels.where((c) => _favorites.contains(c.url)).toList();
-    if (favList.isNotEmpty) {
-      m['__favorites__'] = favList;
-    }
-
-    for (final ch in channels) {
-      (m[ch.group ?? lang.t('other')] ??= []).add(ch);
-    }
-    _cachedGroups = m;
-    return m;
-  }
-
-  List<String> _sortedKeys(Map<String, List<Channel>> groups) {
-    if (_cachedSortedKeys != null) return _cachedSortedKeys!;
-    
-    final keys = groups.keys.where((k) => k != '__favorites__').toList();
-    final fav   = keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
-    final other = keys.where((k) => !_favGenres.contains(k)).toList()..sort();
-    
-    _cachedSortedKeys = [];
-    if (groups.containsKey('__favorites__')) {
-      _cachedSortedKeys!.add('__favorites__');
-    }
-    _cachedSortedKeys!.addAll([...fav, ...other]);
-    
-    return _cachedSortedKeys!;
   }
 
   void _openPlayer(Channel ch) {
@@ -190,77 +145,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openSettings() async {
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF160B25),
-        title: Text(lang.t('logout_title'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(lang.t('language'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _LangBtn(label: 'FR', active: lang.locale.value == 'fr', onTap: () { lang.setLanguage('fr'); Navigator.pop(ctx); }),
-                const SizedBox(width: 12),
-                _LangBtn(label: 'EN', active: lang.locale.value == 'en', onTap: () { lang.setLanguage('en'); Navigator.pop(ctx); }),
-              ],
-            ),
-            if (Platform.isAndroid || Platform.isIOS) ...[
-              const SizedBox(height: 24),
-              const Divider(color: _C.border, height: 1),
-              const SizedBox(height: 24),
-              Text(lang.t('rate_app'), style: const TextStyle(color: _C.glow, fontSize: 14, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(lang.t('rate_app_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    ReviewService.requestReview();
-                  },
-                  icon: const Icon(Icons.star_rounded, color: Colors.white),
-                  label: Text(lang.t('rate_app').toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.accent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            const Divider(color: _C.border, height: 1),
-            const SizedBox(height: 24),
-            Text(lang.t('logout_confirm'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(lang.t('logout_desc'), style: const TextStyle(color: _C.txtSub, fontSize: 12, height: 1.5)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(lang.t('cancel'), style: const TextStyle(color: _C.txtSub))),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _logout();
-            },
-            child: Text(lang.t('logout'), style: const TextStyle(color: Color(0xFFCF6679), fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _logout() async {
-    await CredentialsService.clear();
-    ApiService.invalidateCache();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const SetupScreen()),
-      (route) => false,
+      backgroundColor: const Color(0xFF0C0714),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => const _SettingsSheet(),
     );
   }
 
@@ -280,32 +169,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: lang.t('live'), genres: _genres, counts: _genreCounts, selected: _selectedGenre,
                 favGenres: _favGenres, onSelect: _onGenreSelect, onToggleFav: _toggleFavGenre,
               ),
-              appBar: _AppBar(
-                searchVisible: _searchVisible, viewMode: viewMode, searchCtrl: _searchCtrl,
-                onSearchChanged: _onSearch, onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-                onAccount: _openSettings, onToggleView: (v) => settings.setViewMode(v),
-                onToggleSearch: () => setState(() {
-                  _searchVisible = !_searchVisible;
-                  if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
-                }),
-              ),
+              appBar: _buildAppBar(viewMode),
               body: FutureBuilder<List<Channel>>(
                 future: _future,
                 builder: (ctx, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
+                  if (snap.connectionState == ConnectionState.waiting && _allChannels.isEmpty) {
                     return const _LoadingView();
                   }
-                  if (snap.hasError) {
+                  if (snap.hasError && _allChannels.isEmpty) {
                     return _ErrorView(message: snap.error.toString(), onRetry: () => setState(() {
                       _allChannels = []; _filtered = []; _future = _loadChannels();
                     }));
                   }
-                  if (_allChannels.isEmpty) {
-                    return Center(child: Text(lang.t('no_connection'), style: const TextStyle(color: _C.txtSub)));
-                  }
-
-                  final groups = _grouped(_filtered);
-                  final sortedKeys = _sortedKeys(groups);
+                  
+                  final Map<String, List<Channel>> m = {};
+                  final favList = _filtered.where((c) => _favorites.contains(c.url)).toList();
+                  if (favList.isNotEmpty) m['__favorites__'] = favList;
+                  for (final ch in _filtered) { (m[ch.group ?? lang.t('other')] ??= []).add(ch); }
+                  
+                  final keys = m.keys.where((k) => k != '__favorites__').toList();
+                  final favG   = keys.where((k) =>  _favGenres.contains(k)).toList()..sort();
+                  final otherG = keys.where((k) => !_favGenres.contains(k)).toList()..sort();
+                  final sortedKeys = [if (m.containsKey('__favorites__')) '__favorites__', ...favG, ...otherG];
 
                   return RefreshIndicator(
                     onRefresh: () => _loadChannels(force: true),
@@ -317,14 +202,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (_query.isNotEmpty)
                           ..._buildGridSlivers(_filtered, viewMode, showTitle: true, title: '${lang.t('results_for')} "$_query"')
                         else if (viewMode == ViewMode.themes && _selectedGenre == null)
-                          _buildThemesGrid(groups, sortedKeys)
+                          _buildThemesGrid(m, sortedKeys)
                         else if (_selectedGenre != null)
-                          ..._buildGridSlivers(groups[_selectedGenre]!, viewMode, showTitle: false)
+                          ..._buildGridSlivers(m[_selectedGenre]!, viewMode, showTitle: false)
                         else
                           for (final key in sortedKeys)
                             SliverToBoxAdapter(child: _CategoryRow(
                               title: key == '__favorites__' ? lang.t('favorites') : key, 
-                              channels: groups[key]!, 
+                              channels: m[key]!, 
                               favorites: _favorites,
                               onTap: _openPlayer, onFav: _toggleFavorite,
                               onTitleTap: key == '__favorites__' ? null : () => setState(() => _selectedGenre = key),
@@ -346,10 +231,83 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(ViewMode viewMode) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(70),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xF00C0714),
+          border: Border(bottom: BorderSide(color: _C.border, width: 1)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                if (!(_searchVisible && MediaQuery.of(context).size.width < 600)) ...[
+                  _IconBtn(icon: Icons.menu_rounded, onTap: () => _scaffoldKey.currentState?.openDrawer()),
+                  const SizedBox(width: 8),
+                  const BrandLogo(fontSize: 22, showSubtitle: false),
+                ],
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child)),
+                  child: _searchVisible 
+                    ? SizedBox(
+                        key: const ValueKey('f'), 
+                        width: MediaQuery.of(context).size.width < 600 ? MediaQuery.of(context).size.width * 0.7 : 200, 
+                        height: 40, 
+                        child: _SearchField(controller: _searchCtrl, onChanged: _onSearch)
+                      ) 
+                    : const SizedBox(key: ValueKey('e')),
+                ),
+                const SizedBox(width: 6),
+                _IconBtn(
+                  icon: _searchVisible ? Icons.close_rounded : Icons.search_rounded,
+                  onTap: () => setState(() {
+                    _searchVisible = !_searchVisible;
+                    if (!_searchVisible) { _searchCtrl.clear(); _onSearch(''); }
+                  }),
+                ),
+                const SizedBox(width: 4),
+                PopupMenuButton<ViewMode>(
+                  icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
+                  tooltip: lang.t('view_mode'), color: const Color(0xFF160B25), offset: const Offset(0, 50),
+                  onSelected: (v) => settings.setViewMode(v),
+                  itemBuilder: (_) => [
+                    _buildPopupItem(viewMode, ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
+                    _buildPopupItem(viewMode, ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
+                    _buildPopupItem(viewMode, ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
+                    _buildPopupItem(viewMode, ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                _IconBtn(icon: Icons.settings_rounded, onTap: _openSettings),
+                const SizedBox(width: 4),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<ViewMode> _buildPopupItem(ViewMode viewMode, ViewMode v, IconData icon, String label) {
+    final selected = viewMode == v;
+    return PopupMenuItem(
+      value: v,
+      child: Row(children: [
+        Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: selected ? _C.accent : Colors.white, fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.normal)),
+      ]),
+    );
+  }
+
   List<Widget> _buildGridSlivers(List<Channel> channels, ViewMode viewMode, {bool showTitle = false, String? title}) {
     double maxExtent = 270;
     double aspectRatio = 264 / 185;
-
     switch (viewMode) {
       case ViewMode.gridSmall: maxExtent = 180; break;
       case ViewMode.gridMedium: maxExtent = 270; break;
@@ -382,125 +340,75 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildThemesGrid(Map<String, List<Channel>> groups, List<String> sortedKeys) {
     final width = MediaQuery.of(context).size.width;
     final maxExtent = width < 600 ? width : 350.0;
-
+    final keys = sortedKeys.where((k) => k != '__favorites__').toList();
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverGrid(
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: maxExtent, 
-          mainAxisSpacing: 12, 
-          crossAxisSpacing: 16, 
-          childAspectRatio: width < 600 ? 3.5 / 1 : 2.8 / 1
-        ),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: maxExtent, mainAxisSpacing: 12, crossAxisSpacing: 16, childAspectRatio: width < 600 ? 3.5 / 1 : 2.8 / 1),
         delegate: SliverChildBuilderDelegate((_, i) {
-          final key = sortedKeys[i];
-          return _CategoryCard(
-            title: key, count: groups[key]!.length, isFav: _favGenres.contains(key),
-            onTap: () => setState(() => _selectedGenre = key),
-          );
-        }, childCount: sortedKeys.length),
+          final key = keys[i];
+          return _CategoryCard(title: key, count: groups[key]!.length, isFav: _favGenres.contains(key), onTap: () => setState(() => _selectedGenre = key));
+        }, childCount: keys.length),
       ),
     );
   }
 }
 
-class _AppBar extends StatelessWidget implements PreferredSizeWidget {
-  final bool searchVisible;
-  final ViewMode viewMode;
-  final TextEditingController searchCtrl;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onToggleSearch;
-  final ValueChanged<ViewMode> onToggleView;
-  final VoidCallback onOpenDrawer;
-  final VoidCallback onAccount;
-
-  const _AppBar({
-    required this.searchVisible, required this.viewMode, required this.searchCtrl,
-    required this.onSearchChanged, required this.onToggleSearch, required this.onToggleView,
-    required this.onOpenDrawer, required this.onAccount,
-  });
-
-  @override
-  Size get preferredSize => const Size.fromHeight(70);
-
+class _SettingsSheet extends StatelessWidget {
+  const _SettingsSheet();
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
     return Container(
-      decoration: const BoxDecoration(color: Color(0xF00C0714), border: Border(bottom: BorderSide(color: _C.border, width: 1))),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(children: [
-            if (!(searchVisible && width < 600)) ...[
-              _AppBarIcon(icon: Icons.menu_rounded, onTap: onOpenDrawer),
-              const SizedBox(width: 8),
-              const BrandLogo(fontSize: 22, showSubtitle: false),
-            ],
-            const Spacer(),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: SizeTransition(sizeFactor: anim, axis: Axis.horizontal, child: child)),
-              child: searchVisible 
-                ? SizedBox(
-                    key: const ValueKey('field'), 
-                    width: width < 600 ? width * 0.7 : 200, 
-                    height: 40, 
-                    child: _GlassSearchField(controller: searchCtrl, onChanged: onSearchChanged)
-                  ) 
-                : const SizedBox(key: ValueKey('empty')),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 24),
+          Text(lang.t('settings').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.language_rounded, color: Color(0xFFBB86FC)),
+            title: Text(lang.t('language'), style: const TextStyle(color: Colors.white)),
+            trailing: ValueListenableBuilder<String>(
+              valueListenable: lang.locale,
+              builder: (context, locale, _) => DropdownButton<String>(
+                value: locale, dropdownColor: const Color(0xFF1F1235), underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'fr', child: Text('Français', style: TextStyle(color: Colors.white))),
+                  DropdownMenuItem(value: 'en', child: Text('English', style: TextStyle(color: Colors.white))),
+                ],
+                onChanged: (v) { if (v != null) lang.setLanguage(v); },
+              ),
             ),
-            const SizedBox(width: 6),
-            _AppBarIcon(icon: searchVisible ? Icons.close_rounded : Icons.search_rounded, onTap: onToggleSearch),
-            const SizedBox(width: 4),
-            PopupMenuButton<ViewMode>(
-              icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
-              tooltip: lang.t('view_mode'), color: const Color(0xFF160B25), offset: const Offset(0, 50),
-              onSelected: onToggleView,
-              itemBuilder: (_) => [
-                _buildPopupItem(context, ViewMode.themes, Icons.list_alt_rounded, lang.t('view_themes')),
-                _buildPopupItem(context, ViewMode.gridSmall, Icons.grid_view_rounded, lang.t('view_grid_small')),
-                _buildPopupItem(context, ViewMode.gridMedium, Icons.grid_view_rounded, lang.t('view_grid_medium')),
-                _buildPopupItem(context, ViewMode.gridLarge, Icons.grid_view_rounded, lang.t('view_grid_large')),
-              ],
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: onAccount,
-              child: MouseRegion(cursor: SystemMouseCursors.click, child: CircleAvatar(radius: 16, backgroundColor: _C.accentAlt, child: const Icon(Icons.person_rounded, size: 18, color: Colors.white))),
-            ),
-            const SizedBox(width: 4),
-          ]),
-        ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            title: Text(lang.t('logout'), style: const TextStyle(color: Colors.redAccent)),
+            onTap: () async {
+              Navigator.pop(context);
+              await CredentialsService.clear();
+              ApiService.invalidateCache();
+              Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SetupScreen()), (route) => false);
+            },
+          ),
+        ],
       ),
     );
   }
-
-  PopupMenuItem<ViewMode> _buildPopupItem(BuildContext context, ViewMode v, IconData icon, String label) {
-    final selected = viewMode == v;
-    return PopupMenuItem(
-      value: v,
-      child: Row(children: [
-        Icon(icon, size: 18, color: selected ? _C.accent : Colors.white70),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(color: selected ? _C.accent : Colors.white, fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.normal)),
-      ]),
-    );
-  }
 }
 
-class _AppBarIcon extends StatefulWidget {
+class _IconBtn extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _AppBarIcon({required this.icon, required this.onTap});
-
+  const _IconBtn({required this.icon, required this.onTap});
   @override
-  State<_AppBarIcon> createState() => _AppBarIconState();
+  State<_IconBtn> createState() => _IconBtnState();
 }
 
-class _AppBarIconState extends State<_AppBarIcon> {
+class _IconBtnState extends State<_IconBtn> {
   bool _focused = false;
-
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.transparent,
@@ -508,64 +416,19 @@ class _AppBarIconState extends State<_AppBarIcon> {
       onTap: widget.onTap,
       onFocusChange: (v) => setState(() => _focused = v),
       borderRadius: BorderRadius.circular(8),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click, 
-        child: Container(
-          width: 36, 
-          height: 36, 
-          decoration: BoxDecoration(
-            color: _focused ? _C.accent.withOpacity(0.3) : Colors.white.withValues(alpha: 0.07), 
-            borderRadius: BorderRadius.circular(8),
-            border: _focused ? Border.all(color: Colors.white, width: 1.5) : null,
-          ), 
-          child: Icon(widget.icon, color: Colors.white, size: 20)
-        )
-      ),
+      hoverColor: _C.accent.withOpacity(0.2),
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(width: 36, height: 36, decoration: BoxDecoration(color: _focused ? _C.accent.withOpacity(0.3) : Colors.white.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8), border: _focused ? Border.all(color: Colors.white, width: 1.5) : null), child: Icon(widget.icon, color: Colors.white, size: 20))),
     ),
   );
 }
 
-class _GlassSearchField extends StatefulWidget {
+class _SearchField extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  const _GlassSearchField({required this.controller, required this.onChanged});
-
-  @override
-  State<_GlassSearchField> createState() => _GlassSearchFieldState();
-}
-
-class _GlassSearchFieldState extends State<_GlassSearchField> {
-  late FocusNode _focusNode;
-  bool _readOnly = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) {
-        setState(() => _readOnly = true);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
-
+  const _SearchField({required this.controller, required this.onChanged});
   @override
   Widget build(BuildContext context) => TextField(
-    controller: widget.controller, 
-    focusNode: _focusNode,
-    autofocus: true, 
-    onChanged: widget.onChanged, 
-    style: const TextStyle(color: _C.txt, fontSize: 14),
-    readOnly: Platform.isAndroid ? _readOnly : false,
-    onTap: () {
-      if (_readOnly) setState(() => _readOnly = false);
-    },
+    controller: controller, autofocus: true, onChanged: onChanged, style: const TextStyle(color: _C.txt, fontSize: 14),
     decoration: InputDecoration(
       hintText: lang.t('search_hint_live'), hintStyle: const TextStyle(color: _C.txtSub, fontSize: 13), prefixIcon: const Icon(Icons.search_rounded, color: _C.accent, size: 18),
       filled: true, fillColor: const Color(0xFF1A0F2E), contentPadding: EdgeInsets.zero,
@@ -587,15 +450,12 @@ class _CategoryRow extends StatelessWidget {
   final VoidCallback? onToggleFavGenre;
   final VoidCallback? onTitleTap;
   final ViewMode viewMode;
-
   const _CategoryRow({required this.title, required this.channels, required this.favorites, required this.onTap, required this.onFav, this.isAccent = false, this.isFavGenre = false, this.onToggleFavGenre, this.onTitleTap, this.viewMode = ViewMode.gridMedium});
-
   @override
   Widget build(BuildContext context) {
     double rowHeight = 185;
     if (viewMode == ViewMode.gridSmall) rowHeight = 125;
     if (viewMode == ViewMode.gridLarge) rowHeight = 265;
-
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.fromLTRB(24, 28, 12, 10), child: Row(children: [
         if (isAccent) Container(width: 3, height: 18, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: _C.accent, borderRadius: BorderRadius.circular(2))),
@@ -627,54 +487,19 @@ class _ChannelCardState extends State<_ChannelCard> {
   bool _hovered = false;
   bool _focused = false;
   bool get _active => _hovered || _focused;
-
   @override
   Widget build(BuildContext context) {
     double w = 248;
     if (widget.viewMode == ViewMode.gridSmall) w = 160;
     if (widget.viewMode == ViewMode.gridLarge) w = 380;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: widget.onTap,
-        onFocusChange: (v) => setState(() => _focused = v),
-        borderRadius: BorderRadius.circular(10),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click, 
-          onEnter: (_) => setState(() => _hovered = true), 
-          onExit: (_) => setState(() => _hovered = false), 
-          child: Container(
-            width: w, 
-            margin: const EdgeInsets.symmetric(horizontal: 8), 
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200), 
-              curve: Curves.easeOut, 
-              transform: _active ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), 
-              transformAlignment: Alignment.center, 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, 
-                children: [
-                  Stack(children: [
-                    AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _active ? _C.accent : Colors.transparent, width: 2), boxShadow: _active ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))),
-                    Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _active || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))),
-                    Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
-                  ]),
-                  const SizedBox(height: 7),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2), 
-                    child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _active ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
-                  ),
-                ],
-              ),
-            )
-          )
-        ),
+        onTap: widget.onTap, onFocusChange: (v) => setState(() => _focused = v), borderRadius: BorderRadius.circular(10),
+        child: MouseRegion(cursor: SystemMouseCursors.click, onEnter: (_) => setState(() => _hovered = true), onExit: (_) => setState(() => _hovered = false), child: Container(width: w, margin: const EdgeInsets.symmetric(horizontal: 8), child: AnimatedContainer(duration: const Duration(milliseconds: 200), curve: Curves.easeOut, transform: _active ? (Matrix4.identity()..scale(1.05, 1.05, 1.0)) : Matrix4.identity(), transformAlignment: Alignment.center, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Stack(children: [AnimatedContainer(duration: const Duration(milliseconds: 200), decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: _active ? _C.accent : Colors.transparent, width: 2), boxShadow: _active ? [BoxShadow(color: _C.accent.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 1)] : []), child: ClipRRect(borderRadius: BorderRadius.circular(10), child: AspectRatio(aspectRatio: 16 / 9, child: _buildThumbnail()))), Positioned(top: 7, right: 7, child: AnimatedOpacity(opacity: _active || widget.isFavorite ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: GestureDetector(onTap: widget.onFav, behavior: HitTestBehavior.opaque, child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle), child: Icon(widget.isFavorite ? Icons.star_rounded : Icons.star_border_rounded, color: widget.isFavorite ? const Color(0xFFFFD700) : Colors.white, size: 15))))), Positioned(bottom: 7, left: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: _C.accent.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 5, color: Colors.white), SizedBox(width: 3), Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.2))])))]), const SizedBox(height: 7), Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Text(widget.channel.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _active ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500)))]))))
       ),
     );
   }
-
-
   Widget _buildThumbnail() {
     final logo = widget.channel.logo;
     if (logo != null && logo.isNotEmpty) return CachedNetworkImage(imageUrl: logo, fit: BoxFit.cover, memCacheWidth: 400, placeholder: (_, __) => _shimmer(), errorWidget: (_, __, ___) => _fallback());
@@ -704,97 +529,21 @@ class _CategoryCard extends StatefulWidget {
   final bool isFav;
   final VoidCallback onTap;
   const _CategoryCard({required this.title, required this.count, required this.isFav, required this.onTap});
-
   @override
   State<_CategoryCard> createState() => _CategoryCardState();
 }
 
 class _CategoryCardState extends State<_CategoryCard> {
   bool _focused = false;
-
   @override
   Widget build(BuildContext context) {
-    final String channelsLabel = lang.locale.value == 'fr' 
-      ? "$widget.count chaîne${widget.count > 1 ? 's' : ''}" 
-      : "$widget.count channel${widget.count > 1 ? 's' : ''}";
-    
+    final String channelsLabel = lang.locale.value == 'fr' ? "${widget.count} chaîne${widget.count > 1 ? 's' : ''}" : "${widget.count} channel${widget.count > 1 ? 's' : ''}";
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: widget.onTap,
-        onFocusChange: (v) => setState(() => _focused = v),
-        borderRadius: BorderRadius.circular(12),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click, 
-          child: Container(
-            decoration: BoxDecoration(
-              color: _C.bgCard, 
-              borderRadius: BorderRadius.circular(12), 
-              border: Border.all(
-                color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), 
-                width: (widget.isFav || _focused) ? 1.5 : 1
-              ), 
-              gradient: LinearGradient(
-                begin: Alignment.topLeft, 
-                end: Alignment.bottomRight, 
-                colors: [_C.bgCard, (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)]
-              )
-            ), 
-            padding: const EdgeInsets.symmetric(horizontal: 16), 
-            child: Row(
-              children: [
-                Container(width: 42, height: 42, decoration: BoxDecoration(color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(widget.isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), 
-                const SizedBox(width: 14), 
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center, 
-                    crossAxisAlignment: CrossAxisAlignment.start, 
-                    children: [
-                      Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), 
-                      const SizedBox(height: 2), 
-                      Text(channelsLabel, style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))
-                    ]
-                  )
-                ), 
-                Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)
-              ]
-            )
-          )
-        ),
+        onTap: widget.onTap, onFocusChange: (v) => setState(() => _focused = v), borderRadius: BorderRadius.circular(12),
+        child: MouseRegion(cursor: SystemMouseCursors.click, child: Container(decoration: BoxDecoration(color: _C.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: widget.isFav ? _C.accent : (_focused ? Colors.white : _C.border), width: (widget.isFav || _focused) ? 1.5 : 1), gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.bgCard, (widget.isFav || _focused) ? _C.accent.withValues(alpha: 0.1) : const Color(0xFF1F1235)])), padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: widget.isFav ? _C.accent : const Color(0xFF2D1B4E), borderRadius: BorderRadius.circular(10)), child: Icon(widget.isFav ? Icons.bookmark_rounded : Icons.live_tv_rounded, color: Colors.white, size: 20)), const SizedBox(width: 14), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.5), maxLines: 1, overflow: TextOverflow.ellipsis), const SizedBox(height: 2), Text(channelsLabel, style: TextStyle(color: widget.isFav ? _C.glow : _C.txtSub, fontSize: 12, fontWeight: FontWeight.w500))])), Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20)])))
       ),
     );
   }
-}
-
-class _LangBtn extends StatefulWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _LangBtn({required this.label, required this.active, required this.onTap});
-
-  @override
-  State<_LangBtn> createState() => _LangBtnState();
-}
-
-class _LangBtnState extends State<_LangBtn> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: widget.onTap,
-      onFocusChange: (v) => setState(() => _focused = v),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: widget.active ? _C.accent : (_focused ? Colors.white.withOpacity(0.15) : Colors.white.withValues(alpha: 0.05)),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: widget.active ? _C.glow : (_focused ? Colors.white : _C.border), width: _focused ? 2.0 : 1.0),
-        ),
-        child: Text(widget.label, style: TextStyle(color: widget.active ? Colors.white : (_focused ? Colors.white : _C.txtSub), fontWeight: FontWeight.bold)),
-      ),
-    ),
-  );
 }

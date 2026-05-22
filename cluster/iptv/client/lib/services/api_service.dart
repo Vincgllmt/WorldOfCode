@@ -79,7 +79,7 @@ class ApiService {
   static final RegExp _displayTags = RegExp(r'\s*[\(\[][^\)\]]*[\)\]]|\s*[-|│‖]{1,3}\s*\w*\s*[-|│‖]{1,3}');
   static final RegExp _specialChars = RegExp(r'[★☆✪✦◈❤♛♕❖◆▶►•·]+');
   static final RegExp _multiSpaces = RegExp(r'\s{2,}');
-  static final RegExp _catFilter = RegExp(r'[^\w\s\-/éèêëàâùûüîïôœç]', unicode: true);
+  static final RegExp _catFilter = RegExp(r'[^\x20-\x7E\xA0-\xFF]', unicode: true);
 
   static String _cleanName(String name) {
     final decoded = decodeIfNeeded(name);
@@ -91,6 +91,7 @@ class ApiService {
 
   static String _cleanCat(String name) {
     final decoded = decodeIfNeeded(name);
+    // Keep standard ASCII and Latin-1 supplement (accents), remove others
     String cleaned = decoded.replaceAll(_catFilter, '').trim();
     cleaned = cleaned.replaceAll(_multiSpaces, ' ');
     return cleaned.isEmpty ? (decoded.isNotEmpty ? decoded : "Autres") : cleaned;
