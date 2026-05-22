@@ -19,7 +19,7 @@ class DownloadsScreen extends StatelessWidget {
       body: ListenableBuilder(
         listenable: downloadService,
         builder: (context, _) {
-          final items = downloadService.items.where((i) => i.status == DownloadStatus.completed).toList();
+          final items = downloadService.items;
 
           if (items.isEmpty) {
             return Center(
@@ -34,11 +34,23 @@ class DownloadsScreen extends StatelessWidget {
             );
           }
 
+          // Sort: Downloading first, then Pending, then Error, then Completed
+          final sortedItems = List<DownloadItem>.from(items)..sort((a, b) {
+            const order = {
+              DownloadStatus.downloading: 0,
+              DownloadStatus.pending: 1,
+              DownloadStatus.error: 2,
+              DownloadStatus.completed: 3,
+              DownloadStatus.paused: 4,
+            };
+            return (order[a.status] ?? 5).compareTo(order[b.status] ?? 5);
+          });
+
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            itemCount: items.length,
+            itemCount: sortedItems.length,
             itemBuilder: (context, index) {
-              final item = items[index];
+              final item = sortedItems[index];
               return _DownloadTile(item: item);
             },
           );
@@ -54,10 +66,12 @@ class _DownloadTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCompleted = item.status == DownloadStatus.completed;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
-        onTap: () => Navigator.push(context, MaterialPageRoute(
+        onTap: isCompleted ? () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => PlayerScreen(
             name: item.title,
             url: item.url,
@@ -66,14 +80,14 @@ class _DownloadTile extends StatelessWidget {
             seriesId: item.seriesId,
             cover: item.cover,
           ),
-        )),
+        )) : null,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFF1F1235),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x229D4EDD)),
+            border: Border.all(color: isCompleted ? const Color(0x229D4EDD) : const Color(0xFF9D4EDD).withValues(alpha: 0.5)),
           ),
           child: Row(
             children: [
@@ -106,9 +120,16 @@ class _DownloadTile extends StatelessWidget {
                       item.type == 'movie' ? lang.t('movies') : lang.t('series'),
                       style: const TextStyle(color: Color(0xFFB0AEC8), fontSize: 12),
                     ),
+                    const SizedBox(height: 8),
+                    _StatusIndicator(item: item),
                   ],
                 ),
               ),
+              if (item.status == DownloadStatus.error)
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.orangeAccent, size: 24),
+                  onPressed: () => downloadService.retryDownload(item.id, item.type),
+                ),
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 24),
                 onPressed: () => _confirmDelete(context),
@@ -121,6 +142,7 @@ class _DownloadTile extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    // ... rest of the method unchanged
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -139,5 +161,53 @@ class _DownloadTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _StatusIndicator extends StatelessWidget {
+  final DownloadItem item;
+  const _StatusIndicator({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (item.status) {
+      case DownloadStatus.downloading:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: item.progress,
+                minHeight: 4,
+                backgroundColor: Colors.white.withValues(alpha: 0.1),
+                color: const Color(0xFF9D4EDD),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('${(item.progress * 100).toInt()}%', style: const TextStyle(color: Color(0xFF9D4EDD), fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        );
+      case DownloadStatus.pending:
+        return Row(
+          children: [
+            const SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFBB86FC))),
+            const SizedBox(width: 8),
+            Text(lang.t('waiting'), style: const TextStyle(color: Color(0xFFBB86FC), fontSize: 11)),
+          ],
+        );
+      case DownloadStatus.error:
+        return const Text('Erreur', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold));
+      case DownloadStatus.completed:
+        return Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 14),
+            const SizedBox(width: 4),
+            const Text('Complet', style: TextStyle(color: Color(0xFF4CAF50), fontSize: 11)),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

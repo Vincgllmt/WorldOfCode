@@ -125,7 +125,18 @@ class DownloadService extends ChangeNotifier {
 
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final extension = item.url.split('.').last.split('?').first;
+      
+      // Better extension detection
+      String extension = 'mp4';
+      try {
+        final uri = Uri.parse(item.url);
+        final path = uri.path.toLowerCase();
+        if (path.endsWith('.ts')) extension = 'ts';
+        else if (path.endsWith('.mkv')) extension = 'mkv';
+        else if (path.endsWith('.avi')) extension = 'avi';
+        else if (path.endsWith('.m3u8')) extension = 'ts'; // Treat HLS segments as TS for download if possible
+      } catch (_) {}
+      
       final fileName = '${item.type}_${item.id}.$extension';
       final savePath = '${dir.path}/downloads/$fileName';
 
@@ -134,9 +145,22 @@ class DownloadService extends ChangeNotifier {
       final cancelToken = CancelToken();
       _cancelTokens[item.id] = cancelToken;
 
+      final origin = Uri.parse(item.url).origin;
+      final options = Options(
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Referer': origin,
+          'Origin': origin,
+        },
+        responseType: ResponseType.stream,
+        followRedirects: true,
+        validateStatus: (status) => status != null && status < 500,
+      );
+
       await _dio.download(
         item.url,
         savePath,
+        options: options,
         cancelToken: cancelToken,
         onReceiveProgress: (received, total) {
           if (total != -1) {
@@ -151,6 +175,7 @@ class DownloadService extends ChangeNotifier {
       _cancelTokens.remove(item.id);
     } catch (e) {
       _cancelTokens.remove(item.id);
+      debugPrint('Download Error ($item.id): $e');
       if (e is DioException && CancelToken.isCancel(e)) {
         item.status = DownloadStatus.pending; // Re-queue if cancelled/paused
       } else {
@@ -161,6 +186,15 @@ class DownloadService extends ChangeNotifier {
     await _saveMetadata();
     _checkQueue();
     notifyListeners();
+  }
+
+  void retryDownload(int id, String type) {
+    final index = _items.indexWhere((i) => i.id == id && i.type == type);
+    if (index != -1 && _items[index].status == DownloadStatus.error) {
+      _items[index].status = DownloadStatus.pending;
+      _checkQueue();
+      notifyListeners();
+    }
   }
 
   Future<void> removeDownload(int id, String type) async {

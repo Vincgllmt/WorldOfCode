@@ -86,9 +86,10 @@ class DownloadButton extends StatelessWidget {
           case DownloadStatus.error:
             return _CircleBtn(
               size: size,
-              icon: Icons.error_outline_rounded,
+              icon: Icons.refresh_rounded,
               color: Colors.redAccent,
-              onTap: () => downloadService.removeDownload(id, type),
+              onTap: () => downloadService.retryDownload(id, type),
+              onLongPress: () => _confirmDelete(context),
             );
           default:
             return _CircleBtn(size: size, icon: Icons.download_rounded, onTap: () {});
@@ -122,15 +123,17 @@ class DownloadButton extends StatelessWidget {
 class _CircleBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final Color? color;
   final double size;
-  const _CircleBtn({required this.icon, required this.onTap, this.color, required this.size});
+  const _CircleBtn({required this.icon, required this.onTap, this.onLongPress, this.color, required this.size});
 
   @override
   Widget build(BuildContext context) {
     final themeColor = color ?? const Color(0xFF9D4EDD);
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         width: size, height: size,
         decoration: BoxDecoration(
