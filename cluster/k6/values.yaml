@@ -1,9 +1,3 @@
-# k6-operator subchart configuration
-k6-operator:
-  installCRDs: true
-  authProxy:
-    enabled: false
-
 # WOC k6 configuration
 k6:
   image: grafana/k6:0.57.0
