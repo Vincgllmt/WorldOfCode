@@ -40,7 +40,7 @@ loki:
   persistence:
     enabled: true
     size: 5Gi
-    storageClassName: longhorn
+    storageClassName: local-path
 
 promtail:
   enabled: true
