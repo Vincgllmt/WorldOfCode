@@ -11,6 +11,7 @@ stages:
   - deploy-apps # Backend, Frontend, Messagerie, Backoffice en parallèle
   - deploy-monitoring
   - deploy-n8n-ollama
+  - load-test
 
 # --- CONFIGURATION GLOBALE PAR DÉFAUT (Déploiements K8s) ---
 image: alpine/k8s:1.31.13
@@ -64,6 +65,7 @@ include:
   #- local: cluster/n8n/.gitlab-ci.yml
   - local: cluster/cert-manager/.gitlab-ci.yml
   - local: cluster/uptime-kuma/.gitlab-ci.yml
+  - local: cluster/k6/.gitlab-ci.yml
 
 # ===================================
 # JOB 1: LINTER (Frontend & Backoffice)

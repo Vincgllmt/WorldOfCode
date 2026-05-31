@@ -1,0 +1,12 @@
+# k6-operator subchart configuration
+k6-operator:
+  installCRDs: true
+  authProxy:
+    enabled: false
+
+# WOC k6 configuration
+k6:
+  image: grafana/k6:0.57.0
+  # VictoriaMetrics remote write URL (vmsingle service in monitoring namespace)
+  victoriaMetricsUrl: "http://vmsingle-vm-stack.monitoring.svc.cluster.local:8428/api/v1/write"
+  credentialsSecretName: k6-credentials

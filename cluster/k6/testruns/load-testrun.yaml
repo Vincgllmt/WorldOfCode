@@ -1,0 +1,36 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-load
+  namespace: k6
+spec:
+  parallelism: 1
+  script:
+    configMap:
+      name: k6-scripts
+      file: load.js
+  runner:
+    image: ${K6_IMAGE}
+    serviceAccountName: k6-runner
+    podMetadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "k6"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/agent-inject-secret-creds: "secret/data/k6"
+        vault.hashicorp.com/agent-inject-template-creds: |
+          {{- with secret "secret/data/k6" -}}
+          export TEST_USER="{{ .Data.data.username }}"
+          export TEST_PASSWORD="{{ .Data.data.password }}"
+          {{- end }}
+    env:
+      - name: BASE_URL
+        value: "${BASE_URL}"
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: "${VM_URL}"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        . /vault/secrets/creds
+        exec k6 run --out experimental-prometheus-rw /home/k6/load.js
