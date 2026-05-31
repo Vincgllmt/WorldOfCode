@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { height: 110px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); position: relative; }
+  .chip .tag { position: absolute; left: 10px; top: 10px; font-size: 11px; color: var(--fg-3); font-weight: 600; letter-spacing: 0.08em; }
+  .nm { color: var(--fg-2); font-size: 11px; font-weight: 600; }
+  .hx { color: var(--fg-3); font-size: 10px; font-family: var(--font-mono); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .pri-name { font-weight: 700; font-size: 14px; }
+  .pri-note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="pri-name">Deep Violet — Backgrounds &amp; Surfaces</div>
+    <div class="pri-note">page → card → elevated → focused row → modal scrim</div>
+  </div>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#0B0414"><span class="tag">page floor</span></div><div class="nm">bg-0</div><div class="hx">#0B0414</div></div>
+    <div class="sw"><div class="chip" style="background:#14082A"><span class="tag">screen bg</span></div><div class="nm">bg-1</div><div class="hx">#14082A</div></div>
+    <div class="sw"><div class="chip" style="background:#1B0E36"><span class="tag">card</span></div><div class="nm">bg-2</div><div class="hx">#1B0E36</div></div>
+    <div class="sw"><div class="chip" style="background:#251548"><span class="tag">elevated</span></div><div class="nm">bg-3</div><div class="hx">#251548</div></div>
+    <div class="sw"><div class="chip" style="background:#2F1A57"><span class="tag">selected</span></div><div class="nm">bg-4</div><div class="hx">#2F1A57</div></div>
+  </div>
+</body></html>

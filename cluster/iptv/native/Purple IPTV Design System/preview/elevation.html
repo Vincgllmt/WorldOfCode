@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .row { display: flex; gap: 20px; align-items: center; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .box { background: var(--bg-2); width: 116px; height: 116px; border-radius: 14px; }
+  .nm { font-size: 11px; color: var(--fg-2); font-weight: 600; }
+  .px { font-size: 10px; color: var(--fg-3); font-family: var(--font-mono); text-align: center; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Elevation · shadow + lavender glow</div>
+    <div class="note">color glow > drop shadow</div>
+  </div>
+  <div class="row">
+    <div class="item"><div class="box" style="box-shadow: 0 2px 6px rgba(0,0,0,0.25);"></div><div class="nm">shadow-sm</div><div class="px">popovers</div></div>
+    <div class="item"><div class="box" style="box-shadow: 0 8px 24px rgba(0,0,0,0.45);"></div><div class="nm">shadow-md</div><div class="px">sheets</div></div>
+    <div class="item"><div class="box" style="box-shadow: 0 24px 60px rgba(0,0,0,0.65);"></div><div class="nm">shadow-lg</div><div class="px">modals</div></div>
+    <div class="item"><div class="box" style="box-shadow: 0 12px 32px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);"></div><div class="nm">poster</div><div class="px">artwork</div></div>
+    <div class="item"><div class="box" style="box-shadow: 0 0 24px rgba(179,107,252,0.65), 0 0 64px rgba(168,85,247,0.35); outline: 2px solid #B36BFC; outline-offset: -2px;"></div><div class="nm">focus-glow</div><div class="px">★ TV state</div></div>
+  </div>
+</body></html>

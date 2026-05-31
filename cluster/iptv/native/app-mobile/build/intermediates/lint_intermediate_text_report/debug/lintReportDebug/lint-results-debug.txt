@@ -1,0 +1,466 @@
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/AndroidManifest.xml:7: Warning: WRITE_EXTERNAL_STORAGE no longer provides write access when targeting Android 10, unless you use requestLegacyExternalStorage [ScopedStorage]
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ScopedStorage":
+   Scoped storage is enforced on Android 10+ (or Android 11+ if using
+   requestLegacyExternalStorage). In particular, WRITE_EXTERNAL_STORAGE will
+   no longer provide write access to all files; it will provide the equivalent
+   of READ_EXTERNAL_STORAGE instead.
+
+   As of Android 13, if you need to query or interact with MediaStore or media
+   files on the shared storage, you should be using instead one or more new
+   storage permissions:
+   * android.permission.READ_MEDIA_IMAGES
+   * android.permission.READ_MEDIA_VIDEO
+   * android.permission.READ_MEDIA_AUDIO
+
+   and then add maxSdkVersion="33" to the older permission. See the developer
+   guide for how to do this:
+   https://developer.android.com/about/versions/13/behavior-changes-13#granula
+   r-media-permissions
+
+   The MANAGE_EXTERNAL_STORAGE permission can be used to manage all files, but
+   it is rarely necessary and most apps on Google Play are not allowed to use
+   it. Most apps should instead migrate to use scoped storage. To modify or
+   delete files, apps should request write access from the user as described
+   at https://goo.gle/android-mediastore-createwriterequest.
+
+   To learn more, read these resources: Play policy:
+   https://goo.gle/policy-storage-help Allowable use cases:
+   https://goo.gle/policy-storage-usecases
+
+   https://goo.gle/android-storage-usecases
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/themes.xml:7: Error: android:windowLayoutInDisplayCutoutMode requires API level 27 (current min is 21) [NewApi]
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NewApi":
+   This check scans through all the Android API calls in the application and
+   warns about any calls that are not available on all versions targeted by
+   this application (according to its minimum SDK attribute in the manifest).
+
+   If you really want to use this API and don't need to support older devices
+   just set the minSdkVersion in your build.gradle or AndroidManifest.xml
+   files.
+
+   If your code is deliberately accessing newer APIs, and you have ensured
+   (e.g. with conditional execution) that this code will only ever be called
+   on a supported platform, then you can annotate your class or method with
+   the @TargetApi annotation specifying the local minimum SDK to apply, such
+   as @TargetApi(11), such that this check considers 11 rather than your
+   manifest file's minimum SDK as the required API level.
+
+   If you are deliberately setting android: attributes in style definitions,
+   make sure you place this in a values-vNN folder in order to avoid running
+   into runtime conflicts on certain devices where manufacturers have added
+   custom attributes whose ids conflict with the new ones on later platforms.
+
+   Similarly, you can use tools:targetApi="11" in an XML file to indicate that
+   the element will only be inflated in an adequate context.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/AndroidManifest.xml:19: Warning: Attribute usesCleartextTraffic is only used in API level 23 and higher (current min is 21) [UnusedAttribute]
+        android:usesCleartextTraffic="true">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/AndroidManifest.xml:31: Warning: Attribute supportsPictureInPicture is only used in API level 24 and higher (current min is 21) [UnusedAttribute]
+            android:supportsPictureInPicture="true"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedAttribute":
+   This check finds attributes set in XML files that were introduced in a
+   version newer than the oldest version targeted by your application (with
+   the minSdkVersion attribute).
+
+   This is not an error; the application will simply ignore the attribute.
+   However, if the attribute is important to the appearance or functionality
+   of your application, you should consider finding an alternative way to
+   achieve the same result with only available attributes, and then you can
+   optionally create a copy of the layout in a layout-vNN folder which will be
+   used on API NN or higher where you can take advantage of the newer
+   attribute.
+
+   Note: This check does not only apply to attributes. For example, some tags
+   can be unused too, such as the new <tag> element in layouts introduced in
+   API 21.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/kotlin/com/purple/iptvplayer/mobile/util/LocaleHelper.kt:37: Warning: Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the bundle configuration [AppBundleLocaleChanges]
+        config.setLocale(locale)
+        ~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "AppBundleLocaleChanges":
+   When changing locales at runtime (e.g. to provide an in-app language
+   switcher), the Android App Bundle must be configured to not split by locale
+   or the Play Core library must be used to download additional locales at
+   runtime.
+
+   https://developer.android.com/guide/app-bundle/configure-base#handling_language_changes
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/AndroidManifest.xml:11: Warning: An activity in this app supports picture-in-picture and the targetSdkVersion is 31 or above; it is therefore strongly recommended to call both setAutoEnterEnabled(true) and setSourceRectHint(...) [PictureInPictureIssue]
+    <application
+     ~~~~~~~~~~~
+
+   Explanation for issues of type "PictureInPictureIssue":
+   Starting in Android 12, the recommended approach for enabling
+   picture-in-picture (PiP) has changed. If your app does not use the new
+   approach, your app's transition animations will be of poor quality compared
+   to other apps. The new approach requires calling setAutoEnterEnabled(true)
+   and setSourceRectHint(...).
+
+   https://developer.android.com/develop/ui/views/picture-in-picture#smoother-transition
+
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.application than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.application than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.application than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.library than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.library than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:2: Warning: A newer version of com.android.library than 8.7.0 is available: 9.2.1. (There is also a newer version of 8.7.𝑥 available, if upgrading to 9.2.1 is difficult: 8.7.3) [AndroidGradlePluginVersion]
+agp                  = "8.7.0"
+                       ~~~~~~~
+
+   Explanation for issues of type "AndroidGradlePluginVersion":
+   This detector looks for usage of the Android Gradle Plugin where the
+   version you are using is not the current stable release. Using older
+   versions is fine, and there are cases where you deliberately want to stick
+   with an older version. However, you may simply not be aware that a more
+   recent version is available, and that is what this lint check helps find.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:3: Warning: A newer version of org.jetbrains.kotlin.android than 2.0.0 is available: 2.2.20 [GradleDependency]
+kotlin               = "2.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:3: Warning: A newer version of org.jetbrains.kotlin.android than 2.0.0 is available: 2.2.20 [GradleDependency]
+kotlin               = "2.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:3: Warning: A newer version of org.jetbrains.kotlin.android than 2.0.0 is available: 2.2.20 [GradleDependency]
+kotlin               = "2.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:4: Warning: A newer version of androidx.core:core-ktx than 1.13.1 is available: 1.18.0 [GradleDependency]
+coreKtx              = "1.13.1"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:4: Warning: A newer version of androidx.core:core-ktx than 1.13.1 is available: 1.18.0 [GradleDependency]
+coreKtx              = "1.13.1"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:4: Warning: A newer version of androidx.core:core-ktx than 1.13.1 is available: 1.18.0 [GradleDependency]
+coreKtx              = "1.13.1"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:5: Warning: A newer version of androidx.compose:compose-bom than 2024.09.00 is available: 2026.05.01 [GradleDependency]
+composeBom           = "2024.09.00"
+                       ~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:5: Warning: A newer version of androidx.compose:compose-bom than 2024.09.00 is available: 2026.05.01 [GradleDependency]
+composeBom           = "2024.09.00"
+                       ~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:5: Warning: A newer version of androidx.compose:compose-bom than 2024.09.00 is available: 2026.05.01 [GradleDependency]
+composeBom           = "2024.09.00"
+                       ~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:6: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.8.4 is available: 2.10.0 [GradleDependency]
+lifecycleRuntimeKtx  = "2.8.4"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:7: Warning: A newer version of androidx.activity:activity-compose than 1.9.2 is available: 1.13.0 [GradleDependency]
+activityCompose      = "1.9.2"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:7: Warning: A newer version of androidx.activity:activity-compose than 1.9.2 is available: 1.13.0 [GradleDependency]
+activityCompose      = "1.9.2"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:7: Warning: A newer version of androidx.activity:activity-compose than 1.9.2 is available: 1.13.0 [GradleDependency]
+activityCompose      = "1.9.2"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:8: Warning: A newer version of androidx.navigation:navigation-compose than 2.8.0 is available: 2.9.8 [GradleDependency]
+navigationCompose    = "2.8.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:8: Warning: A newer version of androidx.navigation:navigation-compose than 2.8.0 is available: 2.9.8 [GradleDependency]
+navigationCompose    = "2.8.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:8: Warning: A newer version of androidx.navigation:navigation-compose than 2.8.0 is available: 2.9.8 [GradleDependency]
+navigationCompose    = "2.8.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-dash than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-dash than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-dash than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-hls than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-hls than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-exoplayer-hls than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-session than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-session than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-session than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-ui than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-ui than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:11: Warning: A newer version of androidx.media3:media3-ui than 1.4.0 is available: 1.10.1 [GradleDependency]
+media3               = "1.4.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:15: Warning: A newer version of androidx.datastore:datastore-preferences than 1.1.1 is available: 1.2.1 [GradleDependency]
+datastorePrefs       = "1.1.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:15: Warning: A newer version of androidx.datastore:datastore-preferences than 1.1.1 is available: 1.2.1 [GradleDependency]
+datastorePrefs       = "1.1.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:15: Warning: A newer version of androidx.datastore:datastore-preferences than 1.1.1 is available: 1.2.1 [GradleDependency]
+datastorePrefs       = "1.1.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:16: Warning: A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0 [GradleDependency]
+securityCrypto       = "1.1.0-alpha06"
+                       ~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:16: Warning: A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0 [GradleDependency]
+securityCrypto       = "1.1.0-alpha06"
+                       ~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:16: Warning: A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0 [GradleDependency]
+securityCrypto       = "1.1.0-alpha06"
+                       ~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:17: Warning: A newer version of com.android.billingclient:billing-ktx than 7.0.0 is available: 9.0.0 [GradleDependency]
+billing              = "7.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:17: Warning: A newer version of com.android.billingclient:billing-ktx than 7.0.0 is available: 9.0.0 [GradleDependency]
+billing              = "7.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:17: Warning: A newer version of com.android.billingclient:billing-ktx than 7.0.0 is available: 9.0.0 [GradleDependency]
+billing              = "7.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:18: Warning: A newer version of com.google.android.play:review-ktx than 2.0.1 is available: 2.0.2 [GradleDependency]
+playReview           = "2.0.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:18: Warning: A newer version of com.google.android.play:review-ktx than 2.0.1 is available: 2.0.2 [GradleDependency]
+playReview           = "2.0.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:18: Warning: A newer version of com.google.android.play:review-ktx than 2.0.1 is available: 2.0.2 [GradleDependency]
+playReview           = "2.0.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:19: Warning: A newer version of androidx.tv:tv-material than 1.0.0 is available: 1.1.0 [GradleDependency]
+tvCompose            = "1.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:19: Warning: A newer version of androidx.tv:tv-material than 1.0.0 is available: 1.1.0 [GradleDependency]
+tvCompose            = "1.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:19: Warning: A newer version of androidx.tv:tv-material than 1.0.0 is available: 1.1.0 [GradleDependency]
+tvCompose            = "1.0.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:20: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.8.1 is available: 1.9.0 [GradleDependency]
+coroutines           = "1.8.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:20: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.8.1 is available: 1.9.0 [GradleDependency]
+coroutines           = "1.8.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:20: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.8.1 is available: 1.9.0 [GradleDependency]
+coroutines           = "1.8.1"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:21: Warning: A newer version of com.google.android.gms:play-services-cast-framework than 21.5.0 is available: 22.3.1 [GradleDependency]
+castFramework        = "21.5.0"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:21: Warning: A newer version of com.google.android.gms:play-services-cast-framework than 21.5.0 is available: 22.3.1 [GradleDependency]
+castFramework        = "21.5.0"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:21: Warning: A newer version of com.google.android.gms:play-services-cast-framework than 21.5.0 is available: 22.3.1 [GradleDependency]
+castFramework        = "21.5.0"
+                       ~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:22: Warning: A newer version of androidx.mediarouter:mediarouter than 1.7.0 is available: 1.8.1 [GradleDependency]
+mediaRouter          = "1.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:22: Warning: A newer version of androidx.mediarouter:mediarouter than 1.7.0 is available: 1.8.1 [GradleDependency]
+mediaRouter          = "1.7.0"
+                       ~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/gradle/libs.versions.toml:22: Warning: A newer version of androidx.mediarouter:mediarouter than 1.7.0 is available: 1.8.1 [GradleDependency]
+mediaRouter          = "1.7.0"
+                       ~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/strings.xml:24: Warning: Formatting %d followed by words ("day"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="trial_banner">Free trial: %d day(s) remaining.</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/strings.xml:56: Warning: Formatting %d followed by words ("episodes"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="download_season_progress">%1$d / %2$d episodes</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "PluralsCandidate":
+   This lint check looks for potential errors in internationalization where
+   you have translated a message which involves a quantity and it looks like
+   other parts of the string may need grammatical changes.
+
+   For example, rather than something like this:
+     <string name="try_again">Try again in %d seconds.</string>
+   you should be using a plural:
+      <plurals name="try_again">
+           <item quantity="one">Try again in %d second</item>
+           <item quantity="other">Try again in %d seconds</item>
+       </plurals>
+   This will ensure that in other languages the right set of translations are
+   provided for the different quantity classes.
+
+   (This check depends on some heuristics, so it may not accurately determine
+   whether a string really should be a quantity. You can use tools:ignore to
+   filter out false positives.
+
+   https://developer.android.com/guide/topics/resources/string-resource.html#Plurals
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/AndroidManifest.xml:13: Warning: The attribute android:allowBackup is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute android:dataExtractionRules specifying an @xml resource which configures cloud backups and device transfers on Android 12 and higher. [DataExtractionRules]
+        android:allowBackup="false"
+                             ~~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/strings.xml:61: Warning: The resource R.string.cast_casting_to appears to be unused [UnusedResources]
+    <string name="cast_casting_to">Casting to %1$s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/strings.xml:62: Warning: The resource R.string.cast_stop appears to be unused [UnusedResources]
+    <string name="cast_stop">Stop Cast</string>
+            ~~~~~~~~~~~~~~~~
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/values/strings.xml:63: Warning: The resource R.string.cast_disconnect appears to be unused [UnusedResources]
+    <string name="cast_disconnect">Disconnect</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-hdpi/ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-mdpi/ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xhdpi/ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xxhdpi/ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+
+   Explanation for issues of type "IconLauncherShape":
+   According to the Android Design Guide
+   (https://d.android.com/r/studio-ui/designer/material/iconography) your
+   launcher icons should "use a distinct silhouette", a "three-dimensional,
+   front view, with a slight perspective as if viewed from above, so that
+   users perceive some depth."
+
+   The unique silhouette implies that your launcher icon should not be a
+   filled square.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-anydpi-v26/ic_launcher.xml:2: Warning: The application adaptive icon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml:2: Warning: The application adaptive roundIcon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+
+   Explanation for issues of type "MonochromeLauncherIcon":
+   If android:roundIcon and android:icon are both in your manifest, you must
+   either remove the reference to android:roundIcon if it is not needed; or,
+   supply the monochrome icon in the drawable defined by the android:roundIcon
+   and android:icon attribute.
+
+   For example, if android:roundIcon and android:icon are both in the
+   manifest, a launcher might choose to use android:roundIcon over
+   android:icon to display the adaptive app icon. Therefore, your themed
+   application iconwill not show if your monochrome attribute is not also
+   specified in android:roundIcon.
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/drawable/ic_logo.png: Warning: Found bitmap drawable res/drawable/ic_logo.png in densityless folder [IconLocation]
+
+   Explanation for issues of type "IconLocation":
+   The res/drawable folder is intended for density-independent graphics such
+   as shapes defined in XML. For bitmaps, move it to drawable-mdpi and
+   consider providing higher and lower resolution versions in drawable-ldpi,
+   drawable-hdpi and drawable-xhdpi. If the icon really is density independent
+   (for example a solid color) you can place it in drawable-nodpi.
+
+   https://developer.android.com/guide/practices/screens_support.html
+
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-hdpi/ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-mdpi/ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xhdpi/ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xxhdpi/ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+/home/rigolo/Documents/woc/cluster/iptv/native/app-mobile/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+
+   Explanation for issues of type "IconDuplicates":
+   If an icon is repeated under different names, you can consolidate and just
+   use one of the icons and delete the others to make your application
+   smaller. However, duplicated icons usually are not intentional and can
+   sometimes point to icons that were accidentally overwritten or accidentally
+   not updated.
+
+1 errors, 93 warnings

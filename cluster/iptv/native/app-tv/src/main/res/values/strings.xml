@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Purple IPTV</string>
+
+    <!-- Setup -->
+    <string name="setup_subtitle">Connect to your IPTV service to access your favorite content.</string>
+    <string name="tab_m3u">M3U LINK</string>
+    <string name="tab_credentials">CREDENTIALS</string>
+    <string name="field_m3u_hint">M3U / M3U8 Link</string>
+    <string name="field_server">Server (Host)</string>
+    <string name="field_username">Username</string>
+    <string name="field_password">Password</string>
+    <string name="trial_info">3-day free trial included. Premium activation available after.</string>
+    <string name="btn_connect">CONNECT</string>
+
+    <!-- Navigation -->
+    <string name="nav_live">Live TV</string>
+    <string name="nav_movies">Movies</string>
+    <string name="nav_series">Series</string>
+    <string name="nav_downloads">Downloads</string>
+
+    <!-- Downloads -->
+    <string name="btn_download">Download</string>
+    <string name="btn_download_season">Download Season</string>
+    <string name="download_active">Downloading…</string>
+    <string name="download_queued">In queue</string>
+    <string name="download_done">Downloaded</string>
+    <string name="download_failed">Failed</string>
+    <string name="btn_play">Play</string>
+    <string name="btn_retry">Retry</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_close">Close</string>
+    <string name="downloads_empty">No downloads yet</string>
+    <string name="downloads_empty_sub">Download movies and episodes to watch offline</string>
+    <string name="downloads_section_active">Downloading</string>
+    <string name="downloads_section_queue">Up next</string>
+    <string name="downloads_section_completed">Downloaded</string>
+    <string name="download_cancel">Cancel</string>
+    <string name="download_season_progress">%1$d / %2$d episodes</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings &amp; Account</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_logout_title">Sign out?</string>
+    <string name="settings_logout_desc">All your local data will be kept on this device.</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_cancel_all">Cancel all</string>
+    <string name="btn_logout">Sign out</string>
+    <string name="btn_confirm_delete">Delete</string>
+    <string name="delete_confirm_title">Delete?</string>
+    <string name="delete_confirm_text">Delete \"%1$s\"?</string>
+
+    <!-- Subtitle style -->
+    <string name="subtitle_style_title">Subtitle Style</string>
+    <string name="subtitle_size_label">SIZE</string>
+    <string name="subtitle_size_small">Small</string>
+    <string name="subtitle_size_medium">Medium</string>
+    <string name="subtitle_size_large">Large</string>
+    <string name="subtitle_color_label">COLOR</string>
+    <string name="subtitle_color_white">White</string>
+    <string name="subtitle_color_yellow">Yellow</string>
+    <string name="subtitle_background_label">BACKGROUND</string>
+    <string name="subtitle_background_dark">Dark semi-transparent background</string>
+    <string name="subtitle_preview_label">PREVIEW</string>
+    <string name="subtitle_preview_text">This is a subtitle preview</string>
+</resources>

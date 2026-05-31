@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .panel { background: var(--bg-2); border-radius: 14px; padding: 14px; }
+  .group { display: flex; align-items: center; gap: 12px; padding: 10px 4px; }
+  .thumb { width: 56px; height: 56px; border-radius: 10px; background: linear-gradient(140deg, #ff7a18, #af002d); flex: 0 0 56px; }
+  .grow { flex: 1 1 auto; min-width: 0; }
+  .name { font: 700 16px var(--font-display); color: #fff; }
+  .sub { font: 400 13px var(--font-body); color: rgba(255,255,255,0.55); margin-top: 2px; }
+  .actions { display: flex; align-items: center; gap: 14px; }
+  .icobtn { width: 36px; height: 36px; border-radius: 999px; background: #B36BFC; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .icobtn .play { width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 8px; border-color: transparent transparent transparent #fff; }
+  .trash { width: 24px; height: 24px; opacity: 0.55; }
+  .trash svg { fill: none; stroke: #fff; stroke-width: 1.5; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0 0 0 70px; }
+
+  .row-focus { background: var(--bg-3); border-radius: 10px; box-shadow: inset 4px 0 0 #B36BFC; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">List row · download / episode</div>
+    <div class="note">focus = bg-3 + lavender left-edge bar</div>
+  </div>
+  <div class="panel">
+    <div class="group row-focus" style="padding-left: 8px;">
+      <div class="thumb"></div>
+      <div class="grow">
+        <div class="name">S9 E1 · Naruto – S09E01</div>
+        <div class="sub">Focused · ready to play</div>
+      </div>
+      <div class="actions">
+        <span class="icobtn"><span class="play"></span></span>
+        <span class="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m-7 0v13a2 2 0 002 2h6a2 2 0 002-2V7M10 11v6M14 11v6"/></svg></span>
+      </div>
+    </div>
+    <hr/>
+    <div class="group">
+      <div class="thumb" style="background: linear-gradient(140deg, #ff7a18, #af002d);"></div>
+      <div class="grow">
+        <div class="name">S9 E2 · Naruto – S09E02</div>
+        <div class="sub">Default</div>
+      </div>
+      <div class="actions">
+        <span class="icobtn"><span class="play"></span></span>
+        <span class="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m-7 0v13a2 2 0 002 2h6a2 2 0 002-2V7M10 11v6M14 11v6"/></svg></span>
+      </div>
+    </div>
+  </div>
+</body></html>

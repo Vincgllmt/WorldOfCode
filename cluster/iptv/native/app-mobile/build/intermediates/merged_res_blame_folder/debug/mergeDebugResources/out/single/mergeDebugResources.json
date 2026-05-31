@@ -1,0 +1,78 @@
+[
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.purple.iptvplayer.app-mobile-debug-76:/drawable_cast_dialog_bg.xml.flat",
+        "source": "com.purple.iptvplayer.app-mobile-main-78:/drawable/cast_dialog_bg.xml"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable-xxxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable-mdpi_ic_launcher_foreground.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable-mdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable-hdpi_ic_launcher_foreground.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable-hdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable_ic_logo.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable/ic_logo.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable-xxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-debug-76:/drawable-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "/home/rigolo/.gradle/daemon/8.9/com.purple.iptvplayer.app-mobile-main-78:/drawable-xhdpi/ic_launcher_foreground.png"
+    }
+]

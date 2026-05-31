@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+  .pill-out { padding: 12px 22px; border-radius: 999px; border: 1.5px solid #fff; color: #fff; font: 600 13px/1 var(--font-display); letter-spacing: 0.06em; background: transparent; display: inline-flex; align-items: center; gap: 10px; }
+  .pill-brand { padding: 12px 22px; border-radius: 999px; border: 1.5px solid #B36BFC; color: #B36BFC; font: 800 14px/1 var(--font-display); letter-spacing: 0.06em; background: transparent; display: inline-flex; align-items: center; gap: 8px; }
+  .pill-brand .light { color: #fff; font-weight: 400; }
+  .seg { display: inline-flex; gap: 8px; background: var(--bg-2); padding: 6px; border-radius: 14px; }
+  .seg button { padding: 10px 16px; border-radius: 10px; border: none; background: transparent; color: var(--fg-2); font: 600 13px var(--font-display); }
+  .seg button.on { background: #B36BFC; color: #fff; }
+  .opt { padding: 12px 18px; border-radius: 14px; border: 2px solid transparent; background: rgba(255,255,255,0.04); color: #fff; font: 600 14px var(--font-display); display:inline-flex; align-items:center; gap:8px; }
+  .opt.sel { border-color: #B36BFC; color: #BF8FFF; }
+  .opt .dot { width: 12px; height: 12px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2); }
+  .opt.yellow .dot { background: #F2E028; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Pills, Segments, Selectables</div>
+    <div class="note">trial banner CTA · brand pill · language seg · radio</div>
+  </div>
+  <div class="grid">
+    <div class="col">
+      <button class="pill-out">ACTIVATE</button>
+      <div class="lab">Outlined pill (trial banner)</div>
+    </div>
+    <div class="col">
+      <button class="pill-brand">PURPLE<span class="light">IPTV</span></button>
+      <div class="lab">Brand pill</div>
+    </div>
+    <div class="col">
+      <div class="seg"><button>FR</button><button class="on">EN</button></div>
+      <div class="lab">Language segment</div>
+    </div>
+    <div class="col" style="flex-direction:row; gap: 10px; align-items:center;">
+      <button class="opt sel"><span class="dot"></span>White</button>
+      <button class="opt yellow"><span class="dot"></span>Yellow</button>
+    </div>
+  </div>
+</body></html>

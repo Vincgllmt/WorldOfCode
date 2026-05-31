@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: end; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .tile { aspect-ratio: 1/1; border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
+  .label { font: 500 11px var(--font-display); color: var(--fg-2); text-align: center; line-height: 1.35; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+  .focus { transform: scale(1.06); outline: 3px solid #B36BFC; outline-offset: -3px; box-shadow: 0 0 24px rgba(179,107,252,0.6); }
+
+  .flag-fr { background: linear-gradient(90deg, #0055A4 0% 33%, #fff 33% 66%, #EF4135 66% 100%); }
+  .flag-al { background: radial-gradient(circle, #fff 0 25%, #E41E20 25%); }
+  .flag-africa { background: linear-gradient(135deg, #ff6a00, #ffd000 30%, #ff007a 70%, #6d27d2); }
+  .flag-prime { background: linear-gradient(135deg, #1B0E36, #6B22C0); display: flex; align-items: center; justify-content: center; color: #fff; font: 800 18px var(--font-display); letter-spacing: 0.06em; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Channel tiles · Direct TV</div>
+    <div class="note">square · flag art full-bleed · label below</div>
+  </div>
+  <div class="row">
+    <div class="col"><div class="tile flag-fr"></div><div class="label">FR · CANAL+ SPORT</div><div class="lab">Default</div></div>
+    <div class="col"><div class="tile flag-fr focus"></div><div class="label">FR · FRANCE SPORT</div><div class="lab">Focused</div></div>
+    <div class="col"><div class="tile flag-africa"></div><div class="label">AFRICANS CHANNELS</div><div class="lab">Default</div></div>
+    <div class="col"><div class="tile flag-prime">+SPT</div><div class="label">PRIME SPORTS FR</div><div class="lab">Default</div></div>
+  </div>
+</body></html>

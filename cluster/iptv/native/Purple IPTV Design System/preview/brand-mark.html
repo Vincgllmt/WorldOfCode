@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 24px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: center; }
+  .panel { background: var(--bg-2); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .panel.dark { background: #000; }
+  .panel.brand { background: linear-gradient(180deg, #B881FF, #A66BFC); }
+  .panel img { width: 100%; height: 110px; object-fit: contain; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Logo mark · usage on backgrounds</div>
+    <div class="note">on dark · on bg-2 · on brand</div>
+  </div>
+  <div class="row">
+    <div class="panel dark"><img src="../assets/logo_mark_tight.png" alt=""><div class="lab">On black</div></div>
+    <div class="panel"><img src="../assets/logo_mark_tight.png" alt=""><div class="lab">On bg-2</div></div>
+    <div class="panel brand"><img src="../assets/logo_mark_tight.png" alt=""><div class="lab">On lavender</div></div>
+  </div>
+</body></html>

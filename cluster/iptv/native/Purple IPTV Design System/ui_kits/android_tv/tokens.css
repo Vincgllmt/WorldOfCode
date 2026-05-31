@@ -1,0 +1,71 @@
+/* Android TV kit — local tokens import + TV-specific overrides */
+@import url("../../colors_and_type.css");
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: var(--fg-1);
+  font-family: var(--font-display);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fixed 1920×1080 TV stage, scaled to fit viewport */
+#tv-stage {
+  width: 1920px;
+  height: 1080px;
+  transform-origin: top left;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  position: relative;
+  overflow: hidden;
+}
+#tv-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+/* Generic focusable visual treatment */
+.focusable {
+  outline: none;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 160ms ease-out,
+              opacity 200ms ease-out,
+              filter 200ms ease-out;
+}
+
+/* Faint glow used by hero CTAs */
+@keyframes pulse-live {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(255,59,48,0); }
+}
+.live-dot { animation: pulse-live 1.4s ease-in-out infinite; }
+
+@keyframes hero-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.hero-fade {
+  animation: hero-fade 420ms cubic-bezier(0.22,1,0.36,1);
+  animation-fill-mode: forwards;
+}
+
+/* hide scrollbars in rows */
+.row-scroll::-webkit-scrollbar { display: none; }
+.row-scroll { scrollbar-width: none; }
+
+/* protection gradients */
+.hero-protection-bottom {
+  background: linear-gradient(180deg, transparent 0%, rgba(11,4,20,0) 35%, rgba(11,4,20,0.7) 70%, var(--bg-1) 100%);
+}
+.hero-protection-left {
+  background: linear-gradient(90deg, var(--bg-1) 0%, rgba(11,4,20,0.92) 25%, rgba(11,4,20,0.5) 55%, transparent 80%);
+}

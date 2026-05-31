@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .yes, .no { padding: 14px 16px; border-radius: 12px; background: var(--bg-2); }
+  .yes { border-left: 3px solid #34D399; }
+  .no { border-left: 3px solid #FF5A5F; }
+  .head { font: 700 11px var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 8px; }
+  .yes .head { color: #34D399; }
+  .no .head { color: #FF5A5F; }
+  .quote { font: 400 14px/1.45 var(--font-body); color: var(--fg-1); }
+  .quote.fr { color: var(--fg-2); font-style: italic; margin-top: 6px; font-size: 13px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Voice — verbatim, bilingual, direct</div>
+    <div class="note">no marketing, no emoji, no exclamation</div>
+  </div>
+  <div class="grid">
+    <div class="yes"><div class="head">Do</div>
+      <div class="quote">"Connect to your IPTV service to access your favorite content."</div>
+      <div class="quote fr">« Connectez-vous à votre service IPTV pour accéder à votre contenu favori. »</div>
+    </div>
+    <div class="no"><div class="head">Don't</div>
+      <div class="quote">"Let's get you streaming! 🎬 Unlimited movies, just for you."</div>
+    </div>
+    <div class="yes"><div class="head">Do</div>
+      <div class="quote">"Free trial: 3 day(s) remaining."</div>
+    </div>
+    <div class="no"><div class="head">Don't</div>
+      <div class="quote">"Only 3 days left — don't miss out on premium!"</div>
+    </div>
+    <div class="yes"><div class="head">Do</div>
+      <div class="quote">"Sign out? All your local data will be kept on this device."</div>
+    </div>
+    <div class="no"><div class="head">Don't</div>
+      <div class="quote">"Are you sure you want to leave us? 😢"</div>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,683 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:2:1-32:12
+MERGED from [:core] /home/rigolo/Documents/woc/cluster/iptv/native/core/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [io.insert-koin:koin-androidx-compose:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/7c88e547d916288c6b5c82bbac4af646/transformed/koin-androidx-compose-3.5.6/AndroidManifest.xml:2:1-7:12
+MERGED from [io.insert-koin:koin-android:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/1e1ed1266a47d67c2f992bfac49b7b03/transformed/koin-android-3.5.6/AndroidManifest.xml:2:1-9:12
+MERGED from [com.google.android.play:review-ktx:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/c5580a5bf6a39b090ebaedddaefb91e5/transformed/review-ktx-2.0.1/AndroidManifest.xml:2:1-14:12
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/84518b4c4b0dce06de0eec7dce121077/transformed/coil-compose-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/b3637ba27105f77b8a7d27b885dcd0ee/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/ea4aa04b943c4bf30cb7687cd41d9e83/transformed/coil-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/db842e05a4a9a26a7df6454b07113b33/transformed/coil-base-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/86ffffcd98dc690a5ab4685872330d81/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.appcompat:appcompat:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/4da942bdef07b93dd308f59a5c56967c/transformed/appcompat-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.billingclient:billing-ktx:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/16a2b929218afefc8a7dd5a8115bd48c/transformed/billing-ktx-7.0.0/AndroidManifest.xml:2:1-11:12
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:2:1-35:12
+MERGED from [com.google.android.play:review:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/bf5d388083047b9928e3ac18a2e4e57e/transformed/review-2.0.1/AndroidManifest.xml:2:1-14:12
+MERGED from [com.google.android.gms:play-services-location:19.0.0] /home/rigolo/.gradle/caches/8.9/transforms/deef69f06b9aea318cebf79b40ff6b89/transformed/play-services-location-19.0.0/AndroidManifest.xml:2:1-9:12
+MERGED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:16:1-24:12
+MERGED from [com.google.android.gms:play-services-tasks:18.1.0] /home/rigolo/.gradle/caches/8.9/transforms/0748be84595acb9b91ded99dc1023cf9/transformed/play-services-tasks-18.1.0/AndroidManifest.xml:2:1-6:12
+MERGED from [com.google.android.gms:play-services-places-placereport:17.0.0] /home/rigolo/.gradle/caches/8.9/transforms/ef8d81672d1bc2af00aeb9cdaef4d1b4/transformed/play-services-places-placereport-17.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:16:1-26:12
+MERGED from [androidx.fragment:fragment:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/60b9b2a083a3895390eec13d17d9b439/transformed/fragment-1.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/7b7774b4c06de81fc9fbc2188e2cb88a/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/437f1f1d763157d463e15be7203f39ca/transformed/activity-1.9.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.tv:tv-material:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/58ddaddff5d92cea3197bcd9bca4e576/transformed/tv-material-1.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.tv:tv-foundation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7fa8fcf141b90a177009eae05cd26842/transformed/tv-foundation-1.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rigolo/.gradle/caches/8.9/transforms/da3263e811f0644bf13e7d36bee4d6b8/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.compose.material3:material3-android:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/b63494f5629b4ed3cc1423bebdfe282c/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/8287635213c3d8791e2c8fc57174738b/transformed/material-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d8a204efd92fa68e6ac247b9675e7a80/transformed/animation-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/59b45d3ff1b2e8d1ee5530941f568ec8/transformed/ui-tooling-data/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/8e1e0da390b9b889197f7df0af0ce635/transformed/ui-unit/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/bcd5f4c9085697f9449782217ab73b3d/transformed/ui-geometry/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/b32af00c331297d2d418d185bfec5e96/transformed/ui-tooling-preview/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/0aaa46037ed7692a1552a9e69f378195/transformed/ui-graphics/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/f72d4c7a57cea3460b866db90d21dbff/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/c9d438e124e350619b8ada1c0037bf77/transformed/ui-util/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/2583994582dc7370161610b308a4123f/transformed/ui-text/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.compose.animation:animation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/e5cac151b7a452134d5e8dcc798798c7/transformed/animation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/ee850663ba70e8fccfb82761ad7e4a06/transformed/foundation-layout/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/620759f904b6af85881d79c490a4a202/transformed/foundation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a6f89f6609405f8469447b5bf770177a/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/eee6945e48d8cd1ebfb74e47ccd07589/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/f055bcd11c65c1a4a83fccdda1cda424/transformed/runtime-retain/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/295c179eeeef6b4ae6ae7f5ff9c60fd7/transformed/runtime-annotation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.transition:transition:1.6.0] /home/rigolo/.gradle/caches/8.9/transforms/829359ba4212e57e71a9b3d678222d5c/transformed/transition-1.6.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e143c1e4483d32cd78ff1aea6c36509a/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/fe50b82330fa81bbbcfb602f44c619f4/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/2fa2870ff576fa3d9d4122491c2ddee0/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2-views-helper:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/b6ebc9148be546a157dad66f80b2b568/transformed/emoji2-views-helper-1.4.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.media3:media3-ui:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0876716eac9fd3196ecfe59dad35c5b5/transformed/media3-ui-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-session:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/7dfb9847597c1934bf72acc166faf463/transformed/media3-session-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-extractor:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0c09947e399dff57a80a79b1373cd7e5/transformed/media3-extractor-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-container:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/70b445d90a29b9f0a74fc701a59e42b6/transformed/media3-container-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-datasource:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/6f728eb8246397e8433a3969c9c8e826/transformed/media3-datasource-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-decoder:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/e7aa199b0b8d4f7d6c5f7bed6aae0ab2/transformed/media3-decoder-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-database:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/d23d771fb82c7dc84e25497726f296c9/transformed/media3-database-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-common:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/2f145cdce4077f1c5252206d908b6f2c/transformed/media3-common-1.4.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media3:media3-exoplayer-hls:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8b95437f2e97d8b660792cd5e680b236/transformed/media3-exoplayer-hls-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-exoplayer-dash:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8375aabed1de6afced932e8a7a160b0a/transformed/media3-exoplayer-dash-1.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-exoplayer:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/5d418a8611e53cb76cd4a6cdaf587d74/transformed/media3-exoplayer-1.4.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media:media:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a2bd267cce297f697cf1f30fb78f7db8/transformed/media-1.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/d30c5f2a7342fa6e9c35ba91e1eeba0f/transformed/recyclerview-1.3.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/54e86c8ba240d75d1baf6ee404a946f9/transformed/drawerlayout-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/0fc8e6e8eecf29072a3410ca984f690a/transformed/viewpager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/a24fdee2d4b63c907deb2c3e683442da/transformed/customview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c558a21053443b9b8a763a08a2e81a3a/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.window:window-core-android:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/e57995449b2de22f9721fe54287b72fa/transformed/window-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/bde47e7c4c7b39f040b99fdcc57ebfe9/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/6701aa881579a7b562cb246a62ea07b2/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/289a7ebc1c46d4cafb174d1f115eb650/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.core:core-ktx:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/c19a4806a434e2573def0e3cfee088d7/transformed/core-ktx-1.16.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rigolo/.gradle/caches/8.9/transforms/a7cce266d8861671934ffdd3439d3161/transformed/graphics-path-1.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/0e893d1061a1f43925c70483b69fcfa9/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:2:1-5:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/1f04cb6580daa9ef04483aa86956a488/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/6d19afda6400ee4810ff182ab7d8c278/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/3439e1a98401c17525742fd65064f889/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/5198a656673c0586a5f7e80dadfe504c/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/34fc51cfa32e17950c9154c8fb3ad90a/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/69caf76b03a765f7f0524cd21bb7ebad/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/17957cff163c348bd9a36c9c0f379593/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/b25b1e00526be246bb056bb3e4e507de/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/c7e7612ae8ff1162f63e070b6c2732c0/transformed/savedstate-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/e7666b2033a94c1a7a28dc69f3f132f3/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/484a0e19fc0af8a5655bbcf5543e8437/transformed/savedstate-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d78e5a29820c8d498412bea70d35a64f/transformed/runtime/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4147da23bc2595ecd27270d3408da256/transformed/runtime-saveable/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/4208a148dbd9aebefe31fe55580c4af6/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/13c9a679bad3f7a1a4aa9c9c23b02ce3/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/a4b8ff2e9b2649f6b978c98ba354214b/transformed/ui/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-ktx:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/a05c139c096292287a4d322bfc9e6975/transformed/activity-ktx-1.9.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-compose:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/7d2151cb3480f230a9c195e843bbb1df/transformed/activity-compose-1.9.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-core-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/4368f70841f2419f05c63893a4774008/transformed/datastore-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/5f59c23d4ef1444e93d6914885b2487c/transformed/datastore-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/696813b6b6fb51ae02798f5cdbcbeb66/transformed/datastore-preferences-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/rigolo/.gradle/caches/8.9/transforms/580a88a7138f6a4d714d8a5bf6466336/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7b0b80b15322a339e31f917582f97894/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:15:1-37:12
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.android.datatransport:transport-api:3.0.0] /home/rigolo/.gradle/caches/8.9/transforms/d036f4a2f87b8f4956d5db50a9753fe7/transformed/transport-api-3.0.0/AndroidManifest.xml:15:1-22:12
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rigolo/.gradle/caches/8.9/transforms/a7147a8ceac666f92d3278d38942d132/transformed/exifinterface-1.3.7/AndroidManifest.xml:17:1-24:12
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] /home/rigolo/.gradle/caches/8.9/transforms/3691b93a3e5832ff588b8180b2aae759/transformed/firebase-encoders-json-18.0.0/AndroidManifest.xml:15:1-23:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/b7c059ccaa99e23df65e7c68b0c5cea4/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.tracing:tracing:1.2.0] /home/rigolo/.gradle/caches/8.9/transforms/419fe5f02dbe0d486686c58743f86025/transformed/tracing-1.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/01ceb61fa6da0adc722d33636a4aa477/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c0acba4154f1e66e5af9acd0339f3442/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e3802c9787f1e580a5738dff59ac3f1c/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/714c15d65d0522393cedc67002f4bc54/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rigolo/.gradle/caches/8.9/transforms/f9145c000bec4ba77ebfd62457265145/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/aee4895431cc4ebf3ccbc6a3436eee2d/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/05f589d6341b3aff413fb0bfd2785665/transformed/core-viewtree-1.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:2:1-21:12
+	package
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:4:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:25:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:25:5-67
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:4:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:5:5-79
+MERGED from [androidx.media3:media3-common:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/2f145cdce4077f1c5252206d908b6f2c/transformed/media3-common-1.4.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-common:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/2f145cdce4077f1c5252206d908b6f2c/transformed/media3-common-1.4.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/5d418a8611e53cb76cd4a6cdaf587d74/transformed/media3-exoplayer-1.4.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/5d418a8611e53cb76cd4a6cdaf587d74/transformed/media3-exoplayer-1.4.0/AndroidManifest.xml:22:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:24:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:24:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:22:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:22:5-79
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:5:22-76
+uses-permission#com.android.vending.BILLING
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:6:5-67
+MERGED from [com.android.billingclient:billing-ktx:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/16a2b929218afefc8a7dd5a8115bd48c/transformed/billing-ktx-7.0.0/AndroidManifest.xml:9:5-67
+MERGED from [com.android.billingclient:billing-ktx:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/16a2b929218afefc8a7dd5a8115bd48c/transformed/billing-ktx-7.0.0/AndroidManifest.xml:9:5-67
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:10:5-67
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:10:5-67
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:6:22-64
+uses-feature#android.software.leanback
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:8:5-86
+	android:required
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:8:60-83
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:8:19-59
+uses-feature#android.hardware.touchscreen
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:9:5-90
+	android:required
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:9:63-87
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:9:19-62
+application
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:11:5-30:19
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:11:5-30:19
+MERGED from [io.insert-koin:koin-android:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/1e1ed1266a47d67c2f992bfac49b7b03/transformed/koin-android-3.5.6/AndroidManifest.xml:7:5-20
+MERGED from [io.insert-koin:koin-android:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/1e1ed1266a47d67c2f992bfac49b7b03/transformed/koin-android-3.5.6/AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.play:review-ktx:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/c5580a5bf6a39b090ebaedddaefb91e5/transformed/review-ktx-2.0.1/AndroidManifest.xml:11:5-12:19
+MERGED from [com.google.android.play:review-ktx:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/c5580a5bf6a39b090ebaedddaefb91e5/transformed/review-ktx-2.0.1/AndroidManifest.xml:11:5-12:19
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:18:5-33:19
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:18:5-33:19
+MERGED from [com.google.android.play:review:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/bf5d388083047b9928e3ac18a2e4e57e/transformed/review-2.0.1/AndroidManifest.xml:11:5-12:19
+MERGED from [com.google.android.play:review:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/bf5d388083047b9928e3ac18a2e4e57e/transformed/review-2.0.1/AndroidManifest.xml:11:5-12:19
+MERGED from [com.google.android.gms:play-services-location:19.0.0] /home/rigolo/.gradle/caches/8.9/transforms/deef69f06b9aea318cebf79b40ff6b89/transformed/play-services-location-19.0.0/AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.gms:play-services-location:19.0.0] /home/rigolo/.gradle/caches/8.9/transforms/deef69f06b9aea318cebf79b40ff6b89/transformed/play-services-location-19.0.0/AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-tasks:18.1.0] /home/rigolo/.gradle/caches/8.9/transforms/0748be84595acb9b91ded99dc1023cf9/transformed/play-services-tasks-18.1.0/AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.1.0] /home/rigolo/.gradle/caches/8.9/transforms/0748be84595acb9b91ded99dc1023cf9/transformed/play-services-tasks-18.1.0/AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-places-placereport:17.0.0] /home/rigolo/.gradle/caches/8.9/transforms/ef8d81672d1bc2af00aeb9cdaef4d1b4/transformed/play-services-places-placereport-17.0.0/AndroidManifest.xml:22:5-20
+MERGED from [com.google.android.gms:play-services-places-placereport:17.0.0] /home/rigolo/.gradle/caches/8.9/transforms/ef8d81672d1bc2af00aeb9cdaef4d1b4/transformed/play-services-places-placereport-17.0.0/AndroidManifest.xml:22:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:20:5-24:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:27:5-35:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:27:5-35:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:25:5-39:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:25:5-39:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/b7c059ccaa99e23df65e7c68b0c5cea4/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/b7c059ccaa99e23df65e7c68b0c5cea4/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:11:5-19:19
+MERGED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:11:5-19:19
+	android:extractNativeLibs
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:16:9-41
+	android:icon
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:15:9-43
+	android:allowBackup
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:13:9-36
+	android:banner
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:14:9-45
+	android:theme
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:17:9-50
+	android:usesCleartextTraffic
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:18:9-44
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:12:9-38
+activity#com.purple.iptvplayer.tv.TvActivity
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:20:9-29:20
+	android:launchMode
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:24:13-44
+	android:exported
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:23:13-36
+	android:configChanges
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:22:13-90
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:21:13-39
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LEANBACK_LAUNCHER
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:25:13-28:29
+action#android.intent.action.MAIN
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:26:17-69
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:26:25-66
+category#android.intent.category.LEANBACK_LAUNCHER
+ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:27:17-86
+	android:name
+		ADDED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml:27:27-83
+uses-sdk
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+MERGED from [:core] /home/rigolo/Documents/woc/cluster/iptv/native/core/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:core] /home/rigolo/Documents/woc/cluster/iptv/native/core/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [io.insert-koin:koin-androidx-compose:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/7c88e547d916288c6b5c82bbac4af646/transformed/koin-androidx-compose-3.5.6/AndroidManifest.xml:5:5-44
+MERGED from [io.insert-koin:koin-androidx-compose:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/7c88e547d916288c6b5c82bbac4af646/transformed/koin-androidx-compose-3.5.6/AndroidManifest.xml:5:5-44
+MERGED from [io.insert-koin:koin-android:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/1e1ed1266a47d67c2f992bfac49b7b03/transformed/koin-android-3.5.6/AndroidManifest.xml:5:5-44
+MERGED from [io.insert-koin:koin-android:3.5.6] /home/rigolo/.gradle/caches/8.9/transforms/1e1ed1266a47d67c2f992bfac49b7b03/transformed/koin-android-3.5.6/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.play:review-ktx:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/c5580a5bf6a39b090ebaedddaefb91e5/transformed/review-ktx-2.0.1/AndroidManifest.xml:7:5-9:41
+MERGED from [com.google.android.play:review-ktx:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/c5580a5bf6a39b090ebaedddaefb91e5/transformed/review-ktx-2.0.1/AndroidManifest.xml:7:5-9:41
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/84518b4c4b0dce06de0eec7dce121077/transformed/coil-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/84518b4c4b0dce06de0eec7dce121077/transformed/coil-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/b3637ba27105f77b8a7d27b885dcd0ee/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/b3637ba27105f77b8a7d27b885dcd0ee/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/ea4aa04b943c4bf30cb7687cd41d9e83/transformed/coil-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/ea4aa04b943c4bf30cb7687cd41d9e83/transformed/coil-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/db842e05a4a9a26a7df6454b07113b33/transformed/coil-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rigolo/.gradle/caches/8.9/transforms/db842e05a4a9a26a7df6454b07113b33/transformed/coil-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/86ffffcd98dc690a5ab4685872330d81/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/86ffffcd98dc690a5ab4685872330d81/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/4da942bdef07b93dd308f59a5c56967c/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] /home/rigolo/.gradle/caches/8.9/transforms/4da942bdef07b93dd308f59a5c56967c/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [com.android.billingclient:billing-ktx:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/16a2b929218afefc8a7dd5a8115bd48c/transformed/billing-ktx-7.0.0/AndroidManifest.xml:5:5-7:41
+MERGED from [com.android.billingclient:billing-ktx:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/16a2b929218afefc8a7dd5a8115bd48c/transformed/billing-ktx-7.0.0/AndroidManifest.xml:5:5-7:41
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:6:5-8:41
+MERGED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:6:5-8:41
+MERGED from [com.google.android.play:review:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/bf5d388083047b9928e3ac18a2e4e57e/transformed/review-2.0.1/AndroidManifest.xml:7:5-9:41
+MERGED from [com.google.android.play:review:2.0.1] /home/rigolo/.gradle/caches/8.9/transforms/bf5d388083047b9928e3ac18a2e4e57e/transformed/review-2.0.1/AndroidManifest.xml:7:5-9:41
+MERGED from [com.google.android.gms:play-services-location:19.0.0] /home/rigolo/.gradle/caches/8.9/transforms/deef69f06b9aea318cebf79b40ff6b89/transformed/play-services-location-19.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-location:19.0.0] /home/rigolo/.gradle/caches/8.9/transforms/deef69f06b9aea318cebf79b40ff6b89/transformed/play-services-location-19.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.1.0] /home/rigolo/.gradle/caches/8.9/transforms/0748be84595acb9b91ded99dc1023cf9/transformed/play-services-tasks-18.1.0/AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.1.0] /home/rigolo/.gradle/caches/8.9/transforms/0748be84595acb9b91ded99dc1023cf9/transformed/play-services-tasks-18.1.0/AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-places-placereport:17.0.0] /home/rigolo/.gradle/caches/8.9/transforms/ef8d81672d1bc2af00aeb9cdaef4d1b4/transformed/play-services-places-placereport-17.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-places-placereport:17.0.0] /home/rigolo/.gradle/caches/8.9/transforms/ef8d81672d1bc2af00aeb9cdaef4d1b4/transformed/play-services-places-placereport-17.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:18:5-43
+MERGED from [androidx.fragment:fragment:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/60b9b2a083a3895390eec13d17d9b439/transformed/fragment-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/60b9b2a083a3895390eec13d17d9b439/transformed/fragment-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/7b7774b4c06de81fc9fbc2188e2cb88a/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.fragment:fragment-ktx:1.6.2] /home/rigolo/.gradle/caches/8.9/transforms/7b7774b4c06de81fc9fbc2188e2cb88a/transformed/fragment-ktx-1.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/437f1f1d763157d463e15be7203f39ca/transformed/activity-1.9.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/437f1f1d763157d463e15be7203f39ca/transformed/activity-1.9.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tv:tv-material:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/58ddaddff5d92cea3197bcd9bca4e576/transformed/tv-material-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.tv:tv-material:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/58ddaddff5d92cea3197bcd9bca4e576/transformed/tv-material-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.tv:tv-foundation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7fa8fcf141b90a177009eae05cd26842/transformed/tv-foundation-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.tv:tv-foundation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7fa8fcf141b90a177009eae05cd26842/transformed/tv-foundation-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rigolo/.gradle/caches/8.9/transforms/da3263e811f0644bf13e7d36bee4d6b8/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rigolo/.gradle/caches/8.9/transforms/da3263e811f0644bf13e7d36bee4d6b8/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.compose.material3:material3-android:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/b63494f5629b4ed3cc1423bebdfe282c/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/b63494f5629b4ed3cc1423bebdfe282c/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/8287635213c3d8791e2c8fc57174738b/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/8287635213c3d8791e2c8fc57174738b/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d8a204efd92fa68e6ac247b9675e7a80/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d8a204efd92fa68e6ac247b9675e7a80/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/59b45d3ff1b2e8d1ee5530941f568ec8/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/59b45d3ff1b2e8d1ee5530941f568ec8/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/8e1e0da390b9b889197f7df0af0ce635/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/8e1e0da390b9b889197f7df0af0ce635/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/bcd5f4c9085697f9449782217ab73b3d/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/bcd5f4c9085697f9449782217ab73b3d/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/b32af00c331297d2d418d185bfec5e96/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/b32af00c331297d2d418d185bfec5e96/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/0aaa46037ed7692a1552a9e69f378195/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/0aaa46037ed7692a1552a9e69f378195/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/f72d4c7a57cea3460b866db90d21dbff/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/f72d4c7a57cea3460b866db90d21dbff/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/c9d438e124e350619b8ada1c0037bf77/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/c9d438e124e350619b8ada1c0037bf77/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/2583994582dc7370161610b308a4123f/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/2583994582dc7370161610b308a4123f/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.animation:animation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/e5cac151b7a452134d5e8dcc798798c7/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/e5cac151b7a452134d5e8dcc798798c7/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/ee850663ba70e8fccfb82761ad7e4a06/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/ee850663ba70e8fccfb82761ad7e4a06/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/620759f904b6af85881d79c490a4a202/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/620759f904b6af85881d79c490a4a202/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a6f89f6609405f8469447b5bf770177a/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a6f89f6609405f8469447b5bf770177a/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/eee6945e48d8cd1ebfb74e47ccd07589/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/eee6945e48d8cd1ebfb74e47ccd07589/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/f055bcd11c65c1a4a83fccdda1cda424/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/f055bcd11c65c1a4a83fccdda1cda424/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/295c179eeeef6b4ae6ae7f5ff9c60fd7/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/295c179eeeef6b4ae6ae7f5ff9c60fd7/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.transition:transition:1.6.0] /home/rigolo/.gradle/caches/8.9/transforms/829359ba4212e57e71a9b3d678222d5c/transformed/transition-1.6.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.transition:transition:1.6.0] /home/rigolo/.gradle/caches/8.9/transforms/829359ba4212e57e71a9b3d678222d5c/transformed/transition-1.6.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e143c1e4483d32cd78ff1aea6c36509a/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e143c1e4483d32cd78ff1aea6c36509a/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/fe50b82330fa81bbbcfb602f44c619f4/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/fe50b82330fa81bbbcfb602f44c619f4/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/2fa2870ff576fa3d9d4122491c2ddee0/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/2fa2870ff576fa3d9d4122491c2ddee0/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/b6ebc9148be546a157dad66f80b2b568/transformed/emoji2-views-helper-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/b6ebc9148be546a157dad66f80b2b568/transformed/emoji2-views-helper-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.media3:media3-ui:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0876716eac9fd3196ecfe59dad35c5b5/transformed/media3-ui-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-ui:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0876716eac9fd3196ecfe59dad35c5b5/transformed/media3-ui-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-session:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/7dfb9847597c1934bf72acc166faf463/transformed/media3-session-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-session:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/7dfb9847597c1934bf72acc166faf463/transformed/media3-session-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0c09947e399dff57a80a79b1373cd7e5/transformed/media3-extractor-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/0c09947e399dff57a80a79b1373cd7e5/transformed/media3-extractor-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/70b445d90a29b9f0a74fc701a59e42b6/transformed/media3-container-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/70b445d90a29b9f0a74fc701a59e42b6/transformed/media3-container-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/6f728eb8246397e8433a3969c9c8e826/transformed/media3-datasource-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/6f728eb8246397e8433a3969c9c8e826/transformed/media3-datasource-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/e7aa199b0b8d4f7d6c5f7bed6aae0ab2/transformed/media3-decoder-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/e7aa199b0b8d4f7d6c5f7bed6aae0ab2/transformed/media3-decoder-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/d23d771fb82c7dc84e25497726f296c9/transformed/media3-database-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/d23d771fb82c7dc84e25497726f296c9/transformed/media3-database-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/2f145cdce4077f1c5252206d908b6f2c/transformed/media3-common-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/2f145cdce4077f1c5252206d908b6f2c/transformed/media3-common-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-hls:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8b95437f2e97d8b660792cd5e680b236/transformed/media3-exoplayer-hls-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-hls:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8b95437f2e97d8b660792cd5e680b236/transformed/media3-exoplayer-hls-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-dash:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8375aabed1de6afced932e8a7a160b0a/transformed/media3-exoplayer-dash-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-dash:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/8375aabed1de6afced932e8a7a160b0a/transformed/media3-exoplayer-dash-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/5d418a8611e53cb76cd4a6cdaf587d74/transformed/media3-exoplayer-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/5d418a8611e53cb76cd4a6cdaf587d74/transformed/media3-exoplayer-1.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media:media:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a2bd267cce297f697cf1f30fb78f7db8/transformed/media-1.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.media:media:1.7.0] /home/rigolo/.gradle/caches/8.9/transforms/a2bd267cce297f697cf1f30fb78f7db8/transformed/media-1.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/d30c5f2a7342fa6e9c35ba91e1eeba0f/transformed/recyclerview-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rigolo/.gradle/caches/8.9/transforms/d30c5f2a7342fa6e9c35ba91e1eeba0f/transformed/recyclerview-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/54e86c8ba240d75d1baf6ee404a946f9/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/54e86c8ba240d75d1baf6ee404a946f9/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/0fc8e6e8eecf29072a3410ca984f690a/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/0fc8e6e8eecf29072a3410ca984f690a/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/a24fdee2d4b63c907deb2c3e683442da/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/a24fdee2d4b63c907deb2c3e683442da/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c558a21053443b9b8a763a08a2e81a3a/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c558a21053443b9b8a763a08a2e81a3a/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.window:window-core-android:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/e57995449b2de22f9721fe54287b72fa/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window-core-android:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/e57995449b2de22f9721fe54287b72fa/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/bde47e7c4c7b39f040b99fdcc57ebfe9/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/bde47e7c4c7b39f040b99fdcc57ebfe9/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/6701aa881579a7b562cb246a62ea07b2/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rigolo/.gradle/caches/8.9/transforms/6701aa881579a7b562cb246a62ea07b2/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/289a7ebc1c46d4cafb174d1f115eb650/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/289a7ebc1c46d4cafb174d1f115eb650/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.core:core-ktx:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/c19a4806a434e2573def0e3cfee088d7/transformed/core-ktx-1.16.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/c19a4806a434e2573def0e3cfee088d7/transformed/core-ktx-1.16.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rigolo/.gradle/caches/8.9/transforms/a7cce266d8861671934ffdd3439d3161/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rigolo/.gradle/caches/8.9/transforms/a7cce266d8861671934ffdd3439d3161/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/0e893d1061a1f43925c70483b69fcfa9/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/0e893d1061a1f43925c70483b69fcfa9/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/1f04cb6580daa9ef04483aa86956a488/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/1f04cb6580daa9ef04483aa86956a488/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/6d19afda6400ee4810ff182ab7d8c278/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/6d19afda6400ee4810ff182ab7d8c278/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/3439e1a98401c17525742fd65064f889/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/3439e1a98401c17525742fd65064f889/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/5198a656673c0586a5f7e80dadfe504c/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/5198a656673c0586a5f7e80dadfe504c/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/34fc51cfa32e17950c9154c8fb3ad90a/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/34fc51cfa32e17950c9154c8fb3ad90a/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/69caf76b03a765f7f0524cd21bb7ebad/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/69caf76b03a765f7f0524cd21bb7ebad/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/17957cff163c348bd9a36c9c0f379593/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/17957cff163c348bd9a36c9c0f379593/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/b25b1e00526be246bb056bb3e4e507de/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/b25b1e00526be246bb056bb3e4e507de/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/c7e7612ae8ff1162f63e070b6c2732c0/transformed/savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/c7e7612ae8ff1162f63e070b6c2732c0/transformed/savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/e7666b2033a94c1a7a28dc69f3f132f3/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/e7666b2033a94c1a7a28dc69f3f132f3/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/484a0e19fc0af8a5655bbcf5543e8437/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /home/rigolo/.gradle/caches/8.9/transforms/484a0e19fc0af8a5655bbcf5543e8437/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d78e5a29820c8d498412bea70d35a64f/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/d78e5a29820c8d498412bea70d35a64f/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4147da23bc2595ecd27270d3408da256/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4147da23bc2595ecd27270d3408da256/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/4208a148dbd9aebefe31fe55580c4af6/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/4208a148dbd9aebefe31fe55580c4af6/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/13c9a679bad3f7a1a4aa9c9c23b02ce3/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/13c9a679bad3f7a1a4aa9c9c23b02ce3/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/a4b8ff2e9b2649f6b978c98ba354214b/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/a4b8ff2e9b2649f6b978c98ba354214b/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/a05c139c096292287a4d322bfc9e6975/transformed/activity-ktx-1.9.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/a05c139c096292287a4d322bfc9e6975/transformed/activity-ktx-1.9.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/7d2151cb3480f230a9c195e843bbb1df/transformed/activity-compose-1.9.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.2] /home/rigolo/.gradle/caches/8.9/transforms/7d2151cb3480f230a9c195e843bbb1df/transformed/activity-compose-1.9.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/4368f70841f2419f05c63893a4774008/transformed/datastore-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/4368f70841f2419f05c63893a4774008/transformed/datastore-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/5f59c23d4ef1444e93d6914885b2487c/transformed/datastore-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/5f59c23d4ef1444e93d6914885b2487c/transformed/datastore-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/696813b6b6fb51ae02798f5cdbcbeb66/transformed/datastore-preferences-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/696813b6b6fb51ae02798f5cdbcbeb66/transformed/datastore-preferences-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/rigolo/.gradle/caches/8.9/transforms/580a88a7138f6a4d714d8a5bf6466336/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /home/rigolo/.gradle/caches/8.9/transforms/580a88a7138f6a4d714d8a5bf6466336/transformed/security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7b0b80b15322a339e31f917582f97894/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/7b0b80b15322a339e31f917582f97894/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-api:3.0.0] /home/rigolo/.gradle/caches/8.9/transforms/d036f4a2f87b8f4956d5db50a9753fe7/transformed/transport-api-3.0.0/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-api:3.0.0] /home/rigolo/.gradle/caches/8.9/transforms/d036f4a2f87b8f4956d5db50a9753fe7/transformed/transport-api-3.0.0/AndroidManifest.xml:18:5-20:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rigolo/.gradle/caches/8.9/transforms/a7147a8ceac666f92d3278d38942d132/transformed/exifinterface-1.3.7/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rigolo/.gradle/caches/8.9/transforms/a7147a8ceac666f92d3278d38942d132/transformed/exifinterface-1.3.7/AndroidManifest.xml:20:5-22:41
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] /home/rigolo/.gradle/caches/8.9/transforms/3691b93a3e5832ff588b8180b2aae759/transformed/firebase-encoders-json-18.0.0/AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] /home/rigolo/.gradle/caches/8.9/transforms/3691b93a3e5832ff588b8180b2aae759/transformed/firebase-encoders-json-18.0.0/AndroidManifest.xml:19:5-21:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/b7c059ccaa99e23df65e7c68b0c5cea4/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/b7c059ccaa99e23df65e7c68b0c5cea4/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.2.0] /home/rigolo/.gradle/caches/8.9/transforms/419fe5f02dbe0d486686c58743f86025/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] /home/rigolo/.gradle/caches/8.9/transforms/419fe5f02dbe0d486686c58743f86025/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/01ceb61fa6da0adc722d33636a4aa477/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/01ceb61fa6da0adc722d33636a4aa477/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c0acba4154f1e66e5af9acd0339f3442/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/c0acba4154f1e66e5af9acd0339f3442/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e3802c9787f1e580a5738dff59ac3f1c/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/e3802c9787f1e580a5738dff59ac3f1c/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/714c15d65d0522393cedc67002f4bc54/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/714c15d65d0522393cedc67002f4bc54/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rigolo/.gradle/caches/8.9/transforms/f9145c000bec4ba77ebfd62457265145/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rigolo/.gradle/caches/8.9/transforms/f9145c000bec4ba77ebfd62457265145/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/aee4895431cc4ebf3ccbc6a3436eee2d/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/aee4895431cc4ebf3ccbc6a3436eee2d/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/05f589d6341b3aff413fb0bfd2785665/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/rigolo/.gradle/caches/8.9/transforms/05f589d6341b3aff413fb0bfd2785665/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:7:5-9:41
+MERGED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:7:5-9:41
+	android:targetSdkVersion
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/rigolo/Documents/woc/cluster/iptv/native/app-tv/src/main/AndroidManifest.xml
+queries
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:12:5-16:15
+intent#action:name:com.android.vending.billing.InAppBillingService.BIND
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:13:9-15:18
+action#com.android.vending.billing.InAppBillingService.BIND
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:14:13-91
+	android:name
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:14:21-88
+meta-data#com.google.android.play.billingclient.version
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:19:9-21:37
+	android:value
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:21:13-34
+	android:name
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:20:13-73
+activity#com.android.billingclient.api.ProxyBillingActivity
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:23:9-27:75
+	android:exported
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:26:13-37
+	android:configChanges
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:25:13-96
+	android:theme
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:27:13-72
+	android:name
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:24:13-78
+activity#com.android.billingclient.api.ProxyBillingActivityV2
+ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:28:9-32:75
+	android:exported
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:31:13-37
+	android:configChanges
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:30:13-96
+	android:theme
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:32:13-72
+	android:name
+		ADDED from [com.android.billingclient:billing:7.0.0] /home/rigolo/.gradle/caches/8.9/transforms/9f336e33f3f1c5f5b7f602ccf72f403d/transformed/billing-7.0.0/AndroidManifest.xml:29:13-80
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/c348c0709b840494882f00f9af8fcfe7/transformed/play-services-base-18.3.0/AndroidManifest.xml:20:19-85
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.3.0] /home/rigolo/.gradle/caches/8.9/transforms/8ac992fbc22140e574cc5f9283481291/transformed/play-services-basement-18.3.0/AndroidManifest.xml:22:13-58
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.10.3] /home/rigolo/.gradle/caches/8.9/transforms/4190d80020475169794d44c3903466bf/transformed/ui-tooling/AndroidManifest.xml:24:13-71
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rigolo/.gradle/caches/8.9/transforms/040f669344e665f90c07a82b66bcf8c7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/rigolo/.gradle/caches/8.9/transforms/820feb1cf70e930a77fb839be9ef13be/transformed/emoji2-1.4.0/AndroidManifest.xml:30:17-75
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:23:9-25:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:25:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:24:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:26:9-28:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /home/rigolo/.gradle/caches/8.9/transforms/9b608aea6ec49c4654aeb1dc16eeb510/transformed/window-1.5.0/AndroidManifest.xml:27:13-51
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:23:9-81
+permission#com.purple.iptvplayer.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:26:22-94
+uses-permission#com.purple.iptvplayer.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.16.0] /home/rigolo/.gradle/caches/8.9/transforms/68ac0b9b65b2563b3c45c698bb18520f/transformed/core-1.16.0/AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /home/rigolo/.gradle/caches/8.9/transforms/04de476c4c0722f2c4411c4645e7eebc/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.1] /home/rigolo/.gradle/caches/8.9/transforms/99f2d96c3aba76057b5cce1c6e6b340d/transformed/profileinstaller-1.4.1/AndroidManifest.xml:50:25-92
+service#com.google.android.datatransport.runtime.backends.TransportBackendDiscovery
+ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:28:9-34:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:36:9-38:40
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:36:9-38:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:30:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:29:13-103
+meta-data#backend:com.google.android.datatransport.cct.CctBackendFactory
+ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:31:13-33:39
+	android:value
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:33:17-36
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/8d3d093bbd7ff0775e5db6dad88bc338/transformed/transport-backend-cct-3.1.8/AndroidManifest.xml:32:17-94
+service#com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService
+ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:26:9-30:19
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:28:13-37
+	android:permission
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:29:13-69
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:27:13-117
+receiver#com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver
+ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:32:9-34:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:34:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.8] /home/rigolo/.gradle/caches/8.9/transforms/c352d0371daa17bc7471629629c72c4f/transformed/transport-runtime-3.1.8/AndroidManifest.xml:33:13-132
+activity#com.google.android.play.core.common.PlayCoreDialogWrapperActivity
+ADDED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:14:9-18:65
+	android:stateNotNeeded
+		ADDED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:17:13-42
+	android:exported
+		ADDED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:16:13-37
+	android:theme
+		ADDED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:18:13-62
+	android:name
+		ADDED from [com.google.android.play:core-common:2.0.2] /home/rigolo/.gradle/caches/8.9/transforms/fb9484f1dcb58e09fc14aaa11d5bae0e/transformed/core-common-2.0.2/AndroidManifest.xml:15:13-93

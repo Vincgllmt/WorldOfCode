@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .row { display: flex; gap: 18px; align-items: center; flex-direction: column; }
+  .stack { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .wm { font: 800 28px var(--font-display); letter-spacing: 0.02em; }
+  .wm .heavy { color: #B36BFC; }
+  .wm .light { color: #fff; font-weight: 400; }
+  .pill { padding: 14px 26px; border-radius: 999px; border: 1.5px solid #B36BFC; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+  .header { display: flex; align-items: center; gap: 10px; }
+  .header .mark { width: 36px; height: 36px; border-radius: 6px; background: url(../assets/logo_mark_tight.png) center/contain no-repeat; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Wordmark — three approved lockups</div>
+    <div class="note">heavy lavender · light white</div>
+  </div>
+  <div class="stack">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="header">
+        <div class="mark"></div>
+        <span class="wm" style="font-size: 22px;"><span class="heavy">PURPLE</span> <span class="light">IPTV</span></span>
+      </div>
+      <div class="lab">Header lockup</div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="pill"><span class="wm" style="font-size: 22px;"><span class="heavy">PURPLE</span> <span class="light">IPTV</span></span></div>
+      <div class="lab">Pill lockup (splash)</div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <span class="wm" style="font-size: 34px;"><span class="heavy">PURPLE</span><br><span class="light">IPTV</span></span>
+      <div class="lab">Stacked (TV idle)</div>
+    </div>
+  </div>
+</body></html>

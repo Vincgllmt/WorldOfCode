@@ -1,0 +1,28 @@
+/* Shared base for all design-system cards */
+@import url("../colors_and_type.css");
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  width: 700px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.row { display: flex; gap: 16px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.muted { color: var(--fg-3); font-size: 12px; letter-spacing: 0.04em; }
+.tok { color: var(--fg-3); font-size: 11px; font-family: var(--font-mono); }
+.label-mini {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 600;
+}

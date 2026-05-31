@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .row2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-2); border-radius: 12px; }
+  .dot { width: 36px; height: 36px; border-radius: 999px; flex: 0 0 36px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
+  .lbl { font-size: 13px; color: var(--fg-1); font-weight: 600; }
+  .meta { font-size: 11px; color: var(--fg-3); font-family: var(--font-mono); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Semantic Colors</div>
+    <div class="note">live, rating, status, destructive</div>
+  </div>
+  <div class="row2">
+    <div class="item"><div class="dot" style="background:#FF3B30; box-shadow: 0 0 12px rgba(255,59,48,0.6);"></div><div><div class="lbl">Live</div><div class="meta">#FF3B30 · --live</div></div></div>
+    <div class="item"><div class="dot" style="background:#FFC53D"></div><div><div class="lbl">Rating star</div><div class="meta">#FFC53D · --rating</div></div></div>
+    <div class="item"><div class="dot" style="background:#34D399"></div><div><div class="lbl">Success</div><div class="meta">#34D399 · --success</div></div></div>
+    <div class="item"><div class="dot" style="background:#FBBF24"></div><div><div class="lbl">Warning</div><div class="meta">#FBBF24 · --warning</div></div></div>
+    <div class="item"><div class="dot" style="background:#FF5A5F"></div><div><div class="lbl">Destructive</div><div class="meta">#FF5A5F · --danger · "Sign out"</div></div></div>
+    <div class="item"><div class="dot" style="background:#60A5FA"></div><div><div class="lbl">Info</div><div class="meta">#60A5FA · --info</div></div></div>
+    <div class="item"><div class="dot" style="background:#FFFFFF; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);"></div><div><div class="lbl">Subtitle · White</div><div class="meta">#FFFFFF · default</div></div></div>
+    <div class="item"><div class="dot" style="background:#F2E028"></div><div><div class="lbl">Subtitle · Yellow</div><div class="meta">#F2E028 · alt option</div></div></div>
+  </div>
+</body></html>

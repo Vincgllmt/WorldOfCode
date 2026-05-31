@@ -10,6 +10,15 @@ class Credentials {
   const Credentials({required this.host, this.user, this.pass, this.type = PlaylistType.xtream});
 
   bool get isXtream => type == PlaylistType.xtream;
+
+  Credentials copyWith({String? host}) {
+    return Credentials(
+      host: host ?? this.host,
+      user: user,
+      pass: pass,
+      type: type,
+    );
+  }
 }
 
 class CredentialsService {

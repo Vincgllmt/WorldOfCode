@@ -106,12 +106,12 @@ class _SetupScreenState extends State<SetupScreen> {
     }
 
     try {
-      final ok = await ApiService().validate(creds);
-      if (!ok) {
+      final validCreds = await ApiService().validate(creds!);
+      if (validCreds == null) {
         setState(() { _loading = false; _error = lang.t('setup_err_invalid_creds'); });
         return;
       }
-      await CredentialsService.save(creds);
+      await CredentialsService.save(validCreds);
       ApiService.invalidateCache();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -145,28 +145,10 @@ class _SetupScreenState extends State<SetupScreen> {
                           children: [
                             const SizedBox(height: 40), // Top margin for language buttons
                             // Responsive Logo
-                            GestureDetector(
-                              onDoubleTap: () async {
-                                await trialService.debugSetExpired();
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('DEBUG: Essai expiré (Redémarrez l\'app)')),
-                                  );
-                                }
-                              },
-                              onLongPress: () async {
-                                await trialService.resetAll();
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('DEBUG: Données réinitialisées !')),
-                                  );
-                                }
-                              },
-                              child: Image.asset(
-                                'assets/images/logo.png',
-                                height: isTV ? 120 : 180, // Smaller on TV to save space
-                                fit: BoxFit.contain,
-                              ),
+                            Image.asset(
+                              'assets/images/logo.png',
+                              height: isTV ? 120 : 180, // Smaller on TV to save space
+                              fit: BoxFit.contain,
                             ),
                             const SizedBox(height: 24),
                             

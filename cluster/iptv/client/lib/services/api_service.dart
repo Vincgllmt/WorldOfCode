@@ -99,7 +99,26 @@ class ApiService {
 
   // ─── Endpoints ─────────────────────────────────────────────────────────────
 
-  Future<bool> validate(Credentials creds) async {
+  Future<Credentials?> validate(Credentials creds) async {
+    try {
+      bool ok = await _doValidate(creds);
+      if (ok) return creds;
+
+      // Fallback: If it was https, try http
+      if (creds.host.startsWith('https://')) {
+        final fallbackHost = creds.host.replaceFirst('https://', 'http://');
+        final fallbackCreds = creds.copyWith(host: fallbackHost);
+        ok = await _doValidate(fallbackCreds);
+        if (ok) return fallbackCreds;
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> _doValidate(Credentials creds) async {
     try {
       if (!creds.isXtream) {
         // Simple check if URL/File is accessible

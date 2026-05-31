@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.7.0" type="partial_results">
+    <map id="AppBundleLocaleChanges">
+        <location id="localeChangeLocation"
+            file="${:app-mobile*debug*MAIN*sourceProvider*0*javaDir*2}/com/purple/iptvplayer/mobile/util/LocaleHelper.kt"
+            line="37"
+            column="9"
+            startOffset="1244"
+            endLine="37"
+            endColumn="33"
+            endOffset="1268"/>
+    </map>
+    <map id="PictureInPictureIssue">
+        <entry
+            name="enterPipMode"
+            boolean="true"/>
+    </map>
+    <map id="UnsafeIntentLaunch">
+            <map id="unprotected">
+                <entry
+                    name="com.purple.iptvplayer.mobile.MainActivity"
+                    boolean="true"/>
+            </map>
+    </map>
+    <map id="UnusedResources">
+        <location id="R.string.cast_casting_to"
+            file="${:app-mobile*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="61"
+            column="13"
+            startOffset="3069"
+            endLine="61"
+            endColumn="35"
+            endOffset="3091"/>
+        <location id="R.string.cast_disconnect"
+            file="${:app-mobile*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="63"
+            column="13"
+            startOffset="3177"
+            endLine="63"
+            endColumn="35"
+            endOffset="3199"/>
+        <location id="R.string.cast_stop"
+            file="${:app-mobile*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="62"
+            column="13"
+            startOffset="3129"
+            endLine="62"
+            endColumn="29"
+            endOffset="3145"/>
+        <entry
+            name="model"
+            string="color[ic_launcher_background(U)],drawable[ic_logo(U),ic_launcher_foreground(U)],mipmap[ic_launcher(U),ic_launcher_round(U)],string[app_name(U),setup_subtitle(U),tab_m3u(U),tab_credentials(U),tab_file(U),field_m3u_hint(U),field_server(U),field_username(U),field_password(U),file_local(U),file_path_hint(U),trial_info(U),btn_connect(U),nav_live(U),nav_movies(U),nav_series(U),nav_downloads(U),trial_banner(U),trial_expired(U),btn_activate(U),drawer_search_hint(U),genre_all(U),change_account(U),settings_title(U),settings_language(U),settings_logout_title(U),settings_logout_desc(U),btn_cancel(U),btn_logout(U),layout_themes(U),layout_small(U),layout_medium(U),layout_large(U),btn_download(U),btn_download_season(U),download_active(U),download_queued(U),download_done(U),download_failed(U),btn_retry(U),btn_delete(U),downloads_empty(U),downloads_empty_sub(U),downloads_section_active(U),downloads_section_queue(U),downloads_section_completed(U),download_cancel(U),download_season_progress(U),btn_cancel_season(U),btn_delete_season(U),cast_casting_to(D),cast_stop(D),cast_disconnect(D)],style[Theme_PurpleIPTV(U)];3^0^2,4^0^2;;;"/>
+    </map>
+
+</incidents>

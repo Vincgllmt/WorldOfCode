@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line-1); padding-bottom: 12px; }
+  .row:last-child { border: none; padding: 0; }
+  .meta { color: var(--fg-3); font-size: 11px; font-family: var(--font-mono); flex: 0 0 auto; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Type · Body, Meta, All-Caps Labels</div>
+    <div class="note">the all-caps eyebrow is signature</div>
+  </div>
+  <div class="stack">
+    <div class="row">
+      <div style="font: 400 18px/1.55 var(--font-body); color:var(--fg-2); max-width: 460px;">Connect to your IPTV service to access your favorite content. 3-day free trial included.</div>
+      <div class="meta">body · 18/400</div>
+    </div>
+    <div class="row">
+      <div style="font: 400 14px/1.5 var(--font-body); color:var(--fg-3);">2025-11-21 · 01:10:48 · Animation, Comédie, Drame</div>
+      <div class="meta">meta · 14/400</div>
+    </div>
+    <div class="row">
+      <div style="font: 600 12px/1 var(--font-display); letter-spacing:0.14em; text-transform:uppercase; color:#BF8FFF;">DOWNLOADED · FRANCE SPORT · EN DIRECT</div>
+      <div class="meta">caps · 12/600 · 0.14em</div>
+    </div>
+    <div class="row">
+      <div style="font: 800 18px/1 var(--font-display); letter-spacing:0.02em; color:#B36BFC;">PURPLE <span style="color:#fff; font-weight:400;">IPTV</span></div>
+      <div class="meta">wordmark</div>
+    </div>
+  </div>
+</body></html>

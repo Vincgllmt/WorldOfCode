@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 24px; background: var(--bg-1); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+
+  /* Mobile bottom tab */
+  .mtab { display: grid; grid-template-columns: repeat(4, 1fr); padding: 10px 0 6px; background: var(--bg-1); border-top: 1px solid rgba(255,255,255,0.04); border-radius: 12px; }
+  .mtab .item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; color: rgba(255,255,255,0.45); }
+  .mtab .item svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .mtab .item.on { color: #B36BFC; }
+  .mtab .item.on svg { fill: #B36BFC; stroke: #B36BFC; }
+  .mtab .item span { font: 600 11px var(--font-display); }
+
+  /* TV side rail */
+  .tvrail { background: var(--bg-2); border-radius: 16px; padding: 16px 8px; width: 220px; }
+  .tvrail .ritem { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; color: rgba(255,255,255,0.6); font: 600 14px var(--font-display); }
+  .tvrail .ritem svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .tvrail .ritem.on { background: #B36BFC; color: #fff; }
+  .tvrail .ritem.on svg { stroke: #fff; }
+  .tvrail .ritem.focus { background: var(--bg-3); color: #fff; box-shadow: inset 4px 0 0 #B36BFC; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Navigation — mobile tab bar + TV rail</div>
+    <div class="note">TV rail collapses when not focused</div>
+  </div>
+  <div class="stack">
+    <div>
+      <div class="mtab">
+        <div class="item"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8M12 18v3"/></svg><span>Direct TV</span></div>
+        <div class="item"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 5v4M11 5v4M15 5v4M19 5v4"/></svg><span>Films</span></div>
+        <div class="item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Series</span></div>
+        <div class="item on"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Downloads</span></div>
+      </div>
+      <div class="lab" style="margin-top: 8px;">Mobile bottom tabs · active "Downloads"</div>
+    </div>
+    <div style="display:flex; gap: 24px; align-items: flex-start;">
+      <div class="tvrail">
+        <div class="ritem on"><svg viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Home</div>
+        <div class="ritem"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8M12 18v3"/></svg>Direct TV</div>
+        <div class="ritem focus"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v4M19 5v4"/></svg>Films</div>
+        <div class="ritem"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Series</div>
+        <div class="ritem"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Search</div>
+      </div>
+      <div class="lab" style="margin-top: 12px;">TV side rail · "Home" selected · "Films" focused</div>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,5 @@
+-keep class com.purple.iptvplayer.core.model.** { *; }
+-keep class com.squareup.moshi.** { *; }
+-keepclassmembers class ** { @com.squareup.moshi.Json *; @com.squareup.moshi.JsonClass *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**

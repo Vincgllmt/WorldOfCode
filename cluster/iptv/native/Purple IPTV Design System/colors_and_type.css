@@ -1,0 +1,240 @@
+/* ============================================================
+   Purple IPTV — Colors & Type Tokens
+   Source of truth for the brand's mobile + TV experience.
+   ============================================================ */
+
+/* ----- Webfonts (Poppins as nearest-match substitution) ----- */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ----------------------------------------------------------
+     COLOR — PURPLE BRAND
+     The brand is unapologetically purple. Two anchor purples:
+       - Lavender Primary  → buttons, focus, brand mark, accents
+       - Deep Violet BG    → the entire screen behind content
+     The lavender NEVER touches anything that isn't either:
+       (a) a primary CTA, (b) focus/selection, (c) brand chrome.
+     ---------------------------------------------------------- */
+
+  /* Primary lavender — interactive + brand */
+  --purple-50:  #F5ECFF;
+  --purple-100: #E7D4FF;
+  --purple-200: #D2B0FF;
+  --purple-300: #BF8FFF;
+  --purple-400: #B36BFC;   /* hero CTA fill */
+  --purple-500: #A855F7;   /* primary action */
+  --purple-600: #8C3DE8;   /* pressed */
+  --purple-700: #6B22C0;
+
+  /* Deep violet — background system (near-black, blue-shifted purple) */
+  --bg-0:  #0B0414;   /* page bottom (pure dark) */
+  --bg-1:  #14082A;   /* default screen background */
+  --bg-2:  #1B0E36;   /* card / surface */
+  --bg-3:  #251548;   /* elevated surface, hover */
+  --bg-4:  #2F1A57;   /* selected row, modal scrim base */
+
+  /* Foreground / text */
+  --fg-1:  #FFFFFF;            /* primary text */
+  --fg-2:  rgba(255,255,255,0.78);  /* secondary copy */
+  --fg-3:  rgba(255,255,255,0.55);  /* muted, meta, placeholder */
+  --fg-4:  rgba(255,255,255,0.32);  /* disabled, faint dividers */
+  --fg-on-primary: #FFFFFF;    /* text on lavender fills */
+
+  /* Borders / dividers */
+  --line-1: rgba(255,255,255,0.08);
+  --line-2: rgba(179,107,252,0.45);   /* focus / selected outline */
+  --line-3: rgba(179,107,252,0.85);   /* pressed outline */
+
+  /* Semantic */
+  --live:    #FF3B30;          /* red dot, LIVE badge */
+  --rating:  #FFC53D;           /* star ratings */
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger:  #FF5A5F;           /* destructive ("Sign out") */
+  --info:    #60A5FA;
+
+  /* Subtitle color options (from in-app settings) */
+  --subtitle-white:  #FFFFFF;
+  --subtitle-yellow: #F2E028;
+
+  /* ----------------------------------------------------------
+     OVERLAYS — for hero banners, posters, focus glow
+     ---------------------------------------------------------- */
+  --grad-hero-bottom: linear-gradient(180deg, transparent 0%, rgba(11,4,20,0.0) 35%, rgba(11,4,20,0.85) 75%, var(--bg-1) 100%);
+  --grad-hero-left:   linear-gradient(90deg, var(--bg-1) 0%, rgba(11,4,20,0.92) 25%, rgba(11,4,20,0.55) 50%, transparent 80%);
+  --grad-trial-bar:   linear-gradient(180deg, #B881FF 0%, #A66BFC 100%);
+  --grad-card-shimmer: linear-gradient(180deg, transparent 0%, rgba(20,8,42,0.0) 60%, rgba(20,8,42,0.92) 100%);
+
+  /* Focus glow — the key TV interaction */
+  --focus-ring:  0 0 0 3px var(--purple-400), 0 0 32px rgba(179,107,252,0.55);
+  --focus-glow:  0 0 24px rgba(179,107,252,0.65), 0 0 64px rgba(168,85,247,0.35);
+
+  /* ----------------------------------------------------------
+     RADII
+     Mobile uses generous corners (cinematic, soft).
+     TV inherits the same scale but cards skew a notch tighter
+     so artwork dominates and focus rings sit cleanly.
+     ---------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;     /* default card, chip, search field */
+  --radius-lg: 18px;     /* poster, large card */
+  --radius-xl: 24px;     /* sheet, modal */
+  --radius-pill: 999px;  /* "PURPLE IPTV" badge, outlined CTAs */
+
+  /* ----------------------------------------------------------
+     SHADOWS / ELEVATION
+     The look avoids drop shadows in favor of color glow
+     and translucent surfaces. Real shadows reserved for
+     floating sheets and tooltips.
+     ---------------------------------------------------------- */
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.65);
+  --shadow-poster: 0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset;
+
+  /* ----------------------------------------------------------
+     SPACING — 4px base, denser TV layouts get 8/16/24/40
+     ---------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* TV safe area (10% inset on 1920×1080) */
+  --tv-safe-x: 96px;
+  --tv-safe-y: 54px;
+
+  /* ----------------------------------------------------------
+     MOTION
+     Quick, confident. Focus state lands in 120ms with a
+     subtle scale + glow. Page transitions are 240ms fades.
+     No bounces; this is a content-first product.
+     ---------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 380ms;
+
+  /* ----------------------------------------------------------
+     TYPE — base
+     "Poppins" is the working substitute for the in-app
+     geometric sans. Inter is the metric fallback.
+     ---------------------------------------------------------- */
+  --font-display: "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+  --font-body:    "Poppins", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  /* Tracking / letter-spacing */
+  --track-tight:   -0.02em;
+  --track-normal:  0;
+  --track-loose:   0.04em;
+  --track-caps:    0.14em;   /* the all-caps "DOWNLOADED", "FRANCE SPORT" labels */
+
+  /* Scale — MOBILE (px values are 16:9 of TV scale below) */
+  --fs-display: 48px;
+  --fs-h1: 32px;
+  --fs-h2: 24px;
+  --fs-h3: 20px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-tiny:  12px;
+
+  /* Scale — TV (1920×1080).  These override on `.tv` root. */
+}
+
+/* TV scale: bumps everything up so the room can read it from 10 ft. */
+.tv, [data-density="tv"] {
+  --fs-display: 72px;
+  --fs-hero-title: 64px;
+  --fs-h1: 44px;
+  --fs-h2: 32px;
+  --fs-h3: 26px;
+  --fs-body: 22px;
+  --fs-small: 18px;
+  --fs-tiny:  16px;
+}
+
+/* ----------------------------------------------------------
+   SEMANTIC HELPERS
+   Use these classes in markup instead of styling tags.
+   ---------------------------------------------------------- */
+
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-display);
+  letter-spacing: var(--track-tight);
+  line-height: 1.05;
+  color: var(--fg-1);
+}
+.h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h1);
+  letter-spacing: var(--track-tight);
+  line-height: 1.1;
+  color: var(--fg-1);
+}
+.h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h2);
+  line-height: 1.2;
+  color: var(--fg-1);
+}
+.h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-h3);
+  line-height: 1.3;
+  color: var(--fg-1);
+}
+.p {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--fg-2);
+}
+.p-small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--fg-3);
+}
+.label-caps {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--purple-300);
+}
+.meta-chip {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--fs-small);
+  color: var(--fg-1);
+  background: rgba(179,107,252,0.16);
+  border: 1px solid rgba(179,107,252,0.35);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--purple-400);
+}
+.brand-wordmark .light { font-weight: 400; color: var(--fg-1); }

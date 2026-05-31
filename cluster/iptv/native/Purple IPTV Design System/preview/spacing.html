@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .row { display: flex; align-items: flex-end; gap: 8px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar { width: 14px; background: #B36BFC; border-radius: 3px; }
+  .nm { font-size: 10px; color: var(--fg-2); font-weight: 600; font-family: var(--font-mono); }
+  .px { font-size: 9px; color: var(--fg-3); font-family: var(--font-mono); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .safe { margin-top: 22px; padding: 18px; background: var(--bg-2); border-radius: 14px; }
+  .safe-frame { position: relative; height: 88px; border: 1px dashed rgba(255,255,255,0.18); border-radius: 6px; }
+  .safe-inner { position: absolute; left: 10%; right: 10%; top: 8%; bottom: 8%; border: 2px solid #B36BFC; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--fg-2); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Spacing scale · 4-base · TV safe-area</div>
+    <div class="note">tv-safe-x 96 / tv-safe-y 54 (on 1920×1080)</div>
+  </div>
+  <div class="row">
+    <div class="col"><div class="bar" style="height:4px"></div><div class="nm">1</div><div class="px">4</div></div>
+    <div class="col"><div class="bar" style="height:8px"></div><div class="nm">2</div><div class="px">8</div></div>
+    <div class="col"><div class="bar" style="height:12px"></div><div class="nm">3</div><div class="px">12</div></div>
+    <div class="col"><div class="bar" style="height:16px"></div><div class="nm">4</div><div class="px">16</div></div>
+    <div class="col"><div class="bar" style="height:20px"></div><div class="nm">5</div><div class="px">20</div></div>
+    <div class="col"><div class="bar" style="height:24px"></div><div class="nm">6</div><div class="px">24</div></div>
+    <div class="col"><div class="bar" style="height:32px"></div><div class="nm">8</div><div class="px">32</div></div>
+    <div class="col"><div class="bar" style="height:40px"></div><div class="nm">10</div><div class="px">40</div></div>
+    <div class="col"><div class="bar" style="height:48px"></div><div class="nm">12</div><div class="px">48</div></div>
+    <div class="col"><div class="bar" style="height:64px"></div><div class="nm">16</div><div class="px">64</div></div>
+    <div class="col"><div class="bar" style="height:80px"></div><div class="nm">20</div><div class="px">80</div></div>
+    <div class="col"><div class="bar" style="height:96px"></div><div class="nm">24</div><div class="px">96</div></div>
+  </div>
+  <div class="safe">
+    <div class="safe-frame"><div class="safe-inner">TV safe area · 10% horizontal · 5% vertical</div></div>
+  </div>
+</body></html>

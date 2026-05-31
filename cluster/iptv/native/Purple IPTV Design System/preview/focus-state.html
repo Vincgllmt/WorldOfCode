@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: end; }
+  .card { aspect-ratio: 2/3; background: linear-gradient(140deg, #4a1f6e, #1B0E36); border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04); position: relative; overflow: hidden; transition: transform 200ms cubic-bezier(0.22,1,0.36,1); }
+  .card .title { position: absolute; left: 12px; right: 12px; bottom: 10px; color: #fff; font: 600 13px var(--font-display); }
+  .card .rating { position: absolute; left: 8px; bottom: 36px; background: #B36BFC; color: #fff; font: 600 11px var(--font-display); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
+  .star { color: #fff; font-size: 10px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .focus-card { transform: scale(1.08); outline: 3px solid #B36BFC; outline-offset: -3px; box-shadow: 0 0 32px rgba(179,107,252,0.7), 0 0 80px rgba(168,85,247,0.4), 0 12px 32px rgba(0,0,0,0.55); z-index: 2; background: linear-gradient(140deg, #6b2da3, #2a1554); }
+  .dimmed { opacity: 0.5; filter: saturate(0.6); }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; text-align: center; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">★ Focus State — the core TV interaction</div>
+    <div class="note">scale 1.08 · 2px lavender ring · glow · siblings dim 50%</div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <div class="card dimmed"><span class="rating"><span class="star">★</span>5.9</span><span class="title">Witchboard</span></div>
+      <div class="lab">Sibling · dimmed</div>
+    </div>
+    <div class="col">
+      <div class="card focus-card"><span class="rating"><span class="star">★</span>7.2</span><span class="title">Olivia</span></div>
+      <div class="lab">Focused</div>
+    </div>
+    <div class="col">
+      <div class="card dimmed"><span class="rating"><span class="star">★</span>6.4</span><span class="title">Le Mage du Kremlin</span></div>
+      <div class="lab">Sibling · dimmed</div>
+    </div>
+  </div>
+</body></html>

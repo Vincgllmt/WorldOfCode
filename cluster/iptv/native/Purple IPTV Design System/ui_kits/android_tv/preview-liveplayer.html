@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Purple IPTV · Live Player</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0B0414; overflow: hidden; height: 100%; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  img { display: block; width: 100vw; height: auto; max-width: 100%; }
+  .live-link { 
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  padding: 12px 22px; border-radius: 999px;
+  background: rgba(11,4,20,0.85); border: 1px solid rgba(179,107,252,0.35);
+  color: rgba(255,255,255,0.85);
+  font: 600 14px/1 'Poppins', system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  z-index: 50;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+ text-decoration: none; }
+  .live-link strong { color: var(--purple-300, #BF8FFF); margin-right: 6px; }
+  .live-link:hover { background: rgba(179,107,252,0.18); }
+  @media (min-aspect-ratio: 16/9) {
+    img { width: auto; height: 100vh; }
+  }
+</style></head>
+<body>
+  <img src="previews/liveplayer.png" alt="Purple IPTV · Live Player screen">
+  <a class="live-link" href="index.html?screen=liveplayer" target="_top">
+    <strong>▶</strong> Open live kit · Live Player
+  </a>
+</body></html>

@@ -1,0 +1,201 @@
+================================================================================
+  APP-TV — NATIVE KOTLIN / ANDROID TV
+  RÉCAPITULATIF DES TRAVAUX ET ROADMAP
+  Dernière mise à jour : 2026-05-24
+================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────
+  PHASE 1 — REDESIGN COMPLET  ✅  TERMINÉE
+────────────────────────────────────────────────────────────────────────────────
+
+Contexte
+  L'application avait été migrée de Flutter vers Kotlin natif pour résoudre
+  des problèmes de navigation D-pad sur Android TV. Le résultat était
+  fonctionnel mais visuellement pauvre. L'objectif était d'atteindre un niveau
+  Netflix / Prime Video / Disney+.
+
+Fichiers modifiés
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ app-tv/src/main/kotlin/com/purple/iptvplayer/tv/ui/                    │
+  │   main/TvMainScreen.kt        ← réécriture complète                    │
+  │   home/TvHomeScreen.kt        ← réécriture complète                    │
+  │   movies/TvMoviesScreen.kt    ← réécriture complète                    │
+  │   series/TvSeriesScreen.kt    ← réécriture complète                    │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+Ce qui a été fait
+
+  1. Sidebar collapsible (TvMainScreen.kt)
+     - Largeur 72dp (collapsed, icônes seules) ↔ 220dp (expanded, icônes + labels)
+     - Animation fluide via animateDpAsState + FastOutSlowInEasing (200ms)
+     - Déclenchement : hasFocus sur le Column de la sidebar
+     - Logo "P" (collapsed) → "PURPLE" lettré (expanded)
+     - Badge trial/premium visible (icône étoile collapsed, bloc complet expanded)
+     - FocusRequester sur le premier item nav + LaunchedEffect delay(150ms)
+       pour l'initialisation du focus au démarrage
+
+  2. Navigation items avec animation (TvMainScreen.kt)
+     - Scale 1.0 → 1.06x au focus (spring DampingRatioMediumBouncy)
+     - Label AnimatedVisibility (fadeIn + expandHorizontally / fadeOut + shrinkHorizontally)
+     - Bordure TvPurpleGlow au focus, fond TvPurple.copy(0.3f) si sélectionné
+     - Settings = dialog (pas un écran), déclenché par l'item index 4
+
+  3. Hero banner Live TV (TvHomeScreen.kt)
+     - Hauteur 280dp, fond dégradé horizontal + lueur radiale violette
+     - Logo de la chaîne (200×130dp, clip RoundedCornerShape 16dp)
+     - Badge rouge "● EN DIRECT", nom de la chaîne (34sp Black), groupe (14sp)
+     - Bouton "Regarder maintenant" focusable : fond blanc si focus, TvPurple sinon
+     - Dégradé vertical en bas pour fondre vers le contenu
+
+  4. Cartes chaînes (TvHomeScreen.kt)
+     - Largeur 180dp, image 120dp de hauteur
+     - Scale 1.08x + zIndex 1f + bordure 3dp TvPurpleGlow au focus
+     - Fond TvBgCard → TvPurple.copy(0.25f) au focus
+
+  5. Écran Films (TvMoviesScreen.kt)
+     - Vue catégories : liste de TvThemeCard (genre + compteur + flèche)
+     - Section "Reprendre la lecture" en haut si des items récents existent
+     - Vue filtrée : LazyVerticalGrid (GridCells.Adaptive 160dp) avec scale
+       animation sur chaque carte film
+     - Overlay détail film : cover grand format, métadonnées (année, durée,
+       note, genre, synopsis), boutons Lecture / Téléchargement / Fermer
+     - Gestion complète du statut de téléchargement (icône dynamique)
+
+  6. Écran Séries (TvSeriesScreen.kt)
+     - Même structure que Films (catégories → grille filtrée)
+     - Overlay détail série : sidebar cover + infos, panel épisodes
+     - Onglets saisons (LazyRow scrollable)
+     - Bouton "Télécharger la saison" avec compteur de progression
+     - Liste d'épisodes : progression de lecture, statut téléchargement,
+       indicateur "déjà vu" (barré + grisé si >= 90% regardé)
+
+  7. Correction des erreurs de compilation
+     - Problème : tv-foundation:1.0.0 stable ne contient PAS TvLazyColumn /
+       TvLazyRow (supprimés avant la release stable). Le JAR ne contient que
+       3 classes : ExperimentalTvFoundationApi, TvImeOptionsKt, TvKeyboardAlignment.
+     - Fix : remplacement par LazyColumn / LazyRow de compose.foundation.lazy
+     - Alias lazyItems pour éviter le conflit avec lazy.grid.items dans
+       TvMoviesScreen et TvSeriesScreen
+     - Fix Brush.radialGradient : paramètre centerX inexistant → center = Offset(...)
+     - Build APK debug réussi ✅
+
+  Environnement de build
+     JAVA_HOME=/home/rigolo/android-studio/jbr (JDK bundlé Android Studio)
+     ./gradlew :app-tv:assembleDebug --no-configuration-cache
+
+
+────────────────────────────────────────────────────────────────────────────────
+  PHASE 2 — HERO BANNER DYNAMIQUE  ⏳  À FAIRE
+────────────────────────────────────────────────────────────────────────────────
+
+  Objectif : rendre le hero banner vivant, pas statique sur la première chaîne.
+
+  2.1 Carousel automatique
+      - Faire tourner le hero sur les N premières chaînes (ex. 5 chaînes vedettes)
+      - Auto-rotation toutes les 5 secondes via LaunchedEffect + coroutine
+      - Animation de transition : cross-fade (AnimatedContent avec ContentTransition)
+      - Indicateurs de position (points) en bas du hero
+      - Pause de la rotation quand l'utilisateur a le focus sur le bouton "Regarder"
+
+  2.2 Intégration EPG (programme en cours)
+      - Appeler l'endpoint EPG existant pour récupérer le programme actuel
+      - Afficher : titre de l'émission, horaire début/fin, barre de progression
+      - Fallback gracieux si pas de données EPG (ne rien afficher)
+      - Fichiers concernés :
+          core/.../repository/EpgRepository.kt  (à vérifier/créer)
+          core/.../viewmodel/ContentViewModel.kt (ajouter epgData StateFlow)
+          TvHomeScreen.kt (consommer et afficher)
+
+
+────────────────────────────────────────────────────────────────────────────────
+  PHASE 3 — LAYOUT FILMS/SÉRIES ENRICHI  ⏳  À FAIRE
+────────────────────────────────────────────────────────────────────────────────
+
+  Objectif : passer d'une liste de catégories à un vrai écran "Netflix-style"
+  avec des rows horizontales par genre visibles directement (sans cliquer).
+
+  3.1 Écran Films — Rows par genre
+      - Remplacer la vue "liste de TvThemeCard" par des sections verticales :
+          [GENRE 1]  → [carte] [carte] [carte] [carte]  →
+          [GENRE 2]  → [carte] [carte] [carte] [carte]  →
+      - LazyColumn (vertical) contenant un LazyRow (horizontal) par genre
+      - Performances : ne charger que les genres visibles (lazy)
+      - Garder la vue grille filtrée quand un genre est sélectionné (inchangée)
+      - Ajouter un hero rotator films en haut (3-5 films mis en avant, même
+        mécanique que Phase 2.1 mais avec cover 2/3)
+
+  3.2 Écran Séries — Rows par genre
+      - Même transformation que Films
+      - Hero rotator séries en haut (si couvertures disponibles)
+
+  3.3 TvSectionHeader "Voir tout →"
+      - Ajouter un lien cliquable "Voir tout" à droite du header de genre
+      - Clic → bascule vers la vue grille filtrée sur ce genre
+
+
+────────────────────────────────────────────────────────────────────────────────
+  PHASE 4 — POLISH & TESTS  ⏳  À FAIRE
+────────────────────────────────────────────────────────────────────────────────
+
+  4.1 Effets visuels focus
+      - Ombre/glow violette sous les cartes focusées (elevation ou Canvas glow)
+      - Technique : Box avec Modifier.graphicsLayer { shadowElevation = ... }
+        ou paint custom avec BlurMaskFilter
+      - Vérifier que le zIndex évite le clipping des cartes voisines
+
+  4.2 Transitions d'écran
+      - AnimatedContent sur la zone contenu du TvMainScreen (quand selectedIndex change)
+      - Transition : slideInHorizontally + fadeIn / slideOutHorizontally + fadeOut
+
+  4.3 Skeleton loading
+      - Remplacer le CircularProgressIndicator par des cartes "squelette" animées
+        (shimmer effect) pendant le chargement de la liste
+
+  4.4 Navigation Back cohérente
+      - Vérifier le comportement de la touche Back sur chaque écran :
+          - Overlay détail (film/série) : Back ferme l'overlay ✅ déjà fait
+          - Vue grille filtrée : Back revient aux catégories (à vérifier)
+          - Sidebar : Back quand focus sur contenu ne quitte pas l'appli
+
+  4.5 Tests émulateur Android TV
+      - Lancer sur AVD Android TV (API 34, 1080p)
+      - Valider navigation D-pad complète : sidebar ↔ contenu ↔ cards ↔ overlay
+      - Valider le focus initial au démarrage
+      - Valider la fluidité des animations (no jank)
+      - Vérifier les états focus/unfocus/selected visuellement
+
+
+────────────────────────────────────────────────────────────────────────────────
+  PHASE 5 — FONCTIONNALITÉS MANQUANTES  ⏳  BACKLOG
+────────────────────────────────────────────────────────────────────────────────
+
+  Ces éléments n'étaient pas dans le périmètre initial mais pourraient
+  être nécessaires pour parité avec l'app mobile.
+
+  - Recherche globale (barre de recherche accessible depuis la sidebar)
+  - Favoris (marquer une chaîne / film / série comme favori)
+  - Paramètres étendus : qualité vidéo, langue audio préférée, proxy
+  - Écran profil/compte (abonnement, date d'expiration)
+  - Chromecast : non applicable sur TV (déjà exclu par design)
+  - PiP (Picture-in-Picture) : pertinent sur TV uniquement si Android 14+
+
+
+────────────────────────────────────────────────────────────────────────────────
+  NOTES TECHNIQUES IMPORTANTES
+────────────────────────────────────────────────────────────────────────────────
+
+  - tv-foundation:1.0.0 stable : NE PAS utiliser TvLazyColumn/TvLazyRow
+    (supprimés du JAR stable). Utiliser LazyColumn/LazyRow standard.
+    Seules classes disponibles : ExperimentalTvFoundationApi, TvImeOptionsKt.
+
+  - Build : toujours utiliser JAVA_HOME=/home/rigolo/android-studio/jbr
+    (le JRE système ne contient pas jlink)
+
+  - Règle de parité (mémoire projet) : toute correction appliquée sur app-tv
+    doit également être vérifiée sur app-mobile si applicable.
+
+  - Focus TV : préférer Modifier.focusable() + onKeyEvent(KeyUp + Center/Enter)
+    plutôt que clickable() pour la compatibilité D-pad.
+
+================================================================================

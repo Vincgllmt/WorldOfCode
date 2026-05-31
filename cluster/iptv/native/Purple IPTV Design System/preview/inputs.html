@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .field { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--bg-2); border-radius: 14px; border: 1px solid rgba(255,255,255,0.04); }
+  .field svg { width: 18px; height: 18px; fill: none; stroke: #B36BFC; stroke-width: 2; }
+  .field .ph { font: 400 15px var(--font-body); color: rgba(255,255,255,0.5); }
+  .field.focus { border: 2px solid #B36BFC; box-shadow: 0 0 24px rgba(179,107,252,0.45); padding: 15px 17px; }
+  .field.filled .ph { color: #fff; }
+  .field.disabled { opacity: 0.5; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+  .row { display: flex; align-items: center; justify-content: space-between; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Text inputs · search · M3U link</div>
+    <div class="note">all states</div>
+  </div>
+  <div class="stack">
+    <div class="row">
+      <div class="field" style="flex:1;">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <span class="ph">Search Movies...</span>
+      </div>
+      <div class="lab" style="margin-left:14px;">Default</div>
+    </div>
+    <div class="row">
+      <div class="field focus filled" style="flex:1;">
+        <svg viewBox="0 0 24 24"><path d="M10 14l2 2 4-4M9 21v-7l-5 3v-7l5 3V6l8 4-3 4 3 4-8-4z"/></svg>
+        <span class="ph">https://playlist.com/get.php?username=...</span>
+      </div>
+      <div class="lab" style="margin-left:14px;">Focused</div>
+    </div>
+    <div class="row">
+      <div class="field disabled" style="flex:1;">
+        <svg viewBox="0 0 24 24"><path d="M10 13a3 3 0 005.66-1H17l3-3V6h-2V4h-2v2h-2l-3 3"/></svg>
+        <span class="ph">Premium activation required</span>
+      </div>
+      <div class="lab" style="margin-left:14px;">Disabled</div>
+    </div>
+  </div>
+</body></html>

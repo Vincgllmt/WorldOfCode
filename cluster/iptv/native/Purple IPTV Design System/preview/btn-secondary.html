@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: end; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+  .btn-s { display:flex; align-items:center; justify-content:center; gap:10px; padding: 14px 18px; border-radius: 14px; background: transparent; color: #B36BFC; font: 600 14px var(--font-display); border: 1.5px solid #B36BFC; }
+  .btn-s.focus { outline: 3px solid #B36BFC; outline-offset: 3px; background: rgba(179,107,252,0.14); box-shadow: 0 0 32px rgba(179,107,252,0.5); transform: scale(1.04); }
+  .btn-s.press { background: rgba(179,107,252,0.22); transform: scale(0.98); }
+  .btn-s.dis { color: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.15); }
+  .dl { width: 14px; height: 14px; border: 1.5px solid currentColor; border-top: none; position: relative; }
+  .dl::before { content: ""; position: absolute; width: 1.5px; height: 8px; background: currentColor; left: 5px; top: -4px; }
+  .dl::after { content: ""; position: absolute; left: 1px; top: -3px; width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Secondary CTA · outlined</div>
+    <div class="note">lavender outline · transparent fill</div>
+  </div>
+  <div class="grid">
+    <div class="col"><button class="btn-s"><span class="dl"></span>Download</button><div class="lab">Default</div></div>
+    <div class="col"><button class="btn-s focus"><span class="dl"></span>Download</button><div class="lab">Focused</div></div>
+    <div class="col"><button class="btn-s press"><span class="dl"></span>Download</button><div class="lab">Pressed</div></div>
+    <div class="col"><button class="btn-s dis"><span class="dl"></span>Download</button><div class="lab">Disabled</div></div>
+  </div>
+</body></html>

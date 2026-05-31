@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.7.0" type="incidents">
+
+    <incident
+        id="CustomX509TrustManager"
+        severity="warning"
+        message="Implementing a custom `X509TrustManager` is error-prone and likely to be insecure. It is likely to disable certificate validation altogether, and is non-trivial to implement correctly without calling Android&apos;s default implementation.">
+        <location
+            file="${:core*debug*MAIN*sourceProvider*0*javaDir*2}/com/purple/iptvplayer/core/network/XtreamApiClient.kt"
+            line="20"
+            column="24"
+            startOffset="567"
+            endLine="20"
+            endColumn="30"
+            endOffset="573"/>
+    </incident>
+
+</incidents>

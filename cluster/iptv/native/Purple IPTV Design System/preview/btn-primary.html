@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"><style>
+  body { padding: 28px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: end; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .lab { font-size: 10px; color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+
+  /* Primary */
+  .btn-p { display:flex; align-items:center; justify-content:center; gap:10px; padding: 14px 18px; border-radius: 14px; background: #B36BFC; color: #fff; font: 600 14px var(--font-display); border: none; box-shadow: 0 8px 24px rgba(179,107,252,0.25); }
+  .btn-p.focus { outline: 3px solid #B36BFC; outline-offset: 3px; box-shadow: 0 0 32px rgba(179,107,252,0.6); transform: scale(1.04); }
+  .btn-p.press { background: #8C3DE8; transform: scale(0.98); }
+  .btn-p.dis { background: rgba(179,107,252,0.25); color: rgba(255,255,255,0.4); box-shadow: none; }
+  .play { width: 0; height: 0; border-style: solid; border-width: 6px 0 6px 9px; border-color: transparent transparent transparent #fff; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .ttl { font-weight: 700; font-size: 14px; }
+  .note { color: var(--fg-3); font-size: 12px; }
+</style></head><body>
+  <div class="top">
+    <div class="ttl">Primary CTA · all states</div>
+    <div class="note">filled lavender · 14px radius</div>
+  </div>
+  <div class="grid">
+    <div class="col"><button class="btn-p"><span class="play"></span>Play</button><div class="lab">Default</div></div>
+    <div class="col"><button class="btn-p focus"><span class="play"></span>Play</button><div class="lab">Focused</div></div>
+    <div class="col"><button class="btn-p press"><span class="play"></span>Play</button><div class="lab">Pressed</div></div>
+    <div class="col"><button class="btn-p dis"><span class="play" style="border-color: transparent transparent transparent rgba(255,255,255,0.4);"></span>Play</button><div class="lab">Disabled</div></div>
+  </div>
+</body></html>
