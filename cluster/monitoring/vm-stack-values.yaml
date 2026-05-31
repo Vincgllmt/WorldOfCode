@@ -15,7 +15,7 @@ vmsingle:
       resources:
         requests:
           storage: 8Gi
-      storageClassName: longhorn # INDISPENSABLE
+      storageClassName: local-path
 
 # 2. Désactivation des composants Cluster (inutiles pour toi)
 vmcluster:
@@ -59,7 +59,7 @@ grafana:
   
   persistence:
     enabled: true
-    storageClassName: "longhorn"
+    storageClassName: "local-path"
     size: 5Gi
 
   additionalDataSources:

@@ -41,7 +41,7 @@ primary:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: longhorn-mysql
+    storageClass: local-path-retain
   resources:
     requests:
       memory: "256Mi"
