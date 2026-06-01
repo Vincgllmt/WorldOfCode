@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -1010,7 +1010,7 @@ function TimelineItem({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function MyRequestsPage() {
+function MyRequestsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [sessions, setSessions] = useState<MentoringSession[]>([])
@@ -1258,5 +1258,20 @@ export default function MyRequestsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function MyRequestsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <div className="text-center space-y-2">
+          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="text-sm">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <MyRequestsPageContent />
+    </Suspense>
   )
 }
