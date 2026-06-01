@@ -5,7 +5,7 @@ variables:
   K6_OPERATOR_CHART: "grafana/k6-operator"
   K6_OPERATOR_VERSION: "3.9.0"
   K6_OPERATOR_RELEASE: "k6-operator"
-  VM_URL: "http://vmsingle-vm-stack.monitoring.svc.cluster.local:8428/api/v1/write"
+  VM_URL: "http://vmsingle-vm-stack-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/write"
   BASE_URL_DEV: "https://api-woc-dev.duckdns.org"
   BASE_URL_PROD: "https://api-woc-prod.duckdns.org"
 
