@@ -1,4 +1,5 @@
 .idea
+.claude/
 
 # CI/CD artifacts
 .npm
@@ -6,3 +7,7 @@ lint-output.txt
 coverage-output.txt
 coverage.xml
 
+# Chacun son claude
+.claude
+
+MONITORING_USER_ERRORS.md

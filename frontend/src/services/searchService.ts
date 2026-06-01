@@ -3,7 +3,7 @@ import type { SearchParams, SearchResponse, UserPreview, GroupPreview } from '@/
 
 export async function search({ q, limit = 5 }: SearchParams): Promise<SearchResponse> {
   const query = q.trim()
-  if (!query) return { users: [], groups: [] }
+  if (!query) return { users: [], groups: [], posts: [] }
 
   const res = await fetchWithAuth(`/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
     credentials: 'include',

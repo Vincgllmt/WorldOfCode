@@ -23,6 +23,8 @@ use App\Mapper\LikeMapper;
 use App\Service\NotificationService;
 use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Moderation\TextModerationService;
+use App\Service\Moderation\ContentRejectedException;
 
 #[Route('/api/post')]
 #[OA\Tag(name: 'Post')]
@@ -33,7 +35,8 @@ class PostController extends AbstractController
         private TechGroupRepository $groupRepo,
         private PostMapper $mapper,
         private NotificationService $notificationService,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private TextModerationService $moderation
     ) {}
 
     #[Route('', name: 'post_list', methods: ['GET'])]
@@ -82,8 +85,16 @@ class PostController extends AbstractController
             ]);
         }
 
-        $posts = $this->repo->findAllWithLikes();
-        $data = array_map(fn($post) => $this->mapper->toDto($post, $user), $posts);
+        $result = $this->repo->findAllForListingWithCounts();
+        $data = array_map(
+            fn($post) => $this->mapper->toDto(
+                $post,
+                $user,
+                (int) ($result['commentCounts'][$post->getId()] ?? 0),
+                (int) ($result['sharedCounts'][$post->getId()] ?? 0)
+            ),
+            $result['posts']
+        );
 
         return $this->json($data);
     }
@@ -154,13 +165,26 @@ class PostController extends AbstractController
             }
         }
 
-        if ($content === null || trim((string) $content) === '' || !$groupId) {
-            return $this->json(['error' => 'Missing content or groupId'], 400);
+        if ($content === null || trim((string) $content) === '') {
+            return $this->json(['error' => 'Missing content'], 400);
         }
 
-        $group = $this->groupRepo->find($groupId);
-        if (!$group) {
-            return $this->json(['error' => 'Group not found'], 404);
+        // Modération du contenu (rejet si severe / trop d'URLs suspectes)
+        try {
+            $this->moderation->checkOrThrow($content);
+        } catch (ContentRejectedException $e) {
+            return $this->json([
+                'error' => $e->getMessage(),
+                'code' => 'content_rejected',
+            ], 422);
+        }
+
+        $group = null;
+        if ($groupId) {
+            $group = $this->groupRepo->find($groupId);
+            if (!$group) {
+                return $this->json(['error' => 'Group not found'], 404);
+            }
         }
 
         $post = new Post();
@@ -248,6 +272,17 @@ class PostController extends AbstractController
         $groupId = $data['groupId'] ?? null;
 
         if (array_key_exists('content', $data)) {
+            // Modération avant écrasement du contenu existant
+            if (is_string($content) && trim($content) !== '') {
+                try {
+                    $this->moderation->checkOrThrow($content);
+                } catch (ContentRejectedException $e) {
+                    return $this->json([
+                        'error' => $e->getMessage(),
+                        'code' => 'content_rejected',
+                    ], 422);
+                }
+            }
             $post->setContent($content);
         }
 

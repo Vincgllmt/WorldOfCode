@@ -5,6 +5,7 @@ import { socket } from "@/lib/socket"
 import { Message } from "@/interfaces/message"
 import { Conversation } from "@/interfaces/conversation"
 import { useAuth } from "@/hooks/useAuth"
+import toast from "react-hot-toast"
 
 // === Requête standard pour récupérer les messages ===
 export const useMessages = (conversationId: string) => {
@@ -77,19 +78,41 @@ export const useRealtimeMessages = (
             )
         }
 
+        // Gestion des accusés de réception (notamment rejet par modération)
+        const onAck = (payload: { temp_id?: string; error?: string; message?: string }) => {
+            if (!payload?.error) return
+
+            if (payload.error === "content_rejected") {
+                // Retirer le message optimistic ajouté localement
+                if (payload.temp_id) {
+                    queryClient.setQueryData<Message[]>(
+                        ["messages", conversationId],
+                        (old) => (old ? old.filter((m) => m.id !== payload.temp_id) : old)
+                    )
+                }
+                toast.error(payload.message || "Votre message a été rejeté par la modération.")
+                return
+            }
+
+            // Autres erreurs génériques (unauthorized_user, db_insert_failed, ...)
+            console.warn("📨 Erreur d'envoi de message :", payload)
+        }
+
         console.log("🟢 Registering socket listeners")
         socket.on("message_created", onMessageCreated)
         socket.on("typing", onTyping)
+        socket.on("ack", onAck)
 
         // Cleanup
         return () => {
             console.log("🔴 Cleanup: removing listeners")
             socket.off("message_created", onMessageCreated)
             socket.off("typing", onTyping)
+            socket.off("ack", onAck)
             socket.emit("leave_conversation", { conversation_id: conversationId })
             // Ne PAS déconnecter le socket ici - il peut être utilisé par d'autres fonctionnalités (appel vidéo)
         }
-    }, [conversationId, userId, user])
+    }, [conversationId, userId, user, queryClient])
 
     // --- Envoi de message ---
     const sendMessage = (body: string, type: Message['type'] = 'text') => {

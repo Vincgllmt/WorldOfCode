@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-auto-unseal
+  namespace: vault
+---
+# Role dans le namespace dev pour restart les StatefulSets dépendants de Vault
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-auto-unseal
+  namespace: dev
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-auto-unseal
+  namespace: dev
+subjects:
+  - kind: ServiceAccount
+    name: vault-auto-unseal
+    namespace: vault
+roleRef:
+  kind: Role
+  name: vault-auto-unseal
+  apiGroup: rbac.authorization.k8s.io
+---
+# Même Role pour le namespace production
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-auto-unseal
+  namespace: production
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-auto-unseal
+  namespace: production
+subjects:
+  - kind: ServiceAccount
+    name: vault-auto-unseal
+    namespace: vault
+roleRef:
+  kind: Role
+  name: vault-auto-unseal
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-auto-unseal
+  namespace: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-auto-unseal
+  template:
+    metadata:
+      labels:
+        app: vault-auto-unseal
+    spec:
+      serviceAccountName: vault-auto-unseal
+      containers:
+        - name: unsealer
+          image: alpine/k8s:1.30.13
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "→ Vault auto-unseal démarré"
+              JUST_UNSEALED=false
+              while true; do
+                HEALTH=$(curl -s http://vault.vault.svc:8200/v1/sys/health 2>/dev/null)
+                SEALED=$(echo "$HEALTH" | grep -o '"sealed":[^,}]*' | grep -o 'true\|false')
+
+                if [ "$SEALED" = "true" ]; then
+                  echo "$(date) — Vault est scellé, unseal en cours..."
+                  curl -sf --request PUT \
+                    --data "{\"key\": \"$UNSEAL_KEY_1\"}" \
+                    http://vault.vault.svc:8200/v1/sys/unseal > /dev/null
+                  echo "$(date) — Unseal effectué."
+                  JUST_UNSEALED=true
+
+                elif [ "$SEALED" = "false" ]; then
+                  if [ "$JUST_UNSEALED" = "true" ]; then
+                    echo "$(date) — Vault unsealed, redémarrage des pods dépendants..."
+                    for NS in dev production; do
+                      kubectl rollout restart deployment/minio -n "$NS" 2>/dev/null \
+                        && echo "[$NS] minio redémarré" || echo "[$NS] minio: deployment introuvable"
+                      kubectl rollout restart statefulset/mysql -n "$NS" 2>/dev/null \
+                        && echo "[$NS] mysql redémarré" || echo "[$NS] mysql: statefulset introuvable"
+                    done
+                    JUST_UNSEALED=false
+                  fi
+
+                else
+                  echo "$(date) — Vault inaccessible, nouvelle tentative dans 5s..."
+                fi
+
+                sleep 5
+              done
+          env:
+            - name: UNSEAL_KEY_1
+              valueFrom:
+                secretKeyRef:
+                  name: vault-unseal-keys
+                  key: unseal-key-1
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"

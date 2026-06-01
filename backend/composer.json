@@ -7,11 +7,12 @@
         "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "aws/aws-sdk-php": "^3.373",
+        "aws/aws-sdk-php": "^3.378",
         "doctrine/dbal": "^3",
         "doctrine/doctrine-bundle": "^2.14",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.3",
+        "elasticsearch/elasticsearch": "^8.13",
         "lexik/jwt-authentication-bundle": "^3.1",
         "nelmio/api-doc-bundle": "^5.3",
         "nelmio/cors-bundle": "^2.6",
@@ -25,6 +26,7 @@
         "symfony/http-client": "7.4.*",
         "symfony/lock": "7.4.*",
         "symfony/mailer": "7.4.*",
+        "symfony/monolog-bundle": "^4.0",
         "symfony/rate-limiter": "7.4.*",
         "symfony/runtime": "7.4.*",
         "symfony/security-bundle": "7.4.*",
@@ -77,9 +79,10 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
         "tests": [
-            "php bin/console doctrine:database:drop --force --env=test",
-            "php bin/console doctrine:database:create --env=test",
-            "php bin/console doctrine:schema:create --env=test",
+            "php bin/console cache:clear --env=test --quiet",
+            "php bin/console doctrine:database:drop --force --env=test --quiet",
+            "php bin/console doctrine:database:create --env=test --quiet",
+            "php bin/console doctrine:schema:create --env=test --quiet",
             "vendor/bin/phpunit"
         ],
         "generate-jwt-keys": [

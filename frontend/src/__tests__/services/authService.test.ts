@@ -57,24 +57,44 @@ describe('authService', () => {
       expect(result).toEqual(twoFAResponse)
     })
 
-    it('lance une erreur quand les credentials sont invalides', async () => {
+    it('traduit le message "Invalid credentials" du backend en français', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        json: () => Promise.resolve({ error: 'Bad credentials' }),
+        status: 401,
+        json: () => Promise.resolve({ error: 'Invalid credentials' }),
       })
 
       await expect(login({ username: 'john', password: 'wrong' }))
-        .rejects.toThrow('Bad credentials')
+        .rejects.toThrow('Identifiants invalides. Vérifiez votre nom d’utilisateur et mot de passe.')
     })
 
-    it('lance une erreur par défaut si pas de message du serveur', async () => {
+    it('utilise le fallback du code HTTP quand le message backend est inconnu', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        json: () => Promise.reject(new Error('parse error')),
+        status: 401,
+        json: () => Promise.resolve({ error: 'Some unknown error' }),
       })
 
       await expect(login({ username: 'john', password: 'wrong' }))
-        .rejects.toThrow('Identifiants invalides')
+        .rejects.toThrow('Identifiants invalides ou session expirée.')
+    })
+
+    it('traduit le message 429 (rate limit) en français', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({ error: 'Too many login attempts. Please try again later.' }),
+      })
+
+      await expect(login({ username: 'john', password: 'wrong' }))
+        .rejects.toThrow('Trop de tentatives de connexion. Veuillez patienter quelques minutes avant de réessayer.')
+    })
+
+    it('lance une erreur réseau si fetch échoue', async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+      await expect(login({ username: 'john', password: 'pass' }))
+        .rejects.toThrow(/Connexion au serveur impossible|hors ligne/)
     })
   })
 
@@ -117,14 +137,15 @@ describe('authService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2)
     })
 
-    it('lance une erreur si le code est invalide', async () => {
+    it('traduit le message "Invalid or expired code" du backend en français', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        json: () => Promise.resolve({ error: 'Code expiré' }),
+        status: 401,
+        json: () => Promise.resolve({ error: 'Invalid or expired code' }),
       })
 
       await expect(verify2FA('temp-token', '000000'))
-        .rejects.toThrow('Code expiré')
+        .rejects.toThrow('Code incorrect ou expiré. Veuillez réessayer.')
     })
 
     it('lance une erreur si /me échoue', async () => {
@@ -134,10 +155,12 @@ describe('authService', () => {
       })
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 401,
+        json: () => Promise.resolve({}),
       })
 
       await expect(verify2FA('temp-token', '123456'))
-        .rejects.toThrow('Impossible de récupérer le profil utilisateur')
+        .rejects.toThrow(/profil|session/i)
     })
   })
 
@@ -157,15 +180,19 @@ describe('authService', () => {
     it('lance une erreur si aucun token en cookie', async () => {
       ;(getCookie as jest.Mock).mockReturnValue(undefined)
 
-      await expect(getMe()).rejects.toThrow('Aucun token trouvé')
+      await expect(getMe()).rejects.toThrow('Vous n’êtes pas connecté.')
     })
 
     it('lance une erreur si le token est invalide', async () => {
       const { fetchWithAuth } = require('@/lib/fetchWithAuth')
       ;(getCookie as jest.Mock).mockReturnValue('expired-jwt')
-      ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({ ok: false })
+      ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({}),
+      })
 
-      await expect(getMe()).rejects.toThrow('Token invalide')
+      await expect(getMe()).rejects.toThrow(/session|invalides/i)
     })
   })
 
@@ -191,10 +218,14 @@ describe('authService', () => {
     })
 
     it('lance une erreur si la requête échoue', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false })
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      })
 
       await expect(requestPasswordReset('john@test.com'))
-        .rejects.toThrow('Erreur lors de la demande de réinitialisation.')
+        .rejects.toThrow(/Service temporairement indisponible|Erreur lors de la demande/)
     })
   })
 
@@ -212,24 +243,26 @@ describe('authService', () => {
       )
     })
 
-    it('lance une erreur avec le message du serveur', async () => {
+    it('lance une erreur avec le fallback du status quand le message est inconnu', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 400,
         json: () => Promise.resolve({ error: 'Token expiré' }),
       })
 
       await expect(resetPassword('bad-token', 'pass'))
-        .rejects.toThrow('Token expiré')
+        .rejects.toThrow('Requête invalide. Vérifiez les informations saisies.')
     })
 
     it('lance une erreur par défaut si le json échoue', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 400,
         json: () => Promise.reject(new Error('parse')),
       })
 
       await expect(resetPassword('bad-token', 'pass'))
-        .rejects.toThrow('Échec de la réinitialisation du mot de passe.')
+        .rejects.toThrow('Requête invalide. Vérifiez les informations saisies.')
     })
   })
 })

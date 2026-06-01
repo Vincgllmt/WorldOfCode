@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
-import { Button } from '@/components/ui/button'
 
 const AdminUserPanel = dynamic(() => import('@/components/adminPanel/AdminUserPanel'), {
   ssr: false,
@@ -12,16 +11,11 @@ const AdminUserPanel = dynamic(() => import('@/components/adminPanel/AdminUserPa
 export default function UtilisateursPage() {
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Utilisateurs</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gérez les comptes, les rôles et les accès.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => location.reload()}>
-          Rafraîchir
-        </Button>
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">Utilisateurs</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Gérez les comptes, les rôles et les accès.
+        </p>
       </header>
 
       <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>

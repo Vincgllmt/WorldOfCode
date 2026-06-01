@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Loader2, Users } from 'lucide-react'
+import { Search, Loader2, Users, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -18,6 +18,23 @@ type NavbarSearchProps = {
 type SearchItem =
     | { type: 'user'; id: number; label: string; sub: string; avatarUrl: string | null; href: string }
     | { type: 'group'; id: number; label: string; sub: string; href: string }
+    | { type: 'post'; id: number; label: string; snippetHtml: string; href: string }
+
+/**
+ * Échappe le HTML brut puis ré-autorise uniquement <mark>...</mark>
+ * pour le highlighting Elasticsearch.
+ */
+function sanitizeSnippet(snippet: string): string {
+    const escaped = snippet
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    return escaped
+        .replace(/&lt;mark&gt;/g, '<mark>')
+        .replace(/&lt;\/mark&gt;/g, '</mark>')
+}
 
 function UserAvatar({ name, avatarUrl, size = 28 }: { name: string; avatarUrl: string | null; size?: number }) {
     const initials = name
@@ -47,13 +64,14 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     const listboxId = useId()
     const router = useRouter()
 
-    const { users, groups, isLoading, isFetching, error, debouncedQuery } = useNavbarSearch({
+    const { users, groups, posts, isLoading, isFetching, error, debouncedQuery } = useNavbarSearch({
         query,
         limit,
     })
 
     const userResults = users ?? []
     const groupResults = groups ?? []
+    const postResults = posts ?? []
 
     const items = useMemo<SearchItem[]>(() => {
         const userItems: SearchItem[] = userResults.map((user) => {
@@ -74,8 +92,15 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
             sub: 'Groupe',
             href: `/group/${group.id}`,
         }))
-        return [...userItems, ...groupItems]
-    }, [userResults, groupResults])
+        const postItems: SearchItem[] = postResults.map((post) => ({
+            type: 'post',
+            id: post.id,
+            label: post.authorUsername ? `@${post.authorUsername}` : 'Publication',
+            snippetHtml: post.snippet,
+            href: `/post/${post.id}`,
+        }))
+        return [...userItems, ...groupItems, ...postItems]
+    }, [userResults, groupResults, postResults])
 
     const hasResults = items.length > 0
 
@@ -85,6 +110,10 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
     )
     const groupItems = useMemo(
         () => items.filter((item) => item.type === 'group'),
+        [items]
+    )
+    const postItems = useMemo(
+        () => items.filter((item) => item.type === 'post'),
         [items]
     )
 
@@ -228,14 +257,25 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
                                 >
                                     {item.type === 'user' ? (
                                         <UserAvatar name={item.label} avatarUrl={item.avatarUrl} />
-                                    ) : (
+                                    ) : item.type === 'group' ? (
                                         <div className="rounded-full bg-muted flex items-center justify-center shrink-0" style={{ width: 28, height: 28 }}>
                                             <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-full bg-muted flex items-center justify-center shrink-0" style={{ width: 28, height: 28 }}>
+                                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                                         </div>
                                     )}
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-medium text-sm leading-tight">{item.label}</p>
-                                        <p className="truncate text-xs text-muted-foreground">{item.sub}</p>
+                                        {item.type === 'post' ? (
+                                            <p
+                                                className="truncate text-xs text-muted-foreground [&>mark]:bg-primary/20 [&>mark]:text-foreground [&>mark]:rounded-sm [&>mark]:px-0.5"
+                                                dangerouslySetInnerHTML={{ __html: sanitizeSnippet(item.snippetHtml) }}
+                                            />
+                                        ) : (
+                                            <p className="truncate text-xs text-muted-foreground">{item.sub}</p>
+                                        )}
                                     </div>
                                 </Link>
                             </li>
@@ -308,6 +348,7 @@ export default function NavbarSearch({ limit = 5, className }: NavbarSearchProps
                 >
                     {renderSection('Utilisateurs', userItems, 0)}
                     {renderSection('Groupes', groupItems, userItems.length)}
+                    {renderSection('Publications', postItems, userItems.length + groupItems.length)}
 
                     {!hasResults && !isLoading && !isFetching ? (
                         <p className="px-3 py-4 text-sm text-muted-foreground">Aucun résultat</p>

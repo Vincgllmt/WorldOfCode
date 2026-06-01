@@ -35,7 +35,7 @@ class Post
     private User $author;
 
     #[ORM\ManyToOne(targetEntity: TechGroup::class, inversedBy: "posts")]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?TechGroup $techGroup = null;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: "post", orphanRemoval: true)]
@@ -135,7 +135,7 @@ class Post
         return $this;
     }
 
-    public function getTechGroup(): TechGroup
+    public function getTechGroup(): ?TechGroup
 
     {
         return $this->techGroup;

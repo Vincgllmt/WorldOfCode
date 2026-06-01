@@ -388,6 +388,31 @@ class SuggestionServiceTest extends KernelTestCase
         $this->assertEmpty(array_intersect($idsPage1, $idsPage2));
     }
 
+    /**
+     * Quand l'offset dépasse la quantité de résultats disponibles ET qu'il
+     * est > 0, la méthode doit retourner un tableau vide (sans fallback).
+     */
+    public function testReturnsEmptyArrayWhenOffsetExceedsAvailableResults(): void
+    {
+        $skill = $this->createSkill('Lifeblood', SkillCategory::OTHER);
+
+        $knight = $this->createUser('TheKnight');
+        $knight->addSkill($skill);
+
+        // Seulement 2 utilisateurs avec le skill partagé
+        for ($i = 1; $i <= 2; $i++) {
+            $u = $this->createUser("Husk{$i}");
+            $u->addSkill($skill);
+        }
+
+        $this->em->flush();
+
+        // Offset = 10 → bien au-delà des 2 résultats existants → tableau vide
+        $results = $this->service->getSuggestedUsers($knight, 5, 10);
+
+        $this->assertSame([], $results);
+    }
+
     // ========== TESTS NOK (exclusions) ==========
 
     /**

@@ -1,0 +1,41 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-stress
+  namespace: k6
+spec:
+  parallelism: 1
+  script:
+    configMap:
+      name: k6-scripts
+      file: stress.js
+  runner:
+    image: ${K6_IMAGE}
+    env:
+      - name: BASE_URL
+        value: "${BASE_URL}"
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: "${VM_URL}"
+    envFrom:
+      - secretRef:
+          name: k6-credentials
+    initContainers:
+      - name: copy-k6
+        image: ${K6_IMAGE}
+        command: ["cp", "/usr/bin/k6", "/shared/k6-real"]
+        volumeMounts:
+          - name: shared-k6
+            mountPath: /shared
+    volumes:
+      - name: k6-wrapper-script
+        configMap:
+          name: k6-wrapper
+          defaultMode: 0755
+      - name: shared-k6
+        emptyDir: {}
+    volumeMounts:
+      - name: k6-wrapper-script
+        mountPath: /usr/bin/k6
+        subPath: wrapper.sh
+      - name: shared-k6
+        mountPath: /shared

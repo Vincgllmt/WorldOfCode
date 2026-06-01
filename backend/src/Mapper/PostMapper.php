@@ -9,7 +9,7 @@ use App\Entity\User;
 
 class PostMapper
 {
-    public function toDto(Post $post, ?User $currentUser = null): PostResponse
+    public function toDto(Post $post, ?User $currentUser = null, ?int $commentsCount = null, ?int $sharedCount = null): PostResponse
     {
         $dto = new PostResponse();
         $dto->id = $post->getId();
@@ -19,8 +19,8 @@ class PostMapper
         $dto->authorId = $post->getAuthor()->getId();
         $dto->authorUsername = $post->getAuthor()->getUsername();
         $dto->authorAvatarUrl = $post->getAuthor()->getAvatarUrl();
-        $dto->techGroupId = $post->getTechGroup()->getId();
-        $dto->techGroupName = $post->getTechGroup()->getName();
+        $dto->techGroupId = $post->getTechGroup()?->getId();
+        $dto->techGroupName = $post->getTechGroup()?->getName();
         $dto->likesCount = $post->getLikes()->count();
         $dto->likedByUser = $this->isLikedByUser($post, $currentUser);
 
@@ -28,7 +28,9 @@ class PostMapper
             $dto->sharedPost = $this->mapSharedPost($post->getSharedFrom(), $currentUser);
         }
 
-        $dto->sharedCount = $post->getSharedPosts()->count();
+        // Use pre-computed counts when available to avoid N+1 lazy loading
+        $dto->sharedCount = $sharedCount ?? $post->getSharedPosts()->count();
+        $dto->commentsCount = $commentsCount ?? $post->getComments()->count();
 
         return $dto;
     }
@@ -43,8 +45,8 @@ class PostMapper
         $dto->authorId = $sharedPost->getAuthor()->getId();
         $dto->authorUsername = $sharedPost->getAuthor()->getUsername();
         $dto->authorAvatarUrl = $sharedPost->getAuthor()->getAvatarUrl();
-        $dto->techGroupId = $sharedPost->getTechGroup()->getId();
-        $dto->techGroupName = $sharedPost->getTechGroup()->getName();
+        $dto->techGroupId = $sharedPost->getTechGroup()?->getId();
+        $dto->techGroupName = $sharedPost->getTechGroup()?->getName();
         $dto->likesCount = $sharedPost->getLikes()->count();
         $dto->sharedCount = $sharedPost->getSharedPosts()->count();
         $dto->likedByUser = $this->isLikedByUser($sharedPost, $currentUser);

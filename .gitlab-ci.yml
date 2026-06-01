@@ -6,11 +6,12 @@ stages:
   - test
   - build # Tous les builds Docker en parallèle
   - scan # Scan de sécurité Trivy
-  - deploy-infra # Longhorn en premier
+  - deploy-infra
   - deploy-services # MySQL, MinIO, Registry en parallèle
   - deploy-apps # Backend, Frontend, Messagerie, Backoffice en parallèle
   - deploy-monitoring
   - deploy-n8n-ollama
+  - load-test
 
 # --- CONFIGURATION GLOBALE PAR DÉFAUT (Déploiements K8s) ---
 image: alpine/k8s:1.31.13
@@ -51,7 +52,6 @@ before_script:
 #     - trivy image --ignore-unfixed --no-progress --scanners vuln --exit-code 1 --severity CRITICAL "${REGISTRY_HOST}/${APP_NAME}:${CI_COMMIT_SHORT_SHA}"
 
 include:
-  - local: cluster/longhorn/.gitlab-ci.yml
   - local: cluster/jwt/.gitlab-ci.yml
   - local: cluster/mysql/.gitlab-ci.yml
   - local: cluster/registry/.gitlab-ci.yml
@@ -65,6 +65,7 @@ include:
   #- local: cluster/n8n/.gitlab-ci.yml
   - local: cluster/cert-manager/.gitlab-ci.yml
   - local: cluster/uptime-kuma/.gitlab-ci.yml
+  - local: cluster/k6/.gitlab-ci.yml
 
 # ===================================
 # JOB 1: LINTER (Frontend & Backoffice)

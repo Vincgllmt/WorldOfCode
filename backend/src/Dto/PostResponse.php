@@ -63,16 +63,18 @@ class PostResponse
     #[OA\Property(
         description: "Identifiant du groupe tech",
         type: "integer",
+        nullable: true,
         example: 2
     )]
-    public int $techGroupId;
+    public ?int $techGroupId = null;
 
     #[OA\Property(
         description: "Nom du groupe tech",
         type: "string",
+        nullable: true,
         example: "Symfony"
     )]
-    public string $techGroupName;
+    public ?string $techGroupName = null;
 
     #[OA\Property(
         description: "Post original partagé (si applicable)",
@@ -100,4 +102,11 @@ class PostResponse
         example: 3
     )]
     public int $sharedCount = 0;
+
+    #[OA\Property(
+        description: "Nombre de commentaires sur ce post",
+        type: "integer",
+        example: 4
+    )]
+    public int $commentsCount = 0;
 }

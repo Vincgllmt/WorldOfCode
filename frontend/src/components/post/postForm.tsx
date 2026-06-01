@@ -9,7 +9,6 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 // 1. Importez dynamic de Next.js
 import dynamic from 'next/dynamic' 
@@ -21,8 +20,8 @@ import { Check } from 'lucide-react'
 
 // 3. Créez l'import dynamique avec ssr: false
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
-  ssr: false, // Ceci empêche le serveur de toucher à ce composant
-  loading: () => <div className="h-64 border rounded-md bg-muted animate-pulse" /> // Optionnel: un placeholder pendant le chargement
+  ssr: false,
+  loading: () => <div style={{ height: 200 }} className="border rounded-md bg-muted animate-pulse" />,
 })
 
 type PostFormProps = {
@@ -120,7 +119,7 @@ export default function PostForm({
               key={selectKey}
               value={groupIdValue ? String(groupIdValue) : undefined}
               onValueChange={(value) =>
-                setGroupId(Number(value))
+                setGroupId(value === 'none' ? undefined : Number(value))
               }
               disabled={loadingGroups || isPending}
             >
@@ -133,11 +132,14 @@ export default function PostForm({
                     Chargement...
                   </p>
                 ) : (
-                  groups?.map((group) => (
-                    <SelectItem key={group.id} value={String(group.id)}>
-                      {group.name}
-                    </SelectItem>
-                  ))
+                  <>
+                    <SelectItem value="none">Sans groupe</SelectItem>
+                    {groups?.map((group) => (
+                      <SelectItem key={group.id} value={String(group.id)}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </>
                 )}
               </SelectContent>
             </Select>

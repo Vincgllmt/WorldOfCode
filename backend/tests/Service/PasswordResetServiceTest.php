@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Entity\User;
 use App\Enum\UserRole;
+use App\Repository\TrustedDeviceRepository;
 use App\Repository\UserRepository;
 use App\Service\PasswordResetService;
 use PHPUnit\Framework\TestCase;
@@ -42,10 +43,12 @@ class PasswordResetServiceTest extends TestCase
     private function makeService(
         ?UserRepository $repo = null,
         ?MailerInterface $mailer = null,
+        ?TrustedDeviceRepository $trustedDeviceRepo = null,
     ): PasswordResetService {
         return new PasswordResetService(
-            $mailer ?? $this->createMock(MailerInterface::class),
-            $repo   ?? $this->createMock(UserRepository::class),
+            $mailer          ?? $this->createMock(MailerInterface::class),
+            $repo            ?? $this->createMock(UserRepository::class),
+            $trustedDeviceRepo ?? $this->createMock(TrustedDeviceRepository::class),
             'http://worldofcode.test'
         );
     }

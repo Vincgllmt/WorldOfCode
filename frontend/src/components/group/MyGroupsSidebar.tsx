@@ -1,16 +1,27 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Users, Search, MessageSquareHeart } from 'lucide-react'
+import { Users, Search, MessageSquareHeart, GraduationCap } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import { getMyMentorProfile } from '@/lib/api/mentoring/profile'
 import Link from 'next/link'
 
 export default function MyGroupsSidebar() {
     const { user } = useAuth()
     const { data: myGroups, isLoading } = useUserGroups(user?.id)
     const [search, setSearch] = useState('')
+
+    const { data: mentorProfile } = useQuery({
+        queryKey: ['mentorProfile', 'me'],
+        queryFn: getMyMentorProfile,
+        retry: false,
+        enabled: !!user,
+        // 404 = pas encore mentor, on supprime l'erreur
+        throwOnError: false,
+    })
 
     const filteredGroups = useMemo(() => {
         if (!myGroups) return []
@@ -70,8 +81,8 @@ export default function MyGroupsSidebar() {
                     Aucun groupe trouvé.
                 </p>
             ) : (
-                <nav className="space-y-0.5">
-                    {filteredGroups.slice(0, 8).map((group) => (
+                <nav className="space-y-0.5 max-h-[200px] overflow-y-auto pr-1 -mr-1 scrollbar-thin">
+                    {filteredGroups.map((group) => (
                         <Link
                             key={group.id}
                             href={`/group/${group.id}`}
@@ -93,6 +104,24 @@ export default function MyGroupsSidebar() {
                 Voir tous les groupes
             </Link>
         </div>
+
+        {!mentorProfile && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mt-4">
+                <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">
+                    <GraduationCap className="h-4 w-4 text-primary" />
+                    Devenez mentor
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                    Partagez vos connaissances et aidez d&apos;autres développeurs à progresser.
+                </p>
+                <Link
+                    href="/mentor/onboarding"
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                    Créer mon profil mentor
+                </Link>
+            </div>
+        )}
 
         <div className="rounded-2xl border border-border/60 bg-card p-4 mt-4">
             <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">

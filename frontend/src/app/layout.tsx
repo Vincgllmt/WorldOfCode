@@ -6,6 +6,7 @@ import { ReactNode, Suspense } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { VideoCallProvider } from '@/contexts/VideoCallContext'
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Navbar from '@/components/layout/Navbar'
 import { usePathname } from 'next/navigation'
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         <AuthProvider>
                             <ThemeSyncer />
                             <VideoCallProvider>
+                                <SettingsModalProvider>
                                 {!hideNavbar && <Suspense fallback={null}><Navbar /></Suspense>}
                                 {children}
                                 {!hideMessageFab && <MessageFab />}
@@ -74,6 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                                 />
                                 {/* Composant d'appel vidéo global */}
                                 <VideoCallGlobal />
+                                </SettingsModalProvider>
                             </VideoCallProvider>
                         </AuthProvider>
                     </QueryClientProvider>

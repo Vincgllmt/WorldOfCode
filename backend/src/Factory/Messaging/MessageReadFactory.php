@@ -47,7 +47,6 @@ final class MessageReadFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(MessageRead $messageRead): void {})
         ;
     }
 }

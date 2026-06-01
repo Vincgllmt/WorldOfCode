@@ -5,7 +5,7 @@ import { User, UpdateUserPayload } from '@/interfaces/user'
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/user/${data.id}`, {
     method: 'PUT',
     headers: {
@@ -19,7 +19,7 @@ export const updateUser = async (data: UpdateUserPayload): Promise<User> => {
 }
 
 export const deleteUser = async (id: number): Promise<void> => {
-  const token = getCookie('token')
+  const token = getCookie('admin_token')
   const res = await fetch(`${API_URL}/api/user/${id}`, {
     method: 'DELETE',
     headers: {

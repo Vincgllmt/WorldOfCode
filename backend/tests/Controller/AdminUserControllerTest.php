@@ -106,8 +106,8 @@ class AdminUserControllerTest extends TestCase
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(UserRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([
-            [
+        $repo->method('findPaginatedWithCounts')->willReturn([
+            'items' => [[
                 'id'           => 2,
                 'username'     => 'GarrusVakarian',
                 'email'        => 'garrus@citadel.net',
@@ -116,36 +116,39 @@ class AdminUserControllerTest extends TestCase
                 'postCount'    => 5,
                 'followerCount'=> 10,
                 'avatarUrl'    => null,
-            ],
+            ]],
+            'total' => 1,
         ]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
-        $this->assertSame('GarrusVakarian', $payload[0]['username']);
-        $this->assertSame(5, $payload[0]['postCount']);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame('GarrusVakarian', $payload['items'][0]['username']);
+        $this->assertSame(5, $payload['items'][0]['postCount']);
     }
 
     public function testListReturnsEmptyWhenNoUsers(): void
     {
         $admin = $this->buildAdmin();
         $repo  = $this->createMock(UserRepository::class);
-        $repo->method('findAllWithCounts')->willReturn([]);
+        $repo->method('findPaginatedWithCounts')->willReturn(['items' => [], 'total' => 0]);
 
-        $response = $this->makeController($admin, $repo)->list();
+        $response = $this->makeController($admin, $repo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame([], $payload);
+        $this->assertSame(0, $payload['total']);
+        $this->assertSame([], $payload['items']);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
     }
 
     // ======================================================================
@@ -205,6 +208,93 @@ class AdminUserControllerTest extends TestCase
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
         $this->makeController($admin, isAdmin: false)->detail(1);
+    }
+
+    public function testDetailTruncatesPostContentOver80Characters(): void
+    {
+        $admin       = $this->buildAdmin();
+        $longContent = str_repeat('G', 100); // 100 chars > 80
+
+        $post = $this->createMock(Post::class);
+        $post->method('getContent')->willReturn($longContent);
+        $post->method('getId')->willReturn(10);
+        $post->method('getCreatedAt')->willReturn(new \DateTime('2024-06-01'));
+        $post->method('getLikes')->willReturn(new ArrayCollection([]));
+        $post->method('getComments')->willReturn(new ArrayCollection([]));
+
+        $user = $this->createMock(User::class);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($user, 42);
+        $user->method('getId')->willReturn(42);
+        $user->method('getUsername')->willReturn('GarrusVakarian');
+        $user->method('getFirstname')->willReturn('Garrus');
+        $user->method('getLastname')->willReturn('Vakarian');
+        $user->method('getEmail')->willReturn('garrus@citadel.net');
+        $user->method('getRole')->willReturn(UserRole::ROLE_USER);
+        $user->method('getCreationDate')->willReturn(new \DateTime('2024-01-01'));
+        $user->method('getAvatarUrl')->willReturn(null);
+        $user->method('getBio')->willReturn(null);
+        $user->method('getLocation')->willReturn(null);
+        $user->method('getAvailability')->willReturn(null);
+        $user->method('getExperiences')->willReturn([]);
+        $user->method('getPosts')->willReturn(new ArrayCollection([$post]));
+        $user->method('getSkills')->willReturn(new ArrayCollection([]));
+        $user->method('getLinks')->willReturn(new ArrayCollection([]));
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($user);
+
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('countByAuthorId')->willReturn(0);
+
+        $response = $this->makeController($admin, $userRepo, $reportRepo)->detail(42);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(1, $payload['lastFivePosts']);
+        $this->assertSame(mb_substr($longContent, 0, 80) . '…', $payload['lastFivePosts'][0]['excerpt']);
+    }
+
+    public function testDetailKeepsShortPostContentAsIs(): void
+    {
+        $admin        = $this->buildAdmin();
+        $shortContent = 'Garrus calibrating weapons systems.'; // < 80 chars
+
+        $post = $this->createMock(Post::class);
+        $post->method('getContent')->willReturn($shortContent);
+        $post->method('getId')->willReturn(11);
+        $post->method('getCreatedAt')->willReturn(new \DateTime('2024-06-01'));
+        $post->method('getLikes')->willReturn(new ArrayCollection([]));
+        $post->method('getComments')->willReturn(new ArrayCollection([]));
+
+        $user = $this->createMock(User::class);
+        (new \ReflectionProperty(User::class, 'id'))->setValue($user, 42);
+        $user->method('getId')->willReturn(42);
+        $user->method('getUsername')->willReturn('GarrusVakarian');
+        $user->method('getFirstname')->willReturn('Garrus');
+        $user->method('getLastname')->willReturn('Vakarian');
+        $user->method('getEmail')->willReturn('garrus@citadel.net');
+        $user->method('getRole')->willReturn(UserRole::ROLE_USER);
+        $user->method('getCreationDate')->willReturn(new \DateTime('2024-01-01'));
+        $user->method('getAvatarUrl')->willReturn(null);
+        $user->method('getBio')->willReturn(null);
+        $user->method('getLocation')->willReturn(null);
+        $user->method('getAvailability')->willReturn(null);
+        $user->method('getExperiences')->willReturn([]);
+        $user->method('getPosts')->willReturn(new ArrayCollection([$post]));
+        $user->method('getSkills')->willReturn(new ArrayCollection([]));
+        $user->method('getLinks')->willReturn(new ArrayCollection([]));
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($user);
+
+        $reportRepo = $this->createMock(ReportRepository::class);
+        $reportRepo->method('countByAuthorId')->willReturn(0);
+
+        $response = $this->makeController($admin, $userRepo, $reportRepo)->detail(42);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($shortContent, $payload['lastFivePosts'][0]['excerpt']);
     }
 
     // ======================================================================

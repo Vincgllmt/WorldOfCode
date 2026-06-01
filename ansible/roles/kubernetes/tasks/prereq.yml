@@ -55,3 +55,9 @@
         }
       }
 
+- name: Release existing Longhorn mpath devices
+  shell: |
+    multipath -ll 2>/dev/null | grep -oE "mpath[a-z]+" | while read DEV; do
+      multipath -f $DEV 2>/dev/null || true
+    done
+  ignore_errors: true

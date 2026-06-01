@@ -1,0 +1,26 @@
+monolog:
+    channels:
+        - user_error
+        - server_error
+
+    handlers:
+        main:
+            type:      stream
+            path:      php://stdout
+            level:     debug
+            channels:  ['!user_error', '!server_error']
+            formatter: monolog.formatter.json
+
+        user_error_handler:
+            type:      stream
+            path:      php://stdout
+            level:     warning
+            channels:  [user_error]
+            formatter: monolog.formatter.json
+
+        server_error_handler:
+            type:      stream
+            path:      php://stdout
+            level:     error
+            channels:  [server_error]
+            formatter: monolog.formatter.json

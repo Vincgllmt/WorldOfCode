@@ -7,7 +7,10 @@ export const createComment = async (data: CreateCommentPayload): Promise<Comment
     body: JSON.stringify(data)
   })
 
-  if (!res.ok) throw new Error('Erreur lors de la création du commentaire')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body?.error || 'Erreur lors de la création du commentaire')
+  }
 
   return res.json()
 }
@@ -42,7 +45,10 @@ export const updateComment = async (data: UpdateCommentPayload): Promise<Comment
     body: JSON.stringify({ content: data.content })
   })
 
-  if (!res.ok) throw new Error('Erreur lors de la mise à jour du commentaire')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body?.error || 'Erreur lors de la mise à jour du commentaire')
+  }
 
   return res.json()
 }

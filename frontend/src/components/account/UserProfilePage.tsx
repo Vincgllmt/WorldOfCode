@@ -1,14 +1,17 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserGroups } from '@/hooks/useUsers'
 import { useFollowers } from '@/hooks/useFollow'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import ProfileSidebar from '@/components/profile/ProfileSidebar'
 import ProfileTabsContent from '@/components/profile/ProfileTabsContent'
+import MentorPublicProfile from '@/components/mentoring/MentorPublicProfile'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Group } from '@/interfaces/group'
+import type { MentorProfile } from '@/types/mentoring'
 
 type UserProfilePageProps = {
   userId: number
@@ -28,6 +31,17 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
     error: groupsError,
   } = useUserGroups(userId)
   const { followers } = useFollowers(userId)
+
+  const [mentorProfile, setMentorProfile] = useState<MentorProfile | null>(null)
+  const [mentorLoading, setMentorLoading] = useState(true)
+
+  useEffect(() => {
+    fetchWithAuth(`/api/users/${userId}/mentor-profile`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setMentorProfile(data))
+      .catch(() => setMentorProfile(null))
+      .finally(() => setMentorLoading(false))
+  }, [userId])
 
   const isFollowedByViewer = useMemo(
     () => followers?.some((follower) => follower.id === viewerId) ?? false,
@@ -107,6 +121,14 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
           user={user}
           isOwnProfile={isOwnProfile}
         />
+        {!mentorLoading && mentorProfile && !isOwnProfile && (
+          <MentorPublicProfile
+            profile={mentorProfile}
+            userId={userId}
+            viewerId={viewerId}
+            isFollowing={isFollowedByViewer}
+          />
+        )}
       </main>
     </div>
   )

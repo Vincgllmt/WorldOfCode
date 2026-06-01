@@ -23,22 +23,133 @@ final class AdminReportController extends AbstractController
         private AdminReportMapper $mapper,
     ) {}
 
-    #[Route('', name: 'admin_reports_list', methods: ['GET'])]
+    #[Route('/posts', name: 'admin_reports_grouped_by_post', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Liste tous les reports pour la modération admin',
+        summary: 'Reports groupés par post (un item = un post signalé)',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'sortField', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',   in: 'query', schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Liste des reports'),
+            new OA\Response(response: 200, description: 'Posts signalés avec compteurs agrégés'),
             new OA\Response(response: 403, description: 'Accès interdit'),
         ]
     )]
-    public function list(): JsonResponse
+    public function listGroupedByPost(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $reports = $this->reportRepo->findBy([], ['createdAt' => 'DESC']);
-        $dtos = array_map([$this->mapper, 'toDto'], $reports);
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $sortField = $request->query->get('sortField', 'latestReportAt');
+        $sortDir   = $request->query->get('sortDir', 'DESC');
 
-        return $this->json($dtos);
+        $result = $this->reportRepo->findGroupedByPost(
+            page: $page,
+            limit: $limit,
+            sortField: $sortField,
+            sortDir: $sortDir,
+        );
+
+        return $this->json([
+            'items' => $result['items'],
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
+    }
+
+    #[Route('', name: 'admin_reports_list', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Liste paginée des reports pour la modération admin',
+        parameters: [
+            new OA\Parameter(name: 'page',      in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'limit',     in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'status',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'reason',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateFrom',  in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'dateTo',    in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortField',   in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sortDir',     in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'claimedByMe', in: 'query', schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'postId',      in: 'query', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Liste paginée des reports'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+        ]
+    )]
+    public function list(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $page      = max(1, (int) $request->query->get('page', 1));
+        $limit     = min(100, max(1, (int) $request->query->get('limit', 20)));
+        $status    = $request->query->get('status') ?: null;
+        $reason    = $request->query->get('reason') ?: null;
+        $dateFrom  = $request->query->get('dateFrom') ?: null;
+        $dateTo    = $request->query->get('dateTo') ?: null;
+        $sortField   = $request->query->get('sortField', 'createdAt');
+        $sortDir     = $request->query->get('sortDir', 'DESC');
+        $claimedByMe = filter_var($request->query->get('claimedByMe', false), FILTER_VALIDATE_BOOLEAN);
+        $postId      = $request->query->get('postId') ? (int) $request->query->get('postId') : null;
+
+        $result = $this->reportRepo->findPaginatedWithFilters(
+            page: $page,
+            limit: $limit,
+            status: $status,
+            dateFrom: $dateFrom,
+            dateTo: $dateTo,
+            reason: $reason,
+            sortField: $sortField,
+            sortDir: $sortDir,
+            claimedByUser: $claimedByMe ? $this->getUser() : null,
+            postId: $postId,
+        );
+
+        $dtos = array_map([$this->mapper, 'toDto'], $result['items']);
+
+        return $this->json([
+            'items' => $dtos,
+            'total' => $result['total'],
+            'page'  => $page,
+            'limit' => $limit,
+        ]);
+    }
+
+    #[Route('/posts/{postId}/claim', name: 'admin_report_claim_by_post', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Prendre en charge tous les reports PENDING d\'un post',
+        responses: [
+            new OA\Response(response: 200, description: 'Reports pris en charge'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Aucun report PENDING pour ce post'),
+        ]
+    )]
+    public function claimByPost(int $postId): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $reports = $this->reportRepo->findPendingByPostId($postId);
+
+        if (empty($reports)) {
+            return $this->json(['error' => 'Aucun report PENDING pour ce post'], 404);
+        }
+
+        $currentUser = $this->getUser();
+        $now = new \DateTime();
+
+        foreach ($reports as $report) {
+            $report->setStatus(ReportStatus::IN_PROGRESS);
+            $report->setClaimedBy($currentUser);
+            $report->setClaimedAt($now);
+            $this->reportRepo->save($report, flush: false);
+        }
+        $this->reportRepo->getEntityManager()->flush();
+
+        return $this->json(['claimed' => count($reports)]);
     }
 
     #[Route('/{id}/claim', name: 'admin_report_claim', methods: ['PATCH'])]
@@ -113,18 +224,35 @@ final class AdminReportController extends AbstractController
         $em = $this->reportRepo->getEntityManager();
         $em->wrapInTransaction(function () use ($report, $currentUser, $resolutionNote) {
             $post = $report->getPost();
+
+            // Récupérer tous les reports du même post AVANT suppression
+            // (après, post_id sera NULL via ON DELETE SET NULL)
+            $allReports = $post
+                ? $this->reportRepo->findByPostId($post->getId())
+                : [$report];
+
             if ($post) {
                 $this->postRepo->remove($post, flush: true);
-                $this->reportRepo->getEntityManager()->refresh($report);
+                // Refresh chaque report pour refléter le post_id = NULL en base
+                foreach ($allReports as $r) {
+                    $this->reportRepo->getEntityManager()->refresh($r);
+                }
             }
 
-            $report->setStatus(ReportStatus::RESOLVED);
-            $report->setResolvedBy($currentUser);
-            $report->setResolvedAt(new \DateTime());
-            if ($resolutionNote) {
-                $report->setResolutionNote($resolutionNote);
+            $now = new \DateTime();
+            foreach ($allReports as $r) {
+                if ($r->getStatus() === ReportStatus::RESOLVED || $r->getStatus() === ReportStatus::REJECTED) {
+                    continue;
+                }
+                $r->setStatus(ReportStatus::RESOLVED);
+                $r->setResolvedBy($currentUser);
+                $r->setResolvedAt($now);
+                if ($resolutionNote) {
+                    $r->setResolutionNote($resolutionNote);
+                }
+                $this->reportRepo->save($r, flush: false);
             }
-            $this->reportRepo->save($report);
+            $this->reportRepo->getEntityManager()->flush();
         });
 
         return $this->json($this->mapper->toDto($report));

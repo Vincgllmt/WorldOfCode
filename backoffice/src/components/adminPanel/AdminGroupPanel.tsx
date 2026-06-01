@@ -2,13 +2,21 @@
 
 import { useState } from 'react'
 import { useAdminGroups, useCreateAdminGroup, useUpdateAdminGroup, useDeleteAdminGroup } from '@/hooks/useAdminGroups'
+import { useAdminGroupDetail } from '@/hooks/useAdminGroupDetail'
 import { AdminGroupListItem } from '@/interfaces/adminGroup'
 import { GroupFormDialog } from './GroupFormDialog'
 import { PaginatedTable } from '@/components/shared/PaginationTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { TableCell, TableHead, TableRow } from '@/components/ui/table'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,24 +33,39 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Rss, MoreVertical, ArrowUp, ArrowDown, Layers } from 'lucide-react'
+import { Plus, Search, Rss, MoreVertical, ArrowUp, ArrowDown, Layers, Users, FileText } from 'lucide-react'
 
-type SortKey = 'name' | 'memberCount' | 'postCount' | 'createdAt'
+type SortKey = 'name' | 'memberCount' | 'postCount' | 'createdAt' | 'creatorUsername'
+
+const ITEMS_PER_PAGE = 20
 
 export default function AdminGroupPanel() {
-  const { groups, isLoading } = useAdminGroups()
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
+
+  const { groups, total, isLoading, isFetching } = useAdminGroups({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search:    search || undefined,
+    sortField: sortKey,
+    sortDir,
+  })
+
   const createGroup = useCreateAdminGroup()
   const updateGroup = useUpdateAdminGroup()
   const deleteGroup = useDeleteAdminGroup()
 
-  const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [createOpen, setCreateOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<AdminGroupListItem | null>(null)
   const [groupToDelete, setGroupToDelete] = useState<{ id: number; name: string } | null>(null)
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null)
+
+  const { groupDetail, isLoading: isLoadingDetail } = useAdminGroupDetail(selectedGroupId)
 
   const handleSort = (key: SortKey) => {
+    setPage(1)
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
@@ -59,14 +82,6 @@ export default function AdminGroupPanel() {
   }
 
   const filtered = groups
-    .filter((g) => !search || g.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const mul = sortDir === 'asc' ? 1 : -1
-      if (sortKey === 'name') return mul * a.name.localeCompare(b.name)
-      if (sortKey === 'memberCount') return mul * (a.memberCount - b.memberCount)
-      if (sortKey === 'postCount') return mul * (a.postCount - b.postCount)
-      return mul * a.createdAt.localeCompare(b.createdAt)
-    })
 
   if (isLoading) {
     return (
@@ -101,10 +116,13 @@ export default function AdminGroupPanel() {
           <Input
             placeholder="Rechercher par nom..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="pl-8 h-9 text-sm"
           />
         </div>
+        <span className={`text-xs text-muted-foreground transition-opacity ${isFetching ? 'opacity-50' : 'opacity-100'}`}>
+          {total} groupe{total !== 1 ? 's' : ''}
+        </span>
         <Button size="sm" className="ml-auto gap-1.5" onClick={() => setCreateOpen(true)}>
           <Plus className="h-3.5 w-3.5" />
           Nouveau groupe
@@ -113,6 +131,9 @@ export default function AdminGroupPanel() {
 
       <PaginatedTable
         data={filtered}
+        totalItems={total}
+        currentPage={page}
+        onPageChange={setPage}
         emptyState={
           <div className="flex flex-col items-center gap-2 py-8">
             <Layers className="h-8 w-8 text-muted-foreground/40" />
@@ -141,7 +162,12 @@ export default function AdminGroupPanel() {
             >
               Posts <SortIcon col="postCount" />
             </TableHead>
-            <TableHead>Créateur</TableHead>
+            <TableHead
+              className="cursor-pointer select-none"
+              onClick={() => handleSort('creatorUsername')}
+            >
+              Créateur <SortIcon col="creatorUsername" />
+            </TableHead>
             <TableHead
               className="cursor-pointer select-none whitespace-nowrap"
               onClick={() => handleSort('createdAt')}
@@ -152,7 +178,11 @@ export default function AdminGroupPanel() {
           </>
         }
         renderRow={(group) => (
-          <TableRow key={group.id} className="hover:bg-muted/30">
+          <TableRow
+            key={group.id}
+            className="hover:bg-muted/30 cursor-pointer"
+            onClick={() => setSelectedGroupId(group.id)}
+          >
             <TableCell className="font-medium">{group.name}</TableCell>
             <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
               {group.description
@@ -168,6 +198,7 @@ export default function AdminGroupPanel() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-primary hover:underline text-xs"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Rss className="h-3.5 w-3.5" />
                 </a>
@@ -183,7 +214,7 @@ export default function AdminGroupPanel() {
             <TableCell className="text-sm whitespace-nowrap">
               {new Date(group.createdAt).toLocaleDateString('fr-FR')}
             </TableCell>
-            <TableCell>
+            <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -206,6 +237,149 @@ export default function AdminGroupPanel() {
           </TableRow>
         )}
       />
+
+      {/* Sheet détail groupe */}
+      <Sheet open={!!selectedGroupId} onOpenChange={(open) => { if (!open) setSelectedGroupId(null) }}>
+        <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto border-border px-6">
+          <SheetHeader className="border-b border-border pb-4 -mx-6 px-6">
+            <SheetTitle className="text-base font-bold">
+              Détail du groupe{' '}
+              <span className="text-muted-foreground font-mono text-sm">#{selectedGroupId}</span>
+            </SheetTitle>
+          </SheetHeader>
+
+          {isLoadingDetail ? (
+            <div className="space-y-4 mt-5 pb-6">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+            </div>
+          ) : groupDetail ? (
+            <div className="mt-5 space-y-5 pb-6">
+
+              {/* Nom + créateur */}
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center ring-2 ring-border shrink-0">
+                  <span className="text-sm font-bold text-primary">
+                    {groupDetail.name[0]?.toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm leading-tight">{groupDetail.name}</p>
+                  {groupDetail.creatorUsername && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Créé par <strong className="text-foreground">{groupDetail.creatorUsername}</strong>
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {new Date(groupDetail.createdAt).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {groupDetail.description && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Description</p>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm leading-relaxed">
+                    {groupDetail.description}
+                  </div>
+                </div>
+              )}
+
+              {/* RSS */}
+              {groupDetail.rssFeedUrl && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+                    <Rss className="h-3 w-3" />
+                    Flux RSS
+                  </p>
+                  <a
+                    href={groupDetail.rssFeedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline break-all"
+                  >
+                    {groupDetail.rssFeedUrl}
+                  </a>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono border-t border-border pt-4">
+                <span>{groupDetail.memberCount} membre{groupDetail.memberCount !== 1 ? 's' : ''}</span>
+                <span>·</span>
+                <span>{groupDetail.postCount} post{groupDetail.postCount !== 1 ? 's' : ''}</span>
+              </div>
+
+              {/* Membres */}
+              {groupDetail.members.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Membres ({groupDetail.memberCount > 20 ? `20 / ${groupDetail.memberCount}` : groupDetail.memberCount})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {groupDetail.members.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs"
+                      >
+                        {m.avatarUrl ? (
+                          <img src={m.avatarUrl} alt={m.username} className="h-4 w-4 rounded-full object-cover" />
+                        ) : (
+                          <span className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                            {m.username[0]?.toUpperCase()}
+                          </span>
+                        )}
+                        {m.username}
+                      </div>
+                    ))}
+                    {groupDetail.memberCount > 20 && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        +{groupDetail.memberCount - 20} autres
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Posts récents */}
+              {groupDetail.recentPosts.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    Posts récents
+                  </p>
+                  <div className="space-y-1.5">
+                    {groupDetail.recentPosts.map((p) => (
+                      <div key={p.id} className="text-xs rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="font-medium text-foreground">{p.authorUsername}</p>
+                          <p className="text-muted-foreground/60 font-mono text-[11px] shrink-0">
+                            {new Date(p.createdAt).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        {p.excerpt ? (
+                          <p className="text-muted-foreground leading-relaxed">{p.excerpt}</p>
+                        ) : (
+                          <p className="text-muted-foreground/50 italic">(pas de texte)</p>
+                        )}
+                        <p className="text-muted-foreground/60 font-mono mt-1">
+                          {p.likesCount} like{p.likesCount !== 1 ? 's' : ''} · {p.commentsCount} commentaire{p.commentsCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       {/* Dialog création */}
       <GroupFormDialog

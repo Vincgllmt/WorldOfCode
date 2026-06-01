@@ -1,0 +1,7 @@
+apiVersion: v2
+name: k6
+description: Load testing with k6 operator for WOC
+type: application
+version: 0.1.0
+appVersion: "0.57.0"
+

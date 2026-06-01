@@ -26,7 +26,19 @@ export interface GroupPreview {
   name: string
 }
 
+export interface PostPreview {
+  id: number
+  authorId: number | null
+  authorUsername: string | null
+  groupId: number | null
+  groupName: string | null
+  snippet: string
+  createdAt: string | null
+  score: number
+}
+
 export interface SearchResponse {
   users: UserPreview[]
   groups: GroupPreview[]
+  posts: PostPreview[]
 }

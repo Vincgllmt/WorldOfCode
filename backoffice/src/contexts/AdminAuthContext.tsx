@@ -2,7 +2,7 @@
 
 import { createContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCookie, deleteCookie } from 'cookies-next'
+import { getCookie, setCookie, deleteCookie } from 'cookies-next'
 import toast from 'react-hot-toast'
 import { AdminAuthContextType, TwoFAPendingState } from '@/interfaces/AdminAuthContext'
 import { AuthenticatedUser, LoginCredentials } from '@/interfaces/Authentification'
@@ -17,7 +17,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter()
 
   useEffect(() => {
-    const token = getCookie('token')
+    const token = getCookie('admin_token')
     if (!token) return setIsLoading(false)
 
     authService.getMe()
@@ -36,19 +36,33 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (credentials: LoginCredentials) => {
     try {
       const response = await authService.login(credentials)
-      setTwoFAPending({ tempToken: response.tempToken, maskedEmail: response.maskedEmail })
+      if ('token' in response) {
+        // Trusted device — skip 2FA, set token directly
+        setCookie('admin_token', response.token, { path: '/' })
+        const authenticatedUser = await authService.getMe()
+        if (authenticatedUser.role !== 'ROLE_ADMIN') {
+          toast.error("Vous n'avez pas accès à l'interface admin")
+          return router.push('/unauthorized')
+        }
+        setUser(authenticatedUser)
+        toast.success('Connexion admin réussie ✅')
+        router.push('/')
+      } else {
+        setTwoFAPending({ tempToken: response.tempToken, maskedEmail: response.maskedEmail })
+      }
     } catch (error) {
       toast.error('Identifiants invalides')
       console.error(error)
     }
   }
 
-  const verify2FA = async (code: string) => {
+  const verify2FA = async (code: string, rememberDevice?: boolean) => {
     if (!twoFAPending) return
     try {
       const authenticatedUser = await authService.verify2FA({
         tempToken: twoFAPending.tempToken,
         code,
+        rememberDevice,
       })
 
       if (authenticatedUser.role !== 'ROLE_ADMIN') {
@@ -71,7 +85,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     authService.logout()
     setUser(null)
     setTwoFAPending(null)
-    deleteCookie('token')
+    deleteCookie('admin_token')
     toast.success('Déconnexion réussie 👋')
     router.push('/login')
   }
