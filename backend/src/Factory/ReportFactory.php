@@ -56,7 +56,6 @@ final class ReportFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Report $report): void {})
         ;
     }
 }

@@ -1,0 +1,153 @@
+variables:
+  K6_NAMESPACE: "k6"
+  K6_IMAGE: "grafana/k6:0.57.0"
+  K6_CHART_REPO: "https://grafana.github.io/helm-charts"
+  K6_OPERATOR_CHART: "grafana/k6-operator"
+  K6_OPERATOR_VERSION: "3.9.0"
+  K6_OPERATOR_RELEASE: "k6-operator"
+  VM_URL: "http://vmsingle-vm-stack-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/write"
+  BASE_URL_DEV: "https://api-woc-dev.duckdns.org"
+  BASE_URL_PROD: "https://api-woc-prod.duckdns.org"
+
+# ─── Déploiement de l'opérateur k6 + scripts (une seule fois) ────────────────
+deploy:k6:
+  stage: deploy-monitoring
+  when: manual
+  allow_failure: false
+  script:
+    # 1. Namespace
+    - kubectl create namespace "$K6_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl label namespace "$K6_NAMESPACE" app.kubernetes.io/managed-by=Helm --overwrite
+    - kubectl annotate namespace "$K6_NAMESPACE" meta.helm.sh/release-name="$K6_OPERATOR_RELEASE" meta.helm.sh/release-namespace="$K6_NAMESPACE" --overwrite
+
+    # 2. k6-operator via Helm
+    - helm repo add grafana "$K6_CHART_REPO"
+    - helm repo update grafana
+    - |
+      helm upgrade --install "$K6_OPERATOR_RELEASE" "$K6_OPERATOR_CHART" \
+        --namespace "$K6_NAMESPACE" \
+        --version "$K6_OPERATOR_VERSION" \
+        --set installCRDs=true \
+        --set authProxy.enabled=false
+
+    # 3. Chart WOC k6 : ConfigMap des scripts + ServiceAccount
+    - |
+      helm upgrade --install k6 cluster/k6 \
+        --namespace "$K6_NAMESPACE" \
+        --values cluster/k6/values.yaml
+
+    # 4. Génération du JWT token depuis le backend et stockage dans Vault + Secret K8s
+    - |
+      VAULT_TOKEN=$(python3 -c "import json; d=json.load(open('cluster/vault/vault-keys.json')); print(d['root_token'])")
+      BACKEND_POD=$(kubectl get pods -n dev -l app=backend -o jsonpath='{.items[0].metadata.name}')
+      JWT=$(kubectl exec -n dev "$BACKEND_POD" -c php-fpm -- sh -c \
+        ". /vault/secrets/config && php bin/console lexik:jwt:generate-token hichem --no-ansi 2>/dev/null" \
+        | grep -E "^ey")
+      kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" vault kv patch secret/k6 jwt_token="$JWT" || \
+        kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" vault kv put secret/k6 jwt_token="$JWT"
+      kubectl create secret generic k6-credentials \
+        --from-literal=JWT_TOKEN="$JWT" \
+        -n "$K6_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+# ─── Jobs de test ─────────────────────────────────────────────────────────────
+
+.k6_run_template:
+  stage: load-test
+  when: manual
+  allow_failure: true
+  needs: []
+  script:
+    - apk add --no-cache gettext
+
+    # Régénération du JWT token (valide 4h) depuis le backend + mise à jour du Secret
+    - |
+      VAULT_TOKEN=$(python3 -c "import json; d=json.load(open('cluster/vault/vault-keys.json')); print(d['root_token'])")
+      BACKEND_NAMESPACE=$(echo "$BASE_URL" | grep -q "prod" && echo "production" || echo "dev")
+      BACKEND_POD=$(kubectl get pods -n "$BACKEND_NAMESPACE" -l app=backend -o jsonpath='{.items[0].metadata.name}')
+      JWT=$(kubectl exec -n "$BACKEND_NAMESPACE" "$BACKEND_POD" -c php-fpm -- sh -c \
+        ". /vault/secrets/config && php bin/console lexik:jwt:generate-token hichem --no-ansi 2>/dev/null" \
+        | grep -E "^ey")
+      kubectl create secret generic k6-credentials \
+        --from-literal=JWT_TOKEN="$JWT" \
+        -n "$K6_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+    # Nettoyage du TestRun précédent
+    - kubectl delete testrun "$TESTRUN_NAME" -n "$K6_NAMESPACE" --ignore-not-found
+
+    # Application du TestRun avec substitution des variables d'env
+    - BASE_URL="$BASE_URL" VM_URL="$VM_URL" K6_IMAGE="$K6_IMAGE" envsubst < "$TESTRUN_FILE" | kubectl apply -f -
+
+    # Attente de la fin (polling)
+    - |
+      echo "Attente de la fin du TestRun $TESTRUN_NAME..."
+      for i in $(seq 1 "$K6_TIMEOUT_ITERATIONS"); do
+        STAGE=$(kubectl get testrun "$TESTRUN_NAME" -n "$K6_NAMESPACE" -o jsonpath='{.status.stage}' 2>/dev/null || echo "pending")
+        echo "  [$i/$K6_TIMEOUT_ITERATIONS] stage: $STAGE"
+        if [ "$STAGE" = "finished" ] || [ "$STAGE" = "error" ] || [ "$STAGE" = "aborted" ]; then
+          break
+        fi
+        sleep 10
+      done
+
+    # Logs du pod k6
+    - |
+      echo "─── Logs k6 ───────────────────────────────────────────────────────────"
+      POD=$(kubectl get pods -n "$K6_NAMESPACE" -l "k6_cr=$TESTRUN_NAME" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+      if [ -n "$POD" ]; then
+        kubectl logs "$POD" -n "$K6_NAMESPACE" -c k6 || kubectl logs "$POD" -n "$K6_NAMESPACE" || true
+      fi
+
+    # Résultat
+    - |
+      FINAL=$(kubectl get testrun "$TESTRUN_NAME" -n "$K6_NAMESPACE" -o jsonpath='{.status.stage}' 2>/dev/null || echo "unknown")
+      echo "──────────────────────────────────────────────────────────────────────"
+      echo "Résultat final : $FINAL"
+      if [ "$FINAL" = "error" ] || [ "$FINAL" = "aborted" ]; then exit 1; fi
+
+test:k6:smoke:dev:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_DEV"
+    TESTRUN_NAME: "k6-smoke"
+    TESTRUN_FILE: "cluster/k6/testruns/smoke-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "30"    # 5 min max
+
+test:k6:smoke:prod:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_PROD"
+    TESTRUN_NAME: "k6-smoke"
+    TESTRUN_FILE: "cluster/k6/testruns/smoke-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "30"
+
+test:k6:load:dev:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_DEV"
+    TESTRUN_NAME: "k6-load"
+    TESTRUN_FILE: "cluster/k6/testruns/load-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "90"    # 15 min max
+
+test:k6:load:prod:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_PROD"
+    TESTRUN_NAME: "k6-load"
+    TESTRUN_FILE: "cluster/k6/testruns/load-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "90"
+
+test:k6:stress:dev:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_DEV"
+    TESTRUN_NAME: "k6-stress"
+    TESTRUN_FILE: "cluster/k6/testruns/stress-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "120"   # 20 min max
+
+test:k6:stress:prod:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_PROD"
+    TESTRUN_NAME: "k6-stress"
+    TESTRUN_FILE: "cluster/k6/testruns/stress-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "120"

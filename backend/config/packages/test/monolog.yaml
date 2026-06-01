@@ -1,0 +1,22 @@
+monolog:
+    handlers:
+        main:
+            type:      stream
+            path:      /dev/null
+            level:     debug
+            channels:  ['!user_error', '!server_error']
+            formatter: monolog.formatter.json
+
+        user_error_handler:
+            type:      stream
+            path:      /dev/null
+            level:     debug
+            channels:  [user_error]
+            formatter: monolog.formatter.json
+
+        server_error_handler:
+            type:      stream
+            path:      /dev/null
+            level:     debug
+            channels:  [server_error]
+            formatter: monolog.formatter.json

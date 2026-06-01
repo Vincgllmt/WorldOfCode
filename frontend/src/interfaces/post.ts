@@ -6,11 +6,12 @@ export interface Post {
   readonly authorId: number
   readonly authorUsername: string
   readonly authorAvatarUrl?: string | null
-  readonly techGroupId: number
-  readonly techGroupName: string
+  readonly techGroupId?: number | null
+  readonly techGroupName?: string | null
   readonly likesCount: number
   readonly likedByUser: boolean
   readonly sharedCount: number
+  readonly commentsCount: number
   readonly sharedPost?: Post | null
   readonly likedByMe?: boolean 
   readonly isAuthorFollowedByMe?: boolean
@@ -23,7 +24,7 @@ export interface SharePostPayload {
 
 export interface PostFormValues {
   readonly content: string
-  readonly groupId: number
+  readonly groupId?: number
 }
 
 export type CreatePostPayload = PostFormValues

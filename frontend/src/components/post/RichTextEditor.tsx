@@ -17,9 +17,6 @@ import 'tinymce/plugins/codesample'
 import 'tinymce/plugins/image'
 import 'tinymce/plugins/link'
 import 'tinymce/plugins/lists'
-// TinyMCE styles (inline imports + disable remote loading)
-import 'tinymce/skins/ui/oxide/skin.min.css'
-import 'tinymce/skins/ui/oxide/content.min.css'
 
 const TinyMCEEditor = dynamic<TinyMCEEditorProps>(
   () => import('@tinymce/tinymce-react').then((mod) => mod.Editor),

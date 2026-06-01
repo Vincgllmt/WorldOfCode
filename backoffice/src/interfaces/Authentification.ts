@@ -24,4 +24,7 @@ export interface TwoFAResponse {
 export interface Verify2FAPayload {
   tempToken: string
   code: string
+  rememberDevice?: boolean
 }
+
+export type AuthenticateResponse = TwoFAResponse | TokenResponse

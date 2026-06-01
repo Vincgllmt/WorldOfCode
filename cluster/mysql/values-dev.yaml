@@ -23,6 +23,7 @@ primary:
   podAnnotations:
     vault.hashicorp.com/agent-inject: "true"
     vault.hashicorp.com/role: "app"
+    vault.hashicorp.com/agent-init-first: "false"
     vault.hashicorp.com/agent-inject-secret-mysql-root: "secret/data/mysql"
     vault.hashicorp.com/agent-inject-template-mysql-root: |
       {{ "{{- with secret \"secret/data/mysql\" -}}" }}
@@ -33,6 +34,18 @@ primary:
       {{ "{{- with secret \"secret/data/mysql\" -}}" }}
       {{ "{{ .Data.data.password }}" }}
       {{ "{{- end -}}" }}
+  initContainers:
+    - name: wait-for-vault
+      image: curlimages/curl:8.13.0
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Attente de Vault unsealed..."
+          until curl -s http://vault.vault.svc:8200/v1/sys/health | grep -q '"sealed":false'; do
+            echo "Vault est scellé, nouvelle tentative dans 5s..."
+            sleep 5
+          done
+          echo "Vault prêt."
   extraEnvVars:
     - name: MYSQL_ROOT_PASSWORD_FILE
       value: "/vault/secrets/mysql-root"
@@ -41,7 +54,7 @@ primary:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: longhorn-mysql
+    storageClass: local-path-retain
   resources:
     requests:
       memory: "256Mi"

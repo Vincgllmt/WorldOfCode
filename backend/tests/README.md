@@ -77,6 +77,10 @@ docker compose exec backend composer run tests
 | **GroupSuggestionControllerTest**  | 🎭 **The Witcher 3**        | GeraltRivia<br>YenneferVengerberg                | (mock - hashed)                       |
 | **PaymentControllerTest**          | 🕵️ **Disco Elysium**       | HarryDuBois<br>KimKitsuragi                      | (mock - hashed)                       |
 | **StripeServiceTest**              | ⚙️ **Factorio**             | EngineerBuilder<br>BitersHorde                   | (mock - hashed)                       |
+| **FeedControllerTest**             | 🔬 **Portal**               | Chell                                            | (mock - hashed)                       |
+| **FeedServiceTest**                | 🌾 **Stardew Valley**       | Farmer<br>Penny                                  | (mock - hashed)                       |
+| **LoginNotificationServiceTest**   | 🔍 **Watch Dogs**           | AidenPearce<br>ClaraLille                        | (mock - hashed)                       |
+| **TrustedDeviceServiceTest**       | 🕵️ **Hitman**              | Agent47<br>DianaWinterbottom                     | (mock - hashed)                       |
 
 ### Comment Choisir une Référence ?
 
@@ -112,6 +116,6 @@ private $userData = [
 
 ---
 
-*Dernière mise à jour : 30 mars 2026*
+*Dernière mise à jour : 23 avril 2026*
 
 *"Un bon test est un test qui raconte une histoire" - The Tester's Creed*

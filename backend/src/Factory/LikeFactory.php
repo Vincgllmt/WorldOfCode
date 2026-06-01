@@ -46,7 +46,6 @@ final class LikeFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Like $like): void {})
         ;
     }
 }

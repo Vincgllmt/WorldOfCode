@@ -1,13 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminGroupService } from '@/services/adminGroupService'
+import { adminGroupService, AdminGroupsParams } from '@/services/adminGroupService'
 import toast from 'react-hot-toast'
 
-export function useAdminGroups() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-groups'],
-    queryFn: adminGroupService.getGroups,
+export function useAdminGroups(params: AdminGroupsParams) {
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['admin-groups', params],
+    queryFn: () => adminGroupService.getGroupsPaginated(params),
+    placeholderData: (prev) => prev,
   })
-  return { groups: data ?? [], isLoading }
+  return {
+    groups: data?.items ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    isFetching,
+  }
 }
 
 export function useCreateAdminGroup() {

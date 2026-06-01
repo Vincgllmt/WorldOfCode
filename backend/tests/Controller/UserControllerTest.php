@@ -13,6 +13,7 @@ use App\Mapper\TechGroupMapper;
 use App\Mapper\UserLinkMapper;
 use App\Mapper\UserMapper;
 use App\Repository\SkillRepository;
+use App\Repository\TrustedDeviceRepository;
 use App\Repository\UserLinkRepository;
 use App\Repository\UserRepository;
 use PHPUnit\Framework\TestCase;
@@ -292,6 +293,21 @@ class UserControllerTest extends TestCase
         $this->assertSame(403, $response->getStatusCode());
     }
 
+    public function testUpdateFailsWithInvalidJsonPayload(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $request = new Request(content: 'not valid json at all');
+        $response = $this->makeController($shepard, $repo)->update(1, $request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Invalid JSON payload', $payload['error']);
+    }
+
     public function testUpdateFailsWhenValidationFails(): void
     {
         $shepard = $this->buildUser(1);
@@ -447,7 +463,7 @@ class UserControllerTest extends TestCase
             'newPassword'     => 'Ap3rtur3Sc!ence',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -466,7 +482,7 @@ class UserControllerTest extends TestCase
             'currentPassword' => 'N7Comm4nd3r!', 'newPassword' => 'New!',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(99, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(99, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(404, $response->getStatusCode());
     }
@@ -484,7 +500,7 @@ class UserControllerTest extends TestCase
             'currentPassword' => 'N7Comm4nd3r!', 'newPassword' => 'New!Pass1!',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo, isAdmin: false)->changePassword(2, $request, $hasher);
+        $response = $this->makeController($shepard, $repo, isAdmin: false)->changePassword(2, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(403, $response->getStatusCode());
     }
@@ -499,7 +515,7 @@ class UserControllerTest extends TestCase
         $hasher  = $this->createMock(UserPasswordHasherInterface::class);
         $request = new Request(content: json_encode(['currentPassword' => 'N7Comm4nd3r!'], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -519,9 +535,51 @@ class UserControllerTest extends TestCase
             'newPassword'     => 'Ap3rtur3Sc!ence',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher);
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
 
         $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testChangePasswordFailsWhenNewSameAsCurrent(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->method('isPasswordValid')->willReturn(true);
+
+        $request = new Request(content: json_encode([
+            'currentPassword' => 'SamePassw0rd!Strong',
+            'newPassword'     => 'SamePassw0rd!Strong', // identique
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('different', $payload['error']);
+    }
+
+    public function testChangePasswordFailsWhenNewPasswordIsWeak(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->method('isPasswordValid')->willReturn(true);
+
+        $request = new Request(content: json_encode([
+            'currentPassword' => 'OldP4ssw0rd!Strong',
+            'newPassword'     => 'weak', // trop court / faible
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo)->changePassword(1, $request, $hasher, $this->createMock(TrustedDeviceRepository::class));
+
+        $this->assertSame(400, $response->getStatusCode());
     }
 
     // ======================================================================
@@ -692,6 +750,95 @@ class UserControllerTest extends TestCase
         $this->assertSame(403, $response->getStatusCode());
     }
 
+    public function testUpdateProfileWithFullPayload(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+        $repo->expects($this->once())->method('save');
+
+        $skill1 = new \App\Entity\Skill();
+        $skill1->setName('Biotics');
+        $skillProp = new \ReflectionProperty(\App\Entity\Skill::class, 'id');
+        $skillProp->setValue($skill1, 100);
+        $skill1->setCategory(\App\Enum\SkillCategory::OTHER);
+
+        $skillRepo = $this->createMock(SkillRepository::class);
+        $skillRepo->method('findByIds')->willReturn([$skill1]);
+
+        $request = new Request(content: json_encode([
+            'bio'          => 'Commander Shepard, N7.',
+            'location'     => 'SSV Normandy',
+            'availability' => 'employed',
+            'experiences'  => ['Saving the galaxy from Reapers'],
+            'avatarUrl'    => 'https://normandy.sr2/avatar.png',
+            'skillIds'     => [100],
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, false, null, null, $skillRepo)->updateProfile(1, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['Saving the galaxy from Reapers'], $shepard->getExperiences());
+        $this->assertSame('https://normandy.sr2/avatar.png', $shepard->getAvatarUrl());
+        $this->assertCount(1, $shepard->getSkills());
+    }
+
+    public function testUpdateProfileFailsWhenValidationFails(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+        // ne doit jamais sauvegarder
+        $repo->expects($this->never())->method('save');
+
+        $validator = $this->makeValidator(valid: false);
+
+        $request = new Request(content: json_encode(['bio' => 'whatever'], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, false, $validator)->updateProfile(1, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Validation failed', $payload['error']);
+    }
+
+    public function testUpdateProfileReplacesExistingSkills(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        // Skill existant à supprimer
+        $oldSkill = new \App\Entity\Skill();
+        $oldSkill->setName('Renegade');
+        $oldSkillProp = new \ReflectionProperty(\App\Entity\Skill::class, 'id');
+        $oldSkillProp->setValue($oldSkill, 50);
+        $oldSkill->setCategory(\App\Enum\SkillCategory::OTHER);
+        $shepard->addSkill($oldSkill);
+
+        // Nouveau skill
+        $newSkill = new \App\Entity\Skill();
+        $newSkill->setName('Paragon');
+        (new \ReflectionProperty(\App\Entity\Skill::class, 'id'))->setValue($newSkill, 51);
+        $newSkill->setCategory(\App\Enum\SkillCategory::OTHER);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $skillRepo = $this->createMock(SkillRepository::class);
+        $skillRepo->method('findByIds')->willReturn([$newSkill]);
+
+        $request = new Request(content: json_encode([
+            'skillIds' => [51],
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, false, null, null, $skillRepo)->updateProfile(1, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertCount(1, $shepard->getSkills());
+        $this->assertSame('Paragon', $shepard->getSkills()->first()->getName());
+    }
+
     public function testUpdateProfileFailsWithInvalidJson(): void
     {
         $shepard = $this->buildUser(1);
@@ -818,6 +965,22 @@ class UserControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
     }
 
+    public function testCreateLinkFailsWithInvalidJson(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $request = new Request(content: 'not-valid-json');
+
+        $response = $this->makeController($shepard, $repo)->createLink(1, $request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Invalid JSON payload', $payload['error']);
+    }
+
     // ======================================================================
     //  updateLink()
     // ======================================================================
@@ -882,6 +1045,70 @@ class UserControllerTest extends TestCase
         $response = $this->makeController($shepard, $repo, linkRepo: $linkRepo)->updateLink(1, 99, $request);
 
         $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testUpdateLinkFailsWhenNotOwnerAndNotAdmin(): void
+    {
+        $shepard = $this->buildUser(1);
+        $garrus  = $this->buildUser(2, 'Garrus');
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($garrus); // user appartient à quelqu'un d'autre
+
+        $request = new Request(content: json_encode([
+            'type' => 'github', 'url' => 'https://g.io',
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, isAdmin: false)->updateLink(2, 1, $request);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testUpdateLinkFailsWithInvalidJson(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $link = (new UserLink())->setUser($shepard)->setType(LinkType::GITHUB)->setUrl('https://github.com/x');
+        (new \ReflectionProperty(UserLink::class, 'id'))->setValue($link, 10);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $linkRepo = $this->createMock(UserLinkRepository::class);
+        $linkRepo->method('find')->willReturn($link);
+
+        $request = new Request(content: 'not-valid-json');
+
+        $response = $this->makeController($shepard, $repo, linkRepo: $linkRepo)->updateLink(1, 10, $request);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testUpdateLinkFailsWhenValidationFails(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        $link = (new UserLink())->setUser($shepard)->setType(LinkType::GITHUB)->setUrl('https://github.com/x');
+        (new \ReflectionProperty(UserLink::class, 'id'))->setValue($link, 10);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+
+        $linkRepo = $this->createMock(UserLinkRepository::class);
+        $linkRepo->method('find')->willReturn($link);
+        $linkRepo->expects($this->never())->method('save');
+
+        $validator = $this->makeValidator(valid: false);
+
+        $request = new Request(content: json_encode([
+            'type' => 'github', 'url' => 'bad-url',
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, false, $validator, $linkRepo)->updateLink(1, 10, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Validation failed', $payload['error']);
     }
 
     // ======================================================================
@@ -1046,5 +1273,42 @@ class UserControllerTest extends TestCase
         $response = $this->makeController($shepard, $repo)->updateUserSkills(1, $request);
 
         $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testUpdateUserSkillsReplacesExistingSkillsWithNewOnes(): void
+    {
+        $shepard = $this->buildUser(1);
+
+        // Pré-équiper Shepard avec 2 anciens skills
+        $oldSkill1 = new \App\Entity\Skill();
+        $oldSkill1->setName('Renegade')->setCategory(\App\Enum\SkillCategory::OTHER);
+        (new \ReflectionProperty(\App\Entity\Skill::class, 'id'))->setValue($oldSkill1, 50);
+        $shepard->addSkill($oldSkill1);
+
+        $oldSkill2 = new \App\Entity\Skill();
+        $oldSkill2->setName('Paragon')->setCategory(\App\Enum\SkillCategory::OTHER);
+        (new \ReflectionProperty(\App\Entity\Skill::class, 'id'))->setValue($oldSkill2, 51);
+        $shepard->addSkill($oldSkill2);
+
+        // Nouveaux skills à ajouter
+        $newSkill = new \App\Entity\Skill();
+        $newSkill->setName('Biotics')->setCategory(\App\Enum\SkillCategory::OTHER);
+        (new \ReflectionProperty(\App\Entity\Skill::class, 'id'))->setValue($newSkill, 100);
+
+        $skillRepo = $this->createMock(SkillRepository::class);
+        $skillRepo->method('findByIds')->with([100])->willReturn([$newSkill]);
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('find')->willReturn($shepard);
+        $repo->expects($this->once())->method('save');
+
+        $request = new Request(content: json_encode(['skillIds' => [100]], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($shepard, $repo, skillRepo: $skillRepo)->updateUserSkills(1, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        // Les anciens skills doivent avoir été retirés et seuls les nouveaux sont là
+        $this->assertCount(1, $shepard->getSkills());
+        $this->assertSame('Biotics', $shepard->getSkills()->first()->getName());
     }
 }

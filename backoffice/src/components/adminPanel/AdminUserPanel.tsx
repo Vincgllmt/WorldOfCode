@@ -7,6 +7,8 @@ import { MoreVertical, MapPin, Briefcase, Link as LinkIcon, FileText, Flag, Sear
 import { useAdminUsers, useAdminUpdateUserRole, useAdminDeleteUser } from '@/hooks/useAdminUsers'
 import { useAdminUserDetail } from '@/hooks/useAdminUserDetail'
 
+const ITEMS_PER_PAGE = 20
+
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,7 +48,7 @@ import { PaginatedTable } from '../shared/PaginationTable'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SortKey = 'postCount' | 'followerCount' | 'creationDate' | null
+type SortKey = 'postCount' | 'followerCount' | 'creationDate' | 'username' | 'email' | 'role' | null
 
 // ─── Composant skeleton de chargement ─────────────────────────────────────────
 
@@ -85,16 +87,28 @@ function UserPanelSkeleton() {
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function AdminUserPanel() {
-  const { users, isLoading } = useAdminUsers()
-  const updateUserRole = useAdminUpdateUserRole()
-  const deleteUser = useAdminDeleteUser()
-
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState<'ROLE_USER' | 'ROLE_ADMIN' | ''>('')
   const [filterDateFrom, setFilterDateFrom] = useState<string>('')
   const [filterDateTo, setFilterDateTo] = useState<string>('')
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
+
+  const { users, total, isLoading, isFetching } = useAdminUsers({
+    page,
+    limit: ITEMS_PER_PAGE,
+    search:    search || undefined,
+    role:      filterRole || undefined,
+    dateFrom:  filterDateFrom || undefined,
+    dateTo:    filterDateTo || undefined,
+    sortField: sortKey ?? undefined,
+    sortDir:   sortKey ? sortDir : undefined,
+  })
+
+  const updateUserRole = useAdminUpdateUserRole()
+  const deleteUser = useAdminDeleteUser()
+
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const { userDetail, isLoading: isLoadingDetail } = useAdminUserDetail(selectedUserId)
   const [pendingRoleChange, setPendingRoleChange] = useState<{
@@ -107,7 +121,16 @@ export default function AdminUserPanel() {
 
   const hasFilters = search || filterRole || filterDateFrom || filterDateTo
 
+  const resetFilters = () => {
+    setSearch('')
+    setFilterRole('')
+    setFilterDateFrom('')
+    setFilterDateTo('')
+    setPage(1)
+  }
+
   const toggleSort = (key: SortKey) => {
+    setPage(1)
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     } else {
@@ -121,29 +144,9 @@ export default function AdminUserPanel() {
       <span className="ml-1 text-primary">{sortDir === 'asc' ? '↑' : '↓'}</span>
     )
 
-  const filteredUsers = (users ?? []).filter((user) => {
-    const matchesSearch =
-      !search ||
-      user.username.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase())
-    const matchesRole = !filterRole || user.role === filterRole
-    const userDate = user.creationDate.slice(0, 10)
-    const matchesDateFrom = !filterDateFrom || userDate >= filterDateFrom
-    const matchesDateTo = !filterDateTo || userDate <= filterDateTo
-    return matchesSearch && matchesRole && matchesDateFrom && matchesDateTo
-  })
+  const sortedUsers = users
 
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    if (!sortKey) return 0
-    const valA = a[sortKey]
-    const valB = b[sortKey]
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortDir === 'asc' ? valA - valB : valB - valA
-    }
-    return sortDir === 'asc'
-      ? String(valA).localeCompare(String(valB))
-      : String(valB).localeCompare(String(valA))
-  })
+  const handleFilterChange = (fn: () => void) => { fn(); setPage(1) }
 
   const handleConfirmRoleChange = () => {
     if (!pendingRoleChange) return
@@ -166,13 +169,6 @@ export default function AdminUserPanel() {
     setUserToDelete(null)
   }
 
-  const resetFilters = () => {
-    setSearch('')
-    setFilterRole('')
-    setFilterDateFrom('')
-    setFilterDateTo('')
-  }
-
   return (
     <div className="space-y-4">
       {/* Filtres */}
@@ -182,12 +178,12 @@ export default function AdminUserPanel() {
           <Input
             placeholder="Rechercher username, email…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
             className="pl-8 h-9 text-sm"
           />
         </div>
 
-        <Select value={filterRole || 'ALL'} onValueChange={(val) => setFilterRole(val === 'ALL' ? '' : val as typeof filterRole)}>
+        <Select value={filterRole || 'ALL'} onValueChange={(val) => handleFilterChange(() => setFilterRole(val === 'ALL' ? '' : val as typeof filterRole))}>
           <SelectTrigger className="h-9 w-[150px] text-sm">
             <SelectValue placeholder="Tous les rôles" />
           </SelectTrigger>
@@ -204,14 +200,14 @@ export default function AdminUserPanel() {
           <Input
             type="date"
             value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setFilterDateFrom(e.target.value))}
             className="h-9 w-[140px] text-sm"
           />
           <span>jusqu&apos;au</span>
           <Input
             type="date"
             value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setFilterDateTo(e.target.value))}
             className="h-9 w-[140px] text-sm"
           />
         </div>
@@ -229,8 +225,8 @@ export default function AdminUserPanel() {
         )}
 
         {!isLoading && (
-          <span className="ml-auto text-xs text-muted-foreground font-mono">
-            {sortedUsers.length} résultat{sortedUsers.length !== 1 ? 's' : ''}
+          <span className={`ml-auto text-xs font-mono transition-opacity ${isFetching ? 'opacity-50' : 'text-muted-foreground'}`}>
+            {total} résultat{total !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -241,7 +237,10 @@ export default function AdminUserPanel() {
       ) : (
         <PaginatedTable
           data={sortedUsers}
-          itemsPerPage={10}
+          itemsPerPage={ITEMS_PER_PAGE}
+          totalItems={total}
+          currentPage={page}
+          onPageChange={setPage}
           emptyState={
             <div className="flex flex-col items-center gap-2 py-2">
               <Search className="h-8 w-8 text-muted-foreground/30" />
@@ -251,9 +250,24 @@ export default function AdminUserPanel() {
           headers={
             <>
               <TableHead className="w-10 pl-4"></TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Username</TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Email</TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">Rôle</TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('username')}
+              >
+                Username{sortIndicator('username')}
+              </TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('email')}
+              >
+                Email{sortIndicator('email')}
+              </TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => toggleSort('role')}
+              >
+                Rôle{sortIndicator('role')}
+              </TableHead>
               <TableHead
                 className="text-xs font-semibold text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors"
                 onClick={() => toggleSort('creationDate')}

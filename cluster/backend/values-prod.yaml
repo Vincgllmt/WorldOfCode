@@ -1,7 +1,14 @@
 replicaCount: 1
 
+migrations:
+  enabled: false
+
+server:
+  type: fpm
+
 vault:
   secretPath: "secret/data/production/backend"
+  minioSecretPath: "secret/data/production/minio"
 
 image:
   repository: registry.woc:32000/backend
@@ -25,7 +32,6 @@ env:
   CORS_ALLOW_ORIGIN: "^https?://(woc-prod\\.duckdns\\.org|api-woc-prod\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.production.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"
-  MINIO_SECRET_KEY: "admin1234"
   MINIO_BUCKET: "uploads"
   MINIO_PUBLIC_URL: "https://api-woc-prod.duckdns.org/uploads"
   RESET_PASSWORD_URL: "https://woc-prod.duckdns.org"

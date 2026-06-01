@@ -50,7 +50,6 @@ final class MessageFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Message $message): void {})
         ;
     }
 }

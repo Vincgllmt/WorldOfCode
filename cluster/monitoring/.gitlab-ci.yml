@@ -33,6 +33,20 @@ deploy:vm-stack:
         --values cluster/monitoring/vm-stack-values.yaml
     
 
+# --- Job 3 : Alerting Grafana (ConfigMap hot-reloadé par le sidecar Grafana) ---
+deploy:monitoring:alerting:
+  stage: deploy-monitoring
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      changes:
+        - cluster/monitoring/grafana-alerting.yaml
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+  script:
+    - kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl apply -f cluster/monitoring/grafana-alerting.yaml
+
 # --- Job 2 : Loki & Promtail ---
 deploy:loki-stack:
   stage: deploy-monitoring

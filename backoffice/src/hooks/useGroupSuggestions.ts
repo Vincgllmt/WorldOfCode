@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
-  getGroupSuggestions,
+  getGroupSuggestionsPaginated,
+  GroupSuggestionsParams,
   claimGroupSuggestion,
   approveGroupSuggestion,
   rejectGroupSuggestion,
@@ -10,13 +11,14 @@ import { ApproveSuggestionPayload, RejectSuggestionPayload } from '@/interfaces/
 
 const QUERY_KEY = ['groupSuggestions']
 
-export const useGroupSuggestions = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: getGroupSuggestions,
+export const useGroupSuggestions = (params: GroupSuggestionsParams) => {
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: [...QUERY_KEY, params],
+    queryFn: () => getGroupSuggestionsPaginated(params),
+    placeholderData: (prev) => prev,
     refetchInterval: 30000,
   })
-  return { suggestions: data ?? [], isLoading, error }
+  return { suggestions: data?.items ?? [], total: data?.total ?? 0, isLoading, isFetching, error }
 }
 
 export const useClaimSuggestion = () => {

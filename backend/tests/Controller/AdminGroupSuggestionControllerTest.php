@@ -146,36 +146,39 @@ class AdminGroupSuggestionControllerTest extends TestCase
     {
         $admin    = $this->buildAdmin();
         $suggRepo = $this->createMock(GroupSuggestionRepository::class);
-        $suggRepo->method('findAll')->willReturn([
-            $this->buildSuggestion(1),
+        $suggRepo->method('findPaginated')->willReturn([
+            'items' => [$this->buildSuggestion(1)],
+            'total' => 1,
         ]);
 
-        $response = $this->makeController($admin, $suggRepo)->list();
+        $response = $this->makeController($admin, $suggRepo)->list(new Request());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $payload);
-        $this->assertSame('Deepnest Dev', $payload[0]['name']);
-        $this->assertSame('PENDING', $payload[0]['status']);
+        $this->assertSame(1, $payload['total']);
+        $this->assertCount(1, $payload['items']);
+        $this->assertSame('Deepnest Dev', $payload['items'][0]['name']);
+        $this->assertSame('PENDING', $payload['items'][0]['status']);
     }
 
     public function testListReturnsEmptyWhenNone(): void
     {
         $admin    = $this->buildAdmin();
         $suggRepo = $this->createMock(GroupSuggestionRepository::class);
-        $suggRepo->method('findAll')->willReturn([]);
+        $suggRepo->method('findPaginated')->willReturn(['items' => [], 'total' => 0]);
 
-        $response = $this->makeController($admin, $suggRepo)->list();
+        $response = $this->makeController($admin, $suggRepo)->list(new Request());
 
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame([], $payload);
+        $this->assertSame(0, $payload['total']);
+        $this->assertSame([], $payload['items']);
     }
 
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();
         $this->expectException(AccessDeniedException::class);
-        $this->makeController($admin, isAdmin: false)->list();
+        $this->makeController($admin, isAdmin: false)->list(new Request());
     }
 
     // ======================================================================

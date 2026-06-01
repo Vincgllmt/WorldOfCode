@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-wrapper
+  namespace: k6
+  labels:
+    {{- include "k6.labels" . | nindent 4 }}
+data:
+  wrapper.sh: |
+    #!/bin/sh
+    if [ "$1" = "run" ]; then
+        shift
+        exec /shared/k6-real run --out=experimental-prometheus-rw "$@"
+    else
+        exec /shared/k6-real "$@"
+    fi

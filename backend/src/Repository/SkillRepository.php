@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 
 class SkillRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry, CacheInterface $cache)
+    public function __construct(ManagerRegistry $registry, private CacheInterface $cache)
     {
         parent::__construct($registry, Skill::class);
     }

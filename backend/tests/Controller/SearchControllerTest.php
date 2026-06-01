@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\UserRole;
 use App\Repository\TechGroupRepository;
 use App\Repository\UserRepository;
+use App\Service\Elasticsearch\SearchService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -84,11 +85,23 @@ class SearchControllerTest extends TestCase
     private function makeController(
         User $currentUser,
         ?UserRepository $userRepo = null,
-        ?TechGroupRepository $groupRepo = null
+        ?TechGroupRepository $groupRepo = null,
+        ?SearchService $searchService = null,
     ): SearchController {
+        // Par défaut, on simule un cluster Elasticsearch indisponible :
+        // searchUsers / searchGroups throw → le controller bascule sur la recherche SQL,
+        // et searchPosts retourne un tableau vide.
+        if ($searchService === null) {
+            $searchService = $this->createMock(SearchService::class);
+            $searchService->method('searchUsers')->willThrowException(new \RuntimeException('ES down'));
+            $searchService->method('searchGroups')->willThrowException(new \RuntimeException('ES down'));
+            $searchService->method('searchPosts')->willReturn([]);
+        }
+
         $controller = new SearchController(
-            $userRepo  ?? $this->createMock(UserRepository::class),
-            $groupRepo ?? $this->createMock(TechGroupRepository::class)
+            $userRepo      ?? $this->createMock(UserRepository::class),
+            $groupRepo     ?? $this->createMock(TechGroupRepository::class),
+            $searchService,
         );
 
         $controller->setContainer($this->makeContainer($currentUser));

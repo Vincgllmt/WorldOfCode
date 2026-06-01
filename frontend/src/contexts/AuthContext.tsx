@@ -1,11 +1,12 @@
 'use client'
 
-import { createContext, useState, useEffect, ReactNode } from 'react'
-import { getCookie } from 'cookies-next'
+import { createContext, useState, useEffect, useRef, ReactNode } from 'react'
+import { getCookie, setCookie } from 'cookies-next'
 import { useRouter } from 'next/navigation'
 import * as authService from '@/services/authService'
 import { AuthContextType } from '@/interfaces/AuthContext'
 import { AuthenticatedUser, LoginCredentials } from '@/interfaces/Authentification'
+import { parseAuthErrorResponse, parseNetworkError } from '@/lib/authErrors'
 import toast from 'react-hot-toast'
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -14,6 +15,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleTokenRefresh = (token: string) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const refreshIn = payload.exp * 1000 - Date.now() - 30 * 60 * 1000 // 30 min avant expiry
+      if (refreshIn <= 0) return
+      refreshTimerRef.current = setTimeout(async () => {
+        try {
+          const newToken = await authService.refreshToken()
+          setUser(prev => (prev ? { ...prev, token: newToken } : prev))
+          scheduleTokenRefresh(newToken)
+        } catch {
+          logout()
+        }
+      }, refreshIn)
+    } catch {
+      // token non décodable, on ignore
+    }
+  }
 
   // vérifier s'il existe déjà un token
   useEffect(() => {
@@ -21,11 +43,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedToken) {
       authService
         .getMe()
-        .then(setUser)
-        .catch(() => logout()) // si token invalide → logout
+        .then((userData) => {
+          setUser(userData)
+          scheduleTokenRefresh(storedToken as string)
+        })
+        .catch(() => logout())
         .finally(() => setIsLoading(false))
     } else {
       setIsLoading(false)
+    }
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
   }, [])
 
@@ -40,18 +68,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return
       }
 
-      // Fallback si 2FA désactivé (ne devrait pas arriver, mais sécurité)
+      // Appareil de confiance : le backend renvoie directement le JWT sans 2FA
       const { token } = result
-      const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (meRes.ok) {
-        const userData = await meRes.json()
-        setUser({ ...userData, token })
-        router.push('/home')
+      setCookie('token', token, { path: '/', maxAge: 14400 })
+
+      let meRes: Response
+      try {
+        meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch (err) {
+        throw new Error(parseNetworkError(err, 'Impossible de récupérer votre profil.'))
       }
+
+      if (!meRes.ok) {
+        throw new Error(await parseAuthErrorResponse(meRes, 'Impossible de récupérer votre profil.'))
+      }
+
+      const userData = await meRes.json()
+      setUser({ ...userData, token })
+      scheduleTokenRefresh(token)
+      router.push('/home')
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Identifiants invalides'
+      const message = error instanceof Error ? error.message : 'Identifiants invalides.'
       toast.error(message)
       throw error
     }
@@ -68,24 +107,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { token } = result
-    const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    let meRes: Response
+    try {
+      meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090'}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    } catch (err) {
+      throw new Error(parseNetworkError(err, 'Impossible de récupérer votre profil.'))
+    }
+    if (!meRes.ok) {
+      throw new Error(await parseAuthErrorResponse(meRes, 'Impossible de récupérer votre profil.'))
+    }
     const userData = await meRes.json()
     const authenticatedUser = { ...userData, token }
     setUser(authenticatedUser)
     return authenticatedUser
   }
 
-  const verify2FA = async (code: string) => {
+  const verify2FA = async (code: string, rememberDevice = false) => {
     const tempToken = sessionStorage.getItem('2fa_tempToken')
     if (!tempToken) {
       throw new Error('Aucun token temporaire trouvé. Veuillez vous reconnecter.')
     }
 
-    const authenticatedUser = await authService.verify2FA(tempToken, code)
+    const authenticatedUser = await authService.verify2FA(tempToken, code, rememberDevice)
     sessionStorage.removeItem('2fa_tempToken')
     setUser(authenticatedUser)
+    scheduleTokenRefresh(authenticatedUser.token)
 
     // Rediriger vers onboarding si inscription, sinon home
     const redirect = sessionStorage.getItem('2fa_redirect') || '/home'
@@ -94,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const logout = () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     authService.logout()
     sessionStorage.removeItem('2fa_tempToken')
     setUser(null)

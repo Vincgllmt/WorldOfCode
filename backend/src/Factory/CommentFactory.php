@@ -65,7 +65,6 @@ final class CommentFactory extends PersistentProxyObjectFactory
     protected function initialize(): static
     {
         return $this
-            // ->afterInstantiate(function(Comment $comment): void {})
         ;
     }
 }

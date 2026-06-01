@@ -27,7 +27,11 @@ export const createPost = async (data: CreatePostPayload): Promise<Post> => {
     body: JSON.stringify(data)
   })
 
-  if (!res.ok) throw new Error('Erreur lors de la création du post')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    // Message précis du backend si dispo (ex: "Votre texte contient des termes interdits.")
+    throw new Error(body?.error || 'Erreur lors de la création du post')
+  }
 
   return res.json()
 }
@@ -132,7 +136,10 @@ export const updatePost = async (id: number,
     body: JSON.stringify(data),
   })
 
-  if (!res.ok) throw new Error("Erreur lors de la modification du post")
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body?.error || "Erreur lors de la modification du post")
+  }
   return res.json()
 }
 

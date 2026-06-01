@@ -17,6 +17,10 @@ type PaginatedTableProps<T> = {
   renderRow: (item: T, index: number) => ReactNode
   itemsPerPage?: number
   emptyState?: ReactNode
+  // Mode server-side (optionnel) — si fourni, la pagination est externe
+  totalItems?: number
+  currentPage?: number
+  onPageChange?: (page: number) => void
 }
 
 export function PaginatedTable<T>({
@@ -25,17 +29,34 @@ export function PaginatedTable<T>({
   renderRow,
   itemsPerPage = 10,
   emptyState,
+  totalItems,
+  currentPage: externalPage,
+  onPageChange,
 }: PaginatedTableProps<T>) {
-  const [page, setPage] = useState(1)
+  const [internalPage, setInternalPage] = useState(1)
 
-  const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage))
-  const safeCurrentPage = Math.min(page, totalPages)
-  const paginated = data.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage)
+  const isServerSide = totalItems !== undefined && externalPage !== undefined && onPageChange !== undefined
 
-  const from = data.length === 0 ? 0 : (safeCurrentPage - 1) * itemsPerPage + 1
-  const to = Math.min(safeCurrentPage * itemsPerPage, data.length)
+  const total        = isServerSide ? totalItems : data.length
+  const totalPages   = Math.max(1, Math.ceil(total / itemsPerPage))
+  const safeCurrentPage = isServerSide
+    ? Math.min(externalPage, totalPages)
+    : Math.min(internalPage, totalPages)
 
-  const goTo = (p: number) => setPage(Math.max(1, Math.min(p, totalPages)))
+  const paginated = isServerSide
+    ? data
+    : data.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage)
+
+  const from = total === 0 ? 0 : (safeCurrentPage - 1) * itemsPerPage + 1
+  const to   = isServerSide
+    ? Math.min(safeCurrentPage * itemsPerPage, total)
+    : Math.min(safeCurrentPage * itemsPerPage, data.length)
+
+  const goTo = (p: number) => {
+    const clamped = Math.max(1, Math.min(p, totalPages))
+    if (isServerSide) onPageChange(clamped)
+    else setInternalPage(clamped)
+  }
 
   // Compute visible page numbers (max 5 around current)
   const getPageNumbers = () => {

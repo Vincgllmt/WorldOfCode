@@ -5,23 +5,60 @@ import type { IAllProps as TinyMCEEditorProps } from '@tinymce/tinymce-react'
 import type { Editor as TinyMCEEditor } from 'tinymce'
 import toast from 'react-hot-toast'
 import { uploadImage } from '@/services/uploadService'
+import { checkImageNSFW, getNsfwBlockMessage } from '@/services/nsfwService'
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
 
 type EditorInit = NonNullable<TinyMCEEditorProps['init']>
 type UploadHandler = NonNullable<EditorInit['images_upload_handler']>
 type EditorChangeHandler = NonNullable<TinyMCEEditorProps['onEditorChange']>
 
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  png: 'image/png', gif: 'image/gif',
+  webp: 'image/webp',
+}
+
 export const useRichTextEditor = (onChange: (value: string) => void) => {
   const handleImageUpload: UploadHandler = useCallback(async (blobInfo) => {
+    const blob = blobInfo.blob()
+    const fileName = typeof blobInfo.filename === 'function' ? blobInfo.filename() : 'upload'
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
+    const mimeType = blob.type || EXT_TO_MIME[ext] || ''
+    const file = new File([blob], fileName, { type: mimeType })
+
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+      throw new Error('Format non support\u00e9')
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`L'image ne doit pas d\u00e9passer ${MAX_IMAGE_SIZE_MB} Mo.`)
+    }
+
+    // V\u00e9rification NSFW avant upload
+    const checkingToast = toast.loading('V\u00e9rification de l\'image\u2026')
     try {
-      const blob = blobInfo.blob()
-      const fileName = typeof blobInfo.filename === 'function' ? blobInfo.filename() : 'upload'
-      const file = new File([blob], fileName, { type: blob.type })
+      const nsfwResult = await checkImageNSFW(file)
+      toast.dismiss(checkingToast)
+      if (nsfwResult.blocked) {
+        const msg = getNsfwBlockMessage(nsfwResult)
+        toast.error(msg)
+        throw new Error(msg)
+      }
+    } catch (err) {
+      toast.dismiss(checkingToast)
+      if (err instanceof Error && err.message.includes('refus\u00e9e')) {
+        throw err
+      }
+      // Erreur du mod\u00e8le : on ne bloque pas, on continue l'upload
+    }
+
+    try {
       const { url } = await uploadImage(file)
       return url
     } catch (error) {
-      console.error('Erreur lors du téléversement de l’image', error)
-      toast.error("Impossible de téléverser l'image")
-      throw error instanceof Error ? error : new Error("Échec du téléversement")
+      console.error("Erreur lors du t\u00e9l\u00e9versement de l'image", error)
+      toast.error("Impossible de t\u00e9l\u00e9verser l'image")
+      throw error instanceof Error ? error : new Error("\u00c9chec du t\u00e9l\u00e9versement")
     }
   }, [])
 
@@ -31,21 +68,49 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
 
   const editorInit = useMemo<TinyMCEEditorProps['init']>(() => {
     const baseSettings: EditorInit = {
-      skin: false,
-      content_css: false,
+      skin_url: '/tinymce/skins/ui/oxide',
+      content_css: '/tinymce/skins/ui/oxide/content.min.css',
+      language: 'fr_FR',
+      language_url: '/tinymce/langs/fr_FR.js',
       menubar: false,
       statusbar: false,
-      height: 320,
+      height: 200,
       plugins: 'advlist autolink autoresize codesample link image lists',
       toolbar: 'undo redo | bold italic | bullist numlist | link image codesample',
       toolbar_mode: 'sliding',
-      placeholder: 'Partage ton idée… Tu peux ajouter du code, une image ou un lien.',
+      placeholder: 'Partage ton id\u00e9e\u2026 Tu peux ajouter du code, une image ou un lien.',
       branding: false,
       content_style:
         'body { font-family: var(--font-geist-sans, system-ui); font-size: 14px; line-height: 1.6; } pre, code { font-family: var(--font-geist-mono, ui-monospace); } img { max-width: 100%; height: auto; }',
       images_upload_handler: handleImageUpload,
       automatic_uploads: true,
       file_picker_types: 'image',
+      // Désactive l'onglet "Téléverser" → tout sur l'onglet "Général" avec
+      // un bouton "Parcourir" à côté du champ Source.
+      image_uploadtab: false,
+      // Désactive aussi l'onglet "Avancé" pour rester minimaliste.
+      image_advtab: false,
+      file_picker_callback: (callback) => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/jpeg,image/png,image/webp,image/gif'
+        input.onchange = async () => {
+          const file = input.files?.[0]
+          if (!file) return
+          try {
+            const url = await handleImageUpload({
+              blob: () => file,
+              filename: () => file.name,
+              base64: () => '',
+              uri: () => '',
+            } as Parameters<UploadHandler>[0])
+            callback(url, { alt: file.name })
+          } catch {
+            // Erreur déjà toastée par handleImageUpload
+          }
+        }
+        input.click()
+      },
       convert_urls: false,
       relative_urls: false,
       codesample_content_css: '/prism-dracula.css',
@@ -66,10 +131,9 @@ export const useRichTextEditor = (onChange: (value: string) => void) => {
           }
         })
 
-        // Thème dynamique pour le contenu de l'iframe (dark, cyberpunk-dark, etc.)
         editor.on('init', () => {
           const themeMap: Record<string, { bg: string; fg: string }> = {
-            dark:            { bg: '#1f2937', fg: '#f9fafb' },
+            dark: { bg: '#1f2937', fg: '#f9fafb' },
             'cyberpunk-dark': { bg: '#12121c', fg: '#e0f2fe' },
             'cyberpunk-light': { bg: '#f0f9ff', fg: '#0c1222' },
           }

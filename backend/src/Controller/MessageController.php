@@ -13,8 +13,6 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Repository\Messaging\MessageReadRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
-
 
 #[Route('/api/messaging')]
 #[OA\Tag(name: 'Messaging')]
@@ -82,9 +80,12 @@ class MessageController extends AbstractController
 
         /** @var User $currentUser */
         $currentUser = $this->getUser();
+        // @codeCoverageIgnoreStart
+        // Garde-fou type-safe : inatteignable car denyAccessUnlessGranted plus haut.
         if (!$currentUser instanceof \App\Entity\User) {
             throw new \LogicException('Expected current user to be an instance of App\Entity\User');
         }
+        // @codeCoverageIgnoreEnd
 
         $messages = $messageRepo->findByConversationOrdered($id);
 

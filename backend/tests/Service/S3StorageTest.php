@@ -6,6 +6,7 @@ use App\Service\Storage\S3Storage;
 use Aws\Exception\AwsException;
 use Aws\S3\S3Client;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 /**
  * 🎮 Minecraft - Tests unitaires du S3Storage
@@ -26,7 +27,8 @@ class S3StorageTest extends TestCase
             'SteveKey',
             'CreeperSecret',
             'minecraft-bucket',
-            $publicBaseUrl
+            $publicBaseUrl,
+            new NullLogger()
         );
 
         $clientProp = new \ReflectionProperty(S3Storage::class, 'client');

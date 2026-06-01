@@ -19,17 +19,39 @@ spec:
           {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
           export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
           {{ "{{- end -}}" }}
+        vault.hashicorp.com/agent-inject-secret-minio: "{{ .Values.vault.minioSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-minio: |
+          {{ print "{{- with secret \"" .Values.vault.minioSecretPath "\" -}}" }}
+          export MINIO_SECRET_KEY={{ "\"{{ .Data.data.rootPassword }}\"" }}
+          {{ "{{- end -}}" }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
-      
+
       containers:
         # --- Conteneur PHP-FPM ---
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/sh", "-c"]
-          args: [". /vault/secrets/config && exec php-fpm"]
+          {{- if .Values.migrations.enabled }}
+          args:
+            - |
+              . /vault/secrets/config
+              . /vault/secrets/minio
+              echo "→ Attente de la base de données..."
+              until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
+              echo "→ Exécution des migrations..."
+              php bin/console doctrine:migrations:migrate --no-interaction
+              echo "→ Migrations terminées. Démarrage du serveur..."
+              {{- if eq .Values.server.type "builtin" }}
+              exec php -S 0.0.0.0:9001 -t public
+              {{- else }}
+              exec /usr/local/bin/entrypoint-prod.sh php-fpm
+              {{- end }}
+          {{- else }}
+          args: [". /vault/secrets/config && . /vault/secrets/minio && exec /usr/local/bin/entrypoint-prod.sh php-fpm"]
+          {{- end }}
           ports:
             - containerPort: 9000
           env:
@@ -45,8 +67,6 @@ spec:
               value: {{ .Values.env.MINIO_ENDPOINT | quote }}
             - name: MINIO_ACCESS_KEY
               value: {{ .Values.env.MINIO_ACCESS_KEY | quote }}
-            - name: MINIO_SECRET_KEY
-              value: {{ .Values.env.MINIO_SECRET_KEY | quote }}
             - name: MINIO_BUCKET
               value: {{ .Values.env.MINIO_BUCKET | quote }}
             - name: MINIO_PUBLIC_URL

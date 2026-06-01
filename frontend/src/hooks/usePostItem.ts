@@ -22,19 +22,23 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
 
   const [isEditing, setIsEditing] = useState(false)
   const [editGroupId, setEditGroupId] = useState(post.techGroupId)
+  const [editContent, setEditContent] = useState(post.content ?? '')
   const [showDialog, setShowDialog] = useState(false)
   const [showComments, setShowComments] = useState(defaultShowComments)
 
-  const editableRef = useRef<HTMLDivElement>(null)
   const commentRef = useRef<{ focusComposer: () => void }>(null)
 
   const currentUserId = user?.id ?? 0
   const isAuthor = post.authorId === user?.id
   const sanitizedContent = useSanitizedContent(post.content ?? '')
 
+  const startEditing = () => {
+    setEditContent(post.content ?? '')
+    setIsEditing(true)
+  }
+
   const handleSave = () => {
-    const rawHtml = editableRef.current?.innerHTML ?? ''
-    const cleanedHtml = sanitizeHtml(rawHtml)
+    const cleanedHtml = sanitizeHtml(editContent)
     const plainText = stripHtml(cleanedHtml).trim()
 
     if (!plainText && !post.sharedPost) {
@@ -78,13 +82,15 @@ export const usePostItem = (post: Post, defaultShowComments: boolean) => {
     groupLoading,
     isEditing,
     setIsEditing,
+    startEditing,
     editGroupId,
     setEditGroupId,
+    editContent,
+    setEditContent,
     showDialog,
     setShowDialog,
     showComments,
     setShowComments,
-    editableRef,
     commentRef,
     currentUserId,
     isAuthor,
