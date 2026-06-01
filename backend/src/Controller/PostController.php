@@ -85,7 +85,7 @@ class PostController extends AbstractController
             ]);
         }
 
-        $result = $this->repo->findAllWithCounts();
+        $result = $this->repo->findAllForListingWithCounts();
         $data = array_map(
             fn($post) => $this->mapper->toDto(
                 $post,

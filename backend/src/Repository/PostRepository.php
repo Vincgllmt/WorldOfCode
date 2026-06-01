@@ -67,7 +67,7 @@ class PostRepository extends ServiceEntityRepository
     /**
      * @return array{posts: Post[], commentCounts: array<int,int>, sharedCounts: array<int,int>}
      */
-    public function findAllWithCounts(): array
+    public function findAllForListingWithCounts(): array
     {
         $posts = $this->createBaseQueryBuilder()->getQuery()->getResult();
 
