@@ -142,7 +142,11 @@ class PostControllerTest extends TestCase
         $tarnished = $this->buildUser(1);
 
         $postRepo = $this->createMock(PostRepository::class);
-        $postRepo->method('findAllWithLikes')->willReturn([]);
+        $postRepo->method('findAllForListingWithCounts')->willReturn([
+            'posts'         => [],
+            'commentCounts' => [],
+            'sharedCounts'  => [],
+        ]);
 
         $request  = new Request();
         $response = $this->makeController($tarnished, $postRepo)->list($request);
