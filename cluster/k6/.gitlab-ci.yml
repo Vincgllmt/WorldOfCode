@@ -128,6 +128,14 @@ test:k6:load:dev:
     TESTRUN_FILE: "cluster/k6/testruns/load-testrun.yaml"
     K6_TIMEOUT_ITERATIONS: "90"    # 15 min max
 
+test:k6:load:prod:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_PROD"
+    TESTRUN_NAME: "k6-load"
+    TESTRUN_FILE: "cluster/k6/testruns/load-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "90"
+
 test:k6:stress:dev:
   extends: .k6_run_template
   variables:
@@ -135,3 +143,11 @@ test:k6:stress:dev:
     TESTRUN_NAME: "k6-stress"
     TESTRUN_FILE: "cluster/k6/testruns/stress-testrun.yaml"
     K6_TIMEOUT_ITERATIONS: "120"   # 20 min max
+
+test:k6:stress:prod:
+  extends: .k6_run_template
+  variables:
+    BASE_URL: "$BASE_URL_PROD"
+    TESTRUN_NAME: "k6-stress"
+    TESTRUN_FILE: "cluster/k6/testruns/stress-testrun.yaml"
+    K6_TIMEOUT_ITERATIONS: "120"
