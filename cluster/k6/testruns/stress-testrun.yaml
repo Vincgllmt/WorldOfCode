@@ -5,6 +5,7 @@ metadata:
   namespace: k6
 spec:
   parallelism: 1
+  arguments: "--out=prometheus-rw"
   script:
     configMap:
       name: k6-scripts
