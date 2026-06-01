@@ -9,7 +9,7 @@ use App\Entity\User;
 
 class PostMapper
 {
-    public function toDto(Post $post, ?User $currentUser = null): PostResponse
+    public function toDto(Post $post, ?User $currentUser = null, ?int $commentsCount = null, ?int $sharedCount = null): PostResponse
     {
         $dto = new PostResponse();
         $dto->id = $post->getId();
@@ -28,8 +28,9 @@ class PostMapper
             $dto->sharedPost = $this->mapSharedPost($post->getSharedFrom(), $currentUser);
         }
 
-        $dto->sharedCount = $post->getSharedPosts()->count();
-        $dto->commentsCount = $post->getComments()->count();
+        // Use pre-computed counts when available to avoid N+1 lazy loading
+        $dto->sharedCount = $sharedCount ?? $post->getSharedPosts()->count();
+        $dto->commentsCount = $commentsCount ?? $post->getComments()->count();
 
         return $dto;
     }

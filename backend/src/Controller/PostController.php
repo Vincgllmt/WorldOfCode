@@ -85,8 +85,16 @@ class PostController extends AbstractController
             ]);
         }
 
-        $posts = $this->repo->findAllWithLikes();
-        $data = array_map(fn($post) => $this->mapper->toDto($post, $user), $posts);
+        $result = $this->repo->findAllWithCounts();
+        $data = array_map(
+            fn($post) => $this->mapper->toDto(
+                $post,
+                $user,
+                (int) ($result['commentCounts'][$post->getId()] ?? 0),
+                (int) ($result['sharedCounts'][$post->getId()] ?? 0)
+            ),
+            $result['posts']
+        );
 
         return $this->json($data);
     }

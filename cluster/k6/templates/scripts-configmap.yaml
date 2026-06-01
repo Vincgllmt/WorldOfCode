@@ -27,7 +27,7 @@ data:
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 
       group('feed', () => {
-        const postsRes = http.get(`${BASE_URL}/api/post`, { headers, tags: { name: 'post_list' } });
+        const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
 
         if (postsOk) {
@@ -84,7 +84,7 @@ data:
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 
       group('feed', () => {
-        const postsRes = http.get(`${BASE_URL}/api/post`, { headers, tags: { name: 'post_list' } });
+        const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
 
         if (postsOk) {
@@ -143,7 +143,7 @@ data:
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 
       group('feed', () => {
-        const postsRes = http.get(`${BASE_URL}/api/post`, { headers, tags: { name: 'post_list' } });
+        const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
 
         if (postsOk) {

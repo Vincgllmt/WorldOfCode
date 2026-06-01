@@ -65,6 +65,38 @@ class PostRepository extends ServiceEntityRepository
     }
 
     /**
+     * @return array{posts: Post[], commentCounts: array<int,int>, sharedCounts: array<int,int>}
+     */
+    public function findAllWithCounts(): array
+    {
+        $posts = $this->createBaseQueryBuilder()->getQuery()->getResult();
+
+        if (empty($posts)) {
+            return ['posts' => [], 'commentCounts' => [], 'sharedCounts' => []];
+        }
+
+        $ids = array_map(fn(Post $p) => $p->getId(), $posts);
+        $conn = $this->getEntityManager()->getConnection();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $commentRows = $conn->executeQuery(
+            "SELECT post_id, COUNT(*) AS cnt FROM `comment` WHERE post_id IN ($placeholders) GROUP BY post_id",
+            $ids
+        )->fetchAllAssociative();
+
+        $sharedRows = $conn->executeQuery(
+            "SELECT shared_from_id, COUNT(*) AS cnt FROM post WHERE shared_from_id IN ($placeholders) GROUP BY shared_from_id",
+            $ids
+        )->fetchAllAssociative();
+
+        return [
+            'posts'         => $posts,
+            'commentCounts' => array_column($commentRows, 'cnt', 'post_id'),
+            'sharedCounts'  => array_column($sharedRows, 'cnt', 'shared_from_id'),
+        ];
+    }
+
+    /**
      * @return array{items: Post[], totalItems: int}
      */
     public function findPaginatedWithLikes(int $page, int $limit): array
