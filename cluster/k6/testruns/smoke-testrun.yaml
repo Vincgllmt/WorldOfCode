@@ -16,6 +16,8 @@ spec:
         value: "${BASE_URL}"
       - name: K6_PROMETHEUS_RW_SERVER_URL
         value: "${VM_URL}"
+      - name: K6_PROMETHEUS_RW_NATIVE_HISTOGRAMS
+        value: "true"
     envFrom:
       - secretRef:
           name: k6-credentials
