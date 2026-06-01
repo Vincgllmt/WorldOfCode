@@ -55,6 +55,7 @@ deploy:k6:
   stage: load-test
   when: manual
   allow_failure: true
+  needs: []
   script:
     - apk add --no-cache gettext
 
