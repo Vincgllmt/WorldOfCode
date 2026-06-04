@@ -5,7 +5,7 @@ deploy:elasticsearch:
   variables:
     APP_NAMESPACE: "elasticsearch"
     RELEASE_NAME: "elasticsearch"
-    ES_CHART: "bitnami/elasticsearch"
+    ES_CHART: "bitnamilegacy/elasticsearch"
     ES_CHART_VERSION: "21.3.6"
     VALUES_FILE: "cluster/elasticsearch/values.yaml"
   rules:
@@ -18,7 +18,7 @@ deploy:elasticsearch:
   script:
     - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - kubectl apply -f cluster/mysql/templates/storageclass.yaml
-    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo add bitnamilegacy https://charts.bitnami.com/bitnami
     - helm repo update
     - echo "Deploiement Elasticsearch sur le namespace $APP_NAMESPACE"
     - |

@@ -4,6 +4,11 @@ global:
 
 fullnameOverride: elasticsearch
 
+image:
+  registry: docker.io
+  repository: bitnamilegacy/elasticsearch
+  tag: 8.13.4
+
 # Single-node (master joue aussi le rôle data + coordinating)
 master:
   replicaCount: 1
