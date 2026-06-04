@@ -31,7 +31,7 @@ deploy:vm-stack:
         --namespace "$MONITORING_NAMESPACE" \
         --version "$VM_CHART_VERSION" \
         --values cluster/monitoring/vm-stack-values.yaml \
-        --set-file "grafana.dashboards.woc.cluster-overview\.json=cluster/monitoring/dashboards/cluster-overview.json"
+        --set-file "grafana.dashboards.default.cluster-overview.json=cluster/monitoring/dashboards/cluster-overview.json"
     
 
 # --- Job 3 : Alerting Grafana (via API Grafana) ---
