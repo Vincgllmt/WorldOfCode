@@ -22,15 +22,7 @@ deploy:elasticsearch:
     - helm repo update
     - echo "Deploiement Elasticsearch sur le namespace $APP_NAMESPACE"
     - |
-      EXISTING_PWD=$(kubectl get secret --namespace "$APP_NAMESPACE" elasticsearch -o jsonpath="{.data.elasticsearch-password}" 2>/dev/null | base64 -d || true)
-      if [ -z "$EXISTING_PWD" ] && [ -n "$VAULT_ROOT_TOKEN" ]; then
-        EXISTING_PWD=$(kubectl exec -n vault vault-0 -- env VAULT_TOKEN="$VAULT_ROOT_TOKEN" vault kv get -field=password secret/elasticsearch 2>/dev/null || true)
-      fi
-      if [ -z "$EXISTING_PWD" ]; then
-        echo "ERROR: impossible de recuperer le mot de passe ES. Definir VAULT_ROOT_TOKEN dans les variables CI GitLab." && exit 1
-      fi
       helm upgrade --install "$RELEASE_NAME" "$ES_CHART" \
         --namespace "$APP_NAMESPACE" \
         --version "$ES_CHART_VERSION" \
-        --values "$VALUES_FILE" \
-        --set security.elasticPassword="$EXISTING_PWD"
+        --values "$VALUES_FILE"
