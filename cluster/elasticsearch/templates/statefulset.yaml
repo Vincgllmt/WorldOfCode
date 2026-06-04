@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app"
+        vault.hashicorp.com/agent-init-first: "false"
+        vault.hashicorp.com/agent-inject-secret-es: "{{ .Values.vault.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-es: |
+          {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
+          {{ "{{ .Data.data.password }}" }}
+          {{ "{{- end -}}" }}
+    spec:
+      initContainers:
+        - name: wait-for-vault
+          image: curlimages/curl:8.13.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              until curl -s http://vault.vault.svc:8200/v1/sys/health | grep -q '"sealed":false'; do
+                echo "Vault scellé, nouvelle tentative dans 5s..."
+                sleep 5
+              done
+              echo "Vault prêt."
+
+      containers:
+        - name: elasticsearch
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              export ELASTIC_PASSWORD=$(cat /vault/secrets/es)
+              exec /usr/local/bin/docker-entrypoint.sh eswrapper
+          env:
+            - name: discovery.type
+              value: "single-node"
+            - name: xpack.security.enabled
+              value: "true"
+            - name: xpack.security.http.ssl.enabled
+              value: "false"
+            - name: xpack.security.transport.ssl.enabled
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: {{ .Values.javaOpts | quote }}
+            - name: cluster.name
+              value: "woc-elasticsearch"
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -u "elastic:$(cat /vault/secrets/es)" http://localhost:9200/_cluster/health | grep -q '"status":"green"\|"status":"yellow"'
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 120
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.persistence.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}

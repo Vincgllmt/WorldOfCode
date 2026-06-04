@@ -1,86 +1,25 @@
-global:
-  security:
-    allowInsecureImages: true
-
-fullnameOverride: elasticsearch
-
 image:
-  registry: docker.io
-  repository: bitnamilegacy/elasticsearch
-  tag: 8.13.4
+  repository: docker.elastic.co/elasticsearch/elasticsearch
+  tag: "8.13.4"
+  pullPolicy: IfNotPresent
 
-sysctlImage:
-  registry: docker.io
-  repository: bitnamilegacy/os-shell
-  tag: 12-debian-12-r26
+vault:
+  secretPath: "secret/data/elasticsearch"
 
-# Single-node (master joue aussi le rôle data + coordinating)
-master:
-  replicaCount: 1
-  masterOnly: false
-  automountServiceAccountToken: true
+persistence:
+  size: 10Gi
+  storageClass: local-path-retain
 
-  podAnnotations:
-    vault.hashicorp.com/agent-inject: "true"
-    vault.hashicorp.com/role: "app"
-    vault.hashicorp.com/agent-init-first: "false"
-    vault.hashicorp.com/agent-inject-secret-es: "secret/data/elasticsearch"
-    vault.hashicorp.com/agent-inject-template-es: |
-      {{ "{{- with secret \"secret/data/elasticsearch\" -}}" }}
-      {{ "{{ .Data.data.password }}" }}
-      {{ "{{- end -}}" }}
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
 
-  initContainers:
-    - name: wait-for-vault
-      image: curlimages/curl:8.13.0
-      command: ["/bin/sh", "-c"]
-      args:
-        - |
-          echo "Attente de Vault unsealed..."
-          until curl -s http://vault.vault.svc:8200/v1/sys/health | grep -q '"sealed":false'; do
-            echo "Vault est scellé, nouvelle tentative dans 5s..."
-            sleep 5
-          done
-          echo "Vault prêt."
-
-  extraEnvVars:
-    - name: ELASTICSEARCH_ENABLE_SECURITY
-      value: "true"
-    - name: ELASTICSEARCH_PASSWORD_FILE
-      value: "/vault/secrets/es"
-    - name: ES_JAVA_OPTS
-      value: "-Xms512m -Xmx512m"
-
-  persistence:
-    enabled: true
-    size: 10Gi
-    storageClass: local-path-retain
-
-  resources:
-    requests:
-      memory: "512Mi"
-      cpu: "250m"
-    limits:
-      memory: "1Gi"
-      cpu: "500m"
-
-# Désactivation des nœuds dédiés (inutiles en single-node)
-coordinating:
-  replicaCount: 0
-
-data:
-  replicaCount: 0
-
-ingest:
-  enabled: false
-
-security:
-  enabled: false
-
-extraConfig:
-  discovery.type: single-node
+javaOpts: "-Xms512m -Xmx512m"
 
 service:
   type: ClusterIP
-  ports:
-    restAPI: 9200
+  port: 9200
