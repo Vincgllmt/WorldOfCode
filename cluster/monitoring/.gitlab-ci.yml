@@ -30,8 +30,7 @@ deploy:vm-stack:
       helm upgrade --install "$VM_RELEASE_NAME" "$VM_CHART_NAME" \
         --namespace "$MONITORING_NAMESPACE" \
         --version "$VM_CHART_VERSION" \
-        --values cluster/monitoring/vm-stack-values.yaml \
-        --set-file "grafana.dashboards.default.cluster-overview.json=cluster/monitoring/dashboards/cluster-overview.json"
+        --values cluster/monitoring/vm-stack-values.yaml
     
 
 # --- Job 3 : Alerting Grafana (via API Grafana) ---
@@ -49,6 +48,31 @@ deploy:monitoring:alerting:
     - kubectl apply -f cluster/monitoring/grafana-alerting-job.yaml
     - kubectl wait --for=condition=complete job/grafana-alerting-setup -n "$MONITORING_NAMESPACE" --timeout=120s
     - kubectl logs -n "$MONITORING_NAMESPACE" job/grafana-alerting-setup
+
+# --- Job : Dashboards Grafana ---
+deploy:monitoring:dashboards:
+  stage: deploy-monitoring
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      changes:
+        - cluster/monitoring/dashboards/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+  script:
+    - |
+      (
+        echo "apiVersion: v1"
+        echo "kind: ConfigMap"
+        echo "metadata:"
+        echo "  name: grafana-cluster-overview-dashboard"
+        echo "  namespace: $MONITORING_NAMESPACE"
+        echo "  labels:"
+        echo "    grafana_dashboard: \"1\""
+        echo "data:"
+        echo "  cluster-overview.json: |"
+        sed 's/^/    /' cluster/monitoring/dashboards/cluster-overview.json
+      ) | kubectl apply -f -
 
 # --- Job 2 : Loki & Promtail ---
 deploy:loki-stack:
