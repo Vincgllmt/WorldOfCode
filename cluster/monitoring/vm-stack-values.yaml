@@ -68,3 +68,17 @@ grafana:
       jsonData: {}
 
   defaultDashboardsEnabled: true
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: woc
+          orgId: 1
+          folder: WOC
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/woc
+
