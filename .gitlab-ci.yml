@@ -54,6 +54,7 @@ before_script:
 include:
   - local: cluster/jwt/.gitlab-ci.yml
   - local: cluster/mysql/.gitlab-ci.yml
+  - local: cluster/elasticsearch/.gitlab-ci.yml
   - local: cluster/registry/.gitlab-ci.yml
   - local: cluster/minio/.gitlab-ci.yml
   - local: cluster/vault/.gitlab-ci.yml

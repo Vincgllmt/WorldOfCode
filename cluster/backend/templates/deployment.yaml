@@ -24,6 +24,11 @@ spec:
           {{ print "{{- with secret \"" .Values.vault.minioSecretPath "\" -}}" }}
           export MINIO_SECRET_KEY={{ "\"{{ .Data.data.rootPassword }}\"" }}
           {{ "{{- end -}}" }}
+        vault.hashicorp.com/agent-inject-secret-elasticsearch: "{{ .Values.vault.elasticsearchSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-elasticsearch: |
+          {{ print "{{- with secret \"" .Values.vault.elasticsearchSecretPath "\" -}}" }}
+          export ELASTICSEARCH_PASSWORD={{ "\"{{ .Data.data.password }}\"" }}
+          {{ "{{- end -}}" }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
@@ -39,6 +44,7 @@ spec:
             - |
               . /vault/secrets/config
               . /vault/secrets/minio
+              . /vault/secrets/elasticsearch
               echo "→ Attente de la base de données..."
               until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
               echo "→ Exécution des migrations..."
@@ -50,7 +56,7 @@ spec:
               exec /usr/local/bin/entrypoint-prod.sh php-fpm
               {{- end }}
           {{- else }}
-          args: [". /vault/secrets/config && . /vault/secrets/minio && exec /usr/local/bin/entrypoint-prod.sh php-fpm"]
+          args: [". /vault/secrets/config && . /vault/secrets/minio && . /vault/secrets/elasticsearch && exec /usr/local/bin/entrypoint-prod.sh php-fpm"]
           {{- end }}
           ports:
             - containerPort: 9000
@@ -71,6 +77,10 @@ spec:
               value: {{ .Values.env.MINIO_BUCKET | quote }}
             - name: MINIO_PUBLIC_URL
               value: {{ .Values.env.MINIO_PUBLIC_URL | quote }}
+            - name: ELASTICSEARCH_HOST
+              value: {{ .Values.env.ELASTICSEARCH_HOST | quote }}
+            - name: ELASTICSEARCH_USERNAME
+              value: {{ .Values.env.ELASTICSEARCH_USERNAME | quote }}
 
           # Montage des clés pour PHP
           volumeMounts:
