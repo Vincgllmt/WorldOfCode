@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backend-migrate
+  namespace: production
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/role: "app"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/production/backend"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/production/backend" -}}
+          export DATABASE_URL="{{ .Data.data.url }}"
+          {{- end -}}
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: woc-regcred
+      containers:
+        - name: migrate
+          image: registry.woc:32000/backend:backend-v1.0.2
+          imagePullPolicy: IfNotPresent
+          workingDir: /var/www/backend
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              . /vault/secrets/config
+              echo "→ Attente de la base de données..."
+              until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
+              echo "→ Exécution des migrations..."
+              php bin/console doctrine:migrations:migrate --no-interaction
+              echo "→ Migrations terminées."
+          env:
+            - name: APP_ENV
+              value: "prod"
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /var/www/backend/config/jwt
+              readOnly: true
+      volumes:
+        - name: jwt-keys
+          secret:
+            secretName: jwt-keys

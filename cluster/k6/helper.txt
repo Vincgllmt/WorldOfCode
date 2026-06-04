@@ -1,0 +1,112 @@
+---
+  Ce que fait chaque test
+  
+  Smoke test (smoke.js) — "Est-ce que ça marche ?"
+
+  1 seul utilisateur virtuel, 2 minutes.
+
+  C'est le test minimal : il vérifie que l'API répond correctement en conditions normales. Il simule un utilisateur qui :
+
+  1. Appelle GET /api/post → récupère la liste des posts
+  2. Si la liste n'est pas vide, prend le premier post et appelle GET /api/post/{id} + GET /api/post/{id}/comment
+  3. Appelle GET /api/me → son profil
+  4. Appelle GET /api/search?q=dev → une recherche
+  5. Attend 1 à 3 secondes aléatoires, puis recommence
+
+  Seuils à respecter :
+  - Moins de 1% de requêtes en erreur
+  - 95% des requêtes répondent en moins de 3s
+  - 95% des appels /api/post en moins de 2s
+
+  ---
+  Load test (load.js) — "Est-ce que ça tient sous charge normale ?"
+  
+  Montée progressive jusqu'à 10 utilisateurs simultanés, 12 minutes au total.
+
+  0 VU → (2 min) → 5 VU → (8 min) → 10 VU → (2 min) → 0 VU
+
+  Le scénario est similaire au smoke mais avec deux différences :
+  - Le post cliqué est aléatoire parmi les 5 premiers (pas toujours le premier)
+  - Les termes de recherche varient : dev, tech, cloud, react, backend (tiré au sort)
+  - Pause plus longue entre les itérations : 3 à 8 secondes (simule un vrai utilisateur qui lit)
+
+  Seuils : 95% des requêtes sous 2s, détail d'un post sous 1.5s.
+
+  ---
+  Stress test (stress.js) — "Jusqu'où ça casse ?"
+  
+  Montée agressive jusqu'à 50 utilisateurs simultanés, 15 minutes.
+
+  1. Appelle GET /api/post → récupère la liste des posts
+  2. Si la liste n'est pas vide, prend le premier post et appelle GET
+  /api/post/{id} + GET /api/post/{id}/comment
+  3. Appelle GET /api/me → son profil
+  4. Appelle GET /api/search?q=dev → une recherche
+  5. Attend 1 à 3 secondes aléatoires, puis recommence
+
+  Seuils à respecter :
+  - Moins de 1% de requêtes en erreur
+  - 95% des requêtes répondent en moins de 3s
+  - 95% des appels /api/post en moins de 2s
+
+  ---
+  Load test (load.js) — "Est-ce que ça tient sous charge normale ?"
+
+  Montée progressive jusqu'à 10 utilisateurs simultanés, 12 minutes au total.
+
+  0 VU → (2 min) → 5 VU → (8 min) → 10 VU → (2 min) → 0 VU
+
+  Le scénario est similaire au smoke mais avec deux différences :
+  - Le post cliqué est aléatoire parmi les 5 premiers (pas toujours le premier)
+  - Les termes de recherche varient : dev, tech, cloud, react, backend (tiré au
+  sort)
+  - Pause plus longue entre les itérations : 3 à 8 secondes (simule un vrai
+  utilisateur qui lit)
+
+  Seuils : 95% des requêtes sous 2s, détail d'un post sous 1.5s.
+
+  ---
+  Stress test (stress.js) — "Jusqu'où ça casse ?"
+
+  Montée agressive jusqu'à 50 utilisateurs simultanés, 15 minutes.
+
+  0 → (2 min) → 10 → (3 min) → 25 → (3 min) → 50 → (5 min) → 50 → (2 min) → 0
+
+  Le but est de trouver le point de rupture de l'API. Le scénario est allégé (pas
+  d'appel aux commentaires) pour maximiser la pression sur les routes principales.
+  Les pauses sont courtes (1 à 3s).
+
+  Seuils plus souples : 95% sous 5s, moins de 5% d'erreurs — on accepte une
+  dégradation, on veut juste savoir si ça s'effondre complètement.
+
+  ---
+  Comment ça s'articule en pratique
+
+  GitLab CI (bouton manuel)
+          │
+          ▼
+  Regénère un JWT frais depuis le pod backend (valide 4h)
+          │
+          ▼
+  kubectl apply → crée un objet TestRun dans Kubernetes
+          │
+          ▼
+  k6 Operator détecte le TestRun → lance un pod k6
+          │
+          ├── Exécute le script JS avec le JWT injecté
+          ├── Pousse les métriques vers VictoriaMetrics (Grafana)
+          └── Retourne finished / error
+          │
+          ▼
+  La CI poll le statut toutes les 10s, affiche les logs, et
+  fail le job GitLab si le test se termine en erreur
+
+  ---
+  Ce que les métriques mesurent concrètement
+
+  - http_req_failed : taux de réponses non-2xx (erreurs 500, timeouts…)
+  - http_req_duration : temps de réponse de bout en bout
+  - p(95) : le 95e percentile — "95% des utilisateurs ont attendu moins que X"
+  (plus significatif que la moyenne qui cache les pics)
+  - Les tags name:post_list, name:post_detail etc. permettent de voir les métriques
+  par route dans Grafana, pas juste globalement
