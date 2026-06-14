@@ -215,10 +215,11 @@ class MentoringRequestControllerTest extends TestCase
     public function testCreateWithTargetMentorForcesIsPublicFalse(): void
     {
         $alice = $this->buildUser(1);
+        $bob   = $this->buildUser(2, 'BobMentor');
 
         $mentor = new MentorProfile();
-        $idProp = new \ReflectionProperty(MentorProfile::class, 'id');
-        $idProp->setValue($mentor, 42);
+        (new \ReflectionProperty(MentorProfile::class, 'id'))->setValue($mentor, 42);
+        (new \ReflectionProperty(MentorProfile::class, 'user'))->setValue($mentor, $bob);
 
         $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
         $mentorProfileRepo->method('find')->with(42)->willReturn($mentor);
@@ -635,5 +636,31 @@ class MentoringRequestControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('REQUEST_NOT_CANCELLABLE', $payload['code']);
+    }
+
+    public function testCreateReturns422WhenTargetMentorIsSelf(): void
+    {
+        $alice = $this->buildUser(1, 'AliceJunior');
+
+        $aliceMentorProfile = new MentorProfile();
+        (new \ReflectionProperty(MentorProfile::class, 'id'))->setValue($aliceMentorProfile, 5);
+        (new \ReflectionProperty(MentorProfile::class, 'user'))->setValue($aliceMentorProfile, $alice);
+
+        $mentorProfileRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorProfileRepo->method('find')->with(5)->willReturn($aliceMentorProfile);
+
+        $request = $this->makeJsonRequest([
+            'type'           => 'one_to_one',
+            'title'          => 'Auto-ciblage',
+            'techStack'      => 'PHP',
+            'description'    => 'desc',
+            'targetMentorId' => 5,
+        ]);
+
+        $response = $this->makeController($alice, mentorProfileRepo: $mentorProfileRepo)->create($request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('SELF_TARGETING_NOT_ALLOWED', $payload['code']);
     }
 }

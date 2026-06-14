@@ -9,6 +9,7 @@ import MentorRightPanel from './MentorRightPanel'
 import MentorSessionsFeed from './MentorSessionsFeed'
 import MentorSessionRightPanel from './MentorSessionRightPanel'
 import ModeToggle from './ModeToggle'
+import MentorProfileEditModal from './MentorProfileEditModal'
 import { getMentorActiveSessions } from '@/lib/api/mentoring/sessions'
 import type { MentorProfile, MentoringRequest, MentoringSession } from '@/types/mentoring'
 import { cn } from '@/lib/utils'
@@ -72,7 +73,11 @@ export default function MentorCockpitPage({ initialProfile }: Props) {
       {/* Topbar */}
       <header className="flex items-center justify-between px-6 h-14 border-b border-border shrink-0">
         <h1 className="font-semibold text-lg">Espace Mentor</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <MentorProfileEditModal
+            profile={profile}
+            onSaved={(updated) => setProfile(updated)}
+          />
           <ModeToggle
             isAvailable={profile.isAvailable}
             onToggle={(newValue) => setProfile(p => ({ ...p, isAvailable: newValue }))}

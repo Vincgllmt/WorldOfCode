@@ -12,6 +12,7 @@ use App\Enum\UserRole;
 use App\Mapper\AdminReportMapper;
 use App\Repository\PostRepository;
 use App\Repository\ReportRepository;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -90,9 +91,10 @@ class AdminReportControllerTest extends TestCase
         bool $isAdmin = true,
     ): AdminReportController {
         $controller = new AdminReportController(
-            $reportRepo ?? $this->createMock(ReportRepository::class),
-            $postRepo   ?? $this->createMock(PostRepository::class),
-            $mapper     ?? $this->createMock(AdminReportMapper::class),
+            $reportRepo           ?? $this->createMock(ReportRepository::class),
+            $postRepo             ?? $this->createMock(PostRepository::class),
+            $mapper               ?? $this->createMock(AdminReportMapper::class),
+            $this->createMock(NotificationService::class),
         );
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
 
@@ -119,13 +121,27 @@ class AdminReportControllerTest extends TestCase
         return $report;
     }
 
-    private function buildPost(int $id): Post
+    private function buildPost(int $id, ?User $author = null): Post
     {
         $post = new Post();
         $post->onCreate();
 
         $idProp = new \ReflectionProperty(Post::class, 'id');
         $idProp->setValue($post, $id);
+
+        if ($author) {
+            $post->setAuthor($author);
+        } else {
+            // résout "Typed property Post::$author must not be accessed before initialization"
+            // dans la logique de notification du resolve()
+            $postAuthor = new User();
+            $postAuthor->setUsername('PostAuthor')->setEmail('pa@woc.dev')
+                ->setFirstname('Post')->setLastname('Author')
+                ->setPassword('hash')->setRole(UserRole::ROLE_USER);
+            (new \ReflectionProperty(User::class, 'id'))->setValue($postAuthor, $id + 1000);
+            $postAuthor->onCreate();
+            $post->setAuthor($postAuthor);
+        }
 
         return $post;
     }

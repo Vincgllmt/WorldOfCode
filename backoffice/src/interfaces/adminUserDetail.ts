@@ -29,4 +29,7 @@ export interface AdminUserDetail {
   links: Array<{ id: number; type: string; url: string }>
   lastFivePosts: AdminPostSummary[]
   reportCountOnPosts: number
+  isBanned: boolean
+  bannedAt: string | null
+  bannedReason: string | null
 }

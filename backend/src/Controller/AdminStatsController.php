@@ -5,8 +5,10 @@ namespace App\Controller;
 use App\Dto\AdminActivityPointDto;
 use App\Dto\AdminRecentEventDto;
 use App\Dto\AdminStatsResponse;
+use App\Enum\FeedbackStatus;
 use App\Enum\ReportStatus;
 use App\Enum\SuggestionStatus;
+use App\Repository\FeedbackRepository;
 use App\Repository\GroupSuggestionRepository;
 use App\Repository\PostRepository;
 use App\Repository\ReportRepository;
@@ -28,6 +30,7 @@ final class AdminStatsController extends AbstractController
         private TechGroupRepository $groupRepo,
         private ReportRepository $reportRepo,
         private GroupSuggestionRepository $groupSuggestionRepo,
+        private FeedbackRepository $feedbackRepo,
     ) {}
 
     #[Route('/stats', name: 'admin_stats', methods: ['GET'])]
@@ -50,6 +53,7 @@ final class AdminStatsController extends AbstractController
             totalGroups: $this->groupRepo->count([]),
             pendingReportsCount: $this->reportRepo->count(['status' => ReportStatus::PENDING]),
             pendingGroupSuggestionsCount: $this->groupSuggestionRepo->count(['status' => SuggestionStatus::PENDING]),
+            newFeedbacksCount: $this->feedbackRepo->count(['status' => FeedbackStatus::NEW]),
             newUsersThisWeek: $this->userRepo->countSince($oneWeekAgo),
             newPostsThisWeek: $this->postRepo->countSince($oneWeekAgo),
             topGroups: $this->groupRepo->findTopByActivity(5),
@@ -125,7 +129,7 @@ final class AdminStatsController extends AbstractController
         // Derniers posts publiés
         $posts = $this->postRepo->findBy([], ['createdAt' => 'DESC'], 10);
         foreach ($posts as $post) {
-            $content = $post->getContent() ?? '';
+            $content = strip_tags($post->getContent() ?? '');
             $excerpt = mb_strlen($content) > 50
                 ? mb_substr($content, 0, 50) . '…'
                 : $content;

@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { MoreVertical, MapPin, Briefcase, Link as LinkIcon, FileText, Flag, Search, SlidersHorizontal, X } from 'lucide-react'
+import { MoreVertical, MapPin, Briefcase, Link as LinkIcon, FileText, Flag, Search, SlidersHorizontal, X, ShieldBan, ShieldCheck } from 'lucide-react'
 
-import { useAdminUsers, useAdminUpdateUserRole, useAdminDeleteUser } from '@/hooks/useAdminUsers'
+import { useAdminUsers, useAdminUpdateUserRole, useAdminDeleteUser, useAdminBanUser, useAdminUnbanUser } from '@/hooks/useAdminUsers'
 import { useAdminUserDetail } from '@/hooks/useAdminUserDetail'
 
 const ITEMS_PER_PAGE = 20
@@ -48,7 +48,7 @@ import { PaginatedTable } from '../shared/PaginationTable'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SortKey = 'postCount' | 'followerCount' | 'creationDate' | 'username' | 'email' | 'role' | null
+type SortKey = 'postCount' | 'followerCount' | 'reportCount' | 'creationDate' | 'username' | 'email' | 'role' | null
 
 // ─── Composant skeleton de chargement ─────────────────────────────────────────
 
@@ -91,6 +91,7 @@ export default function AdminUserPanel() {
   const [filterRole, setFilterRole] = useState<'ROLE_USER' | 'ROLE_ADMIN' | ''>('')
   const [filterDateFrom, setFilterDateFrom] = useState<string>('')
   const [filterDateTo, setFilterDateTo] = useState<string>('')
+  const [filterBanned, setFilterBanned] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
@@ -104,10 +105,13 @@ export default function AdminUserPanel() {
     dateTo:    filterDateTo || undefined,
     sortField: sortKey ?? undefined,
     sortDir:   sortKey ? sortDir : undefined,
+    isBanned:  filterBanned ? true : undefined,
   })
 
   const updateUserRole = useAdminUpdateUserRole()
-  const deleteUser = useAdminDeleteUser()
+  const deleteUser    = useAdminDeleteUser()
+  const banUser       = useAdminBanUser()
+  const unbanUser     = useAdminUnbanUser()
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const { userDetail, isLoading: isLoadingDetail } = useAdminUserDetail(selectedUserId)
@@ -118,14 +122,17 @@ export default function AdminUserPanel() {
     newRole: 'ROLE_USER' | 'ROLE_ADMIN'
   } | null>(null)
   const [userToDelete, setUserToDelete] = useState<{ id: number; username: string } | null>(null)
+  const [userToBan, setUserToBan] = useState<{ id: number; username: string } | null>(null)
+  const [banReason, setBanReason] = useState('')
 
-  const hasFilters = search || filterRole || filterDateFrom || filterDateTo
+  const hasFilters = search || filterRole || filterDateFrom || filterDateTo || filterBanned
 
   const resetFilters = () => {
     setSearch('')
     setFilterRole('')
     setFilterDateFrom('')
     setFilterDateTo('')
+    setFilterBanned(false)
     setPage(1)
   }
 
@@ -169,6 +176,23 @@ export default function AdminUserPanel() {
     setUserToDelete(null)
   }
 
+  const handleConfirmBan = () => {
+    if (!userToBan) return
+    banUser.mutate({ id: userToBan.id, reason: banReason || undefined }, {
+      onSuccess: () => toast.success(`${userToBan.username} a été banni`),
+      onError: () => toast.error('Erreur lors du bannissement'),
+    })
+    setUserToBan(null)
+    setBanReason('')
+  }
+
+  const handleUnban = (id: number, username: string) => {
+    unbanUser.mutate(id, {
+      onSuccess: () => toast.success(`${username} a été débanni`),
+      onError: () => toast.error('Erreur lors du débannissement'),
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Filtres */}
@@ -193,6 +217,18 @@ export default function AdminUserPanel() {
             <SelectItem value="ROLE_ADMIN">Admin</SelectItem>
           </SelectContent>
         </Select>
+
+        <button
+          onClick={() => handleFilterChange(() => setFilterBanned(b => !b))}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs font-medium transition-colors ${
+            filterBanned
+              ? 'bg-destructive/10 border-destructive/40 text-destructive'
+              : 'border-border text-muted-foreground hover:text-foreground hover:border-border/80'
+          }`}
+        >
+          <ShieldBan className="h-3.5 w-3.5" />
+          Bannis
+        </button>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -286,32 +322,54 @@ export default function AdminUserPanel() {
               >
                 Followers{sortIndicator('followerCount')}
               </TableHead>
+              <TableHead
+                className="text-xs font-semibold text-muted-foreground cursor-pointer select-none text-right hover:text-foreground transition-colors"
+                onClick={() => toggleSort('reportCount')}
+                title="Signalements sur les posts de cet utilisateur"
+              >
+                <span className="flex items-center justify-end gap-1">
+                  <Flag className="h-3 w-3" />
+                  Reports{sortIndicator('reportCount')}
+                </span>
+              </TableHead>
               <TableHead className="text-xs font-semibold text-muted-foreground text-right pr-4">Actions</TableHead>
             </>
           }
           renderRow={(user) => (
             <TableRow
               key={user.id}
-              className="cursor-pointer hover:bg-muted/40 transition-colors border-border/50"
+              className={`cursor-pointer hover:bg-muted/40 transition-colors border-border/50 ${user.isBanned ? 'opacity-60' : ''}`}
               onClick={() => setSelectedUserId(user.id)}
             >
               <TableCell className="pl-4">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.username}
-                    className="h-8 w-8 rounded-full object-cover ring-1 ring-border"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
-                    <span className="text-xs font-semibold text-primary">
-                      {user.username[0]?.toUpperCase()}
+                <div className="relative">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.username}
+                      className="h-8 w-8 rounded-full object-cover ring-1 ring-border"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
+                      <span className="text-xs font-semibold text-primary">
+                        {user.username[0]?.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  {user.isBanned && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-destructive flex items-center justify-center">
+                      <ShieldBan className="h-2 w-2 text-white" />
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </TableCell>
 
-              <TableCell className="font-medium text-sm">{user.username}</TableCell>
+              <TableCell className="font-medium text-sm">
+                <span>{user.username}</span>
+                {user.isBanned && (
+                  <span className="ml-1.5 text-[10px] font-semibold text-destructive uppercase tracking-wide">Banni</span>
+                )}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
 
               <TableCell onClick={(e) => e.stopPropagation()}>
@@ -343,6 +401,15 @@ export default function AdminUserPanel() {
               </TableCell>
               <TableCell className="text-right text-sm font-mono">{user.postCount}</TableCell>
               <TableCell className="text-right text-sm font-mono">{user.followerCount}</TableCell>
+              <TableCell className="text-right text-sm font-mono">
+                {user.reportCount > 0 ? (
+                  <span className={`font-semibold ${user.reportCount >= 3 ? 'text-destructive' : 'text-amber-500'}`}>
+                    {user.reportCount}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">0</span>
+                )}
+              </TableCell>
 
               <TableCell className="text-right pr-4" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
@@ -351,10 +418,28 @@ export default function AdminUserPanel() {
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem onClick={() => setSelectedUserId(user.id)}>
                       Voir le profil
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {user.isBanned ? (
+                      <DropdownMenuItem
+                        onClick={() => handleUnban(user.id, user.username)}
+                        className="text-emerald-600 focus:text-emerald-600"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5 mr-2" />
+                        Débannir
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={() => { setUserToBan({ id: user.id, username: user.username }); setBanReason('') }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <ShieldBan className="h-3.5 w-3.5 mr-2" />
+                        Bannir
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setUserToDelete({ id: user.id, username: user.username })}
@@ -502,6 +587,21 @@ export default function AdminUserPanel() {
                 </div>
               )}
 
+              {/* Bandeau banni */}
+              {userDetail.isBanned && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <ShieldBan className="h-4 w-4 text-destructive shrink-0" />
+                    <p className="text-xs text-destructive font-semibold">
+                      Compte banni le {userDetail.bannedAt ? new Date(userDetail.bannedAt).toLocaleDateString('fr-FR') : '—'}
+                    </p>
+                  </div>
+                  {userDetail.bannedReason && (
+                    <p className="text-xs text-destructive/80 pl-6">Raison : {userDetail.bannedReason}</p>
+                  )}
+                </div>
+              )}
+
               {/* Alerte reports */}
               {userDetail.reportCountOnPosts > 0 && (
                 <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5">
@@ -563,6 +663,40 @@ export default function AdminUserPanel() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingRoleChange(null)}>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmRoleChange}>Confirmer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog bannissement */}
+      <AlertDialog open={!!userToBan} onOpenChange={(open) => { if (!open) { setUserToBan(null); setBanReason('') } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldBan className="h-4 w-4 text-destructive" />
+              Bannir {userToBan?.username}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              L&apos;utilisateur sera immédiatement bloqué et recevra un email de notification.
+              Cette action est réversible via &quot;Débannir&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-0 py-1">
+            <label className="text-xs font-medium text-foreground">Raison (optionnelle — incluse dans l&apos;email)</label>
+            <Input
+              className="mt-1.5 text-sm"
+              placeholder="Ex : contenu inapproprié répété, spam…"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setUserToBan(null); setBanReason('') }}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBan}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Bannir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

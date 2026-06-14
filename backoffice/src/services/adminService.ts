@@ -53,6 +53,7 @@ export interface AdminUsersParams {
   dateTo?: string
   sortField?: string
   sortDir?: 'asc' | 'desc'
+  isBanned?: boolean
 }
 
 export interface AdminUsersPaginatedResponse {
@@ -71,8 +72,9 @@ export const getAdminUsersPaginated = async (params: AdminUsersParams): Promise<
   if (params.role)      query.set('role', params.role)
   if (params.dateFrom)  query.set('dateFrom', params.dateFrom)
   if (params.dateTo)    query.set('dateTo', params.dateTo)
-  if (params.sortField) query.set('sortField', params.sortField)
-  if (params.sortDir)   query.set('sortDir', params.sortDir.toUpperCase())
+  if (params.sortField)            query.set('sortField', params.sortField)
+  if (params.sortDir)              query.set('sortDir', params.sortDir.toUpperCase())
+  if (params.isBanned !== undefined) query.set('isBanned', String(params.isBanned))
 
   const res = await fetch(`${API_URL}/api/admin/users?${query.toString()}`, {
     headers: {
@@ -107,6 +109,25 @@ export const updateAdminUserRole = async (id: number, role: 'ROLE_USER' | 'ROLE_
     body: JSON.stringify({ role }),
   })
   if (!res.ok) throw new Error('Erreur lors de la mise à jour du rôle')
+}
+
+export const banAdminUser = async (id: number, reason?: string): Promise<void> => {
+  const token = getCookie('admin_token')
+  const res = await fetch(`${API_URL}/api/admin/users/${id}/ban`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reason: reason ?? null }),
+  })
+  if (!res.ok) throw new Error('Erreur lors du bannissement')
+}
+
+export const unbanAdminUser = async (id: number): Promise<void> => {
+  const token = getCookie('admin_token')
+  const res = await fetch(`${API_URL}/api/admin/users/${id}/unban`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Erreur lors du débannissement')
 }
 
 export interface AdminPostsParams {

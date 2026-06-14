@@ -97,6 +97,9 @@ class MentoringRequestController extends AbstractController
             if (!$targetProfile) {
                 return $this->json(['error' => 'Mentor cible introuvable.', 'code' => 'TARGET_MENTOR_NOT_FOUND'], 422);
             }
+            if ($targetProfile->getUser() === $user) {
+                return $this->json(['error' => 'Vous ne pouvez pas vous cibler vous-même.', 'code' => 'SELF_TARGETING_NOT_ALLOWED'], 422);
+            }
             $mentoringRequest->setTargetMentor($targetProfile);
             $mentoringRequest->setIsPublic(false);
         }

@@ -4,13 +4,12 @@ namespace App\Tests\Controller;
 
 use App\Controller\MentorProfileController;
 use App\Entity\MentorProfile;
-use App\Entity\Skill;
+use App\Entity\TechGroup;
 use App\Entity\User;
-use App\Enum\SkillCategory;
 use App\Enum\TeachingStyle;
 use App\Enum\UserRole;
 use App\Repository\MentorProfileRepository;
-use App\Repository\SkillRepository;
+use App\Repository\TechGroupRepository;
 use Doctrine\DBAL\Driver\Exception as DriverException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\TestCase;
@@ -33,12 +32,12 @@ class MentorProfileControllerTest extends TestCase
         return $user;
     }
 
-    private function buildSkill(int $id, string $name): Skill
+    private function buildTechGroup(int $id, string $name): TechGroup
     {
-        $skill = new Skill();
-        $skill->setName($name)->setCategory(SkillCategory::OTHER);
-        (new \ReflectionProperty(Skill::class, 'id'))->setValue($skill, $id);
-        return $skill;
+        $group = new TechGroup();
+        $group->setName($name);
+        (new \ReflectionProperty(TechGroup::class, 'id'))->setValue($group, $id);
+        return $group;
     }
 
     private function buildMentorProfile(int $id, User $user, array $specialties = []): MentorProfile
@@ -78,11 +77,11 @@ class MentorProfileControllerTest extends TestCase
     private function makeController(
         User $currentUser,
         ?MentorProfileRepository $mentorRepo = null,
-        ?SkillRepository $skillRepo = null,
+        ?TechGroupRepository $groupRepo = null,
     ): MentorProfileController {
         $controller = new MentorProfileController(
             $mentorRepo ?? $this->createMock(MentorProfileRepository::class),
-            $skillRepo  ?? $this->createMock(SkillRepository::class),
+            $groupRepo  ?? $this->createMock(TechGroupRepository::class),
         );
         $controller->setContainer($this->makeContainer($currentUser));
         return $controller;
@@ -115,8 +114,8 @@ class MentorProfileControllerTest extends TestCase
     public function testCreateSuccessFullPayload(): void
     {
         $bob = $this->buildUser(1);
-        $php = $this->buildSkill(100, 'PHP');
-        $js  = $this->buildSkill(101, 'JavaScript');
+        $php = $this->buildTechGroup(100, 'PHP');
+        $js  = $this->buildTechGroup(101, 'JavaScript');
 
         $mentorRepo = $this->createMock(MentorProfileRepository::class);
         $mentorRepo->method('findOneBy')->willReturn(null);
@@ -127,8 +126,8 @@ class MentorProfileControllerTest extends TestCase
             }
         );
 
-        $skillRepo = $this->createMock(SkillRepository::class);
-        $skillRepo->method('find')->willReturnCallback(
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturnCallback(
             fn(int $id) => match ($id) {
                 100 => $php,
                 101 => $js,
@@ -143,7 +142,7 @@ class MentorProfileControllerTest extends TestCase
             'mentorBio'        => 'Senior PHP dev',
         ], JSON_THROW_ON_ERROR));
 
-        $response = $this->makeController($bob, $mentorRepo, $skillRepo)->create($request);
+        $response = $this->makeController($bob, $mentorRepo, $groupRepo)->create($request);
 
         $this->assertSame(201, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -211,18 +210,18 @@ class MentorProfileControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
     }
 
-    public function testCreateReturns422WhenSkillNotFound(): void
+    public function testCreateReturns422WhenGroupNotFound(): void
     {
         $bob = $this->buildUser(1);
 
         $mentorRepo = $this->createMock(MentorProfileRepository::class);
         $mentorRepo->method('findOneBy')->willReturn(null);
 
-        $skillRepo = $this->createMock(SkillRepository::class);
-        $skillRepo->method('find')->willReturn(null);
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn(null);
 
         $request = new Request(content: json_encode(['specialties' => [999]]));
-        $response = $this->makeController($bob, $mentorRepo, $skillRepo)->create($request);
+        $response = $this->makeController($bob, $mentorRepo, $groupRepo)->create($request);
 
         $this->assertSame(422, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -281,17 +280,17 @@ class MentorProfileControllerTest extends TestCase
 
     public function testUpdateSuccessFullPayload(): void
     {
-        $bob = $this->buildUser(1);
-        $oldSkill = $this->buildSkill(50, 'OldSkill');
-        $newSkill = $this->buildSkill(100, 'PHP');
-        $profile = $this->buildMentorProfile(10, $bob, [$oldSkill]);
+        $bob      = $this->buildUser(1);
+        $oldGroup = $this->buildTechGroup(50, 'OldGroup');
+        $newGroup = $this->buildTechGroup(100, 'PHP');
+        $profile  = $this->buildMentorProfile(10, $bob, [$oldGroup]);
 
         $mentorRepo = $this->createMock(MentorProfileRepository::class);
         $mentorRepo->method('findOneBy')->willReturn($profile);
         $mentorRepo->expects($this->once())->method('save');
 
-        $skillRepo = $this->createMock(SkillRepository::class);
-        $skillRepo->method('find')->with(100)->willReturn($newSkill);
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->with(100)->willReturn($newGroup);
 
         $request = new Request(content: json_encode([
             'maxActiveMentees' => 7,
@@ -299,7 +298,7 @@ class MentorProfileControllerTest extends TestCase
             'teachingStyle'    => 'direct',
             'specialties'      => [100],
         ]));
-        $response = $this->makeController($bob, $mentorRepo, $skillRepo)->update($request);
+        $response = $this->makeController($bob, $mentorRepo, $groupRepo)->update($request);
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(7, $profile->getMaxActiveMentees());
@@ -381,19 +380,19 @@ class MentorProfileControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
     }
 
-    public function testUpdateReturns422WhenSkillNotFound(): void
+    public function testUpdateReturns422WhenGroupNotFound(): void
     {
-        $bob = $this->buildUser(1);
+        $bob     = $this->buildUser(1);
         $profile = $this->buildMentorProfile(10, $bob);
 
         $mentorRepo = $this->createMock(MentorProfileRepository::class);
         $mentorRepo->method('findOneBy')->willReturn($profile);
 
-        $skillRepo = $this->createMock(SkillRepository::class);
-        $skillRepo->method('find')->willReturn(null);
+        $groupRepo = $this->createMock(TechGroupRepository::class);
+        $groupRepo->method('find')->willReturn(null);
 
         $request = new Request(content: json_encode(['specialties' => [999]]));
-        $response = $this->makeController($bob, $mentorRepo, $skillRepo)->update($request);
+        $response = $this->makeController($bob, $mentorRepo, $groupRepo)->update($request);
 
         $this->assertSame(422, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
