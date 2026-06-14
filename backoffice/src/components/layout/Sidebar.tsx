@@ -6,46 +6,45 @@ import { ADMIN_NAV_ITEMS } from "../nav-item"
 import { Button } from "@/components/ui/button"
 import clsx from "clsx"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
-import { LogOut } from "lucide-react"
+import { LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
 import Image from "next/image"
 import { useTheme } from "next-themes"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useAdminStats } from "@/hooks/useAdminStats"
 
-const COLLAPSED_W = 60  // px
-const EXPANDED_W  = 224 // px
+const COLLAPSED_W = 60
+const EXPANDED_W  = 224
+const LS_KEY      = "backoffice-sidebar-expanded"
 
 export function AdminSidebar() {
-  const pathname  = usePathname()
+  const pathname   = usePathname()
   const { user, logout } = useAdminAuth()
-  const { stats } = useAdminStats()
+  const { stats }  = useAdminStats()
   const pendingCount = stats?.pendingReportsCount ?? 0
   const pendingGroupSuggestionsCount = stats?.pendingGroupSuggestionsCount ?? 0
+  const newFeedbacksCount = stats?.newFeedbacksCount ?? 0
   const { resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const [expanded, setExpanded] = useState(false)
-  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [mounted, setMounted]   = useState(false)
+  const [expanded, setExpanded] = useState(true)
 
-  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem(LS_KEY)
+    if (stored !== null) setExpanded(stored === "true")
+  }, [])
 
-  const isDark = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
+  const toggle = () => {
+    const next = !expanded
+    setExpanded(next)
+    localStorage.setItem(LS_KEY, String(next))
+  }
+
+  const isDark  = resolvedTheme === "dark" || resolvedTheme === "cyberpunk-dark"
   const logoSrc = mounted ? (isDark ? "/logo_white.png" : "/logo2.png") : "/logo2.png"
-
-  const handleMouseEnter = () => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current)
-    enterTimer.current = setTimeout(() => setExpanded(true), 250)
-  }
-  const handleMouseLeave = () => {
-    if (enterTimer.current) clearTimeout(enterTimer.current)
-    leaveTimer.current = setTimeout(() => setExpanded(false), 350)
-  }
 
   return (
     <aside
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       style={{
         width: expanded ? EXPANDED_W : COLLAPSED_W,
         minWidth: expanded ? EXPANDED_W : COLLAPSED_W,
@@ -56,10 +55,10 @@ export function AdminSidebar() {
       }}
       className="relative z-30 flex flex-col shrink-0 bg-[var(--sidebar)] border-r border-[var(--sidebar-border)] overflow-hidden"
     >
-      {/* Header — Logo */}
+      {/* Header — Logo + bouton toggle */}
       <div className="flex items-center h-14 px-3 border-b border-[var(--sidebar-border)] shrink-0 overflow-hidden">
         <div
-          className="h-6 flex items-center"
+          className="flex-1 flex items-center overflow-hidden"
           style={{
             opacity: expanded ? 1 : 0,
             transform: expanded ? "translateX(0)" : "translateX(-8px)",
@@ -79,6 +78,22 @@ export function AdminSidebar() {
             />
           )}
         </div>
+
+        <button
+          onClick={toggle}
+          title={expanded ? "Réduire la sidebar" : "Agrandir la sidebar"}
+          className={clsx(
+            "shrink-0 flex items-center justify-center rounded-md h-7 w-7",
+            "text-[var(--sidebar-foreground)]/40 hover:text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]",
+            "transition-colors duration-150",
+            !expanded && "mx-auto"
+          )}
+        >
+          {expanded
+            ? <ChevronLeft className="h-4 w-4" />
+            : <ChevronRight className="h-4 w-4" />
+          }
+        </button>
       </div>
 
       {/* Nav items */}
@@ -87,14 +102,19 @@ export function AdminSidebar() {
           {ADMIN_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname?.startsWith(href)
             const hasBadge =
-              (href === "/reports" && pendingCount > 0) ||
-              (href === "/groups" && pendingGroupSuggestionsCount > 0)
-            const badgeCount = href === "/reports" ? pendingCount : pendingGroupSuggestionsCount
+              (href === "/reports"   && pendingCount > 0) ||
+              (href === "/groups"    && pendingGroupSuggestionsCount > 0) ||
+              (href === "/feedbacks" && newFeedbacksCount > 0)
+            const badgeCount =
+              href === "/reports"   ? pendingCount :
+              href === "/groups"    ? pendingGroupSuggestionsCount :
+              href === "/feedbacks" ? newFeedbacksCount : 0
 
             return (
               <li key={href}>
                 <Link
                   href={href}
+                  title={!expanded ? label : undefined}
                   className={clsx(
                     "relative flex items-center h-9 rounded-md text-sm font-medium transition-colors duration-150 overflow-hidden",
                     "px-0",
@@ -103,24 +123,23 @@ export function AdminSidebar() {
                       : "text-[var(--sidebar-foreground)]/70 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-foreground)]"
                   )}
                 >
-                  {/* Active left bar */}
+                  {/* Barre active */}
                   {active && (
                     <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[var(--sidebar-primary)]" />
                   )}
 
-                  {/* Icon — always centered in collapsed zone */}
+                  {/* Icône — toujours centrée dans la zone collapsed */}
                   <span
                     className="relative shrink-0 flex items-center justify-center"
                     style={{ width: COLLAPSED_W - 16, minWidth: COLLAPSED_W - 16 }}
                   >
                     <Icon className="h-4 w-4" />
-                    {/* Dot badge (collapsed only) */}
                     {hasBadge && !expanded && (
                       <span className="absolute top-0 right-1 h-1.5 w-1.5 rounded-full bg-destructive" />
                     )}
                   </span>
 
-                  {/* Label + count badge */}
+                  {/* Label + badge count */}
                   <span
                     className="flex items-center gap-2 flex-1 min-w-0 pr-3"
                     style={{
@@ -145,13 +164,16 @@ export function AdminSidebar() {
         </ul>
       </nav>
 
-      {/* Separator */}
+      {/* Séparateur */}
       <div className="h-px bg-[var(--sidebar-border)] mx-2" />
 
       {/* Footer */}
       <div className="shrink-0 py-2 px-2 flex flex-col gap-1 overflow-hidden">
-        {/* User identity */}
-        <div className="flex items-center h-9 overflow-hidden">
+        {/* Identité utilisateur */}
+        <div
+          className="flex items-center h-9 overflow-hidden"
+          title={!expanded ? user?.username : undefined}
+        >
           <span
             className="shrink-0 flex items-center justify-center"
             style={{ width: COLLAPSED_W - 16, minWidth: COLLAPSED_W - 16 }}
@@ -179,7 +201,7 @@ export function AdminSidebar() {
           </span>
         </div>
 
-        {/* Actions row */}
+        {/* Ligne actions */}
         <div className="flex items-center h-9 overflow-hidden">
           <span
             className="shrink-0 flex items-center justify-center"

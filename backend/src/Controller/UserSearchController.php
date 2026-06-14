@@ -33,7 +33,11 @@ class UserSearchController extends AbstractController
         $isMentor = $request->query->getBoolean('isMentor', false);
 
         if ($isMentor) {
-            $profiles = $this->mentorProfileRepo->searchMentors($query, 10);
+            $currentUser = $this->getUser();
+            $profiles = array_values(array_filter(
+                $this->mentorProfileRepo->searchMentors($query, 10),
+                fn($p) => $p->getUser() !== $currentUser
+            ));
             return $this->json(array_map(fn($p) => [
                 'id'          => $p->getUser()->getId(),
                 'username'    => $p->getUser()->getUsername(),

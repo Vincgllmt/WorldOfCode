@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * 🎮 Hollow Knight - Tests unitaires du FeedbackController
@@ -351,5 +352,68 @@ class FeedbackControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame([], $payload);
+    }
+
+    // ======================================================================
+    //  updateStatus() — admin only
+    // ======================================================================
+
+    public function testUpdateStatusSuccess(): void
+    {
+        $radiance = $this->buildUser(1, 'Radiance', true);
+        $knight   = $this->buildUser(2);
+        $feedback = $this->buildFeedback($knight, 1);
+
+        $feedbackRepo = $this->createMock(FeedbackRepository::class);
+        $feedbackRepo->method('find')->with(1)->willReturn($feedback);
+        $feedbackRepo->expects($this->once())->method('save')->with($feedback);
+
+        $request  = new Request(content: json_encode(['status' => 'read'], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($radiance, $feedbackRepo, isAdmin: true)->updateStatus(1, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('read', $payload['status']);
+        $this->assertSame(FeedbackStatus::READ, $feedback->getStatus());
+    }
+
+    public function testUpdateStatusReturns404WhenNotFound(): void
+    {
+        $radiance = $this->buildUser(1, 'Radiance', true);
+
+        $feedbackRepo = $this->createMock(FeedbackRepository::class);
+        $feedbackRepo->method('find')->willReturn(null);
+
+        $request  = new Request(content: json_encode(['status' => 'read'], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($radiance, $feedbackRepo, isAdmin: true)->updateStatus(999, $request);
+
+        $this->assertSame(404, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUpdateStatusReturns422WhenStatusInvalid(): void
+    {
+        $radiance = $this->buildUser(1, 'Radiance', true);
+        $knight   = $this->buildUser(2);
+        $feedback = $this->buildFeedback($knight, 1);
+
+        $feedbackRepo = $this->createMock(FeedbackRepository::class);
+        $feedbackRepo->method('find')->willReturn($feedback);
+
+        $request  = new Request(content: json_encode(['status' => 'invalid_status'], JSON_THROW_ON_ERROR));
+        $response = $this->makeController($radiance, $feedbackRepo, isAdmin: true)->updateStatus(1, $request);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testUpdateStatusDeniesNonAdmin(): void
+    {
+        $knight = $this->buildUser(1);
+        $this->expectException(AccessDeniedException::class);
+        $request = new Request(content: json_encode(['status' => 'read'], JSON_THROW_ON_ERROR));
+        $this->makeController($knight, isAdmin: false)->updateStatus(1, $request);
     }
 }

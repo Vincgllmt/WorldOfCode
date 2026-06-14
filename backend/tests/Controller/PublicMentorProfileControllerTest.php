@@ -4,9 +4,8 @@ namespace App\Tests\Controller;
 
 use App\Controller\PublicMentorProfileController;
 use App\Entity\MentorProfile;
-use App\Entity\Skill;
+use App\Entity\TechGroup;
 use App\Entity\User;
-use App\Enum\SkillCategory;
 use App\Enum\TeachingStyle;
 use App\Enum\UserRole;
 use App\Repository\MentorProfileRepository;
@@ -51,12 +50,12 @@ class PublicMentorProfileControllerTest extends TestCase
         return $profile;
     }
 
-    private function buildSkill(int $id, string $name): Skill
+    private function buildTechGroup(int $id, string $name): TechGroup
     {
-        $skill = new Skill();
-        $skill->setName($name)->setCategory(SkillCategory::OTHER);
-        (new \ReflectionProperty(Skill::class, 'id'))->setValue($skill, $id);
-        return $skill;
+        $group = new TechGroup();
+        $group->setName($name);
+        (new \ReflectionProperty(TechGroup::class, 'id'))->setValue($group, $id);
+        return $group;
     }
 
     private function makeContainer(User $currentUser): ContainerInterface
@@ -97,9 +96,9 @@ class PublicMentorProfileControllerTest extends TestCase
         $alice = $this->buildUser(1, 'Alice');
         $bob   = $this->buildUser(2, 'BobMentor');
 
-        $phpSkill = $this->buildSkill(100, 'PHP');
-        $jsSkill  = $this->buildSkill(101, 'JavaScript');
-        $profile = $this->buildMentorProfile(10, $bob, [$phpSkill, $jsSkill]);
+        $phpGroup = $this->buildTechGroup(100, 'PHP');
+        $jsGroup  = $this->buildTechGroup(101, 'JavaScript');
+        $profile = $this->buildMentorProfile(10, $bob, [$phpGroup, $jsGroup]);
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->with(2)->willReturn($bob);

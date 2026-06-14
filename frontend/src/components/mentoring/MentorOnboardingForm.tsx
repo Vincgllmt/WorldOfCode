@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search, X } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { createMentorProfile } from '@/lib/api/mentoring/profile'
-import type { Skill } from '@/types/mentoring'
+interface TechGroup { id: number; name: string }
 
 const SUGGESTIONS_COUNT = 8
 
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function MentorOnboardingForm({ onSuccess }: Props) {
-  const [skills, setSkills] = useState<Skill[]>([])
+  const [skills, setSkills] = useState<TechGroup[]>([])
   const [skillsLoading, setSkillsLoading] = useState(true)
   const [skillsError, setSkillsError] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<number[]>([])
@@ -31,12 +31,11 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   const [mentorBio, setMentorBio] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [maxError, setMaxError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchWithAuth('/skills')
+    fetchWithAuth('/group')
       .then(r => r.json())
-      .then((data: Skill[]) => {
+      .then((data: TechGroup[]) => {
         setSkills(data)
         setSkillsLoading(false)
       })
@@ -68,18 +67,8 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
     )
   }
 
-  const handleMaxChange = (value: number) => {
-    setMaxActiveMentees(value)
-    if (value < 1 || value > 10) {
-      setMaxError('La valeur doit être entre 1 et 10.')
-    } else {
-      setMaxError(null)
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (maxActiveMentees < 1 || maxActiveMentees > 10) return
     if (selectedSkills.length === 0) {
       setSpecialtiesError('Veuillez sélectionner au moins une spécialité.')
       return
@@ -110,10 +99,14 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <p className="text-xs text-muted-foreground">
+        Les champs marqués d&apos;un <span className="text-destructive font-semibold">*</span> sont obligatoires.
+      </p>
+
       {/* Spécialités */}
       <div>
         <label className="block text-sm font-medium mb-2">
-          Spécialités technologiques
+          Spécialités technologiques <span className="text-destructive">*</span>
         </label>
 
         {skillsLoading ? (
@@ -194,7 +187,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
       {/* Style pédagogique */}
       <div>
         <label htmlFor="teachingStyle" className="block text-sm font-medium mb-2">
-          Style pédagogique
+          Style pédagogique <span className="text-muted-foreground font-normal">(optionnel)</span>
         </label>
         <select
           id="teachingStyle"
@@ -211,27 +204,20 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
 
       {/* Charge maximale */}
       <div>
-        <label htmlFor="maxActiveMentees" className="block text-sm font-medium mb-2">
-          Nombre max de mentorés simultanés (1-10)
+        <label className="block text-sm font-medium mb-2">
+          Mentorés actifs max <span className="text-destructive">*</span> — <span className="text-primary">{maxActiveMentees}</span>
         </label>
         <input
-          id="maxActiveMentees"
-          type="number"
+          type="range"
           min={1}
           max={10}
           value={maxActiveMentees}
-          onChange={e => handleMaxChange(Number(e.target.value))}
-          aria-describedby={maxError ? 'maxError' : undefined}
-          aria-invalid={!!maxError}
-          className={`w-24 rounded-md border bg-background px-3 py-2 ${
-            maxError ? 'border-destructive' : 'border-border'
-          }`}
+          onChange={e => setMaxActiveMentees(Number(e.target.value))}
+          className="w-full accent-primary"
         />
-        {maxError && (
-          <p id="maxError" role="alert" className="text-destructive text-sm flex items-center gap-1 mt-1">
-            <span aria-hidden="true">⚠</span> {maxError}
-          </p>
-        )}
+        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+          <span>1</span><span>5</span><span>10</span>
+        </div>
       </div>
 
       {/* Bio mentor */}
@@ -257,7 +243,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
 
       <button
         type="submit"
-        disabled={loading || skillsLoading || !!maxError}
+        disabled={loading || skillsLoading}
         className="w-full bg-primary text-primary-foreground rounded-md py-2.5 font-medium disabled:opacity-50"
       >
         {loading ? 'Création en cours...' : 'Devenir Mentor'}

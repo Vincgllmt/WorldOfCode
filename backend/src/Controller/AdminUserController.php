@@ -10,6 +10,7 @@ use App\Mapper\SkillMapper;
 use App\Mapper\UserLinkMapper;
 use App\Repository\ReportRepository;
 use App\Repository\UserRepository;
+use App\Service\UserBanNotificationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -26,6 +27,7 @@ final class AdminUserController extends AbstractController
         private ReportRepository $reportRepo,
         private SkillMapper $skillMapper,
         private UserLinkMapper $linkMapper,
+        private UserBanNotificationService $banNotification,
     ) {}
 
     #[Route('/users', name: 'admin_users_list', methods: ['GET'])]
@@ -58,6 +60,9 @@ final class AdminUserController extends AbstractController
         $dateTo    = $request->query->get('dateTo') ?: null;
         $sortField = $request->query->get('sortField', 'creationDate');
         $sortDir   = $request->query->get('sortDir', 'DESC');
+        $isBanned  = $request->query->has('isBanned')
+            ? filter_var($request->query->get('isBanned'), FILTER_VALIDATE_BOOLEAN)
+            : null;
 
         $result = $this->userRepo->findPaginatedWithCounts(
             page: $page,
@@ -68,6 +73,7 @@ final class AdminUserController extends AbstractController
             dateTo: $dateTo,
             sortField: $sortField,
             sortDir: $sortDir,
+            isBanned: $isBanned,
         );
 
         $items = array_map(fn($row) => new AdminUserListItemDto(
@@ -83,6 +89,8 @@ final class AdminUserController extends AbstractController
             postCount: (int) $row['postCount'],
             followerCount: (int) $row['followerCount'],
             avatarUrl: $row['avatarUrl'] ?? null,
+            reportCount: (int) ($row['reportCount'] ?? 0),
+            isBanned: (bool) ($row['isBanned'] ?? false),
         ), $result['items']);
 
         return $this->json([
@@ -147,6 +155,9 @@ final class AdminUserController extends AbstractController
             links: array_map([$this->linkMapper, 'toDto'], $user->getLinks()->toArray()),
             lastFivePosts: $lastFiveDtos,
             reportCountOnPosts: $this->reportRepo->countByAuthorId($user->getId()),
+            isBanned: $user->isBanned(),
+            bannedAt: $user->getBannedAt()?->format(\DateTimeInterface::ATOM),
+            bannedReason: $user->getBannedReason(),
         );
 
         return $this->json($dto);
@@ -186,6 +197,79 @@ final class AdminUserController extends AbstractController
 
         $user->setRole($role);
         $this->userRepo->save($user, true);
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/users/{id}/ban', name: 'admin_user_ban', methods: ['POST'])]
+    #[OA\Post(
+        summary: "Bannir un utilisateur et lui envoyer un email de notification",
+        responses: [
+            new OA\Response(response: 200, description: 'Utilisateur banni'),
+            new OA\Response(response: 400, description: 'Utilisateur déjà banni ou bannissement d\'un admin impossible'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé'),
+        ]
+    )]
+    public function ban(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $user = $this->userRepo->find($id);
+        if (!$user) {
+            throw new NotFoundHttpException('Utilisateur non trouvé');
+        }
+
+        if ($user->getRole() === UserRole::ROLE_ADMIN) {
+            return $this->json(['error' => 'Impossible de bannir un administrateur'], 400);
+        }
+
+        if ($user->isBanned()) {
+            return $this->json(['error' => 'Cet utilisateur est déjà banni'], 400);
+        }
+
+        $data   = json_decode($request->getContent(), true) ?? [];
+        $reason = trim($data['reason'] ?? '') ?: null;
+
+        $user->setIsBanned(true)
+             ->setBannedAt(new \DateTime())
+             ->setBannedReason($reason);
+
+        $this->userRepo->save($user, true);
+        $this->banNotification->sendBanEmail($user, $reason);
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/users/{id}/unban', name: 'admin_user_unban', methods: ['POST'])]
+    #[OA\Post(
+        summary: "Lever le bannissement d'un utilisateur",
+        responses: [
+            new OA\Response(response: 200, description: 'Bannissement levé'),
+            new OA\Response(response: 400, description: 'Utilisateur non banni'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouvé'),
+        ]
+    )]
+    public function unban(int $id): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $user = $this->userRepo->find($id);
+        if (!$user) {
+            throw new NotFoundHttpException('Utilisateur non trouvé');
+        }
+
+        if (!$user->isBanned()) {
+            return $this->json(['error' => 'Cet utilisateur n\'est pas banni'], 400);
+        }
+
+        $user->setIsBanned(false)
+             ->setBannedAt(null)
+             ->setBannedReason(null);
+
+        $this->userRepo->save($user, true);
+        $this->banNotification->sendUnbanEmail($user);
 
         return $this->json(['success' => true]);
     }

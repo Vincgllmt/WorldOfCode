@@ -6,7 +6,7 @@ use App\Entity\MentorProfile;
 use App\Entity\User;
 use App\Enum\TeachingStyle;
 use App\Repository\MentorProfileRepository;
-use App\Repository\SkillRepository;
+use App\Repository\TechGroupRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +20,7 @@ class MentorProfileController extends AbstractController
 {
     public function __construct(
         private MentorProfileRepository $mentorProfileRepo,
-        private SkillRepository $skillRepo,
+        private TechGroupRepository $techGroupRepo,
     ) {}
 
     #[Route('', name: 'mentor_profile_create', methods: ['POST'])]
@@ -93,12 +93,12 @@ class MentorProfileController extends AbstractController
             $profile->setTeachingStyle($style);
         }
 
-        foreach ($data['specialties'] ?? [] as $skillId) {
-            $skill = $this->skillRepo->find((int) $skillId);
-            if (!$skill) {
-                return $this->json(['error' => "Skill ID $skillId introuvable."], 422);
+        foreach ($data['specialties'] ?? [] as $groupId) {
+            $group = $this->techGroupRepo->find((int) $groupId);
+            if (!$group) {
+                return $this->json(['error' => "Groupe ID $groupId introuvable."], 422);
             }
-            $profile->addSpecialty($skill);
+            $profile->addSpecialty($group);
         }
 
         try {
@@ -200,20 +200,19 @@ class MentorProfileController extends AbstractController
         }
 
         if (isset($data['specialties'])) {
-            // Valider tous les IDs avant de modifier la collection
-            $newSkills = [];
-            foreach ($data['specialties'] as $skillId) {
-                $skill = $this->skillRepo->find((int) $skillId);
-                if (!$skill) {
-                    return $this->json(['error' => "Skill ID $skillId introuvable."], 422);
+            $newGroups = [];
+            foreach ($data['specialties'] as $groupId) {
+                $group = $this->techGroupRepo->find((int) $groupId);
+                if (!$group) {
+                    return $this->json(['error' => "Groupe ID $groupId introuvable."], 422);
                 }
-                $newSkills[] = $skill;
+                $newGroups[] = $group;
             }
             foreach ($profile->getSpecialties()->toArray() as $s) {
                 $profile->removeSpecialty($s);
             }
-            foreach ($newSkills as $skill) {
-                $profile->addSpecialty($skill);
+            foreach ($newGroups as $group) {
+                $profile->addSpecialty($group);
             }
         }
 

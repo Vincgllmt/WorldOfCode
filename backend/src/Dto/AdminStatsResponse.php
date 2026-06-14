@@ -26,6 +26,9 @@ class AdminStatsResponse
         #[OA\Property(description: 'Nombre de suggestions de groupes en attente', example: 3)]
         public readonly int $pendingGroupSuggestionsCount,
 
+        #[OA\Property(description: 'Nombre de feedbacks non lus', example: 5)]
+        public readonly int $newFeedbacksCount,
+
         #[OA\Property(description: 'Nouveaux utilisateurs cette semaine', example: 12)]
         public readonly int $newUsersThisWeek,
 

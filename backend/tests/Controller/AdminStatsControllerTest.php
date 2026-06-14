@@ -4,7 +4,9 @@ namespace App\Tests\Controller;
 
 use App\Controller\AdminStatsController;
 use App\Entity\User;
+use App\Enum\FeedbackStatus;
 use App\Enum\UserRole;
+use App\Repository\FeedbackRepository;
 use App\Repository\GroupSuggestionRepository;
 use App\Repository\PostRepository;
 use App\Repository\ReportRepository;
@@ -84,14 +86,16 @@ class AdminStatsControllerTest extends TestCase
         ?TechGroupRepository $groupRepo = null,
         ?ReportRepository $reportRepo = null,
         ?GroupSuggestionRepository $suggRepo = null,
+        ?FeedbackRepository $feedbackRepo = null,
         bool $isAdmin = true,
     ): AdminStatsController {
         $controller = new AdminStatsController(
-            $userRepo   ?? $this->createMock(UserRepository::class),
-            $postRepo   ?? $this->createMock(PostRepository::class),
-            $groupRepo  ?? $this->createMock(TechGroupRepository::class),
-            $reportRepo ?? $this->createMock(ReportRepository::class),
-            $suggRepo   ?? $this->createMock(GroupSuggestionRepository::class),
+            $userRepo      ?? $this->createMock(UserRepository::class),
+            $postRepo      ?? $this->createMock(PostRepository::class),
+            $groupRepo     ?? $this->createMock(TechGroupRepository::class),
+            $reportRepo    ?? $this->createMock(ReportRepository::class),
+            $suggRepo      ?? $this->createMock(GroupSuggestionRepository::class),
+            $feedbackRepo  ?? $this->createMock(FeedbackRepository::class),
         );
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
 
@@ -104,23 +108,25 @@ class AdminStatsControllerTest extends TestCase
 
     public function testStatsReturnsAggregates(): void
     {
-        $admin     = $this->buildAdmin();
-        $userRepo  = $this->createMock(UserRepository::class);
-        $postRepo  = $this->createMock(PostRepository::class);
-        $groupRepo = $this->createMock(TechGroupRepository::class);
-        $reportRepo = $this->createMock(ReportRepository::class);
-        $suggRepo  = $this->createMock(GroupSuggestionRepository::class);
+        $admin        = $this->buildAdmin();
+        $userRepo     = $this->createMock(UserRepository::class);
+        $postRepo     = $this->createMock(PostRepository::class);
+        $groupRepo    = $this->createMock(TechGroupRepository::class);
+        $reportRepo   = $this->createMock(ReportRepository::class);
+        $suggRepo     = $this->createMock(GroupSuggestionRepository::class);
+        $feedbackRepo = $this->createMock(FeedbackRepository::class);
 
         $userRepo->method('count')->willReturn(50);
         $postRepo->method('count')->willReturn(200);
         $groupRepo->method('count')->willReturn(10);
         $reportRepo->method('count')->willReturn(3);
         $suggRepo->method('count')->willReturn(5);
+        $feedbackRepo->method('count')->willReturn(7);
         $userRepo->method('countSince')->willReturn(8);
         $postRepo->method('countSince')->willReturn(30);
         $groupRepo->method('findTopByActivity')->willReturn([]);
 
-        $response = $this->makeController($admin, $userRepo, $postRepo, $groupRepo, $reportRepo, $suggRepo)->stats();
+        $response = $this->makeController($admin, $userRepo, $postRepo, $groupRepo, $reportRepo, $suggRepo, $feedbackRepo)->stats();
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -129,6 +135,7 @@ class AdminStatsControllerTest extends TestCase
         $this->assertSame(10, $payload['totalGroups']);
         $this->assertSame(5, $payload['pendingGroupSuggestionsCount']);
         $this->assertSame(8, $payload['newUsersThisWeek']);
+        $this->assertSame(7, $payload['newFeedbacksCount']);
     }
 
     public function testStatsDeniesNonAdmin(): void

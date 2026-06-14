@@ -2,10 +2,13 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Enum\NotificationType;
 use App\Enum\ReportStatus;
 use App\Mapper\AdminReportMapper;
 use App\Repository\PostRepository;
 use App\Repository\ReportRepository;
+use App\Service\NotificationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,6 +24,7 @@ final class AdminReportController extends AbstractController
         private ReportRepository $reportRepo,
         private PostRepository $postRepo,
         private AdminReportMapper $mapper,
+        private NotificationService $notificationService,
     ) {}
 
     #[Route('/posts', name: 'admin_reports_grouped_by_post', methods: ['GET'])]
@@ -221,6 +225,19 @@ final class AdminReportController extends AbstractController
         $data = json_decode($request->getContent(), true) ?? [];
         $resolutionNote = $data['resolutionNote'] ?? null;
 
+        // Capturer auteur et signalants AVANT la transaction (le post sera supprimé)
+        $post       = $report->getPost();
+        $postAuthor = $post?->getAuthor();
+        $reporters  = [];
+        if ($post) {
+            foreach ($this->reportRepo->findByPostId($post->getId()) as $r) {
+                $user = $r->getUser();
+                if ($user) {
+                    $reporters[$user->getId()] = $user;
+                }
+            }
+        }
+
         $em = $this->reportRepo->getEntityManager();
         $em->wrapInTransaction(function () use ($report, $currentUser, $resolutionNote) {
             $post = $report->getPost();
@@ -254,6 +271,28 @@ final class AdminReportController extends AbstractController
             }
             $this->reportRepo->getEntityManager()->flush();
         });
+
+        // Notifier après que la transaction a réussi
+        /** @var User $currentUser */
+        $suffix = $resolutionNote ? ' Raison : ' . $resolutionNote : '';
+
+        if ($postAuthor) {
+            $this->notificationService->createAndPush(
+                recipient: $postAuthor,
+                sender: $currentUser,
+                type: NotificationType::POST_DELETED_BY_ADMIN,
+                message: 'Votre post a été supprimé suite à un signalement.' . $suffix,
+            );
+        }
+
+        foreach ($reporters as $reporter) {
+            $this->notificationService->createAndPush(
+                recipient: $reporter,
+                sender: $currentUser,
+                type: NotificationType::POST_DELETED_BY_ADMIN,
+                message: 'Le post que vous avez signalé a été supprimé par la modération.' . $suffix,
+            );
+        }
 
         return $this->json($this->mapper->toDto($report));
     }
