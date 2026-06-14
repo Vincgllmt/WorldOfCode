@@ -34,7 +34,9 @@ build:frontend:
         --build-arg NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage" \
         --insecure \
         --skip-tls-verify \
-        --cache=true
+        --cache=true \
+        --snapshotMode=redo \
+        --compressed-caching=false
 
 
 # scan:frontend:
