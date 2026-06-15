@@ -118,6 +118,28 @@ services:
     networks:
       - projet_network
 
+  code-arena:
+    build: ./code-arena
+    container_name: projet_code_arena
+    ports:
+      - "8082:8082"
+    environment:
+      # Base partagée projet_web (schéma possédé par le backend, jamais migré ici)
+      DATABASE_URL: "mysql://application:password@db:3306/projet_web?serverVersion=8.0&charset=utf8mb4"
+      APP_ENV: dev
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+    volumes:
+      - ./code-arena:/app
+      - /app/vendor
+      - jwt_keys:/app/config/jwt
+    depends_on:
+      - db
+      - backend
+    networks:
+      - projet_network
+    working_dir: /app
+    command: ["symfony", "serve", "--no-tls", "--port=8082", "--allow-all-ip"]
+
   db:
     image: mysql:8.0
     container_name: projet_db
