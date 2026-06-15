@@ -25,7 +25,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname()
 
     // Masquer la navbar pour les routes /login et /register
-    const hideNavbar = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === "/reset-password" || pathname === '/onboarding' || pathname === '/2fa'
+    // ainsi que pour Code Arena, qui possède son propre layout immersif.
+    const hideNavbar = pathname === '/' || pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === "/reset-password" || pathname === '/onboarding' || pathname === '/2fa' || pathname.startsWith('/arena')
     const hideMessageFab = hideNavbar || pathname.startsWith('/message')
 
     return (
