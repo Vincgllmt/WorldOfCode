@@ -25,7 +25,7 @@ class ConversationMapper
         $dto->id = $conv->getId();
         $dto->type = $conv->getType();
         $dto->title = $conv->getTitle();
-        $dto->createdAt = $conv->getCreatedAt()->format('Y-m-d H:i:s');
+        $dto->createdAt = $conv->getCreatedAt()->format('c');
 
         $dto->participants = [];
 
@@ -56,7 +56,7 @@ class ConversationMapper
             $msgDto->id = $lastMsg->getId();
             $msgDto->body = $lastMsg->getBody();
             $msgDto->type = $lastMsg->getType();
-            $msgDto->createdAt = $lastMsg->getCreatedAt()->format('Y-m-d H:i:s');
+            $msgDto->createdAt = $lastMsg->getCreatedAt()->format('c');
             $msgDto->sender = [
                 'id' => $lastMsg->getSender()->getId(),
                 'username' => $lastMsg->getSender()->getUsername(),

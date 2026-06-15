@@ -17,6 +17,7 @@ use App\Service\NotificationService;
 use App\Service\Moderation\TextModerationService;
 use App\Service\Moderation\ContentRejectedException;
 use App\Enum\NotificationType;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
 
 #[Route('/api/comment')]
 #[OA\Tag(name: 'Comment')]
@@ -27,7 +28,8 @@ class CommentController extends AbstractController
         private PostRepository $postRepo,
         private CommentMapper $mapper,
         private NotificationService $notificationService,
-        private TextModerationService $moderation
+        private TextModerationService $moderation,
+        private HtmlSanitizerInterface $appUserContent
     ) {}
 
     #[Route('', name: 'comment_list', methods: ['GET'])]
@@ -98,6 +100,9 @@ class CommentController extends AbstractController
             return $this->json(['error' => 'Missing content or postId'], 400);
         }
 
+        // SEC-21 : sanitization HTML avant persistance (défense en profondeur)
+        $content = $this->appUserContent->sanitize($content);
+
         // Modération du contenu du commentaire
         try {
             $this->moderation->checkOrThrow($content);
@@ -165,6 +170,8 @@ class CommentController extends AbstractController
         $content = $data['content'] ?? null;
 
         if ($content) {
+            // SEC-21 : sanitization HTML avant persistance
+            $content = $this->appUserContent->sanitize($content);
             // Modération avant écrasement
             try {
                 $this->moderation->checkOrThrow($content);

@@ -14,7 +14,7 @@ class TechGroupMapper
         $dto->name = $group->getName();
         $dto->description = $group->getDescription();
         $dto->creatorId = $group->getCreator()?->getId();
-        $dto->createdAt = $group->getCreatedAt()?->format('Y-m-d H:i:s');
+        $dto->createdAt = $group->getCreatedAt()?->format('c');
 
         return $dto;
     }

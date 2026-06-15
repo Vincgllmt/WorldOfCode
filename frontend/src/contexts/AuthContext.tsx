@@ -21,8 +21,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
-      const refreshIn = payload.exp * 1000 - Date.now() - 30 * 60 * 1000 // 30 min avant expiry
-      if (refreshIn <= 0) return
+      const lifetimeMs = payload.exp * 1000 - Date.now()
+      if (lifetimeMs <= 0) return
+      // rafraîchit 2 min avant expiry, ou à mi-vie pour un token très court
+      const margin = Math.min(2 * 60 * 1000, lifetimeMs / 2)
+      const refreshIn = lifetimeMs - margin
       refreshTimerRef.current = setTimeout(async () => {
         try {
           const newToken = await authService.refreshToken()
@@ -70,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Appareil de confiance : le backend renvoie directement le JWT sans 2FA
       const { token } = result
-      setCookie('token', token, { path: '/', maxAge: 14400 })
+      setCookie('token', token, { path: '/', maxAge: 900 })
 
       let meRes: Response
       try {

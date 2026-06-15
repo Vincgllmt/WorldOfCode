@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>WOC — Audit de sécurité (pré-ouverture publique)</title>
+<style>
+  :root {
+    --crit: #dc2626;
+    --high: #ea580c;
+    --med:  #ca8a04;
+    --low:  #2563eb;
+    --bg:   #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #475569;
+    --mono: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; line-height: 1.5; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 4px 0; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
+  .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .summary-card .count { font-size: 32px; font-weight: 700; line-height: 1; }
+  .summary-card .label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .summary-card.crit .count { color: var(--crit); }
+  .summary-card.high .count { color: var(--high); }
+  .summary-card.med  .count { color: var(--med); }
+  .summary-card.low  .count { color: var(--low); }
+
+  .legend { background: #fef2f2; border-left: 4px solid var(--crit); padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; }
+  .legend strong { color: var(--crit); }
+
+  section { margin-bottom: 32px; }
+  h2 { font-size: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-top: 32px; }
+
+  .ticket { background: var(--card); border: 1px solid var(--border); border-left: 6px solid; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; transition: opacity 0.2s; }
+  .ticket.crit { border-left-color: var(--crit); }
+  .ticket.high { border-left-color: var(--high); }
+  .ticket.med  { border-left-color: var(--med); }
+  .ticket.low  { border-left-color: var(--low); }
+  .ticket.fixed { opacity: 0.7; background: #f0fdf4; border-left-color: #16a34a; }
+  .ticket.fixed .ticket-title { text-decoration: line-through; text-decoration-color: #16a34a; text-decoration-thickness: 2px; }
+  .badge.fixed { background: #16a34a; }
+
+  .ticket-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ticket-id { font-family: var(--mono); font-weight: 700; color: var(--muted); font-size: 13px; }
+  .ticket-title { font-size: 16px; font-weight: 600; flex: 1; min-width: 200px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; color: white; letter-spacing: 0.5px; }
+  .badge.crit { background: var(--crit); }
+  .badge.high { background: var(--high); }
+  .badge.med  { background: var(--med); }
+  .badge.low  { background: var(--low); }
+  .category { background: #e2e8f0; color: var(--muted); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+  .ticket-section { margin-top: 10px; }
+  .ticket-section h4 { margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; }
+  .file { font-family: var(--mono); font-size: 13px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: var(--text); }
+  code { font-family: var(--mono); background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  .fix { background: #f0fdf4; border-left: 3px solid #16a34a; padding: 8px 12px; margin-top: 8px; border-radius: 4px; font-size: 14px; }
+
+  .checklist { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .checklist ol { margin: 0; padding-left: 20px; }
+  .checklist li { margin: 6px 0; }
+  .checklist li strong { color: var(--text); }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+  .toc ul { list-style: none; padding: 0; margin: 0; column-count: 2; column-gap: 24px; }
+  .toc li { padding: 2px 0; font-size: 13px; }
+  .toc a { text-decoration: none; color: var(--text); }
+  .toc a:hover { color: var(--low); text-decoration: underline; }
+  .toc .sev-crit { color: var(--crit); font-weight: 600; }
+  .toc .sev-high { color: var(--high); font-weight: 600; }
+  .toc .sev-med  { color: var(--med); }
+  .toc .sev-low  { color: var(--low); }
+
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🔒 WOC — Audit de sécurité</h1>
+  <p class="subtitle">
+    Branche <code>feature-security</code> · Audit réalisé avant ouverture publique de la plateforme<br>
+    Date : 2026-05-21 · 24 vulnérabilités identifiées · <strong style="color:#16a34a;">13 corrigées ✅</strong> · 11 restantes
+  </p>
+
+  <div class="legend">
+    <strong>⚠️ Lire avant de pousser en prod.</strong>
+    <strong style="color:#16a34a;">4 critiques résolues (SEC-2, SEC-3, SEC-4, SEC-13)</strong>, mais
+    <strong>3 critiques restantes (SEC-1, SEC-11, SEC-14)</strong> doivent être corrigées
+    avant tout déploiement public.
+    <br><br>
+    <em>SEC-14 nécessite une variable d'env partagée backend↔messagerie : reporté au sprint
+    "secrets prod" en même temps que SEC-1 et SEC-11.</em>
+  </div>
+
+  <!-- ─── Résumé chiffré ─── -->
+  <div class="summary">
+    <div class="summary-card crit"><div class="count">3 / 7</div><div class="label">CRITIQUE restantes</div></div>
+    <div class="summary-card high"><div class="count">9</div><div class="label">HAUTE</div></div>
+    <div class="summary-card med"><div class="count">7</div><div class="label">MOYENNE</div></div>
+    <div class="summary-card low"><div class="count">2</div><div class="label">BASSE</div></div>
+  </div>
+
+  <!-- ─── Plan d'action recommandé ─── -->
+  <section class="checklist">
+    <h2 style="margin-top:0;border:none;padding:0;">📋 Plan d'action recommandé (ordre suggéré)</h2>
+    <ol>
+      <li><strong>Phase 1 — bloqueurs prod (1 journée)</strong> : SEC-1 (rotate tous les secrets exposés), SEC-2, SEC-3, SEC-4, SEC-11, SEC-13, SEC-14.</li>
+      <li><strong>Phase 2 — durcissement (2-3 jours)</strong> : SEC-5 à SEC-10, SEC-12, SEC-15, SEC-16, SEC-17, SEC-18 (upgrade deps), SEC-19, SEC-23.</li>
+      <li><strong>Phase 3 — défense en profondeur (1 jour)</strong> : SEC-20, SEC-21, SEC-22, SEC-24.</li>
+      <li><strong>Phase 4 — post-déploiement</strong> : tester un scanner externe (Burp, OWASP ZAP), mettre en place un WAF (Cloudflare) et de l'observabilité (logs centralisés, alertes sur 401/429 anormaux).</li>
+    </ol>
+  </section>
+
+  <!-- ─── Table des matières ─── -->
+  <div class="toc">
+    <strong>Table des matières — 24 tickets</strong>
+    <ul>
+      <li><a href="#sec-1"  class="sev-crit">SEC-1 — Secrets exposés (.env dans Git)</a></li>
+      <li><a href="#sec-2"  class="sev-crit"><s>SEC-2 — /api/upload public</s> ✅</a></li>
+      <li><a href="#sec-3"  class="sev-crit"><s>SEC-3 — Premier inscrit = admin</s> ✅</a></li>
+      <li><a href="#sec-4"  class="sev-crit"><s>SEC-4 — MinIO bucket public</s> ✅</a></li>
+      <li><a href="#sec-5"  class="sev-high"><s>SEC-5 — Pas de rate limit register</s> ✅</a></li>
+      <li><a href="#sec-6"  class="sev-high">SEC-6 — Creds Docker triviaux</a></li>
+      <li><a href="#sec-7"  class="sev-high">SEC-7 — JWT cookie non-httpOnly</a></li>
+      <li><a href="#sec-8"  class="sev-med"><s>SEC-8 — JWT TTL 4h sans révocation</s> ✅</a></li>
+      <li><a href="#sec-9"  class="sev-high"><s>SEC-9 — Reset token sans expiration</s> ✅</a></li>
+      <li><a href="#sec-10" class="sev-med"><s>SEC-10 — Pas de rate limit reset password</s> ✅</a></li>
+      <li><a href="#sec-11" class="sev-crit">SEC-11 — Stripe webhook secret placeholder</a></li>
+      <li><a href="#sec-12" class="sev-high">SEC-12 — Docker conteneurs en root</a></li>
+      <li><a href="#sec-13" class="sev-crit"><s>SEC-13 — Messagerie userId client-side</s> ✅</a></li>
+      <li><a href="#sec-14" class="sev-crit">SEC-14 — /api/notify sans auth</a></li>
+      <li><a href="#sec-15" class="sev-high"><s>SEC-15 — Messagerie CORS wildcard défaut</s> ✅</a></li>
+      <li><a href="#sec-16" class="sev-high">SEC-16 — Next.js CVE middleware bypass</a></li>
+      <li><a href="#sec-17" class="sev-med">SEC-17 — tar/ws CVE messagerie</a></li>
+      <li><a href="#sec-18" class="sev-high">SEC-18 — 26 CVE Symfony</a></li>
+      <li><a href="#sec-19" class="sev-med"><s>SEC-19 — Security headers absents</s> ✅</a></li>
+      <li><a href="#sec-20" class="sev-med"><s>SEC-20 — DOMPurify autorise SVG</s> ✅</a></li>
+      <li><a href="#sec-21" class="sev-med"><s>SEC-21 — Pas de sanitization backend</s> ✅</a></li>
+      <li><a href="#sec-22" class="sev-low"><s>SEC-22 — /doc OpenAPI public</s> ✅</a></li>
+      <li><a href="#sec-23" class="sev-med">SEC-23 — IP_HASH_SALT placeholder</a></li>
+      <li><a href="#sec-24" class="sev-low">SEC-24 — Symfony profiler en dev</a></li>
+    </ul>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────── -->
+  <!-- CRITIQUE                                            -->
+  <!-- ─────────────────────────────────────────────────── -->
+  <h2>🔴 CRITIQUE — Corriger avant tout déploiement</h2>
+
+  <!-- SEC-1 -->
+  <div class="ticket crit" id="sec-1">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-1</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="category">Secrets management</span>
+      <span class="ticket-title">Secrets exposés : fichiers .env trackés dans Git</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichiers concernés</h4>
+      <span class="file">backend/.env</span> <span class="file">backend/.env.dev</span>
+      <span class="file">messagerie/.env</span> <span class="file">frontend/.env.local</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Les fichiers <code>.env</code> contiennent des secrets en clair et sont commit dans Git. Tout l'historique
+      git du projet contient maintenant ces secrets — y compris d'éventuels forks, miroirs et caches GitLab.
+      <ul>
+        <li><code>APP_SECRET</code> (Symfony, signe les CSRF/sessions)</li>
+        <li><code>JWT_PASSPHRASE</code> pour les clés privées JWT</li>
+        <li><code>MAILER_DSN</code> avec <strong>app password Gmail réel</strong> (<code>ayrwjiknectnokcf</code>)</li>
+        <li><code>STRIPE_SECRET_KEY</code> (test mais à rotate par principe)</li>
+        <li><code>ADMIN_PASSWORD = Woc@Admin2026!$</code></li>
+        <li>MinIO creds <code>admin / admin1234</code></li>
+      </ul>
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : (1) <code>git rm --cached backend/.env backend/.env.dev messagerie/.env frontend/.env.local</code>,
+      (2) ajouter chaque <code>.env*</code> au <code>.gitignore</code> racine,
+      (3) <strong>ROTATE TOUS LES SECRETS</strong> (changer APP_SECRET, JWT_PASSPHRASE, app password Gmail, mot de passe admin, MinIO),
+      (4) créer <code>.env.example</code> sans valeurs réelles,
+      (5) considérer <code>git filter-repo</code> pour purger l'historique si le repo va devenir public.
+    </div>
+  </div>
+
+  <!-- SEC-2 — FIXÉ -->
+  <div class="ticket crit fixed" id="sec-2">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-2</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Broken Access Control</span>
+      <span class="ticket-title">/api/upload accessible sans authentification</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/config/packages/security.yaml:28</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      La règle <code>{ path: ^/api/upload, roles: PUBLIC_ACCESS }</code> permet à n'importe qui d'uploader
+      des fichiers (images ou ZIP) sans aucune authentification. Vecteurs : spam d'images (coût stockage MinIO illimité),
+      hébergement de contenu illégal sur l'infra, upload de malware via ZIP (admis dans UploadConfig).
+      Le frontend envoie déjà le JWT, donc rendre l'endpoint authentifié ne casse rien côté UX.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      ligne 28 de <code>security.yaml</code> changée en
+      <code>{ path: ^/api/upload, roles: IS_AUTHENTICATED_FULLY }</code>.
+      Le frontend envoyait déjà le JWT (via <code>uploadService.ts</code>), aucune adaptation côté UI nécessaire.
+    </div>
+  </div>
+
+  <!-- SEC-3 — FIXÉ -->
+  <div class="ticket crit fixed" id="sec-3">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-3</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Privilege Escalation</span>
+      <span class="ticket-title">Premier inscrit devient ADMIN automatiquement</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/src/Controller/AuthenticationController.php:116-118</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>if (count($userRepository-&gt;findAll()) === 0) { $user-&gt;setRole(UserRole::ROLE_ADMIN); }</code>.
+      Au premier déploiement en prod, le premier qui s'inscrit (via <code>/api/register</code> public)
+      devient automatiquement administrateur. Combiné avec une absence de rate limit (SEC-5), un attaquant qui scanne
+      le domaine peut s'auto-élever en admin avant même que tu te connectes.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      (a) bloc <code>if (count(findAll()) === 0) { setRole(ADMIN); }</code> retiré de
+      <code>AuthenticationController::register</code>,
+      (b) gestion des admins recentralisée : <strong>seed initial via les fixtures</strong>
+      (<code>AppFixtures.php</code> crée déjà des comptes ROLE_ADMIN) et
+      <strong>modification de rôle via le backoffice</strong> (interface admin existante),
+      (c) test <code>testRegisterGrantsAdminRoleToFirstUser</code> renommé et asserte
+      maintenant <code>ROLE_USER</code> même avec une DB vide.
+    </div>
+  </div>
+
+  <!-- SEC-4 — FIXÉ (mitigation) -->
+  <div class="ticket crit fixed" id="sec-4">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-4</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="badge fixed">✅ MITIGÉ</span>
+      <span class="category">Misconfiguration</span>
+      <span class="ticket-title">MinIO bucket en lecture publique anonyme</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">docker-compose.yaml:155</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>mc anonymous set download local/uploads</code> rend le bucket "uploads" accessible publiquement.
+      Combiné avec SEC-2, n'importe qui peut uploader n'importe quoi et tout le monde peut le télécharger.
+      Le port 9000 MinIO est exposé sur l'host (<code>"9000:9000"</code>) donc directement joignable depuis Internet
+      si le serveur est ouvert.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué (mitigation)</strong> (commit feature-security) :
+      les clés S3 sont passées de <code>&lt;timestamp&gt;-&lt;filename&gt;</code> (énumérable) à
+      <code>&lt;timestamp&gt;-&lt;32 hex chars&gt;.&lt;ext&gt;</code> avec
+      <code>bin2hex(random_bytes(16))</code> dans <code>UploadController</code> (128 bits d'entropie).
+      Le bucket reste en <code>download anonymous</code> (autorise GET sur clé connue, pas LIST) — ce qui est
+      acceptable maintenant que les clés sont imprévisibles. Test mis à jour pour valider le format.
+      <br><br>
+      <strong>⚠️ Note</strong> : ce fix ferme le vecteur d'attaque par devinette (qui est le risque
+      réel), mais ne rend pas les uploads strictement privés. Pour une privacy totale (ex: posts privés
+      à l'avenir), il faudra un proxy authentifié <code>/api/uploads/{key}</code> — chantier dépendant de SEC-7
+      (cookie httpOnly nécessaire pour que <code>&lt;img src&gt;</code> reste compatible).
+    </div>
+  </div>
+
+  <!-- SEC-11 -->
+  <div class="ticket crit" id="sec-11">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-11</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="category">Misconfiguration</span>
+      <span class="ticket-title">STRIPE_WEBHOOK_SECRET non configuré (placeholder)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/.env:49,55</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>STRIPE_WEBHOOK_SECRET=whsec_REPLACE_ME</code>. La vérification de signature du webhook utilisera
+      ce placeholder. En prod, un attaquant peut envoyer un webhook fabriqué qui marque un Payment comme SUCCEEDED →
+      le mentor reçoit l'argent crédité dans la DB sans aucun paiement réel.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : configurer le vrai secret via <code>stripe listen</code> ou le dashboard Stripe.
+      Bonus : faire crasher Symfony au boot si la valeur contient "REPLACE_ME" (validation au démarrage de StripeService).
+    </div>
+  </div>
+
+  <!-- SEC-13 — FIXÉ -->
+  <div class="ticket crit fixed" id="sec-13">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-13</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Broken Access Control</span>
+      <span class="ticket-title">Messagerie : userId envoyé par le client (usurpation d'identité)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">messagerie/src/index.js:91</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>socket.data.userId = socket.handshake.auth?.userId;</code>. Le JWT est validé correctement (ligne 88),
+      mais le serveur écrase ensuite l'identité avec une valeur fournie par le client.
+      Un user authentifié peut s'attribuer le userId d'un autre :
+      <ul>
+        <li>Recevoir les notifications privées de cible (rejoint la room <code>user:&lt;target&gt;</code>)</li>
+        <li>Apparaître online à la place de la cible</li>
+        <li>Envoyer des messages au nom de la cible dans les conversations dont elle est membre
+          (le check participant en ligne 59-68 utilise <code>senderId = userId</code>)</li>
+      </ul>
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      (a) côté backend, création de <code>backend/src/EventListener/JWTCreatedListener.php</code>
+      enregistré dans <code>services.yaml</code> sur l'event <code>lexik_jwt_authentication.on_jwt_created</code>
+      pour injecter <code>userId</code> dans le payload JWT au moment de la création,
+      (b) côté messagerie (<code>messagerie/src/index.js</code>), remplacement de
+      <code>socket.data.userId = socket.handshake.auth?.userId</code> par
+      <code>socket.data.userId = decoded.userId</code> + check que le champ existe sinon rejet de la connexion.
+      Le userId n'est désormais plus jamais contrôlé par le client.
+    </div>
+  </div>
+
+  <!-- SEC-14 -->
+  <div class="ticket crit" id="sec-14">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-14</span>
+      <span class="badge crit">CRITIQUE</span>
+      <span class="category">Broken Access Control</span>
+      <span class="ticket-title">Messagerie /api/notify sans authentification</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">messagerie/src/index.js:19-52</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      L'endpoint HTTP POST <code>/api/notify</code> n'a aucune vérification (pas de header, pas de secret, pas de JWT).
+      Le backend Symfony l'appelle pour pusher des notifications, mais comme le port 8081 est exposé sur l'host
+      (<code>"8081:8081"</code>), n'importe qui sur Internet peut envoyer des notifications fake à n'importe quel
+      userId — vecteur de phishing puissant (faux message d'admin, fausse alerte 2FA, etc.).
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : ajouter un shared secret entre backend et messagerie, vérifié en début d'endpoint :
+      <code>if (req.headers['x-internal-secret'] !== process.env.INTERNAL_SECRET) return res.writeHead(401);</code>.
+      Et ne pas binder le port 8081 publiquement en prod (réseau Docker interne seulement, ou bind sur 127.0.0.1).
+      <br><br>
+      <strong>⏸️ Reporté</strong> : ce fix nécessite une nouvelle variable d'env partagée (modifications
+      <code>backend/.env</code>, <code>messagerie/.env</code>, <code>docker-compose.yaml</code>).
+      À traiter en même temps que SEC-1 (rotation globale des secrets) et SEC-11 (Stripe webhook secret)
+      lors du sprint "secrets prod".
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────── -->
+  <!-- HAUTE                                               -->
+  <!-- ─────────────────────────────────────────────────── -->
+  <h2>🟠 HAUTE — Corriger dans les jours qui suivent</h2>
+
+  <!-- SEC-5 — FIXÉ -->
+  <div class="ticket high fixed" id="sec-5">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-5</span>
+      <span class="badge high">HAUTE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Rate Limiting</span>
+      <span class="ticket-title">Pas de rate limiting sur /api/register</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/src/Controller/AuthenticationController.php:72-123</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Contrairement à <code>/api/authenticate</code>, register ne consomme aucun rate limiter.
+      Permet : spam massif de comptes (DoS DB, saturation Gmail SMTP via 2FA),
+      énumération d'emails (réponse 409 si existe vs 201 sinon),
+      bypass d'éventuelles règles de modération en créant des dizaines de comptes.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      limiteur <code>register_attempts</code> ajouté dans <code>config/packages/rate_limiter.yaml</code>
+      (sliding_window, 3 requêtes / heure par IP), injecté dans <code>register()</code> et consommé
+      en tout début de méthode (clé = IP cliente) → renvoie <code>429</code> au-delà du quota.
+      Couvert par le test <code>testRegisterFailsWhenRateLimitIsExceeded</code>.
+    </div>
+  </div>
+
+  <!-- SEC-6 -->
+  <div class="ticket high" id="sec-6">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-6</span>
+      <span class="badge high">HAUTE</span>
+      <span class="category">Secrets management</span>
+      <span class="ticket-title">Credentials MySQL/MinIO triviaux en dur dans docker-compose</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">docker-compose.yaml:115-143</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>MYSQL_ROOT_PASSWORD=root</code>, <code>MYSQL_PASSWORD=password</code>,
+      <code>MINIO_ROOT_PASSWORD=admin1234</code>. Le fichier docker-compose.yaml est commit.
+      Le port MySQL 3306 est exposé sur 0.0.0.0:3306 du host par défaut.
+      En prod tel quel = compromission totale (admin MySQL en root/root).
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : (1) <code>docker-compose.prod.yaml</code> séparé non-tracké pour les valeurs prod,
+      (2) utiliser des Docker secrets ou variables d'env d'un <code>.env.prod</code> non commit,
+      (3) ne pas exposer le port 3306 en prod (retirer la ligne <code>ports:</code> du service db),
+      (4) mots de passe générés via <code>openssl rand -base64 32</code>.
+    </div>
+  </div>
+
+  <!-- SEC-7 -->
+  <div class="ticket high" id="sec-7">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-7</span>
+      <span class="badge high">HAUTE</span>
+      <span class="category">Session Management</span>
+      <span class="ticket-title">JWT stocké dans cookie non-httpOnly (vulnérable XSS exfiltration)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">frontend/src/contexts/AuthContext.tsx:73</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>setCookie('token', token, { path: '/', maxAge: 14400 })</code> — aucune option
+      <code>httpOnly</code>, <code>secure</code>, <code>sameSite</code>.
+      Le JWT est lisible depuis <code>document.cookie</code>. Si une XSS est exploitée (même un bug obscur dans
+      une dépendance, un message non sanitizé, une iframe inject), le token est exfiltré en 1 ligne JS.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : faire poser le cookie côté <strong>backend</strong> dans la réponse
+      <code>/api/authenticate</code> et <code>/api/2fa/verify</code> via <code>Symfony\Component\HttpFoundation\Cookie</code>
+      avec <code>->withHttpOnly(true)->withSecure(true)->withSameSite('lax')</code>.
+      Le frontend ne lit plus le token directement : il appelle <code>/api/me</code> qui utilise le cookie.
+      Le pattern actuel de stockage <code>sessionStorage</code> du tempToken 2FA souffre du même problème — à migrer aussi.
+    </div>
+  </div>
+
+  <!-- SEC-9 — FIXÉ -->
+  <div class="ticket high fixed" id="sec-9">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-9</span>
+      <span class="badge high">HAUTE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Authentication</span>
+      <span class="ticket-title">Token de reset password sans expiration</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/src/Entity/User.php</span> <span class="file">backend/src/Service/PasswordResetService.php</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Le champ <code>resetToken</code> n'a pas de champ <code>resetTokenExpiresAt</code>.
+      Un UUID v4 est généré et reste valable indéfiniment tant qu'il n'est pas consommé.
+      Si l'email est intercepté (boîte mail compromise un mois plus tard, leak, etc.), le token marche encore.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      champ <code>resetTokenExpiresAt</code> ajouté à <code>User</code> (+ migration
+      <code>Version20260615120000</code>), mis à <code>now()+1h</code> dans <code>requestReset()</code>,
+      et vérifié dans <code>resetPassword()</code> : un token expiré est refusé <em>et purgé</em>
+      (token + expiration remis à null), sans changer le mot de passe.
+      Couvert par les tests <code>testResetPasswordWithExpiredTokenReturnsFalseAndClearsToken</code> et la mise à jour
+      du test de succès (810 tests au vert).
+    </div>
+  </div>
+
+  <!-- SEC-12 -->
+  <div class="ticket high" id="sec-12">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-12</span>
+      <span class="badge high">HAUTE</span>
+      <span class="category">Container Security</span>
+      <span class="ticket-title">Conteneurs Docker tournent en root</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichiers</h4>
+      <span class="file">backend/Dockerfile</span> <span class="file">backend/Dockerfile.prod</span>
+      <span class="file">frontend/Dockerfile</span> <span class="file">messagerie/Dockerfile</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Aucun <code>USER</code> non-root configuré dans les Dockerfile. Tous les conteneurs tournent en
+      UID 0. En cas d'exploit RCE (Symfony CVE, Node CVE, mediasoup, faille npm), l'attaquant a root dans
+      le container → tentatives d'évasion plus faciles.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : à la fin de chaque Dockerfile, créer et utiliser un user non-root.
+      Exemple backend : <code>USER www-data</code> (déjà créé pour les permissions var/cache).
+      Exemple Node : <code>RUN useradd -m -u 1001 appuser && chown -R appuser /app && USER appuser</code>.
+    </div>
+  </div>
+
+  <!-- SEC-15 — FIXÉ -->
+  <div class="ticket high fixed" id="sec-15">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-15</span>
+      <span class="badge high">HAUTE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Misconfiguration</span>
+      <span class="ticket-title">Messagerie : CORS wildcard par défaut</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">messagerie/src/index.js:14</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";</code>. Si la variable d'env est oubliée
+      en prod, CORS accepte toutes les origines → un site malicieux peut établir un Socket.IO
+      depuis le navigateur de la victime et écouter ses messages.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      le défaut wildcard <code>|| "*"</code> a été retiré dans <code>messagerie/src/index.js</code> ;
+      le serveur lève désormais <code>Error("CORS_ORIGIN is required...")</code> au boot si la variable n'est pas définie.
+      <code>CORS_ORIGIN</code> est déjà fourni dans <code>messagerie/.env</code>, <code>.env.exemple</code>
+      et <code>docker-compose.yaml</code>, donc aucun impact dev/CI/docker.
+    </div>
+  </div>
+
+  <!-- SEC-16 -->
+  <div class="ticket high" id="sec-16">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-16</span>
+      <span class="badge high">HAUTE</span>
+      <span class="category">Vulnerable Dependencies</span>
+      <span class="ticket-title">Dépendances Next.js vulnérables (middleware bypass)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichiers</h4>
+      <span class="file">frontend/package.json</span> <span class="file">backoffice/package.json</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>npm audit</code> remonte des CVE critiques sur Next.js :
+      <ul>
+        <li><strong>GHSA-267c-6grr-h53f</strong> Middleware bypass via segment-prefetch (App Router)</li>
+        <li><strong>GHSA-36qx-fr4f-26g5</strong> Middleware bypass Pages Router i18n</li>
+        <li><strong>GHSA-492v-c6pp-mqqv</strong> Middleware bypass dynamic route params</li>
+        <li><strong>GHSA-wfc6-r584-vfw7</strong> Cache poisoning React Server Components</li>
+        <li><strong>GHSA-qx2v-qp2m-jg93</strong> PostCSS XSS</li>
+      </ul>
+      Le backoffice utilise un middleware pour vérifier le <code>admin_token</code> : si le middleware peut être bypassé,
+      l'attaquant accède aux routes admin sans token.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : <code>npm audit fix --force</code> dans <code>frontend/</code> et <code>backoffice/</code>
+      pour passer à Next.js 15.5.18+. Faire tourner les tests Playwright/manual avant push.
+    </div>
+  </div>
+
+  <!-- SEC-18 -->
+  <div class="ticket high" id="sec-18">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-18</span>
+      <span class="badge high">HAUTE</span>
+      <span class="category">Vulnerable Dependencies</span>
+      <span class="ticket-title">Symfony : 26 CVE sur 10 packages (cache, mailer, mime, security-http, runtime…)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4>
+      <span class="file">backend/composer.lock</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>composer audit</code> remonte 26 advisories. Les plus impactantes :
+      <ul>
+        <li>CVE-2026-45073 SQL Injection symfony/cache PdoAdapter</li>
+        <li>CVE-2026-45075 HEAD request bypasse #[IsGranted]</li>
+        <li>CVE-2026-45067 SMTP/CRLF injection via Address</li>
+        <li>CVE-2026-46626 APP_DEBUG via web request (RCE potentiel)</li>
+        <li>CVE-2026-45077 Unauthenticated PHP deserialization MonologBridge</li>
+      </ul>
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : <code>composer update</code> dans backend/ pour aller à Symfony 7.4.12+ qui patche tout.
+      Re-run la suite de tests (déjà à 95 % de couverture donc rapide à valider).
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────── -->
+  <!-- MOYENNE                                             -->
+  <!-- ─────────────────────────────────────────────────── -->
+  <h2>🟡 MOYENNE — À traiter dans la roadmap sécurité</h2>
+
+  <!-- SEC-8 — FIXÉ -->
+  <div class="ticket med fixed" id="sec-8">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-8</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Session Management</span>
+      <span class="ticket-title">JWT TTL trop long (4h) sans révocation possible</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">backend/config/packages/lexik_jwt_authentication.yaml:5</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>token_ttl: 14400</code> (4h). En cas de vol du JWT, l'attaquant a 4h sans aucun moyen de révoquer.
+      L'industrie recommande 15-30 min avec refresh token. Le frontend rafraîchit déjà 30 min avant expiry.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      <code>token_ttl: 900</code> (15 min) dans <code>lexik_jwt_authentication.yaml</code> — conforme OWASP
+      (access token 5-15 min) et NIST SP 800-63B (AAL3 : inactivité ≤ 15 min).
+      Côté frontend, la marge de refresh (<code>AuthContext.tsx</code>) qui était à « 30 min avant expiry »
+      bloquait tout renouvellement pour un token de 15 min → remplacée par « 2 min avant expiry, ou à mi-vie » ;
+      le <code>maxAge</code> du cookie aligné sur 900s dans <code>AuthContext.tsx</code> et <code>authService.ts</code>.
+      Tests frontend verts (32) dont un test pré-cassé réparé.
+      <em>Optionnel non fait</em> : blacklist Redis via claim <code>jti</code> pour un logout server-side.
+    </div>
+  </div>
+
+  <!-- SEC-10 — FIXÉ -->
+  <div class="ticket med fixed" id="sec-10">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-10</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Rate Limiting</span>
+      <span class="ticket-title">Pas de rate limiting sur /api/reset-password</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">backend/src/Controller/AuthenticationController.php:423</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Spam d'emails à n'importe quelle adresse (harcèlement, phishing), saturation Gmail SMTP (compte bloqué).
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      limiteur <code>password_reset_attempts</code> ajouté dans <code>config/packages/rate_limiter.yaml</code>
+      (sliding_window, 3 requêtes / heure par IP), injecté dans <code>requestPasswordReset()</code> et consommé
+      en début de méthode (clé = IP cliente) → renvoie <code>429</code> au-delà du quota, sans envoyer d'email.
+      Couvert par le test <code>testRequestPasswordResetFailsWhenRateLimitIsExceeded</code>.
+    </div>
+  </div>
+
+  <!-- SEC-17 -->
+  <div class="ticket med" id="sec-17">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-17</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="category">Vulnerable Dependencies</span>
+      <span class="ticket-title">Messagerie : tar path traversal + ws memory disclosure</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">messagerie/package.json</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      GHSA-83g3-92jg-28cx tar Arbitrary File Read/Write,
+      GHSA-qffp-2rhf-9h96 tar Path Traversal,
+      GHSA-58qx-3vcg-4xpx ws Uninitialized memory disclosure (impacte Socket.IO).
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : <code>npm audit fix</code> dans messagerie/.
+    </div>
+  </div>
+
+  <!-- SEC-19 — FIXÉ -->
+  <div class="ticket med fixed" id="sec-19">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-19</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Security Headers</span>
+      <span class="ticket-title">Aucun security header configuré</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Pas de <code>Content-Security-Policy</code> (XSS), <code>Strict-Transport-Security</code> (HTTPS forcé),
+      <code>X-Frame-Options</code> (clickjacking), <code>X-Content-Type-Options nosniff</code> (MIME confusion),
+      <code>Referrer-Policy</code>.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      <ul>
+        <li><strong>Frontend + backoffice</strong> (<code>next.config.ts</code> → <code>headers()</code>) :
+          <code>Strict-Transport-Security</code>, <code>X-Frame-Options: DENY</code>,
+          <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy</code> et
+          <code>Permissions-Policy</code> (caméra/micro autorisés pour soi côté frontend pour les appels vidéo,
+          tout désactivé côté backoffice). Origines CSP dérivées des variables d'env.</li>
+        <li><strong>Backend</strong> : <code>SecurityHeadersSubscriber</code> sur <code>kernel.response</code>
+          (nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS en HTTPS,
+          CSP <code>frame-ancestors 'none'</code> — pas de default-src pour ne pas casser <code>/doc</code>).
+          Couvert par <code>SecurityHeadersSubscriberTest</code> (3 tests).</li>
+      </ul>
+      <em>À finaliser</em> : le CSP frontend/backoffice est posé en <code>Content-Security-Policy-Report-Only</code>
+      (déploiement OWASP-safe : observe les violations sans bloquer). À promouvoir en en-tête bloquant
+      <code>Content-Security-Policy</code> après vérification navigateur (DevTools → Console, aucun rapport de violation).
+    </div>
+  </div>
+
+  <!-- SEC-20 — FIXÉ -->
+  <div class="ticket med fixed" id="sec-20">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-20</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">XSS</span>
+      <span class="ticket-title">DOMPurify autorise SVG (surface XSS inutile)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">frontend/src/lib/sanitizeHtml.ts</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>USE_PROFILES: { html: true, svg: true, svgFilters: true }</code> — l'UI ne propose pas d'insérer
+      du SVG, mais le sanitizer en accepte. Surface d'attaque inutile (CVE historiques sur DOMPurify+SVG).
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      <code>USE_PROFILES: { html: true }</code> dans <code>frontend/src/lib/sanitizeHtml.ts</code>
+      (profils <code>svg</code> et <code>svgFilters</code> retirés). Couvert par <code>sanitizeHtml.test.ts</code>
+      (3 tests : HTML de base conservé, SVG retiré, scripts/handlers neutralisés).
+    </div>
+  </div>
+
+  <!-- SEC-21 — FIXÉ -->
+  <div class="ticket med fixed" id="sec-21">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-21</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">XSS</span>
+      <span class="ticket-title">Sanitization HTML uniquement côté frontend (pas de défense en profondeur)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Les posts/commentaires sont stockés en DB tels quels (HTML brut envoyé via l'API). La sanitization DOMPurify
+      est seulement au rendu. Un futur client mobile ou un export qui afficherait sans sanitiser =&gt; XSS stocké.
+      La modération texte bloque les insultes mais pas les balises <code>&lt;script&gt;</code>.
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      <code>symfony/html-sanitizer</code> (v7.4) ajouté via Composer. Sanitizer
+      <code>app.user_content</code> défini dans <code>config/packages/html_sanitizer.yaml</code> :
+      preset « éléments sûrs » W3C (<code>allow_safe_elements</code> + <code>allow_static_elements</code>) —
+      conserve la mise en forme et les médias réellement utilisés (<code>img</code>, <code>video</code>, liens, listes, code…)
+      mais retire <code>script</code>, <code>iframe</code>, <code>object/embed</code>, les handlers <code>on*</code> et les URLs <code>javascript:</code>.
+      Liens limités à <code>http/https/mailto</code>, <code>rel="noopener noreferrer"</code> forcé.
+      <em>(Cohérent avec le DOMPurify du frontend — ne casse pas les posts image/vidéo.)</em>
+      Injecté dans <code>PostController</code> (create / update / share) et <code>CommentController</code> (create / update),
+      appliqué <em>avant persistance</em> (et avant la modération texte). Couvert par 2 tests dédiés
+      (<code>testCreatePostSanitizesHtmlBeforePersist</code>, <code>testCreateCommentSanitizesHtmlBeforePersist</code>).
+      Suite backend complète au vert (809 tests).
+    </div>
+  </div>
+
+  <!-- SEC-23 -->
+  <div class="ticket med" id="sec-23">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-23</span>
+      <span class="badge med">MOYENNE</span>
+      <span class="category">Misconfiguration</span>
+      <span class="ticket-title">IP_HASH_SALT non configuré (valeur placeholder)</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">backend/.env:34</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      <code>IP_HASH_SALT=changeme_in_production_use_a_random_256bit_value</code>. Salt connu =
+      possible de retrouver les IP réelles par dictionnaire (4 milliards d'IPv4, faisable rapidement).
+      Compromet la pseudonymisation RGPD.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : <code>openssl rand -hex 32</code> pour générer un secret 256 bits.
+      Faire crasher Symfony au boot si la valeur contient "changeme".
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────── -->
+  <!-- BASSE                                               -->
+  <!-- ─────────────────────────────────────────────────── -->
+  <h2>🔵 BASSE — Hygiène / hardening</h2>
+
+  <!-- SEC-22 — FIXÉ -->
+  <div class="ticket low fixed" id="sec-22">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-22</span>
+      <span class="badge low">BASSE</span>
+      <span class="badge fixed">✅ FIXÉ</span>
+      <span class="category">Information Disclosure</span>
+      <span class="ticket-title">OpenAPI doc /doc et /doc.json publics</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">backend/config/packages/security.yaml:31,34</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Le schéma complet de l'API est exposé publiquement en prod → reconnaissance facilitée pour les attaquants
+      (toutes les routes, payloads, codes d'erreur sont documentés).
+    </div>
+    <div class="fix">
+      <strong>✅ Fix appliqué</strong> (commit feature-security) :
+      dans <code>config/packages/security.yaml</code>, les règles <code>^/doc</code> et <code>^/doc.json</code>
+      sont passées de <code>PUBLIC_ACCESS</code> à <code>ROLE_ADMIN</code>. Le schéma complet de l'API
+      n'est plus exposé publiquement.
+    </div>
+  </div>
+
+  <!-- SEC-24 -->
+  <div class="ticket low" id="sec-24">
+    <div class="ticket-header">
+      <span class="ticket-id">SEC-24</span>
+      <span class="badge low">BASSE</span>
+      <span class="category">Information Disclosure</span>
+      <span class="ticket-title">Symfony Profiler/WDT potentiellement exposé</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Fichier</h4><span class="file">backend/config/packages/security.yaml:15-16</span>
+    </div>
+    <div class="ticket-section">
+      <h4>Description</h4>
+      Si <code>APP_ENV=dev</code> en prod (oubli ou exploitation de CVE-2026-46626), tout l'historique des
+      requêtes est accessible : headers Authorization, queries SQL, payloads. Le firewall <code>dev</code> est
+      en <code>security: false</code>.
+    </div>
+    <div class="fix">
+      <strong>Fix</strong> : (1) <code>APP_ENV=prod</code> obligatoire en prod, (2) retirer <code>symfony/web-profiler-bundle</code>
+      des dépendances require-dev pour les images prod, (3) patch CVE-2026-46626 via SEC-18.
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      Audit réalisé sur la branche <code>feature-security</code> · 24 vulnérabilités identifiées<br>
+      Pour suivre la progression des fixes : voir les tickets SEC-1 à SEC-24 dans le système de tâches.<br>
+      <strong>⚠️ Ce rapport ne remplace pas un pentest professionnel</strong> — recommandé avant ouverture publique de grande envergure.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

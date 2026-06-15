@@ -67,6 +67,9 @@ class PasswordResetServiceTest extends TestCase
         $this->makeService($repo)->requestReset($cloud);
 
         $this->assertNotNull($cloud->getResetToken());
+        // SEC-9 : une date d'expiration future est posée
+        $this->assertNotNull($cloud->getResetTokenExpiresAt());
+        $this->assertGreaterThan(new \DateTimeImmutable(), $cloud->getResetTokenExpiresAt());
     }
 
     public function testRequestResetSendsEmail(): void
@@ -99,6 +102,7 @@ class PasswordResetServiceTest extends TestCase
     {
         $cloud = $this->buildUser();
         $cloud->setResetToken('valid-ff7-token');
+        $cloud->setResetTokenExpiresAt(new \DateTimeImmutable('+1 hour'));
 
         $repo = $this->createMock(UserRepository::class);
         $repo->method('findOneBy')->with(['resetToken' => 'valid-ff7-token'])->willReturn($cloud);
@@ -111,7 +115,31 @@ class PasswordResetServiceTest extends TestCase
 
         $this->assertTrue($result);
         $this->assertNull($cloud->getResetToken());
+        $this->assertNull($cloud->getResetTokenExpiresAt());
         $this->assertSame('new-hashed-password', $cloud->getPassword());
+    }
+
+    public function testResetPasswordWithExpiredTokenReturnsFalseAndClearsToken(): void
+    {
+        // SEC-9 : un token expiré est refusé et purgé, le mot de passe n'est pas changé.
+        $cloud = $this->buildUser();
+        $cloud->setResetToken('expired-ff7-token');
+        $cloud->setResetTokenExpiresAt(new \DateTimeImmutable('-1 minute'));
+        $originalPassword = $cloud->getPassword();
+
+        $repo = $this->createMock(UserRepository::class);
+        $repo->method('findOneBy')->with(['resetToken' => 'expired-ff7-token'])->willReturn($cloud);
+        $repo->expects($this->once())->method('save')->with($cloud);
+
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->expects($this->never())->method('hashPassword');
+
+        $result = $this->makeService($repo)->resetPassword('expired-ff7-token', 'Buster$w0rd!2024', $hasher);
+
+        $this->assertFalse($result);
+        $this->assertNull($cloud->getResetToken());
+        $this->assertNull($cloud->getResetTokenExpiresAt());
+        $this->assertSame($originalPassword, $cloud->getPassword());
     }
 
     public function testResetPasswordWithInvalidTokenReturnsFalse(): void

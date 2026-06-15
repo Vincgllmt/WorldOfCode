@@ -15,8 +15,8 @@ class TechWatchItemMapper
         $dto->description = $item->getDescription();
         $dto->url = $item->getUrl();
         $dto->imageUrl = $item->getImageUrl();
-        $dto->publishedAt = $item->getPublishedAt()?->format('Y-m-d H:i:s');
-        $dto->fetchedAt = $item->getFetchedAt()->format('Y-m-d H:i:s');
+        $dto->publishedAt = $item->getPublishedAt()?->format('c');
+        $dto->fetchedAt = $item->getFetchedAt()->format('c');
         $dto->sourceName = $item->getSource()->getName();
         return $dto;
     }
