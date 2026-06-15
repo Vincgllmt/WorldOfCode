@@ -29,6 +29,14 @@ final class ChallengeController extends AbstractController
         );
         $solvedIds = array_map('intval', $solvedIds);
 
+        // Taux de réussite par défi = soumissions réussies / total des soumissions.
+        $rates = $connection->fetchAllKeyValue(
+            "SELECT challenge_id,
+                    ROUND(100 * SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) / COUNT(*)) AS rate
+             FROM submission
+             GROUP BY challenge_id",
+        );
+
         $data = array_map(static fn (Challenge $c): array => [
             'id' => $c->getId(),
             'slug' => $c->getSlug(),
@@ -36,6 +44,8 @@ final class ChallengeController extends AbstractController
             'difficulty' => $c->getDifficulty(),
             'languages' => $c->getLanguages(),
             'maxScore' => $c->getMaxScore(),
+            'image' => $c->getImage(),
+            'successRate' => (int) round((float) ($rates[$c->getId()] ?? 0)),
             'solved' => in_array($c->getId(), $solvedIds, true),
         ], $em->getRepository(Challenge::class)->findBy([], ['id' => 'ASC']));
 
@@ -69,6 +79,7 @@ final class ChallengeController extends AbstractController
             'difficulty' => $challenge->getDifficulty(),
             'languages' => $challenge->getLanguages(),
             'maxScore' => $challenge->getMaxScore(),
+            'image' => $challenge->getImage(),
             'publicTests' => $publicTests,
         ]);
     }

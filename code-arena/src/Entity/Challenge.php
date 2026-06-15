@@ -36,6 +36,10 @@ class Challenge
     #[ORM\Column(name: 'max_score')]
     private int $maxScore = 100;
 
+    // URL de couverture optionnelle, affichée sur la carte du défi.
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $image = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -133,6 +137,18 @@ class Challenge
     public function setMaxScore(int $maxScore): self
     {
         $this->maxScore = $maxScore;
+
+        return $this;
+    }
+
+    public function getImage(): ?string
+    {
+        return $this->image;
+    }
+
+    public function setImage(?string $image): self
+    {
+        $this->image = $image;
 
         return $this;
     }

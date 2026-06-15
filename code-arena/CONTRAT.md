@@ -27,6 +27,7 @@ avec scoring, leaderboard et badges.
 | difficulty | VARCHAR(20) | `easy` / `medium` / `hard` |
 | languages | JSON | langages autorisés, ex. `["javascript","python"]` |
 | max_score | INT | défaut 100 |
+| image | VARCHAR(255) | URL de couverture (optionnelle, affichée sur la carte) |
 | created_at | DATETIME | |
 | updated_at | DATETIME | |
 
@@ -92,8 +93,8 @@ Le leaderboard et les badges renvoient des `userId` ; le front résout pseudo/av
 
 | méthode | route | corps / réponse |
 |---|---|---|
-| GET | `/api/arena/challenges` | `[{id, slug, title, difficulty, languages, maxScore, solved}]` |
-| GET | `/api/arena/challenges/{slug}` | `{id, slug, title, statement, difficulty, languages, maxScore, publicTests:[{stdin, expectedOutput}]}` |
+| GET | `/api/arena/challenges` | `[{id, slug, title, difficulty, languages, maxScore, image, solved}]` |
+| GET | `/api/arena/challenges/{slug}` | `{id, slug, title, statement, difficulty, languages, maxScore, image, publicTests:[{stdin, expectedOutput}]}` |
 | POST | `/api/arena/challenges/{slug}/submit` | body `{language, code}` → `{submissionId, status, score, testsPassed, testsTotal, badgeAwarded}` *(stub au début)* |
 | GET | `/api/arena/submissions/{id}` | `{id, challengeSlug, language, status, score, testsPassed, testsTotal, createdAt}` |
 | GET | `/api/arena/leaderboard` | `[{rank, userId, totalScore, badgesCount}]` |
