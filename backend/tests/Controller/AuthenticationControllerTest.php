@@ -99,6 +99,28 @@ class AuthenticationControllerTest extends TestCase
     }
 
     /**
+     * Limiteur pour register() : la clé est l'IP cliente ($request->getClientIp()).
+     * Avec new Request() sans server params, getClientIp() retourne null → clé = null.
+     */
+    private function makeRegisterRateLimiter(bool $accepted = true): RateLimiterFactory
+    {
+        $storage = new InMemoryStorage();
+        $factory = new RateLimiterFactory([
+            'id'     => 'register_attempts',
+            'policy' => 'token_bucket',
+            'limit'  => $accepted ? 100000 : 1,
+            'rate'   => ['interval' => '1 hour'],
+        ], $storage);
+
+        if (!$accepted) {
+            // Épuise le quota sur la clé utilisée par register() (IP null).
+            $factory->create(null)->consume(1);
+        }
+
+        return $factory;
+    }
+
+    /**
      * Crée un container mocké qui expose le TokenStorage avec un utilisateur donné.
      * has('serializer') retourne false pour que json() utilise le fallback JsonResponse.
      */
@@ -175,14 +197,15 @@ class AuthenticationControllerTest extends TestCase
         $repo = $this->createMock(UserRepository::class);
         $repo->expects($this->once())->method('findByUsernameInsensitive')->willReturn(null);
         $repo->expects($this->once())->method('findOneBy')->willReturn(null);
-        $repo->expects($this->once())->method('findAll')->willReturn([new User()]);
+        // SEC-3 (fixé) : findAll() n'est plus appelé dans register() — l'auto-élévation a été retirée.
+        $repo->expects($this->never())->method('findAll');
         $repo->expects($this->once())->method('save')->willReturnCallback(function (User $user): void {
             $idProp = new \ReflectionProperty(User::class, 'id');
             $idProp->setValue($user, 1);
             $user->onCreate();
         });
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(201, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -192,26 +215,29 @@ class AuthenticationControllerTest extends TestCase
         $this->assertSame('https://aperture.lab/chell.png', $payload['avatarUrl']);
     }
 
-    public function testRegisterGrantsAdminRoleToFirstUser(): void
+    public function testRegisterAlwaysCreatesRegularUserEvenWhenDatabaseIsEmpty(): void
     {
+        // SEC-3 (fixé) : l'auto-élévation du premier inscrit en ADMIN a été retirée.
+        // Même si la base est vide, /api/register ne doit JAMAIS créer un admin.
+        // Pour créer un admin, utiliser la commande php bin/console app:create-admin.
         $request = $this->makeRegisterRequest();
         $hasher  = $this->makePasswordHasher();
 
         $repo = $this->createMock(UserRepository::class);
         $repo->method('findByUsernameInsensitive')->willReturn(null);
         $repo->method('findOneBy')->willReturn(null);
-        $repo->method('findAll')->willReturn([]); // aucun utilisateur → premier → ROLE_ADMIN
+        // findAll() ne doit plus être appelé du tout ; on ne le configure plus.
         $repo->method('save')->willReturnCallback(function (User $user): void {
             $idProp = new \ReflectionProperty(User::class, 'id');
             $idProp->setValue($user, 1);
             $user->onCreate();
         });
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(201, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertSame('ROLE_ADMIN', $payload['role']);
+        $this->assertSame('ROLE_USER', $payload['role']);
     }
 
     public function testRegisterFailsWhenRequiredFieldsAreMissing(): void
@@ -220,7 +246,7 @@ class AuthenticationControllerTest extends TestCase
         $hasher  = $this->makePasswordHasher();
         $repo    = $this->createMock(UserRepository::class);
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -231,7 +257,7 @@ class AuthenticationControllerTest extends TestCase
         $hasher  = $this->makePasswordHasher();
         $repo    = $this->createMock(UserRepository::class);
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(400, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -247,7 +273,7 @@ class AuthenticationControllerTest extends TestCase
         $repo = $this->createMock(UserRepository::class);
         $repo->method('findByUsernameInsensitive')->willReturn(new User()); // username pris
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(409, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -264,7 +290,7 @@ class AuthenticationControllerTest extends TestCase
         $repo->method('findByUsernameInsensitive')->willReturn(null);
         $repo->method('findOneBy')->willReturn(new User()); // email pris
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(409, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -280,9 +306,24 @@ class AuthenticationControllerTest extends TestCase
         $repo->method('findByUsernameInsensitive')->willReturn(null);
         $repo->method('findOneBy')->willReturn(null);
 
-        $response = $this->controller->register($request, $hasher, $repo);
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter());
 
         $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testRegisterFailsWhenRateLimitIsExceeded(): void
+    {
+        // SEC-5 : /api/register est désormais protégé par un rate limiter (3/h par IP).
+        $request = $this->makeRegisterRequest();
+        $hasher  = $this->makePasswordHasher();
+
+        // Le repo ne doit jamais être touché : le rejet se fait avant toute logique.
+        $repo = $this->createMock(UserRepository::class);
+        $repo->expects($this->never())->method('save');
+
+        $response = $this->controller->register($request, $hasher, $repo, $this->makeRegisterRateLimiter(false));
+
+        $this->assertSame(429, $response->getStatusCode());
     }
 
     // ======================================================================
@@ -547,7 +588,7 @@ class AuthenticationControllerTest extends TestCase
         $resetService = $this->createMock(PasswordResetService::class);
         $resetService->expects($this->once())->method('requestReset')->with($user);
 
-        $response = $this->controller->requestPasswordReset($request, $repo, $resetService);
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter());
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -565,7 +606,7 @@ class AuthenticationControllerTest extends TestCase
         $resetService = $this->createMock(PasswordResetService::class);
         $resetService->expects($this->never())->method('requestReset');
 
-        $response = $this->controller->requestPasswordReset($request, $repo, $resetService);
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter());
 
         $this->assertSame(200, $response->getStatusCode());
     }
@@ -576,7 +617,7 @@ class AuthenticationControllerTest extends TestCase
         $repo         = $this->createMock(UserRepository::class);
         $resetService = $this->createMock(PasswordResetService::class);
 
-        $response = $this->controller->requestPasswordReset($request, $repo, $resetService);
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter());
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -587,7 +628,7 @@ class AuthenticationControllerTest extends TestCase
         $repo         = $this->createMock(UserRepository::class);
         $resetService = $this->createMock(PasswordResetService::class);
 
-        $response = $this->controller->requestPasswordReset($request, $repo, $resetService);
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter());
 
         $this->assertSame(400, $response->getStatusCode());
     }
@@ -604,9 +645,24 @@ class AuthenticationControllerTest extends TestCase
         $resetService->method('requestReset')
             ->willThrowException($this->createMock(TransportExceptionInterface::class));
 
-        $response = $this->controller->requestPasswordReset($request, $repo, $resetService);
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter());
 
         $this->assertSame(500, $response->getStatusCode());
+    }
+
+    public function testRequestPasswordResetFailsWhenRateLimitIsExceeded(): void
+    {
+        // SEC-10 : /api/reset-password/request est désormais protégé (3/h par IP).
+        $request = new Request(content: json_encode(['email' => self::CHELL_EMAIL], JSON_THROW_ON_ERROR));
+
+        // Aucun email ne doit partir quand le quota est dépassé.
+        $repo         = $this->createMock(UserRepository::class);
+        $resetService = $this->createMock(PasswordResetService::class);
+        $resetService->expects($this->never())->method('requestReset');
+
+        $response = $this->controller->requestPasswordReset($request, $repo, $resetService, $this->makeRegisterRateLimiter(false));
+
+        $this->assertSame(429, $response->getStatusCode());
     }
 
     // ======================================================================

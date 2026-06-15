@@ -132,7 +132,7 @@ describe('authService', () => {
 
       const result = await verify2FA('temp-token', '123456')
 
-      expect(setCookie).toHaveBeenCalledWith('token', 'real-jwt-token', { path: '/', maxAge: 3600 })
+      expect(setCookie).toHaveBeenCalledWith('token', 'real-jwt-token', { path: '/', maxAge: 900 })
       expect(result).toEqual({ ...userData, token: 'real-jwt-token' })
       expect(mockFetch).toHaveBeenCalledTimes(2)
     })

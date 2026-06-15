@@ -30,6 +30,12 @@ services:
     tags:
       - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_authenticated, method: onJWTAuthenticated }
 
+  # SEC-13 : injecte userId dans le payload JWT pour que le service messagerie
+  # n'ait pas à se fier au userId envoyé par le client (usurpation d'identité).
+  App\EventListener\JWTCreatedListener:
+    tags:
+      - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_created, method: onJWTCreated }
+
   App\Service\Storage\S3Storage:
     arguments:
       $endpoint: "%env(MINIO_ENDPOINT)%"

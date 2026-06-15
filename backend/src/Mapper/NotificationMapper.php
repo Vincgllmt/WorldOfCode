@@ -15,7 +15,7 @@ class NotificationMapper
         $dto->message = $notification->getMessage();
         $dto->relatedEntityId = $notification->getRelatedEntityId();
         $dto->isRead = $notification->getIsRead();
-        $dto->createdAt = $notification->getCreatedAt()->format('Y-m-d H:i:s');
+        $dto->createdAt = $notification->getCreatedAt()->format('c');
         $dto->senderId = $notification->getSender()->getId();
         $dto->senderUsername = $notification->getSender()->getUsername();
 

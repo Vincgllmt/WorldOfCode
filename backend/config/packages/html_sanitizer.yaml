@@ -1,0 +1,19 @@
+# SEC-21 : sanitization HTML côté backend (défense en profondeur).
+# On utilise le preset "éléments sûrs" du standard W3C Sanitizer : il conserve la mise
+# en forme et les médias réellement utilisés (img, video, liens, listes, code, titres…)
+# tout en retirant systématiquement script, iframe, object/embed, les handlers on* et
+# les URLs javascript:. Cohérent avec le DOMPurify du frontend.
+framework:
+    html_sanitizer:
+        sanitizers:
+            app.user_content:
+                allow_safe_elements: true
+                allow_static_elements: true
+                # seuls les liens http/https/mailto sont conservés (bloque javascript:, data:…)
+                allowed_link_schemes: ['http', 'https', 'mailto']
+                # ajoute rel="noopener noreferrer" sur tous les liens
+                force_attributes:
+                    a:
+                        rel: 'noopener noreferrer'
+                # garde-fou anti-DoS sur les entrées géantes
+                max_input_length: 20000

@@ -11,7 +11,10 @@ dotenv.config();
 await initMediaSoupWorker();
 
 const PORT = process.env.PORT || 8081;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+if (!process.env.CORS_ORIGIN) {
+    throw new Error("CORS_ORIGIN is required (no wildcard default). Set it to the allowed origin.");
+}
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
 
 const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
@@ -87,8 +90,16 @@ io.use((socket, next) => {
 
         const decoded = jwt.verify(token, publicKey, { algorithms: ["RS256"] });
 
+        // SEC-13 (fixé) : le userId est extrait DU JWT signé par le backend
+        // (via JWTCreatedListener Symfony) et non plus de socket.handshake.auth.
+        // Cette dernière source était envoyée par le client = usurpation possible.
         socket.data.user = decoded;
-        socket.data.userId = socket.handshake.auth?.userId;
+        socket.data.userId = decoded.userId;
+
+        if (!socket.data.userId) {
+            console.error("❌ JWT ne contient pas userId (JWTCreatedListener manquant côté backend ?)");
+            return next(new Error("Invalid token payload"));
+        }
 
         console.log(`✅ JWT valide pour ${decoded.username} (id: ${socket.data.userId})`);
 

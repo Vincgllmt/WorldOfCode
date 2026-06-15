@@ -25,13 +25,15 @@ security:
     - { path: ^/api/register, roles: PUBLIC_ACCESS }
     - { path: ^/api/authenticate, roles: PUBLIC_ACCESS }
     - { path: ^/api/2fa/verify, roles: PUBLIC_ACCESS }
-    - { path: ^/api/upload, roles: PUBLIC_ACCESS }
+    # SEC-2 (fixé) : l'upload requiert maintenant une authentification.
+    - { path: ^/api/upload, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/user, roles: IS_AUTHENTICATED_FULLY }
-    - { path: ^/doc, roles: PUBLIC_ACCESS }
+    # SEC-22 (fixé) : la doc OpenAPI n'est plus publique (reconnaissance d'API).
+    - { path: ^/doc, roles: ROLE_ADMIN }
     - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }
     - { path: ^/api/payment/webhook, roles: PUBLIC_ACCESS }
-    - { path: ^/doc.json, roles: PUBLIC_ACCESS }
+    - { path: ^/doc.json, roles: ROLE_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

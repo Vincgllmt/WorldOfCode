@@ -83,7 +83,12 @@ class UploadController extends AbstractController
             $originalName  = pathinfo($originalName, PATHINFO_FILENAME) . '.webp';
         }
 
-        $key = time() . '-' . $originalName;
+        // SEC-4 (fixé) : clé non-devinable (UUID v4) au lieu de <timestamp>-<filename>
+        // qui était énumérable. Le bucket MinIO étant en `download anonymous` (lecture
+        // publique sur clé connue uniquement), une clé imprévisible (122 bits d'entropie)
+        // ferme le vecteur d'attaque par devinette/scan.
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION) ?: 'bin';
+        $key = sprintf('%d-%s.%s', time(), bin2hex(random_bytes(16)), strtolower($extension));
         $url = $s3->upload($key, $localPath, $finalMime);
 
         // Nettoyage du fichier temporaire de compression

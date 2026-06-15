@@ -21,9 +21,9 @@ class MessageMapper
         $dto->id = $msg->getId();
         $dto->body = $msg->getBody();
         $dto->type = $msg->getType();
-        $dto->createdAt = $msg->getCreatedAt()->format('Y-m-d H:i:s');
-        $dto->editedAt = $msg->getEditedAt()?->format('Y-m-d H:i:s');
-        $dto->deletedAt = $msg->getDeletedAt()?->format('Y-m-d H:i:s');
+        $dto->createdAt = $msg->getCreatedAt()->format('c');
+        $dto->editedAt = $msg->getEditedAt()?->format('c');
+        $dto->deletedAt = $msg->getDeletedAt()?->format('c');
         $dto->sender = [
             'id' => (string) $msg->getSender()->getId(),
             'username' => $msg->getSender()->getUsername(),
