@@ -1,5 +1,6 @@
 deploy:elasticsearch:
   stage: deploy-services
+  needs: []
   environment:
     name: infra
   variables:

@@ -12,6 +12,7 @@ variables:
 # ─── Déploiement de l'opérateur k6 + scripts (une seule fois) ────────────────
 deploy:k6:
   stage: deploy-monitoring
+  needs: []
   when: manual
   allow_failure: false
   script:

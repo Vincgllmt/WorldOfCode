@@ -56,6 +56,9 @@ build:frontend:
 
 deploy:frontend:dev:
   stage: deploy-apps
+  needs:
+    - job: "build:frontend"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: dev
@@ -75,6 +78,9 @@ deploy:frontend:dev:
 
 deploy:frontend:prod:
   stage: deploy-apps
+  needs:
+    - job: "build:frontend"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: production
