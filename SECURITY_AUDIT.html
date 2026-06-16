@@ -85,7 +85,7 @@
   <h1>🔒 WOC — Audit de sécurité</h1>
   <p class="subtitle">
     Branche <code>feature-security</code> · Audit réalisé avant ouverture publique de la plateforme<br>
-    Date : 2026-05-21 · 24 vulnérabilités identifiées · <strong style="color:#16a34a;">14 corrigées ✅</strong> · 10 restantes
+    Date : 2026-05-21 · 24 identifiées · <strong style="color:#16a34a;">14 corrigées ✅</strong> · 9 restantes · <span style="color:#6b7280;">1 écartée (SEC-6, dev only)</span>
   </p>
 
   <div class="legend">
@@ -97,11 +97,22 @@
     <em>⚠️ SEC-14 est corrigé côté code mais <strong>nécessite une action infra</strong> (secret <code>INTERNAL_SECRET</code>
     à créer dans Vault + câbler dans les charts Helm backend &amp; messagerie) — voir le détail dans le ticket SEC-14.
     Sans ça, backend et messagerie crashent au boot.</em>
+    <br><br>
+    <strong style="color:#0ea5e9;">📦 Contexte d'infra (important pour lire cet audit).</strong>
+    La <strong>prod tourne sur Kubernetes</strong> (charts <code>cluster/</code>) avec les secrets dans <strong>Vault</strong>.
+    Le fichier <code>docker-compose.yaml</code> sert <strong>uniquement au dev local</strong> — il n'est référencé ni dans
+    la CI, ni dans <code>cluster/</code>, ni dans <code>ansible/</code>. Les findings qui ne concernaient que
+    <code>docker-compose</code> sont donc <strong>écartés</strong> (cf. SEC-6). En revanche, ce qui touche les
+    <strong>images <code>Dockerfile.prod</code></strong> ou les <strong>déploiements k8s</strong> reste valide
+    (cf. SEC-12). Vault n'injecte que <code>DATABASE_URL</code>, <code>MINIO_SECRET_KEY</code>,
+    <code>ELASTICSEARCH_PASSWORD</code> : les autres secrets (<code>APP_SECRET</code>, <code>JWT_PASSPHRASE</code>,
+    <code>MAILER_DSN</code>, <code>STRIPE_WEBHOOK_SECRET</code>, <code>IP_HASH_SALT</code>) viennent encore du
+    <code>.env</code> commité (cf. SEC-1, SEC-11, SEC-23).
   </div>
 
   <!-- ─── Résumé chiffré ─── -->
   <div class="summary">
-    <div class="summary-card crit"><div class="count">3 / 7</div><div class="label">CRITIQUE restantes</div></div>
+    <div class="summary-card crit"><div class="count">2 / 7</div><div class="label">CRITIQUE restantes</div></div>
     <div class="summary-card high"><div class="count">9</div><div class="label">HAUTE</div></div>
     <div class="summary-card med"><div class="count">7</div><div class="label">MOYENNE</div></div>
     <div class="summary-card low"><div class="count">2</div><div class="label">BASSE</div></div>
@@ -127,13 +138,13 @@
       <li><a href="#sec-3"  class="sev-crit"><s>SEC-3 — Premier inscrit = admin</s> ✅</a></li>
       <li><a href="#sec-4"  class="sev-crit"><s>SEC-4 — MinIO bucket public</s> ✅</a></li>
       <li><a href="#sec-5"  class="sev-high"><s>SEC-5 — Pas de rate limit register</s> ✅</a></li>
-      <li><a href="#sec-6"  class="sev-high">SEC-6 — Creds Docker triviaux</a></li>
+      <li><a href="#sec-6"  style="color:#6b7280;"><s>SEC-6 — Creds Docker triviaux</s> ❌ <small>(dev only, écarté)</small></a></li>
       <li><a href="#sec-7"  class="sev-high">SEC-7 — JWT cookie non-httpOnly</a></li>
       <li><a href="#sec-8"  class="sev-med"><s>SEC-8 — JWT TTL 4h sans révocation</s> ✅</a></li>
       <li><a href="#sec-9"  class="sev-high"><s>SEC-9 — Reset token sans expiration</s> ✅</a></li>
       <li><a href="#sec-10" class="sev-med"><s>SEC-10 — Pas de rate limit reset password</s> ✅</a></li>
       <li><a href="#sec-11" class="sev-crit">SEC-11 — Stripe webhook secret placeholder</a></li>
-      <li><a href="#sec-12" class="sev-high">SEC-12 — Docker conteneurs en root</a></li>
+      <li><a href="#sec-12" class="sev-high">SEC-12 — Pods k8s en root (images sans USER)</a></li>
       <li><a href="#sec-13" class="sev-crit"><s>SEC-13 — Messagerie userId client-side</s> ✅</a></li>
       <li><a href="#sec-14" class="sev-crit"><s>SEC-14 — /api/notify sans auth</s> ✅ <small>(action infra requise)</small></a></li>
       <li><a href="#sec-15" class="sev-high"><s>SEC-15 — Messagerie CORS wildcard défaut</s> ✅</a></li>
@@ -145,7 +156,7 @@
       <li><a href="#sec-21" class="sev-med"><s>SEC-21 — Pas de sanitization backend</s> ✅</a></li>
       <li><a href="#sec-22" class="sev-low"><s>SEC-22 — /doc OpenAPI public</s> ✅</a></li>
       <li><a href="#sec-23" class="sev-med">SEC-23 — IP_HASH_SALT placeholder</a></li>
-      <li><a href="#sec-24" class="sev-low">SEC-24 — Symfony profiler en dev</a></li>
+      <li><a href="#sec-24" class="sev-low">SEC-24 — Symfony profiler ⚠️ <small>(mitigé : APP_ENV=prod)</small></a></li>
     </ul>
   </div>
 
@@ -179,6 +190,14 @@
         <li><code>ADMIN_PASSWORD = Woc@Admin2026!$</code></li>
         <li>MinIO creds <code>admin / admin1234</code></li>
       </ul>
+    </div>
+    <div class="ticket-section">
+      <h4>Précision prod (k8s)</h4>
+      En prod, Vault <strong>écrase</strong> une partie de ces valeurs (<code>DATABASE_URL</code>,
+      <code>MINIO_SECRET_KEY</code>, <code>ELASTICSEARCH_PASSWORD</code>) → pour celles-ci le risque est surtout
+      l'<em>historique git</em>. En revanche <strong>ne sont PAS dans Vault</strong> (donc utilisés en prod depuis le
+      <code>.env</code> commité) : <code>APP_SECRET</code>, <code>JWT_PASSPHRASE</code>, <code>MAILER_DSN</code> (Gmail).
+      Ceux-là sont à la fois <strong>leakés ET actifs en prod</strong> → rotation prioritaire + à basculer dans Vault.
     </div>
     <div class="fix">
       <strong>Fix</strong> : (1) <code>git rm --cached backend/.env backend/.env.dev messagerie/.env frontend/.env.local</code>,
@@ -302,9 +321,17 @@
       ce placeholder. En prod, un attaquant peut envoyer un webhook fabriqué qui marque un Payment comme SUCCEEDED →
       le mentor reçoit l'argent crédité dans la DB sans aucun paiement réel.
     </div>
+    <div class="ticket-section">
+      <h4>Précision prod (k8s)</h4>
+      <code>STRIPE_WEBHOOK_SECRET</code> <strong>n'est pas injecté par Vault</strong> (Vault backend ne fournit que
+      DB/MinIO/Elasticsearch) → en prod le placeholder <code>whsec_REPLACE_ME</code> est <strong>réellement utilisé</strong>.
+      Le risque est donc concret, pas théorique.
+    </div>
     <div class="fix">
-      <strong>Fix</strong> : configurer le vrai secret via <code>stripe listen</code> ou le dashboard Stripe.
-      Bonus : faire crasher Symfony au boot si la valeur contient "REPLACE_ME" (validation au démarrage de StripeService).
+      <strong>Fix</strong> : (1) générer le vrai secret (dashboard Stripe / <code>stripe listen</code>),
+      (2) l'ajouter dans Vault <code>secret/data/production/backend</code> + câbler dans
+      <code>cluster/backend/templates/deployment.yaml</code> (<code>export STRIPE_WEBHOOK_SECRET=…</code>, comme SEC-14),
+      (3) faire crasher Symfony au boot si la valeur contient "REPLACE_ME". <em>(Action infra Vault.)</em>
     </div>
   </div>
 
@@ -439,30 +466,31 @@
     </div>
   </div>
 
-  <!-- SEC-6 -->
-  <div class="ticket high" id="sec-6">
+  <!-- SEC-6 — ÉCARTÉ (dev only) -->
+  <div class="ticket high dismissed" id="sec-6" style="opacity:.7;">
     <div class="ticket-header">
       <span class="ticket-id">SEC-6</span>
-      <span class="badge high">HAUTE</span>
+      <span class="badge" style="background:#6b7280;color:#fff;">❌ NON APPLICABLE</span>
       <span class="category">Secrets management</span>
       <span class="ticket-title">Credentials MySQL/MinIO triviaux en dur dans docker-compose</span>
     </div>
     <div class="ticket-section">
       <h4>Fichier</h4>
-      <span class="file">docker-compose.yaml:115-143</span>
+      <span class="file">docker-compose.yaml</span>
     </div>
     <div class="ticket-section">
-      <h4>Description</h4>
-      <code>MYSQL_ROOT_PASSWORD=root</code>, <code>MYSQL_PASSWORD=password</code>,
-      <code>MINIO_ROOT_PASSWORD=admin1234</code>. Le fichier docker-compose.yaml est commit.
-      Le port MySQL 3306 est exposé sur 0.0.0.0:3306 du host par défaut.
-      En prod tel quel = compromission totale (admin MySQL en root/root).
+      <h4>Pourquoi écarté</h4>
+      <code>docker-compose.yaml</code> sert <strong>uniquement à l'environnement de dev local</strong> — il n'est
+      référencé nulle part dans la CI GitLab, les charts <code>cluster/</code> ni <code>ansible/</code>.
+      <strong>La prod tourne sur Kubernetes</strong>, où les credentials MySQL/MinIO proviennent de
+      <strong>Vault</strong> (cf. <code>cluster/backend/templates/deployment.yaml</code> :
+      <code>DATABASE_URL</code>, <code>MINIO_SECRET_KEY</code> injectés depuis Vault).
+      Les valeurs <code>root</code>/<code>password</code>/<code>admin1234</code> ne concernent donc que le poste de dev.
     </div>
     <div class="fix">
-      <strong>Fix</strong> : (1) <code>docker-compose.prod.yaml</code> séparé non-tracké pour les valeurs prod,
-      (2) utiliser des Docker secrets ou variables d'env d'un <code>.env.prod</code> non commit,
-      (3) ne pas exposer le port 3306 en prod (retirer la ligne <code>ports:</code> du service db),
-      (4) mots de passe générés via <code>openssl rand -base64 32</code>.
+      <strong>Reste à noter</strong> : le <code>docker-compose.yaml</code> contient le <em>vrai</em> mot de passe
+      d'application Gmail SMTP (<code>MAILER_DSN</code>) — ça, c'est un vrai secret commité, traité dans
+      <strong>SEC-1</strong> (rotation + purge). Hygiène dev possible mais non prioritaire.
     </div>
   </div>
 
@@ -530,23 +558,27 @@
       <span class="ticket-id">SEC-12</span>
       <span class="badge high">HAUTE</span>
       <span class="category">Container Security</span>
-      <span class="ticket-title">Conteneurs Docker tournent en root</span>
+      <span class="ticket-title">Pods k8s tournent en root (images sans USER, pas de securityContext)</span>
     </div>
     <div class="ticket-section">
       <h4>Fichiers</h4>
-      <span class="file">backend/Dockerfile</span> <span class="file">backend/Dockerfile.prod</span>
-      <span class="file">frontend/Dockerfile</span> <span class="file">messagerie/Dockerfile</span>
+      <span class="file">backend/Dockerfile.prod</span> <span class="file">frontend/Dockerfile.prod</span>
+      <span class="file">messagerie/Dockerfile.prod</span> <span class="file">backoffice/Dockerfile.prod</span>
+      <span class="file">cluster/*/templates/deployment.yaml</span>
     </div>
     <div class="ticket-section">
       <h4>Description</h4>
-      Aucun <code>USER</code> non-root configuré dans les Dockerfile. Tous les conteneurs tournent en
-      UID 0. En cas d'exploit RCE (Symfony CVE, Node CVE, mediasoup, faille npm), l'attaquant a root dans
-      le container → tentatives d'évasion plus faciles.
+      <strong>Concerne bien la prod (k8s), pas seulement le dev :</strong> les images <code>Dockerfile.prod</code>
+      (utilisées par Kubernetes) n'ont <strong>aucun <code>USER</code> non-root</strong>, et les déploiements
+      <code>cluster/*/templates/deployment.yaml</code> n'ont <strong>aucun <code>securityContext</code></strong>
+      (<code>runAsNonRoot</code>, <code>runAsUser</code>). Les pods applicatifs tournent donc en <strong>UID 0</strong>.
+      En cas d'exploit RCE (CVE Symfony/Node, mediasoup, faille npm), l'attaquant a root dans le pod → évasion facilitée.
     </div>
     <div class="fix">
-      <strong>Fix</strong> : à la fin de chaque Dockerfile, créer et utiliser un user non-root.
-      Exemple backend : <code>USER www-data</code> (déjà créé pour les permissions var/cache).
-      Exemple Node : <code>RUN useradd -m -u 1001 appuser && chown -R appuser /app && USER appuser</code>.
+      <strong>Fix</strong> : (1) ajouter un user non-root en fin de chaque <code>Dockerfile.prod</code>
+      (<code>USER www-data</code> côté PHP, <code>RUN useradd -m -u 1001 appuser && chown -R appuser /app && USER appuser</code> côté Node) ;
+      (2) ajouter un <code>securityContext</code> aux déploiements : <code>runAsNonRoot: true</code>,
+      <code>runAsUser: 1001</code>, <code>allowPrivilegeEscalation: false</code>. <em>(Action infra/Helm.)</em>
     </div>
   </div>
 
@@ -826,9 +858,15 @@
       possible de retrouver les IP réelles par dictionnaire (4 milliards d'IPv4, faisable rapidement).
       Compromet la pseudonymisation RGPD.
     </div>
+    <div class="ticket-section">
+      <h4>Précision prod (k8s)</h4>
+      <code>IP_HASH_SALT</code> <strong>n'est pas injecté par Vault</strong> → en prod le placeholder
+      <code>changeme_...</code> est <strong>réellement utilisé</strong> → la pseudonymisation RGPD est cassée pour de vrai.
+    </div>
     <div class="fix">
-      <strong>Fix</strong> : <code>openssl rand -hex 32</code> pour générer un secret 256 bits.
-      Faire crasher Symfony au boot si la valeur contient "changeme".
+      <strong>Fix</strong> : (1) <code>openssl rand -hex 32</code>, (2) ajouter dans Vault
+      <code>secret/data/production/backend</code> + câbler dans le déploiement (<code>export IP_HASH_SALT=…</code>, comme SEC-14),
+      (3) crasher Symfony au boot si la valeur contient "changeme". <em>(Action infra Vault.)</em>
     </div>
   </div>
 
@@ -862,11 +900,12 @@
     </div>
   </div>
 
-  <!-- SEC-24 -->
+  <!-- SEC-24 — LARGEMENT MITIGÉ -->
   <div class="ticket low" id="sec-24">
     <div class="ticket-header">
       <span class="ticket-id">SEC-24</span>
       <span class="badge low">BASSE</span>
+      <span class="badge" style="background:#0ea5e9;color:#fff;">⚠️ MITIGÉ</span>
       <span class="category">Information Disclosure</span>
       <span class="ticket-title">Symfony Profiler/WDT potentiellement exposé</span>
     </div>
@@ -874,14 +913,17 @@
       <h4>Fichier</h4><span class="file">backend/config/packages/security.yaml:15-16</span>
     </div>
     <div class="ticket-section">
-      <h4>Description</h4>
-      Si <code>APP_ENV=dev</code> en prod (oubli ou exploitation de CVE-2026-46626), tout l'historique des
-      requêtes est accessible : headers Authorization, queries SQL, payloads. Le firewall <code>dev</code> est
-      en <code>security: false</code>.
+      <h4>État réel (k8s)</h4>
+      La prod fixe <code>APP_ENV: "prod"</code> (<code>cluster/backend/values-prod.yaml:32</code>) → le profiler
+      et le firewall <code>dev</code> ne sont <strong>pas actifs en prod</strong>. Le risque résiduel se limite à :
+      (a) une exploitation de <strong>CVE-2026-46626</strong> (bascule <code>APP_DEBUG</code> via requête web) — patchée par SEC-18,
+      et (b) le fait que <code>symfony/web-profiler-bundle</code> est embarqué dans l'image si elle inclut les
+      <code>require-dev</code>.
     </div>
     <div class="fix">
-      <strong>Fix</strong> : (1) <code>APP_ENV=prod</code> obligatoire en prod, (2) retirer <code>symfony/web-profiler-bundle</code>
-      des dépendances require-dev pour les images prod, (3) patch CVE-2026-46626 via SEC-18.
+      <strong>Reste à faire (défense en profondeur)</strong> : (1) build prod sans les <code>require-dev</code>
+      (<code>composer install --no-dev</code> dans <code>Dockerfile.prod</code>) pour exclure le web-profiler-bundle,
+      (2) appliquer SEC-18 (patch CVE-2026-46626). Le point principal (APP_ENV) est déjà couvert par la conf k8s.
     </div>
   </div>
 
