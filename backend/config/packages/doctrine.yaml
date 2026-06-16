@@ -22,6 +22,11 @@ doctrine:
                 prefix: 'App\Entity'
                 alias: App
 
+when@dev:
+    doctrine:
+        dbal:
+            profiling_collect_backtrace: false
+
 when@test:
     doctrine:
         dbal:

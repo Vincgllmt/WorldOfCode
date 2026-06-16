@@ -13,7 +13,7 @@ use App\Enum\MentoringRequestType;
 use App\Enum\MentoringSessionStatus;
 use App\Enum\SessionFormat;
 use App\Enum\TeachingStyle;
-use App\Repository\SkillRepository;
+use App\Repository\TechGroupRepository;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -21,7 +21,7 @@ use Doctrine\Persistence\ObjectManager;
 class MentoringFixtures extends Fixture implements DependentFixtureInterface
 {
     public function __construct(
-        private SkillRepository $skillRepo,
+        private TechGroupRepository $techGroupRepo,
     ) {}
 
     public function getDependencies(): array
@@ -32,7 +32,7 @@ class MentoringFixtures extends Fixture implements DependentFixtureInterface
     public function load(ObjectManager $manager): void
     {
         $now = new \DateTime();
-        $skill = fn(string $name) => $this->skillRepo->findOneBy(['name' => $name]);
+        $skill = fn(string $name) => $this->techGroupRepo->findOneBy(['name' => $name]);
 
         // ─── 1. PROFILS MENTOR (users 0-4) ────────────────────────────────
         //   user_0 = sarah.dev, user_1 = julien_tech, user_2 = marie.code,

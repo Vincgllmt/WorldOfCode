@@ -66,6 +66,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8090/api
+      NEXT_PUBLIC_ARENA_API_URL: http://localhost:8082
       NEXT_PUBLIC_SOCKET_URL: http://localhost:8081
     volumes:
       - ./frontend:/app
@@ -118,6 +119,41 @@ services:
     networks:
       - projet_network
 
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: projet_piston
+    privileged: true
+    ports:
+      - "2000:2000"
+    tmpfs:
+      - /piston/jobs
+    volumes:
+      - piston_packages:/piston/packages
+    networks:
+      - projet_network
+    # Installer les runtimes au premier démarrage (une seule fois, persistés dans le volume) :
+    #   docker exec projet_piston piston ppman install php
+    #   docker exec projet_piston piston ppman install node
+
+  piston-install:
+    image: ghcr.io/engineer-man/piston
+    container_name: projet_piston_install
+    environment:
+      PISTON_URL: http://piston:2000
+    entrypoint: >
+      sh -c "
+        echo 'Attente du démarrage de Piston...' &&
+        sleep 8 &&
+        piston ppman install php &&
+        piston ppman install node &&
+        echo 'Runtimes installés.'
+      "
+    depends_on:
+      - piston
+    networks:
+      - projet_network
+    restart: "no"
+
   code-arena:
     build: ./code-arena
     container_name: projet_code_arena
@@ -128,6 +164,7 @@ services:
       DATABASE_URL: "mysql://application:password@db:3306/projet_web?serverVersion=8.0&charset=utf8mb4"
       APP_ENV: dev
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+      PISTON_URL: http://piston:2000
     volumes:
       - ./code-arena:/app
       - /app/vendor
@@ -135,6 +172,7 @@ services:
     depends_on:
       - db
       - backend
+      - piston
     networks:
       - projet_network
     working_dir: /app
@@ -213,6 +251,7 @@ volumes:
   minio_data:
   jwt_keys:
   elasticsearch_data:
+  piston_packages:
 
 networks:
   projet_network:
