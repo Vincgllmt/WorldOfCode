@@ -25,6 +25,7 @@ services:
   App\Service\NotificationService:
     arguments:
       $messagerieUrl: '%env(MESSAGERIE_URL)%'
+      $internalSecret: '%env(INTERNAL_SECRET)%'
 
   App\EventListener\TwoFactorJWTListener:
     tags:

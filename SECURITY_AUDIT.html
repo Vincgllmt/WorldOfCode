@@ -85,17 +85,18 @@
   <h1>🔒 WOC — Audit de sécurité</h1>
   <p class="subtitle">
     Branche <code>feature-security</code> · Audit réalisé avant ouverture publique de la plateforme<br>
-    Date : 2026-05-21 · 24 vulnérabilités identifiées · <strong style="color:#16a34a;">13 corrigées ✅</strong> · 11 restantes
+    Date : 2026-05-21 · 24 vulnérabilités identifiées · <strong style="color:#16a34a;">14 corrigées ✅</strong> · 10 restantes
   </p>
 
   <div class="legend">
     <strong>⚠️ Lire avant de pousser en prod.</strong>
-    <strong style="color:#16a34a;">4 critiques résolues (SEC-2, SEC-3, SEC-4, SEC-13)</strong>, mais
-    <strong>3 critiques restantes (SEC-1, SEC-11, SEC-14)</strong> doivent être corrigées
+    <strong style="color:#16a34a;">5 critiques résolues (SEC-2, SEC-3, SEC-4, SEC-13, SEC-14)</strong>, mais
+    <strong>2 critiques restantes (SEC-1, SEC-11)</strong> doivent être corrigées
     avant tout déploiement public.
     <br><br>
-    <em>SEC-14 nécessite une variable d'env partagée backend↔messagerie : reporté au sprint
-    "secrets prod" en même temps que SEC-1 et SEC-11.</em>
+    <em>⚠️ SEC-14 est corrigé côté code mais <strong>nécessite une action infra</strong> (secret <code>INTERNAL_SECRET</code>
+    à créer dans Vault + câbler dans les charts Helm backend &amp; messagerie) — voir le détail dans le ticket SEC-14.
+    Sans ça, backend et messagerie crashent au boot.</em>
   </div>
 
   <!-- ─── Résumé chiffré ─── -->
@@ -134,7 +135,7 @@
       <li><a href="#sec-11" class="sev-crit">SEC-11 — Stripe webhook secret placeholder</a></li>
       <li><a href="#sec-12" class="sev-high">SEC-12 — Docker conteneurs en root</a></li>
       <li><a href="#sec-13" class="sev-crit"><s>SEC-13 — Messagerie userId client-side</s> ✅</a></li>
-      <li><a href="#sec-14" class="sev-crit">SEC-14 — /api/notify sans auth</a></li>
+      <li><a href="#sec-14" class="sev-crit"><s>SEC-14 — /api/notify sans auth</s> ✅ <small>(action infra requise)</small></a></li>
       <li><a href="#sec-15" class="sev-high"><s>SEC-15 — Messagerie CORS wildcard défaut</s> ✅</a></li>
       <li><a href="#sec-16" class="sev-high">SEC-16 — Next.js CVE middleware bypass</a></li>
       <li><a href="#sec-17" class="sev-med">SEC-17 — tar/ws CVE messagerie</a></li>
@@ -344,11 +345,12 @@
     </div>
   </div>
 
-  <!-- SEC-14 -->
-  <div class="ticket crit" id="sec-14">
+  <!-- SEC-14 — FIXÉ (code) -->
+  <div class="ticket crit fixed" id="sec-14">
     <div class="ticket-header">
       <span class="ticket-id">SEC-14</span>
       <span class="badge crit">CRITIQUE</span>
+      <span class="badge fixed">✅ FIXÉ (code)</span>
       <span class="category">Broken Access Control</span>
       <span class="ticket-title">Messagerie /api/notify sans authentification</span>
     </div>
@@ -364,14 +366,42 @@
       userId — vecteur de phishing puissant (faux message d'admin, fausse alerte 2FA, etc.).
     </div>
     <div class="fix">
-      <strong>Fix</strong> : ajouter un shared secret entre backend et messagerie, vérifié en début d'endpoint :
-      <code>if (req.headers['x-internal-secret'] !== process.env.INTERNAL_SECRET) return res.writeHead(401);</code>.
-      Et ne pas binder le port 8081 publiquement en prod (réseau Docker interne seulement, ou bind sur 127.0.0.1).
+      <strong>✅ Fix appliqué (code)</strong> (commit feature-security) :
+      secret partagé <code>INTERNAL_SECRET</code> entre backend et messagerie.
+      <ul>
+        <li><strong>Messagerie</strong> (<code>messagerie/src/index.js</code>) : crash au boot si <code>INTERNAL_SECRET</code>
+          absent ; <code>/api/notify</code> renvoie <code>401</code> si le header <code>X-Internal-Secret</code> ne correspond pas
+          (comparaison à temps constant via <code>crypto.timingSafeEqual</code>).</li>
+        <li><strong>Backend</strong> (<code>NotificationService</code> + <code>services.yaml</code>) : envoie le header
+          <code>X-Internal-Secret</code> avec <code>%env(INTERNAL_SECRET)%</code>.</li>
+        <li><strong>Dev</strong> : valeur <code>dev-internal-secret-woc</code> posée dans <code>docker-compose.yaml</code>
+          (backend + messagerie), <code>backend/.env</code>, <code>messagerie/.env(.exemple)</code>. Tests backend au vert (868).</li>
+      </ul>
+    </div>
+    <div class="fix" style="border-left:4px solid #dc2626;background:#fef2f2;">
+      <strong>⚠️ ACTION INFRA REQUISE — bloquant pour le déploiement prod</strong><br>
+      Les deux services <strong>crashent au boot</strong> si <code>INTERNAL_SECRET</code> n'est pas défini.
+      Il faut donc, AVANT (ou pendant) le déploiement des nouvelles images :
+      <ol>
+        <li><strong>Générer un secret</strong> : <code>openssl rand -hex 32</code> (une seule valeur, partagée).</li>
+        <li><strong>Vault — backend</strong> : ajouter la clé <code>INTERNAL_SECRET</code> dans
+          <code>secret/data/production/backend</code>.</li>
+        <li><strong>Vault — messagerie</strong> : ajouter la <em>même</em> valeur sous <code>INTERNAL_SECRET</code> dans
+          <code>secret/data/production/messagerie</code>.</li>
+        <li><strong>Helm — backend</strong> (<code>cluster/backend/templates/deployment.yaml</code>, annotation
+          <code>agent-inject-template-config</code>) : ajouter une ligne
+          <code>export INTERNAL_SECRET="{{ .Data.data.INTERNAL_SECRET }}"</code> (le fichier est déjà sourcé via
+          <code>. /vault/secrets/config</code>).</li>
+        <li><strong>Helm — messagerie</strong> (<code>cluster/messagerie/templates/deployment.yaml</code>, même annotation,
+          à côté de <code>export DB_PASS=…</code>) : ajouter
+          <code>export INTERNAL_SECRET="{{ .Data.data.INTERNAL_SECRET }}"</code>.</li>
+        <li><strong>Dev cluster</strong> : refaire les points 2→5 pour <code>secret/data/…</code> de l'environnement <code>dev</code>.</li>
+      </ol>
+      Vérif post-déploiement : <code>kubectl -n production exec deploy/messagerie -- printenv INTERNAL_SECRET</code>
+      doit renvoyer la valeur, et les pods ne doivent pas être en <code>CrashLoopBackOff</code>.
       <br><br>
-      <strong>⏸️ Reporté</strong> : ce fix nécessite une nouvelle variable d'env partagée (modifications
-      <code>backend/.env</code>, <code>messagerie/.env</code>, <code>docker-compose.yaml</code>).
-      À traiter en même temps que SEC-1 (rotation globale des secrets) et SEC-11 (Stripe webhook secret)
-      lors du sprint "secrets prod".
+      <strong>Recommandé en plus</strong> : ne pas exposer le port 8081 publiquement en prod (réseau interne
+      du cluster uniquement) — défense en profondeur au cas où le secret fuite.
     </div>
   </div>
 

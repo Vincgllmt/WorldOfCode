@@ -19,6 +19,8 @@ services:
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
       MESSAGERIE_URL: http://messagerie:8081
       MAILER_DSN: smtp://noreply.worldofcode@gmail.com:ayrwjiknectnokcf@smtp.gmail.com:587
+      # SEC-14 : secret partagé backend ↔ messagerie (valeur DEV — override en prod via Vault)
+      INTERNAL_SECRET: dev-internal-secret-woc
       ELASTICSEARCH_HOST: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: elastic
       ELASTICSEARCH_PASSWORD: projet_es_dev_password
@@ -105,6 +107,8 @@ services:
       DB_NAME: projet_web
       PORT: 8081
       CORS_ORIGIN: "http://localhost:3000"
+      # SEC-14 : même secret que côté backend (valeur DEV — override en prod via Vault)
+      INTERNAL_SECRET: dev-internal-secret-woc
       MEDIASOUP_ANNOUNCED_IP: "192.168.1.109" # ATTENTION : mettre l'ip du serveur ici, ou de votre machine en mode dev cmd : ifconfig | grep "inet "
     volumes:
       - ./messagerie:/app
