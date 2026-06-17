@@ -3,10 +3,11 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
-import { useArenaChallenges, useArenaLeaderboard } from '@/hooks/useArenaChallenges'
+import { useArenaChallenges, useArenaLeaderboard, useUserBadges } from '@/hooks/useArenaChallenges'
 import { useAuth } from '@/hooks/useAuth'
 import { ArenaChallenge, ChallengeDifficulty, LeaderboardEntry } from '@/interfaces/arena'
 import { Skeleton } from '@/components/ui/skeleton'
+import BadgeMedal from '@/components/arena/BadgeMedal'
 
 /* ---------- Design tokens ---------- */
 
@@ -62,6 +63,7 @@ export default function ArenaPage() {
   const { challenges, isLoading } = useArenaChallenges()
   const { leaderboard } = useArenaLeaderboard()
   const { user } = useAuth()
+  const { badges: myBadges } = useUserBadges(user?.id ?? 0)
 
   const [activeFilter, setActiveFilter] = useState<ChallengeDifficulty | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -149,6 +151,24 @@ export default function ArenaPage() {
               </Link>
             )}
           </div>
+
+          {myBadges && myBadges.length > 0 && (
+            <div className="mt-6">
+              <div className="mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-white/70">
+                Mes badges
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {myBadges.map((badge) => (
+                  <span
+                    key={badge.badgeId}
+                    className="inline-flex items-center justify-center rounded-full bg-white/15 p-1 ring-1 ring-white/40"
+                  >
+                    <BadgeMedal badge={badge} size={38} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Podium */}
@@ -233,8 +253,8 @@ export default function ArenaPage() {
                 href={`/arena/${challenge.slug}`}
                 className="group block overflow-hidden rounded-[20px] border border-[#E8EEEA] bg-white shadow-[0_2px_6px_rgba(16,40,30,.05)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_22px_40px_-18px_rgba(13,60,33,.32)]"
               >
-                {/* Cover */}
-                <div className="relative h-[188px]">
+                {/* Cover plein-cadre */}
+                <div className="relative h-[250px]">
                   {challenge.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={challenge.image} alt={challenge.title} className="absolute inset-0 h-full w-full object-cover" />
@@ -265,7 +285,7 @@ export default function ArenaPage() {
                   </div>
 
                   {/* Bas du cover : difficulté + titre */}
-                  <div className="absolute inset-x-4 bottom-[15px]">
+                  <div className="absolute inset-x-4 bottom-[15px] pr-[148px]">
                     <div className="mb-[9px]">
                       <span
                         className={`inline-block whitespace-nowrap rounded-[20px] px-[11px] py-1 text-[11.5px] font-bold ${DIFF_PILL[challenge.difficulty]}`}
@@ -275,19 +295,19 @@ export default function ArenaPage() {
                     </div>
                     <h3 className="m-0 text-[19px] font-bold tracking-tight text-white">{challenge.title}</h3>
                   </div>
-                </div>
 
-                {/* Corps */}
-                <div className="px-[18px] pb-[18px] pt-4">
-                  <div className="mb-1.5 flex justify-between font-mono text-[11px] text-[#94A099]">
-                    <span>Taux de réussite</span>
-                    <span className="shrink-0">{challenge.successRate}%</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[#EDF2EF]">
-                    <div
-                      className="h-full rounded-full bg-[linear-gradient(90deg,#12A24F,#26C46B)] transition-[width] duration-700"
-                      style={{ width: `${challenge.successRate}%` }}
-                    />
+                  {/* Coin inférieur droit : cartouche taux de réussite */}
+                  <div className="absolute bottom-[15px] right-4 w-[132px] rounded-[11px] bg-black/30 px-3 py-2 ring-1 ring-white/15 backdrop-blur-md">
+                    <div className="mb-1.5 flex items-baseline justify-between">
+                      <span className="font-mono text-[10px] font-medium uppercase tracking-[.06em] text-white/75">Réussite</span>
+                      <span className="font-mono text-[13px] font-bold leading-none text-white">{challenge.successRate}%</span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#26C46B,#8BEFB1)] transition-[width] duration-700"
+                        style={{ width: `${challenge.successRate}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </Link>

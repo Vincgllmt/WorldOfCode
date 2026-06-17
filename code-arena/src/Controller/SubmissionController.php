@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\Badge;
 use App\Entity\Challenge;
 use App\Entity\ChallengeTest;
 use App\Entity\Submission;
-use App\Entity\UserBadge;
 use App\Security\ArenaUser;
+use App\Service\BadgeAwarder;
 use App\Service\PistonService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,7 +19,10 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class SubmissionController extends AbstractController
 {
-    public function __construct(private readonly PistonService $piston) {}
+    public function __construct(
+        private readonly PistonService $piston,
+        private readonly BadgeAwarder $badgeAwarder,
+    ) {}
 
     #[Route('/api/arena/challenges/{slug}/submit', name: 'arena_submit', methods: ['POST'])]
     public function submit(string $slug, Request $request, EntityManagerInterface $em): JsonResponse
@@ -92,7 +94,7 @@ final class SubmissionController extends AbstractController
         $badgesAwarded = [];
 
         if ('passed' === $status) {
-            $badgesAwarded = $this->awardBadges($em, $challenge, $user->getId(), $testsPassed, $totalTests);
+            $badgesAwarded = $this->badgeAwarder->award($em, $challenge, $user->getId(), $testsPassed, $totalTests);
         }
 
         $em->flush();
@@ -131,71 +133,5 @@ final class SubmissionController extends AbstractController
             'testsTotal'   => $submission->getTestsTotal(),
             'createdAt'    => $submission->getCreatedAt()->format(\DateTimeInterface::ATOM),
         ]);
-    }
-
-    /**
-     * Attribue les badges éligibles et retourne la liste des codes de badges octroyés.
-     *
-     * Règles :
-     *  - "perfect"     : tous les tests passés (peut être attribué plusieurs fois si non déjà obtenu)
-     *  - "first_solve" : premier utilisateur à passer tous les tests pour ce défi
-     *
-     * @return string[]
-     */
-    private function awardBadges(
-        EntityManagerInterface $em,
-        Challenge $challenge,
-        int $userId,
-        int $testsPassed,
-        int $totalTests,
-    ): array {
-        $awarded = [];
-
-        /** @var Badge[] $badges */
-        $badges = $challenge->getBadges()->toArray();
-
-        foreach ($badges as $badge) {
-            if ($this->userAlreadyHasBadge($em, $userId, $badge->getId())) {
-                continue;
-            }
-
-            $grant = match ($badge->getCode()) {
-                'perfect'     => $testsPassed === $totalTests,
-                'first_solve' => $testsPassed === $totalTests && $this->isFirstSolve($em, $challenge),
-                default       => false,
-            };
-
-            if ($grant) {
-                $userBadge = (new UserBadge())
-                    ->setUserId($userId)
-                    ->setBadge($badge);
-
-                $em->persist($userBadge);
-                $awarded[] = $badge->getCode();
-            }
-        }
-
-        return $awarded;
-    }
-
-    private function userAlreadyHasBadge(EntityManagerInterface $em, int $userId, int $badgeId): bool
-    {
-        return null !== $em->getRepository(UserBadge::class)->findOneBy([
-            'userId'  => $userId,
-            'badge'   => $badgeId,
-        ]);
-    }
-
-    private function isFirstSolve(EntityManagerInterface $em, Challenge $challenge): bool
-    {
-        $count = $em->createQuery(
-            'SELECT COUNT(s.id) FROM App\Entity\Submission s
-             WHERE s.challenge = :challenge AND s.status = :status',
-        )
-            ->setParameter('challenge', $challenge)
-            ->setParameter('status', 'passed')
-            ->getSingleScalarResult();
-
-        return (int) $count === 0;
     }
 }

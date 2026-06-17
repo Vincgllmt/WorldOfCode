@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\Challenge;
 use App\Entity\Submission;
 use App\Security\ArenaUser;
+use App\Service\BadgeAwarder;
 use App\Service\GameRunner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,7 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class PlayController extends AbstractController
 {
     #[Route('/api/arena/challenges/{slug}/play', name: 'arena_play', methods: ['POST'])]
-    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner): JsonResponse
+    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner, BadgeAwarder $badgeAwarder): JsonResponse
     {
         /** @var ArenaUser $user */
         $user = $this->getUser();
@@ -58,26 +59,39 @@ final class PlayController extends AbstractController
 
         $status = in_array($result['verdict'], ['passed', 'failed'], true) ? $result['verdict'] : 'failed';
 
+        // Le referee renvoie une qualité 0-100 ; on la met à l'échelle de maxScore,
+        // qui est la valeur de points unique du jeu (affichée sur la carte et l'énoncé).
+        $quality = max(0, min(100, $result['score']));
+        $score = (int) round($quality / 100 * $challenge->getMaxScore());
+
         $submission = (new Submission())
             ->setChallenge($challenge)
             ->setUserId($user->getId())
             ->setLanguage($language)
             ->setCode($code)
             ->setStatus($status)
-            ->setScore($result['score'])
+            ->setScore($score)
             ->setTestsTotal(1)
             ->setTestsPassed('passed' === $result['verdict'] ? 1 : 0);
 
         $em->persist($submission);
+
+        // Attribution des badges (mode jeu = un seul "test", réussi si verdict 'passed').
+        $badgesAwarded = [];
+        if ('passed' === $status) {
+            $badgesAwarded = $badgeAwarder->award($em, $challenge, $user->getId(), 1, 1);
+        }
+
         $em->flush();
 
         return new JsonResponse([
             'submissionId' => $submission->getId(),
             'verdict' => $result['verdict'],
-            'score' => $result['score'],
+            'score' => $score,
             'replay' => $result['replay'],
             'playerStderr' => $result['playerStderr'],
             'error' => $result['error'],
+            'badgesAwarded' => $badgesAwarded,
         ], Response::HTTP_CREATED);
     }
 }

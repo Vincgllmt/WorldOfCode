@@ -1,6 +1,9 @@
 .idea
 .claude/
 
+# macOS
+.DS_Store
+
 # CI/CD artifacts
 .npm
 lint-output.txt

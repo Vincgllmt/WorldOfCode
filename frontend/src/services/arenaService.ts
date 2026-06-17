@@ -1,6 +1,6 @@
 import { getCookie } from 'cookies-next'
 
-import { ArenaChallenge, ArenaChallengeDetail, LeaderboardEntry, RunResult, SubmitResult } from '@/interfaces/arena'
+import { ArenaBadge, ArenaChallenge, ArenaChallengeDetail, LeaderboardEntry, RunResult, SubmitResult } from '@/interfaces/arena'
 import type { Replay } from '@/components/arena/gameViewer'
 
 export type { RunResult, SubmitResult, ArenaChallengeDetail }
@@ -12,6 +12,7 @@ export interface PlayResult {
   replay: Replay | null
   playerStderr: string
   error: string | null
+  badgesAwarded: string[]
 }
 
 // Code Arena est un microservice distinct du backend principal : il a sa propre URL.
@@ -61,6 +62,22 @@ export const getArenaLeaderboard = async (): Promise<LeaderboardEntry[]> => {
 
   if (!res.ok) {
     throw new Error('Erreur lors du chargement du classement')
+  }
+
+  return res.json()
+}
+
+export const getUserBadges = async (userId: number): Promise<ArenaBadge[]> => {
+  const token = getCookie('token')
+
+  const res = await fetch(`${ARENA_API_URL}/api/arena/users/${userId}/badges`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Erreur lors du chargement des badges')
   }
 
   return res.json()
