@@ -9,8 +9,10 @@ import ProfileSidebar from '@/components/profile/ProfileSidebar'
 import MentorPublicProfile from '@/components/mentoring/MentorPublicProfile'
 import CvSocialToggle from '@/components/profile/CvSocialToggle'
 import CvTimeline from '@/components/profile/CvTimeline'
+import ExperienceDndList from '@/components/profile/ExperienceDndList'
 import EngagementSummaryBadge from '@/components/profile/EngagementSummaryBadge'
 import SocialActivityView from '@/components/profile/SocialActivityView'
+import { useReorderExperiences } from '@/hooks/useReorderExperiences'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
 import EditBioDialog from '@/components/profile/EditBioDialog'
@@ -18,7 +20,7 @@ import EditExperiencesDialog from '@/components/profile/EditExperiencesDialog'
 import EditSkillsDialog from '@/components/profile/EditSkillsDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Briefcase, Share2, Download, Pencil } from 'lucide-react'
+import { Briefcase, Share2, Download, Pencil, Check } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Group } from '@/interfaces/group'
 import type { MentorProfile } from '@/types/mentoring'
@@ -43,6 +45,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [mentorProfile, setMentorProfile] = useState<MentorProfile | null>(null)
   const [mentorLoading, setMentorLoading] = useState(true)
   const [activeMode, setActiveMode] = useState<'cv' | 'social'>('cv')
+  const [isEditMode, setIsEditMode] = useState(false)
   const [editBioOpen, setEditBioOpen] = useState(false)
   const [editExpOpen, setEditExpOpen] = useState(false)
   const [editSkillsOpen, setEditSkillsOpen] = useState(false)
@@ -61,6 +64,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   )
 
   const isOwnProfile = viewerId === user?.id
+  const { mutate: reorderExperiences } = useReorderExperiences(userId)
   const sortedGroups = useMemo(() => sortGroups(groups), [groups])
 
   if (authLoading || userLoading) {
@@ -138,13 +142,22 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
                   Exporter PDF
                 </Button>
                 <Button
-                  variant="outline"
+                  variant={isEditMode ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => console.log('Mode édition')}
+                  onClick={() => setIsEditMode((v) => !v)}
                   className="gap-1.5"
                 >
-                  <Pencil className="h-4 w-4" />
-                  Mode édition
+                  {isEditMode ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Terminé
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-4 w-4" />
+                      Mode édition
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -166,10 +179,22 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   Expériences
+                  {isEditMode && (
+                    <span className="ml-auto text-xs font-normal text-muted-foreground">
+                      Glissez pour réordonner
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CvTimeline experiences={user.experiences ?? []} />
+                {isEditMode ? (
+                  <ExperienceDndList
+                    experiences={user.experiences ?? []}
+                    onReorder={(orderedIds) => reorderExperiences(orderedIds)}
+                  />
+                ) : (
+                  <CvTimeline experiences={user.experiences ?? []} />
+                )}
               </CardContent>
             </Card>
 
