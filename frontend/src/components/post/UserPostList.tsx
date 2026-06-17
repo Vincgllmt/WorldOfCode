@@ -1,15 +1,16 @@
 'use client'
 
-import { useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import PostItem from '@/components/post/PostItem'
 import { useUserPosts } from '@/hooks/useUserProfile'
 
 type UserPostListProps = {
   userId: number
+  renderActions?: (postId: number) => ReactNode
 }
 
-export default function UserPostList({ userId }: UserPostListProps) {
+export default function UserPostList({ userId, renderActions }: UserPostListProps) {
   const { posts, isLoading, error } = useUserPosts(userId)
 
   const orderedPosts = useMemo(
@@ -42,13 +43,20 @@ export default function UserPostList({ userId }: UserPostListProps) {
   }
 
   if (orderedPosts.length === 0) {
-    return <p className="text-sm text-muted-foreground">Aucun post pour l’instant.</p>
+    return <p className="text-sm text-muted-foreground">Aucun post pour l'instant.</p>
   }
 
   return (
     <div className="space-y-4">
       {orderedPosts.map((post) => (
-        <PostItem key={post.id} post={post} />
+        <div key={post.id}>
+          <PostItem post={post} />
+          {renderActions && (
+            <div className="mt-1 flex justify-end px-1">
+              {renderActions(post.id)}
+            </div>
+          )}
+        </div>
       ))}
     </div>
   )
