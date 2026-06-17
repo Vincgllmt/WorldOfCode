@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+# Secrets hors image (SEC-1) — valeurs réelles via Vault/CI
+.env.exemple
+.env.local
+.env.*.local

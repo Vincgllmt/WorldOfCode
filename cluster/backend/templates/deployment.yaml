@@ -18,6 +18,15 @@ spec:
         vault.hashicorp.com/agent-inject-template-config: |
           {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
           export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
+          {{ "{{ if .Data.data.appSecret }}" }}
+          export APP_SECRET={{ "\"{{ .Data.data.appSecret }}\"" }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.jwtPassphrase }}" }}
+          export JWT_PASSPHRASE={{ "\"{{ .Data.data.jwtPassphrase }}\"" }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.mailerDsn }}" }}
+          export MAILER_DSN={{ "\"{{ .Data.data.mailerDsn }}\"" }}
+          {{ "{{ end }}" }}
           {{ "{{- end -}}" }}
         vault.hashicorp.com/agent-inject-secret-minio: "{{ .Values.vault.minioSecretPath }}"
         vault.hashicorp.com/agent-inject-template-minio: |
