@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ChallengeStatement from '@/components/arena/ChallengeStatement'
+import BadgeUnlockOverlay from '@/components/arena/BadgeUnlockOverlay'
+import type { ArenaBadge, ArenaChallengeDetail } from '@/interfaces/arena'
 import { GAMES } from '../games/registry'
 
 const CodeEditor = dynamic(() => import('@/components/arena/CodeEditor'), { ssr: false })
@@ -41,6 +43,21 @@ const BADGE_LABELS: Record<string, string> = {
   first_solve: 'Première résolution',
 }
 const badgeLabel = (code: string) => BADGE_LABELS[code] ?? code
+
+/* Célébration de réussite : badge à montrer + s'il s'agit d'un badge réellement gagné. */
+type Celebration = { badge: ArenaBadge; unlocked: boolean }
+
+/* Construit le badge à célébrer dans l'overlay de réussite (médaille du jeu). */
+function buildGameBadge(challenge: ArenaChallengeDetail, awarded: string[]): ArenaBadge {
+  return {
+    badgeId: 0,
+    name: awarded.map(badgeLabel).join(' · ') || challenge.title,
+    description: null,
+    icon: null,
+    challengeSlug: challenge.slug,
+    awardedAt: new Date().toISOString(),
+  }
+}
 
 /* Libellé + couleur d'un verdict d'essai (cas de test). */
 const VERDICT_META: Record<TestRunResult['verdict'], { label: string; color: string }> = {
@@ -150,6 +167,12 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   const [isPlaying, setIsPlaying] = useState(false)
   const [leftTab, setLeftTab] = useState<'sujet' | 'tests'>('sujet')
 
+  // Célébration plein écran quand tous les tests passent (null = overlay fermé).
+  // `unlocked` distingue un badge réellement gagné d'une simple réussite d'essai.
+  const [celebration, setCelebration] = useState<Celebration | null>(null)
+  // Célébration en attente : déclenchée seulement à la fin de la visualisation de tous les cas.
+  const [pendingCelebration, setPendingCelebration] = useState<Celebration | null>(null)
+
   // Jeu de tests (mode jeu) : cas sélectionné, résultats par cas, état d'exécution.
   const [selectedTest, setSelectedTest] = useState(0)
   const [testRuns, setTestRuns] = useState<Record<number, TestRunResult>>({})
@@ -207,6 +230,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   function clearReplays() {
     setReplayQueue([])
     setQueuePos(0)
+    setPendingCelebration(null)
   }
 
   /* Démarre la lecture séquentielle des replays d'une série de cas. */
@@ -220,10 +244,24 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
 
   /* Passe au replay suivant de la file (appelé à la fin de chaque cas). */
   function advanceReplay() {
+    // Le cas qui vient de se terminer a échoué → on stoppe la lecture :
+    // pas d'enchaînement des cas suivants, et aucune animation déclenchée.
+    const finished = replayQueue[queuePos]
+    if (finished && testRuns[finished.index]?.verdict !== 'passed') {
+      setPendingCelebration(null)
+      return
+    }
+    // Il reste des cas à jouer → on enchaîne.
     if (queuePos < replayQueue.length - 1) {
       const next = queuePos + 1
       setSelectedTest(replayQueue[next].index)
       setQueuePos(next)
+      return
+    }
+    // Dernier cas joué et tous réussis → on déclenche enfin l'animation différée.
+    if (pendingCelebration) {
+      setCelebration(pendingCelebration)
+      setPendingCelebration(null)
     }
   }
 
@@ -268,6 +306,8 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setRunResult(null)
     setSubmitResult(null)
     setRuntimeError(null)
+    setCelebration(null)
+    setPendingCelebration(null)
     try {
       const results = await runTests(challenge.slug, language, code)
       const byIndex: Record<number, TestRunResult> = {}
@@ -277,6 +317,13 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
       const firstError = results.find((r) => r.error)?.error
       if (firstError) setRuntimeError(firstError)
       startReplayQueue(results)
+      // Essai non noté : célébration sans badge si tous les cas passent, déclenchée
+      // seulement à la fin de la visualisation (la lecture s'arrête au 1er échec).
+      if (results.length > 0 && results.every((r) => r.verdict === 'passed')) {
+        const celeb: Celebration = { badge: buildGameBadge(challenge, []), unlocked: false }
+        if (results.some((r) => r.replay)) setPendingCelebration(celeb)
+        else setCelebration(celeb)
+      }
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -306,6 +353,8 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setSubmitResult(null)
     setRuntimeError(null)
     setRunSummary(null)
+    setCelebration(null)
+    setPendingCelebration(null)
     try {
       const result = await playGame(challenge.slug, language, code)
       setPlayResult(result)
@@ -316,6 +365,12 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
       if (firstError) setRuntimeError(firstError)
       // Rejoue chaque cas l'un après l'autre dans la visualisation.
       startReplayQueue(result.results)
+      if (result.verdict === 'passed') {
+        const celeb: Celebration = { badge: buildGameBadge(challenge, result.badgesAwarded), unlocked: result.badgesAwarded.length > 0 }
+        // Animation différée jusqu'à la fin des replays ; immédiate s'il n'y en a aucun.
+        if (result.results.some((r) => r.replay)) setPendingCelebration(celeb)
+        else setCelebration(celeb)
+      }
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -330,7 +385,10 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setSubmitResult(null)
     setRuntimeError(null)
     try {
-      setSubmitResult(await submitCode(challenge.slug, language, code))
+      const result = await submitCode(challenge.slug, language, code)
+      setSubmitResult(result)
+      if (result.status === 'passed')
+        setCelebration({ badge: buildGameBadge(challenge, result.badgesAwarded), unlocked: result.badgesAwarded.length > 0 })
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -697,6 +755,12 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
           </div>
         </div>
       </div>
+
+      <BadgeUnlockOverlay
+        badge={celebration?.badge ?? null}
+        unlocked={celebration?.unlocked ?? false}
+        onClose={() => setCelebration(null)}
+      />
     </div>
   )
 }
