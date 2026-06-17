@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Passerelle vers le runner Piston (https://github.com/engineer-man/piston).
  * Piston exécute le code dans un sandbox isolé et renvoie stdout/stderr/exitCode.
  */
-final class PistonService
+final class PistonService implements PistonClientInterface
 {
     /** Délai max en secondes pour attendre la réponse de Piston (compilation + exécution). */
     private const HTTP_TIMEOUT = 15.0;
@@ -24,12 +24,20 @@ final class PistonService
     private const FILE_NAMES = [
         'javascript' => 'main.js',
         'php'        => 'main.php',
+        'python'     => 'main.py',
+        'java'       => 'Main.java', // le fichier doit correspondre à la classe publique "Main"
+        'cpp'        => 'main.cpp',
+        'typescript' => 'main.ts',
     ];
 
     /** Correspondance langage interne → identifiant runtime Piston. */
     private const LANGUAGE_MAP = [
         'javascript' => 'javascript',
         'php'        => 'php',
+        'python'     => 'python',
+        'java'       => 'java',
+        'cpp'        => 'c++',
+        'typescript' => 'typescript',
     ];
 
     public function __construct(

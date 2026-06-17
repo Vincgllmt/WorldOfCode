@@ -23,5 +23,8 @@ echo "Clé publique JWT disponible."
 # 4) Nettoyage du cache
 php bin/console cache:clear --no-interaction
 
-# 5) Démarrage du serveur (commande passée par CMD / docker-compose)
+# 5) Synchronisation des jeux (games/<slug>/ -> base). Idempotent ; non bloquant.
+php bin/console app:arena:sync || echo "Avertissement : sync des jeux ignorée (tables absentes ?)."
+
+# 6) Démarrage du serveur (commande passée par CMD / docker-compose)
 exec "$@"

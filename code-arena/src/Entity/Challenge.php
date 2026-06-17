@@ -40,6 +40,13 @@ class Challenge
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
 
+    // Referee du jeu : code exécuté dans Piston qui juge la sortie joueur et produit le replay.
+    #[ORM\Column(name: 'referee_code', type: 'text', nullable: true)]
+    private ?string $refereeCode = null;
+
+    #[ORM\Column(name: 'referee_language', length: 20, nullable: true)]
+    private ?string $refereeLanguage = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -149,6 +156,30 @@ class Challenge
     public function setImage(?string $image): self
     {
         $this->image = $image;
+
+        return $this;
+    }
+
+    public function getRefereeCode(): ?string
+    {
+        return $this->refereeCode;
+    }
+
+    public function setRefereeCode(?string $refereeCode): self
+    {
+        $this->refereeCode = $refereeCode;
+
+        return $this;
+    }
+
+    public function getRefereeLanguage(): ?string
+    {
+        return $this->refereeLanguage;
+    }
+
+    public function setRefereeLanguage(?string $refereeLanguage): self
+    {
+        $this->refereeLanguage = $refereeLanguage;
 
         return $this;
     }

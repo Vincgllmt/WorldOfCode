@@ -8,11 +8,15 @@ import { Button } from '@/components/ui/button'
 
 const CodeEditor = dynamic(() => import('@/components/arena/CodeEditor'), { ssr: false })
 
-const SUPPORTED_LANGUAGES = ['javascript', 'php']
+const SUPPORTED_LANGUAGES = ['javascript', 'typescript', 'python', 'php', 'java', 'cpp']
 
 const DEFAULT_CODE: Record<string, string> = {
   javascript: '// Écris ton code ici\nconsole.log("Hello, World!");\n',
+  typescript: '// Écris ton code ici\nconsole.log("Hello, World!");\n',
+  python: '# Écris ton code ici\nprint("Hello, World!")\n',
   php: '<?php\n\n// Écris ton code ici\necho "Hello, World!";\n',
+  java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}\n',
+  cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}\n',
 }
 
 export default function SandboxPage() {
@@ -46,7 +50,7 @@ export default function SandboxPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
+    <div className="h-full flex flex-col">
 
       {/* Barre du haut */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/60 bg-background/80 backdrop-blur-md flex-shrink-0">

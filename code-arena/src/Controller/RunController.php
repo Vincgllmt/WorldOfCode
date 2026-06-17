@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class RunController extends AbstractController
 {
-    private const SUPPORTED_LANGUAGES = ['javascript', 'php'];
+    private const SUPPORTED_LANGUAGES = ['javascript', 'php', 'python', 'java', 'cpp', 'typescript'];
 
     public function __construct(private readonly PistonService $piston) {}
 
