@@ -1,3 +1,4 @@
+import { ReactNode } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { User, Pencil } from 'lucide-react'
@@ -6,9 +7,10 @@ type ProfileAboutSectionProps = {
   bio: string | null | undefined
   isOwnProfile: boolean
   onEdit?: () => void
+  visibilityToggle?: ReactNode
 }
 
-export default function ProfileAboutSection({ bio, isOwnProfile, onEdit }: ProfileAboutSectionProps) {
+export default function ProfileAboutSection({ bio, isOwnProfile, onEdit, visibilityToggle }: ProfileAboutSectionProps) {
   return (
     <Card className="border-border/70 shadow-sm">
       <CardHeader className="pb-3">
@@ -17,18 +19,21 @@ export default function ProfileAboutSection({ bio, isOwnProfile, onEdit }: Profi
             <User className="h-4 w-4 text-muted-foreground" />
             À propos
           </CardTitle>
-          {isOwnProfile && onEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={onEdit}
-              aria-label="Modifier la bio"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {visibilityToggle}
+            {isOwnProfile && onEdit && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={onEdit}
+                aria-label="Modifier la bio"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

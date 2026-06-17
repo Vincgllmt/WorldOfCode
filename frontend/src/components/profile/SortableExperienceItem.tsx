@@ -3,15 +3,24 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
-import type { Experience } from '@/interfaces/user'
+import { VisibilityToggle } from './VisibilityToggle'
+import { useUpdateExperienceVisibility } from '@/hooks/useUpdateExperienceVisibility'
+import type { Experience, Visibility } from '@/interfaces/user'
 
 type Props = {
   experience: Experience
+  userId: number
+  isEditMode?: boolean
 }
 
-export default function SortableExperienceItem({ experience }: Props) {
+export default function SortableExperienceItem({ experience, userId, isEditMode }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: experience.id })
+
+  const { mutate: updateVisibility, isPending } = useUpdateExperienceVisibility(
+    experience.id,
+    userId
+  )
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -39,6 +48,13 @@ export default function SortableExperienceItem({ experience }: Props) {
           {experience.startDate && ` · ${experience.startDate}`}
         </p>
       </div>
+      {isEditMode && (
+        <VisibilityToggle
+          visibility={experience.visibility}
+          onChange={(v: Visibility) => updateVisibility(v)}
+          disabled={isPending}
+        />
+      )}
     </div>
   )
 }

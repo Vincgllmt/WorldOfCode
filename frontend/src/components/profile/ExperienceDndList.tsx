@@ -21,10 +21,11 @@ import type { Experience } from '@/interfaces/user'
 
 type Props = {
   experiences: Experience[]
+  userId: number
   onReorder: (orderedIds: string[]) => void
 }
 
-export default function ExperienceDndList({ experiences, onReorder }: Props) {
+export default function ExperienceDndList({ experiences, userId, onReorder }: Props) {
   const [items, setItems] = useState<Experience[]>(experiences)
 
   const sensors = useSensors(
@@ -50,7 +51,7 @@ export default function ExperienceDndList({ experiences, onReorder }: Props) {
       <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-2">
           {items.map((exp) => (
-            <SortableExperienceItem key={exp.id} experience={exp} />
+            <SortableExperienceItem key={exp.id} experience={exp} userId={userId} isEditMode />
           ))}
         </div>
       </SortableContext>

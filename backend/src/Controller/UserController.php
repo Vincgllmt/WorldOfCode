@@ -432,7 +432,7 @@ final class UserController extends AbstractController
             $user->setAvatarUrl($dto->avatarUrl);
         }
         if (array_key_exists('fieldVisibility', $payload) && $dto->fieldVisibility !== null) {
-            $allowed = ['bio', 'location', 'availability', 'email'];
+            $allowed = ['bio', 'location', 'availability', 'email', 'skills', 'links'];
             $validValues = ['PUBLIC', 'CONNECTED', 'PRIVATE'];
             $current = $user->getEffectiveFieldVisibility();
             foreach ($dto->fieldVisibility as $key => $value) {

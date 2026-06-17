@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, ReactNode } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,12 +10,14 @@ type ProfileSkillsSectionProps = {
   skills: Skill[] | null | undefined
   isOwnProfile: boolean
   onEdit?: () => void
+  visibilityToggle?: ReactNode
 }
 
 export default function ProfileSkillsSection({
   skills,
   isOwnProfile,
   onEdit,
+  visibilityToggle,
 }: ProfileSkillsSectionProps) {
   const skillsByCategory = useMemo(() => {
     if (!skills || skills.length === 0) return {}
@@ -37,18 +39,21 @@ export default function ProfileSkillsSection({
             <Code2 className="h-4 w-4 text-muted-foreground" />
             Compétences
           </CardTitle>
-          {isOwnProfile && onEdit && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={onEdit}
-              aria-label="Modifier les compétences"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {visibilityToggle}
+            {isOwnProfile && onEdit && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={onEdit}
+                aria-label="Modifier les compétences"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

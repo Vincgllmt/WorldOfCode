@@ -13,6 +13,9 @@ import ExperienceDndList from '@/components/profile/ExperienceDndList'
 import EngagementSummaryBadge from '@/components/profile/EngagementSummaryBadge'
 import SocialActivityView from '@/components/profile/SocialActivityView'
 import { useReorderExperiences } from '@/hooks/useReorderExperiences'
+import { useUpdateFieldVisibility } from '@/hooks/useUpdateFieldVisibility'
+import { VisibilityToggle } from '@/components/profile/VisibilityToggle'
+import type { Visibility } from '@/interfaces/user'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
 import EditBioDialog from '@/components/profile/EditBioDialog'
@@ -65,6 +68,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
 
   const isOwnProfile = viewerId === user?.id
   const { mutate: reorderExperiences } = useReorderExperiences(userId)
+  const { mutate: updateFieldVisibility } = useUpdateFieldVisibility(userId)
   const sortedGroups = useMemo(() => sortGroups(groups), [groups])
 
   if (authLoading || userLoading) {
@@ -172,6 +176,12 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
               bio={user.bio}
               isOwnProfile={isOwnProfile}
               onEdit={() => setEditBioOpen(true)}
+              visibilityToggle={isEditMode && isOwnProfile ? (
+                <VisibilityToggle
+                  visibility={(user.fieldVisibility?.bio as Visibility) ?? 'PUBLIC'}
+                  onChange={(v) => updateFieldVisibility({ bio: v })}
+                />
+              ) : undefined}
             />
 
             <Card className="border-border/70 shadow-sm">
@@ -190,6 +200,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
                 {isEditMode ? (
                   <ExperienceDndList
                     experiences={user.experiences ?? []}
+                    userId={userId}
                     onReorder={(orderedIds) => reorderExperiences(orderedIds)}
                   />
                 ) : (
@@ -202,6 +213,12 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
               skills={user.skills}
               isOwnProfile={isOwnProfile}
               onEdit={() => setEditSkillsOpen(true)}
+              visibilityToggle={isEditMode && isOwnProfile ? (
+                <VisibilityToggle
+                  visibility={(user.fieldVisibility?.skills as Visibility) ?? 'PUBLIC'}
+                  onChange={(v) => updateFieldVisibility({ skills: v })}
+                />
+              ) : undefined}
             />
           </>
         ) : (
