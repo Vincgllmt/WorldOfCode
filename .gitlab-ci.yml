@@ -169,6 +169,7 @@ coverage:backend:
     # Installer Composer
     - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - cd backend
+    - cp .env.example .env
     - composer install --no-interaction --prefer-dist --optimize-autoloader
     # Générer les clés JWT pour les tests (via la commande Lexik JWT pour garantir le bon format)
     - mkdir -p config/jwt
