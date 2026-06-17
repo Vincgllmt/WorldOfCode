@@ -1,17 +1,17 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, Play, Send, CheckCircle2, XCircle, Trophy, Clock, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, Play, Send, CheckCircle2, XCircle, Trophy, Clock, AlertTriangle, Loader2, ListChecks } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { getChallenge, playGame, runCode, submitCode, type PlayResult, type RunResult, type SubmitResult } from '@/services/arenaService'
+import { getChallenge, playGame, runCode, runTests, submitCode, type PlayResult, type RunResult, type SubmitResult, type TestRunResult } from '@/services/arenaService'
 import type { Replay } from '@/components/arena/gameViewer'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ChallengeStatement from '@/components/arena/ChallengeStatement'
-import { GAME_VIEWERS } from '../games/registry'
+import { GAMES } from '../games/registry'
 
 const CodeEditor = dynamic(() => import('@/components/arena/CodeEditor'), { ssr: false })
 const ReplayPlayer = dynamic(() => import('@/components/arena/ReplayPlayer'), { ssr: false })
@@ -41,6 +41,21 @@ const BADGE_LABELS: Record<string, string> = {
   first_solve: 'Première résolution',
 }
 const badgeLabel = (code: string) => BADGE_LABELS[code] ?? code
+
+/* Libellé + couleur d'un verdict d'essai (cas de test). */
+const VERDICT_META: Record<TestRunResult['verdict'], { label: string; color: string }> = {
+  passed: { label: 'Réussi', color: 'text-emerald-600' },
+  failed: { label: 'Échoué', color: 'text-rose-500' },
+  error: { label: 'Erreur', color: 'text-amber-500' },
+}
+
+/* Pastille d'état d'un cas : neutre tant qu'il n'a pas été essayé. */
+function TestStatusDot({ run }: { run?: TestRunResult }) {
+  if (!run) return <span className="h-2 w-2 shrink-0 rounded-full bg-[#D6DED9]" />
+  if (run.verdict === 'passed') return <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+  if (run.verdict === 'failed') return <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
+  return <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+}
 
 /* ── Panneau de résultats ── */
 function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null; submitResult: SubmitResult | null }) {
@@ -131,18 +146,42 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   const [isRunning, setIsRunning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [runtimeError, setRuntimeError] = useState<string | null>(null)
-  const [replay, setReplay] = useState<Replay | null>(null)
   const [playResult, setPlayResult] = useState<PlayResult | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [replayKey, setReplayKey] = useState(0)
   const [leftTab, setLeftTab] = useState<'sujet' | 'tests'>('sujet')
+
+  // Jeu de tests (mode jeu) : cas sélectionné, résultats par cas, état d'exécution.
+  const [selectedTest, setSelectedTest] = useState(0)
+  const [testRuns, setTestRuns] = useState<Record<number, TestRunResult>>({})
+  const [runningTest, setRunningTest] = useState<number | 'all' | null>(null)
+  const [runSummary, setRunSummary] = useState<{ passed: number; total: number } | null>(null)
+
+  // File de replays jouée séquentiellement dans la visualisation (un cas après l'autre).
+  const [replayQueue, setReplayQueue] = useState<{ index: number; replay: Replay }[]>([])
+  const [queuePos, setQueuePos] = useState(0)
+  const [runKey, setRunKey] = useState(0)
 
   // Tailles des panneaux redimensionnables (px)
   const [leftWidth, setLeftWidth] = useState(480)
   const [vizHeight, setVizHeight] = useState(240)
   const [sortieHeight, setSortieHeight] = useState(240)
 
-  const isGame = !!GAME_VIEWERS[slug]
+  const game = GAMES[slug]
+  const isGame = !!game
+  const gameTests = isGame && challenge ? challenge.publicTests : []
+  const busy = isRunning || isSubmitting || isPlaying || runningTest !== null
+
+  // État de départ du cas sélectionné (replay figé d'1 frame) : affiché tant qu'aucun
+  // replay de run/partie n'est en cours, et au chargement de la page (cas 1).
+  const previewReplay = useMemo<Replay | null>(() => {
+    const test = gameTests[selectedTest]
+    if (!game || !test) return null
+    return game.buildPreview(test.stdin ?? '')
+  }, [game, gameTests, selectedTest])
+
+  // Cas en cours de lecture dans la file de replays (null si aucune lecture en cours).
+  const currentReplay = replayQueue[queuePos] ?? null
+  const currentRun = currentReplay ? testRuns[currentReplay.index] : undefined
 
   // Initialise langage + code au chargement
   if (challenge && !language) {
@@ -157,6 +196,92 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setRunResult(null)
     setSubmitResult(null)
     setRuntimeError(null)
+    // Le code change : les essais précédents ne sont plus valides → on revient à l'aperçu.
+    clearReplays()
+    setPlayResult(null)
+    setTestRuns({})
+    setRunSummary(null)
+  }
+
+  /* Vide la file de replays → la visualisation revient à l'aperçu du cas sélectionné. */
+  function clearReplays() {
+    setReplayQueue([])
+    setQueuePos(0)
+  }
+
+  /* Démarre la lecture séquentielle des replays d'une série de cas. */
+  function startReplayQueue(results: TestRunResult[]) {
+    const queue = results.flatMap((r) => (r.replay ? [{ index: r.index, replay: r.replay }] : []))
+    setReplayQueue(queue)
+    setQueuePos(0)
+    setRunKey((k) => k + 1)
+    if (queue.length > 0) setSelectedTest(queue[0].index)
+  }
+
+  /* Passe au replay suivant de la file (appelé à la fin de chaque cas). */
+  function advanceReplay() {
+    if (queuePos < replayQueue.length - 1) {
+      const next = queuePos + 1
+      setSelectedTest(replayQueue[next].index)
+      setQueuePos(next)
+    }
+  }
+
+  /* Sélectionne un cas de test → la visualisation montre son état de départ. */
+  function handleSelectTest(i: number) {
+    setSelectedTest(i)
+    clearReplays()
+    setPlayResult(null)
+    setRunSummary(null)
+    setRuntimeError(null)
+  }
+
+  /* Essai NON noté sur un seul cas. */
+  async function handleRunTest(i: number) {
+    if (!language || !code.trim() || !challenge) return
+    setRunningTest(i)
+    setSelectedTest(i)
+    setPlayResult(null)
+    setRunSummary(null)
+    setRunResult(null)
+    setSubmitResult(null)
+    setRuntimeError(null)
+    try {
+      const [res] = await runTests(challenge.slug, language, code, i)
+      if (res) {
+        setTestRuns((prev) => ({ ...prev, [i]: res }))
+        if (res.error) setRuntimeError(res.error)
+        startReplayQueue([res])
+      }
+    } catch (e) {
+      setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setRunningTest(null)
+    }
+  }
+
+  /* Essai NON noté sur tous les cas en un clic : on rejoue chaque cas l'un après l'autre. */
+  async function handleRunAllTests() {
+    if (!language || !code.trim() || !challenge) return
+    setRunningTest('all')
+    setPlayResult(null)
+    setRunResult(null)
+    setSubmitResult(null)
+    setRuntimeError(null)
+    try {
+      const results = await runTests(challenge.slug, language, code)
+      const byIndex: Record<number, TestRunResult> = {}
+      for (const r of results) byIndex[r.index] = r
+      setTestRuns(byIndex)
+      setRunSummary({ passed: results.filter((r) => r.verdict === 'passed').length, total: results.length })
+      const firstError = results.find((r) => r.error)?.error
+      if (firstError) setRuntimeError(firstError)
+      startReplayQueue(results)
+    } catch (e) {
+      setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setRunningTest(null)
+    }
   }
 
   async function handleRun() {
@@ -180,14 +305,17 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setRunResult(null)
     setSubmitResult(null)
     setRuntimeError(null)
+    setRunSummary(null)
     try {
       const result = await playGame(challenge.slug, language, code)
       setPlayResult(result)
-      if (result.replay) {
-        setReplay(result.replay)
-        setReplayKey((k) => k + 1)
-      }
-      if (result.error) setRuntimeError(result.error)
+      const byIndex: Record<number, TestRunResult> = {}
+      for (const r of result.results) byIndex[r.index] = r
+      setTestRuns(byIndex)
+      const firstError = result.results.find((r) => r.error)?.error
+      if (firstError) setRuntimeError(firstError)
+      // Rejoue chaque cas l'un après l'autre dans la visualisation.
+      startReplayQueue(result.results)
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -298,7 +426,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
             size="sm"
             variant="outline"
             onClick={handleRun}
-            disabled={isRunning || isSubmitting || isPlaying}
+            disabled={busy}
             className="gap-1.5"
           >
             <Play className="h-3.5 w-3.5" />
@@ -308,7 +436,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
           <Button
             size="sm"
             onClick={isGame ? handlePlay : handleSubmit}
-            disabled={isRunning || isSubmitting || isPlaying}
+            disabled={busy}
             className="gap-1.5 bg-[#11A84F] text-white shadow-[0_6px_16px_-6px_rgba(17,168,79,.6)] hover:bg-[#0E9F4A]"
           >
             <Send className="h-3.5 w-3.5" />
@@ -351,10 +479,89 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
               </TabsContent>
 
               <TabsContent value="tests">
-                <h3 className="text-lg font-extrabold">Jeu de tests</h3>
-                <p className="mb-4 font-mono text-xs text-[#94A099]">{challenge.publicTests.length} cas public(s)</p>
-                {challenge.publicTests.length > 0 ? (
-                  <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-extrabold">Jeu de tests</h3>
+                    <p className="mt-0.5 font-mono text-xs text-[#94A099]">
+                      {isGame ? `${gameTests.length} cas` : `${challenge.publicTests.length} cas public(s)`}
+                    </p>
+                  </div>
+                  {isGame && gameTests.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRunAllTests}
+                      disabled={busy || !code.trim()}
+                      className="gap-1.5"
+                    >
+                      {runningTest === 'all'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <ListChecks className="h-3.5 w-3.5" />}
+                      Tout lancer
+                    </Button>
+                  )}
+                </div>
+
+                {isGame ? (
+                  gameTests.length > 0 ? (
+                    <>
+                      {runSummary && (
+                        <div className={cn(
+                          'mt-3 rounded-xl px-3 py-2 text-xs font-semibold',
+                          runSummary.passed === runSummary.total ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500',
+                        )}>
+                          Essai · {runSummary.passed}/{runSummary.total} cas réussis
+                        </div>
+                      )}
+                      <div className="mt-3 space-y-2">
+                        {gameTests.map((_, i) => {
+                          const run = testRuns[i]
+                          const isSel = selectedTest === i
+                          return (
+                            <div
+                              key={i}
+                              className={cn(
+                                'flex items-center gap-2 rounded-xl border p-2.5 transition',
+                                isSel ? 'border-[#11A84F] bg-[#F2FBF5]' : 'border-[#EAEFEC] bg-white hover:border-[#CFE7D8]',
+                              )}
+                            >
+                              <button
+                                onClick={() => handleSelectTest(i)}
+                                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                title="Voir l'état de départ"
+                              >
+                                <TestStatusDot run={run} />
+                                <span className="text-sm font-semibold">Cas {i + 1}</span>
+                                {run && (
+                                  <span className={cn('text-xs font-medium', VERDICT_META[run.verdict].color)}>
+                                    {VERDICT_META[run.verdict].label}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleRunTest(i)}
+                                disabled={busy || !code.trim()}
+                                title="Lancer ce cas"
+                                className="rounded-lg p-1.5 text-[#5C6B63] transition hover:bg-[#E6F2EA] hover:text-[#0E9F4A] disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                {runningTest === i
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Play className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-[#94A099]">
+                        Clique un cas pour voir son état de départ, ▶ pour l&apos;essayer (non noté),
+                        ou « Jouer » pour la soumission notée sur tous les cas.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-sm text-[#94A099]">Aucun cas de test pour ce jeu.</p>
+                  )
+                ) : challenge.publicTests.length > 0 ? (
+                  <div className="mt-4 space-y-3">
                     {challenge.publicTests.map((test, i) => (
                       <div key={i} className="space-y-2 rounded-2xl border border-[#EAEFEC] bg-white p-4">
                         <div className="flex items-center gap-2">
@@ -376,14 +583,14 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#94A099]">Aucun test public — l&apos;input est fourni à ton programme au lancement.</p>
+                  <p className="mt-4 text-sm text-[#94A099]">Aucun test public — l&apos;input est fourni à ton programme au lancement.</p>
                 )}
               </TabsContent>
             </div>
           </Tabs>
 
           {/* Poignée + Visualisation (jeux uniquement) */}
-          {isGame && (
+          {game && (
             <>
               <div
                 onMouseDown={(e) => startRowResize(e, 'viz')}
@@ -392,15 +599,31 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                 <span className="h-[3px] w-11 rounded-full bg-[#C7D0CB]" />
               </div>
               <div style={{ height: vizHeight }} className="flex shrink-0 flex-col bg-white p-4">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-[11px] font-bold uppercase tracking-[.08em] text-[#94A099]">Visualisation</span>
-                  {playResult && (
-                    <span className={cn('text-xs font-semibold', playResult.verdict === 'passed' ? 'text-emerald-600' : 'text-rose-500')}>
-                      {playResult.verdict === 'passed'
-                        ? `✓ Réussi · ${playResult.score} pts`
-                        : playResult.verdict === 'failed' ? '✗ Échoué' : '⚠ Erreur'}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {currentReplay && (
+                      <span className={cn(
+                        'text-xs font-semibold',
+                        currentRun ? VERDICT_META[currentRun.verdict].color : 'text-[#5C6B63]',
+                      )}>
+                        Cas {currentReplay.index + 1}{currentRun ? ` · ${VERDICT_META[currentRun.verdict].label}` : ''}
+                        {replayQueue.length > 1 ? ` · ${queuePos + 1}/${replayQueue.length}` : ''}
+                      </span>
+                    )}
+                    {playResult ? (
+                      <span className={cn(
+                        'text-xs font-semibold',
+                        playResult.verdict === 'passed' ? 'text-emerald-600' : playResult.verdict === 'failed' ? 'text-rose-500' : 'text-amber-500',
+                      )}>
+                        {playResult.verdict === 'passed'
+                          ? `✓ Réussi · ${playResult.testsPassed}/${playResult.testsTotal} · ${playResult.score} pts`
+                          : playResult.verdict === 'failed' ? `✗ ${playResult.testsPassed}/${playResult.testsTotal} cas` : '⚠ Erreur'}
+                      </span>
+                    ) : !currentReplay && previewReplay ? (
+                      <span className="text-xs font-medium text-[#94A099]">Cas {selectedTest + 1} · état de départ</span>
+                    ) : null}
+                  </div>
                 </div>
                 {playResult && playResult.badgesAwarded.length > 0 && (
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -416,11 +639,18 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                   </div>
                 )}
                 <div className="min-h-0 flex-1">
-                  {replay ? (
-                    <ReplayPlayer key={replayKey} replay={replay} viewerFactory={GAME_VIEWERS[slug]} />
+                  {currentReplay ? (
+                    <ReplayPlayer
+                      key={`run-${runKey}-${queuePos}`}
+                      replay={currentReplay.replay}
+                      viewerFactory={game.createViewer}
+                      onEnded={advanceReplay}
+                    />
+                  ) : previewReplay ? (
+                    <ReplayPlayer key={`preview-${selectedTest}`} replay={previewReplay} viewerFactory={game.createViewer} autoPlay={false} />
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#D8E1DC] bg-[#FAFCFB] p-4 text-center text-xs text-[#94A099]">
-                      Clique « Jouer » pour lancer ton code et voir le replay.
+                      Sélectionne un cas de test pour voir son état de départ.
                     </div>
                   )}
                 </div>

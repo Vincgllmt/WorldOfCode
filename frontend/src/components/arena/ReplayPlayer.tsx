@@ -13,10 +13,14 @@ export default function ReplayPlayer({
   replay,
   viewerFactory,
   autoPlay = true,
+  onEnded,
 }: {
   replay: Replay
   viewerFactory: GameViewerFactory
   autoPlay?: boolean
+  /** Appelé une fois quand la lecture automatique atteint la dernière frame
+   *  (sert à enchaîner plusieurs replays — un cas de test après l'autre). */
+  onEnded?: () => void
 }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const appRef = useRef<Application | null>(null)
@@ -27,11 +31,24 @@ export default function ReplayPlayer({
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
 
+  // onEnded gardé dans une ref pour ne pas relancer l'effet (qui remonterait PixiJS).
+  const onEndedRef = useRef(onEnded)
+  useEffect(() => {
+    onEndedRef.current = onEnded
+  }, [onEnded])
+
   const frames = replay.frames
   const last = Math.max(0, frames.length - 1)
 
   useEffect(() => {
     let destroyed = false
+    let endTimer: ReturnType<typeof setTimeout> | undefined
+    let ended = false
+    const fireEnded = () => {
+      if (ended) return
+      ended = true
+      onEndedRef.current?.()
+    }
     const host = hostRef.current
     if (!host) return
 
@@ -56,6 +73,10 @@ export default function ReplayPlayer({
         if (autoPlay && last > 0) {
           anim.current.playing = true
           setPlaying(true)
+        } else if (autoPlay) {
+          // Replay trivial (1 seule frame) : on signale la fin après un court instant
+          // pour que la file de replays continue malgré tout.
+          endTimer = setTimeout(fireEnded, 700)
         }
 
         app.ticker.add((ticker) => {
@@ -71,6 +92,7 @@ export default function ReplayPlayer({
             s.t = 1
             s.playing = false
             setPlaying(false)
+            fireEnded()
           }
           const cur = frames[Math.min(s.index, last)]
           const prev = s.index > 0 ? frames[s.index - 1] : null
@@ -80,6 +102,7 @@ export default function ReplayPlayer({
 
     return () => {
       destroyed = true
+      if (endTimer) clearTimeout(endTimer)
       try {
         if (appRef.current) viewer.teardown(appRef.current)
       } catch {
