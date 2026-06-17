@@ -133,7 +133,7 @@ class AuthenticationController extends AbstractController
 
         $userRepository->save($user);
 
-        return $this->json($this->userMapper->toDto($user), 201);
+        return $this->json($this->userMapper->toDto($user, $user), 201);
     }
 
     #[Route('/api/authenticate', name: 'authenticate', methods: ['POST'])]
@@ -413,7 +413,7 @@ class AuthenticationController extends AbstractController
             return $this->json(['error' => 'Invalid request or unauthenticated'], 401);
         }
 
-        return $this->json($this->userMapper->toDto($user));
+        return $this->json($this->userMapper->toDto($user, $user));
     }
     #[Route('api/reset-password/request', name: 'reset_password_request', methods: ['POST'])]
     #[OA\Post(

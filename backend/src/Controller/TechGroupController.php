@@ -211,7 +211,8 @@ class TechGroupController extends AbstractController
         }
 
         $users = $group->getUsers();
-        $data = array_map(fn($user) => $this->userMapper->toDto($user), $users->toArray());
+        $viewer = $this->getUser();
+        $data = array_map(fn($user) => $this->userMapper->toDto($user, $viewer), $users->toArray());
 
         return $this->json($data);
     }

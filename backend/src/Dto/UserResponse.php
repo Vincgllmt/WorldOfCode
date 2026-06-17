@@ -134,4 +134,11 @@ class UserResponse
         nullable: true
     )]
     public ?array $links = null;
+
+    #[OA\Property(
+        description: "Visibilite par champ (bio, location, availability, email)",
+        type: "object",
+        example: ["bio" => "PUBLIC", "location" => "PUBLIC", "availability" => "PUBLIC", "email" => "PRIVATE"]
+    )]
+    public array $fieldVisibility = [];
 }

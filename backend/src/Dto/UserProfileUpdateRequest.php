@@ -72,13 +72,21 @@ class UserProfileUpdateRequest
     )]
     public readonly ?string $avatarUrl;
 
+    #[OA\Property(
+        description: "Visibilite par champ (bio, location, availability, email)",
+        type: 'object',
+        nullable: true
+    )]
+    public readonly ?array $fieldVisibility;
+
     public function __construct(
         ?string $bio,
         ?string $location,
         ?string $availability,
         ?array $experiences,
         ?array $skillIds,
-        ?string $avatarUrl
+        ?string $avatarUrl,
+        ?array $fieldVisibility
     ) {
         $this->bio = $bio;
         $this->location = $location;
@@ -86,6 +94,7 @@ class UserProfileUpdateRequest
         $this->experiences = $experiences;
         $this->skillIds = $skillIds;
         $this->avatarUrl = $avatarUrl;
+        $this->fieldVisibility = $fieldVisibility;
     }
 
     public static function fromArray(array $payload): self
@@ -96,7 +105,8 @@ class UserProfileUpdateRequest
             $payload['availability'] ?? null,
             $payload['experiences'] ?? null,
             $payload['skillIds'] ?? null,
-            $payload['avatarUrl'] ?? null
+            $payload['avatarUrl'] ?? null,
+            isset($payload['fieldVisibility']) && is_array($payload['fieldVisibility']) ? $payload['fieldVisibility'] : null
         );
     }
 }

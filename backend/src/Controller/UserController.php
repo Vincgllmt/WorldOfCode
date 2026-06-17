@@ -60,8 +60,9 @@ final class UserController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
+        $viewer = $this->getUser();
         $users = $this->repo->findAll();
-        $data = array_map([$this->mapper, 'toDto'], $users);
+        $data = array_map(fn($u) => $this->mapper->toDto($u, $viewer), $users);
 
         return $this->json($data);
     }
@@ -90,7 +91,7 @@ final class UserController extends AbstractController
             return $this->json(['error' => 'User not found'], 404);
         }
 
-        return $this->json($this->mapper->toDto($user));
+        return $this->json($this->mapper->toDto($user, $this->getUser()));
     }
     #[Route('api/user/{id}', name: 'user_update', methods: ['PUT'])]
     #[OA\Put(
@@ -166,7 +167,7 @@ final class UserController extends AbstractController
 
         $this->repo->save($user, true);
 
-        return $this->json($this->mapper->toDto($user));
+        return $this->json($this->mapper->toDto($user, $currentUser));
     }
     #[Route('api/user/{id}', name: 'user_delete', methods: ['DELETE'])]
     #[OA\Delete(
@@ -358,7 +359,7 @@ final class UserController extends AbstractController
         $user->setTheme($theme);
         $this->repo->save($user, true);
 
-        return $this->json($this->mapper->toDto($user));
+        return $this->json($this->mapper->toDto($user, $currentUser));
     }
 
     ##  PROFIL CV
@@ -430,6 +431,17 @@ final class UserController extends AbstractController
         if (array_key_exists('avatarUrl', $payload)) {
             $user->setAvatarUrl($dto->avatarUrl);
         }
+        if (array_key_exists('fieldVisibility', $payload) && $dto->fieldVisibility !== null) {
+            $allowed = ['bio', 'location', 'availability', 'email'];
+            $validValues = ['PUBLIC', 'CONNECTED', 'PRIVATE'];
+            $current = $user->getEffectiveFieldVisibility();
+            foreach ($dto->fieldVisibility as $key => $value) {
+                if (in_array($key, $allowed, true) && in_array($value, $validValues, true)) {
+                    $current[$key] = $value;
+                }
+            }
+            $user->setFieldVisibility($current);
+        }
 
         // Skills (replace all)
         if (array_key_exists('skillIds', $payload) && is_array($dto->skillIds)) {
@@ -446,7 +458,7 @@ final class UserController extends AbstractController
 
         $this->repo->save($user, true);
 
-        return $this->json($this->mapper->toDto($user));
+        return $this->json($this->mapper->toDto($user, $currentUser));
     }
 
     ##  LIENS EXTERNES

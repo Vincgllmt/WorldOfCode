@@ -94,6 +94,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $experiences = null;
 
+    #[ORM\Column(name: 'field_visibility', type: 'json', nullable: true)]
+    private ?array $fieldVisibility = null;
+
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
 
@@ -399,6 +402,31 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->experiences = $experiences;
         return $this;
+    }
+
+    public function getFieldVisibility(): ?array
+    {
+        return $this->fieldVisibility;
+    }
+
+    public function setFieldVisibility(array $fieldVisibility): self
+    {
+        $this->fieldVisibility = $fieldVisibility;
+        return $this;
+    }
+
+    public function getEffectiveFieldVisibility(): array
+    {
+        $defaults = [
+            'bio'          => 'PUBLIC',
+            'location'     => 'PUBLIC',
+            'availability' => 'PUBLIC',
+            'email'        => 'PRIVATE',
+        ];
+        if ($this->fieldVisibility === null) {
+            return $defaults;
+        }
+        return array_merge($defaults, $this->fieldVisibility);
     }
 
     public function getSkills(): Collection
