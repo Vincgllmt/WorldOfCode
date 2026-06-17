@@ -30,10 +30,21 @@ final class ChallengeController extends AbstractController
         $solvedIds = array_map('intval', $solvedIds);
 
         // Taux de réussite par défi = soumissions réussies / total des soumissions.
+        // On ne compte, par utilisateur et par défi, que les soumissions allant jusqu'à
+        // la première réussie incluse : les replays après une première victoire ne doivent
+        // pas gonfler le taux. Les utilisateurs n'ayant jamais réussi comptent toutes leurs
+        // tentatives (COALESCE retombe sur s.id, donc la condition est toujours vraie).
         $rates = $connection->fetchAllKeyValue(
             "SELECT challenge_id,
                     ROUND(100 * SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) / COUNT(*)) AS rate
-             FROM submission
+             FROM submission s
+             WHERE s.id <= COALESCE(
+                 (SELECT MIN(p.id) FROM submission p
+                  WHERE p.user_id = s.user_id
+                    AND p.challenge_id = s.challenge_id
+                    AND p.status = 'passed'),
+                 s.id
+             )
              GROUP BY challenge_id",
         );
 

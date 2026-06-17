@@ -31,6 +31,15 @@ export interface LeaderboardEntry {
   isCurrentUser: boolean
 }
 
+export interface ArenaBadge {
+  badgeId: number
+  name: string
+  description: string | null
+  icon: string | null
+  challengeSlug: string
+  awardedAt: string
+}
+
 export interface RunResult {
   stdout: string
   stderr: string

@@ -4,6 +4,7 @@ import {
   getArenaChallenge,
   getArenaChallenges,
   getArenaLeaderboard,
+  getUserBadges,
 } from '@/services/arenaService'
 
 export const useArenaChallenges = () => {
@@ -28,6 +29,20 @@ export const useArenaChallenge = (slug: string) => {
 
   return {
     challenge: data,
+    isLoading,
+    error,
+  }
+}
+
+export const useUserBadges = (userId: number) => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['arena-user-badges', userId],
+    queryFn: () => getUserBadges(userId),
+    enabled: !!userId,
+  })
+
+  return {
+    badges: data,
     isLoading,
     error,
   }

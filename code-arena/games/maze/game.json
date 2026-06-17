@@ -3,7 +3,7 @@
   "difficulty": "medium",
   "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
   "maxScore": 150,
-  "image": null,
+  "image": "/games/maze/cover.jpg",
   "refereeLanguage": "python",
   "badges": [
     { "code": "first_solve", "name": "Sortie trouvée", "description": "Résoudre le labyrinthe pour la première fois." },
