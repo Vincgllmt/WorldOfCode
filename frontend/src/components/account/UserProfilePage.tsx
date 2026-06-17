@@ -15,6 +15,7 @@ import SocialActivityView from '@/components/profile/SocialActivityView'
 import { useReorderExperiences } from '@/hooks/useReorderExperiences'
 import { useUpdateFieldVisibility } from '@/hooks/useUpdateFieldVisibility'
 import { VisibilityToggle } from '@/components/profile/VisibilityToggle'
+import ShareCvDialog from '@/components/profile/ShareCvDialog'
 import type { Visibility } from '@/interfaces/user'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
@@ -49,6 +50,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [mentorLoading, setMentorLoading] = useState(true)
   const [activeMode, setActiveMode] = useState<'cv' | 'social'>('cv')
   const [isEditMode, setIsEditMode] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [editBioOpen, setEditBioOpen] = useState(false)
   const [editExpOpen, setEditExpOpen] = useState(false)
   const [editSkillsOpen, setEditSkillsOpen] = useState(false)
@@ -130,7 +132,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => console.log('Partager')}
+                  onClick={() => setShareDialogOpen(true)}
                   className="gap-1.5"
                 >
                   <Share2 className="h-4 w-4" />
@@ -237,6 +239,12 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
 
       {isOwnProfile && (
         <>
+          <ShareCvDialog
+            open={shareDialogOpen}
+            onOpenChange={setShareDialogOpen}
+            userId={userId}
+            currentToken={user.cvPublicToken}
+          />
           <EditBioDialog open={editBioOpen} onOpenChange={setEditBioOpen} user={user} />
           <EditExperiencesDialog open={editExpOpen} onOpenChange={setEditExpOpen} user={user} />
           <EditSkillsDialog open={editSkillsOpen} onOpenChange={setEditSkillsOpen} user={user} />
