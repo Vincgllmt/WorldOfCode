@@ -1,5 +1,7 @@
 import type { GameViewerFactory, Replay } from '@/components/arena/gameViewer'
 
+import { chameleonColorsMock } from './chameleon-colors/mock'
+import { createChameleonColorsViewer } from './chameleon-colors/viewer'
 import { mazeMock } from './maze/mock'
 import { createMazeViewer } from './maze/viewer'
 
@@ -9,6 +11,7 @@ import { createMazeViewer } from './maze/viewer'
  */
 export const GAME_VIEWERS: Record<string, GameViewerFactory> = {
   maze: createMazeViewer,
+  'chameleon-colors': createChameleonColorsViewer,
 }
 
 /**
@@ -17,4 +20,5 @@ export const GAME_VIEWERS: Record<string, GameViewerFactory> = {
  */
 export const GAME_MOCKS: Record<string, Replay> = {
   maze: mazeMock,
+  'chameleon-colors': chameleonColorsMock,
 }
