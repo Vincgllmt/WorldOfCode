@@ -48,9 +48,10 @@ class UserResponse
     #[OA\Property(
         description: "Adresse email de l'utilisateur",
         type: "string",
-        example: "alice@example.com"
+        example: "alice@example.com",
+        nullable: true
     )]
-    public string $email;
+    public ?string $email = null;
 
 
     #[OA\Property(
