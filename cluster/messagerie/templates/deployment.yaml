@@ -20,6 +20,9 @@ spec:
         vault.hashicorp.com/agent-inject-template-config: |
           {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
           export DB_PASS={{ "\"{{ .Data.data.password }}\"" }}
+          {{ "{{ if .Data.data.INTERNAL_SECRET }}" }}
+          export INTERNAL_SECRET={{ "\"{{ .Data.data.INTERNAL_SECRET }}\"" }}
+          {{ "{{ end }}" }}
           {{ "{{- end -}}" }}
     spec:
       # SEC-12 : exécution non-root (node = uid 1000)
@@ -67,6 +70,10 @@ spec:
               value: {{ .Values.env.PORT | quote }}
             - name: CORS_ORIGIN
               value: {{ .Values.env.CORS_ORIGIN | quote }}
+            {{- if .Values.env.INTERNAL_SECRET }}
+            - name: INTERNAL_SECRET
+              value: {{ .Values.env.INTERNAL_SECRET | quote }}
+            {{- end }}
             
             # 3. Injection de l'IP publique pour MediaSoup
             {{- if .Values.mediasoup }}

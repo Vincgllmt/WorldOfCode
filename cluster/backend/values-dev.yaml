@@ -38,6 +38,7 @@ env:
   MINIO_PUBLIC_URL: "https://api-woc-dev.duckdns.org/uploads"
   RESET_PASSWORD_URL: "https://woc-dev.duckdns.org"
   MESSAGERIE_URL: "http://messagerie.dev.svc.cluster.local:8081"
+  INTERNAL_SECRET: "dev-internal-secret-woc"
   ELASTICSEARCH_HOST: "http://elasticsearch.elasticsearch.svc.cluster.local:9200"
   ELASTICSEARCH_USERNAME: "elastic"
 
