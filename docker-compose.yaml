@@ -123,6 +123,11 @@ services:
     image: ghcr.io/engineer-man/piston
     container_name: projet_piston
     privileged: true
+    # Limite de sortie par défaut de Piston = 1 Ko, trop faible pour les replays
+    # des jeux de l'arène (le referee renvoie init + frames en JSON). On l'augmente
+    # à 1 Mo, sinon le sandbox tue le process (« Sandbox keeper received fatal signal 6 »).
+    environment:
+      PISTON_OUTPUT_MAX_SIZE: "1048576"
     ports:
       - "2000:2000"
     tmpfs:
