@@ -10,6 +10,7 @@ import type { Replay } from '@/components/arena/gameViewer'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import ChallengeStatement from '@/components/arena/ChallengeStatement'
 import { GAME_VIEWERS } from '../games/registry'
 
 const CodeEditor = dynamic(() => import('@/components/arena/CodeEditor'), { ssr: false })
@@ -334,13 +335,18 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <TabsContent value="sujet">
-                <h2 className="text-[22px] font-extrabold leading-tight">{challenge.title}</h2>
-                <p className="mt-1 font-mono text-xs text-[#94A099]">
-                  {DIFFICULTY_LABEL[challenge.difficulty] ?? challenge.difficulty} ·{' '}
-                  <span className="font-bold text-[#0E9F4A]">+{challenge.maxScore} pts</span>
-                </p>
-                <div className="mt-4 whitespace-pre-wrap text-[14.5px] leading-relaxed text-[#3A453F]">
-                  {challenge.statement}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cn('rounded-full px-2.5 py-0.5 text-[11.5px] font-bold', DIFF_PILL[challenge.difficulty])}>
+                    {DIFFICULTY_LABEL[challenge.difficulty] ?? challenge.difficulty}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E3F6EA] px-2.5 py-0.5 font-mono text-[11.5px] font-bold text-[#0B8F45]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#0B8F45]" />
+                    +{challenge.maxScore} pts
+                  </span>
+                </div>
+                <h2 className="mt-3 text-[22px] font-extrabold leading-tight tracking-tight">{challenge.title}</h2>
+                <div className="mt-4 rounded-2xl border border-[#E5EDE8] bg-[#F5F9F7] p-5">
+                  <ChallengeStatement statement={challenge.statement} />
                 </div>
               </TabsContent>
 

@@ -108,7 +108,7 @@ export default function ArenaPage() {
   return (
     <div>
       {/* ---------- Hero : progression + podium ---------- */}
-      <section className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#0A9245_0%,#13AE54_50%,#1FC465_100%)] p-7 sm:flex-row sm:gap-7 sm:p-9">
+      <section className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#0A9245_0%,#13AE54_50%,#1FC465_100%)] p-5 sm:flex-row sm:gap-7 sm:p-6">
         <div
           className="pointer-events-none absolute inset-0 opacity-50"
           style={{
@@ -154,17 +154,12 @@ export default function ArenaPage() {
 
           {myBadges && myBadges.length > 0 && (
             <div className="mt-6">
-              <div className="mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-white/70">
+              <div className="mb-3 text-[12px] font-semibold uppercase tracking-[.06em] text-white/70">
                 Mes badges
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-4">
                 {myBadges.map((badge) => (
-                  <span
-                    key={badge.badgeId}
-                    className="inline-flex items-center justify-center rounded-full bg-white/15 p-1 ring-1 ring-white/40"
-                  >
-                    <BadgeMedal badge={badge} size={38} />
-                  </span>
+                  <BadgeMedal key={badge.badgeId} badge={badge} size={112} />
                 ))}
               </div>
             </div>

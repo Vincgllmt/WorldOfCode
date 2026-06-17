@@ -3,10 +3,14 @@
     <filter id="ds" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#1C5A36" flood-opacity="0.26"></feDropShadow>
     </filter>
+    <clipPath id="disc"><circle cx="120" cy="120" r="84"></circle></clipPath>
     <style>
       .cham-bob { transform-box: fill-box; transform-origin: 50% 62%; animation: bob 3.2s ease-in-out infinite; }
       .pupil    { transform-box: fill-box; transform-origin: center; animation: look 4.5s ease-in-out infinite; }
       .lid      { transform-box: fill-box; transform-origin: center; transform: scaleY(0); animation: blink 5.5s ease-in-out infinite; }
+      .ray      { transform-box: fill-box; transform-origin: center; animation: twinkle 1.6s ease-in-out infinite; }
+      .sparkle  { transform-box: fill-box; transform-origin: center; animation: sparkle 2.2s ease-in-out infinite; }
+      .glint    { animation: sweep 3.4s ease-in-out infinite; }
       @keyframes bob {
         0%, 100% { transform: translateY(0) rotate(0deg); }
         50%      { transform: translateY(-3px) rotate(-2deg); }
@@ -21,9 +25,25 @@
         94%           { transform: scaleY(1); }
         97%           { transform: scaleY(0); }
       }
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.35; transform: scale(0.8); }
+        50%      { opacity: 1;    transform: scale(1.25); }
+      }
+      @keyframes sparkle {
+        0%, 100% { opacity: 0;  transform: scale(0.2) rotate(0deg); }
+        50%      { opacity: 1;  transform: scale(1)   rotate(45deg); }
+      }
+      @keyframes sweep {
+        0%        { transform: translateX(-110px) skewX(-18deg); opacity: 0; }
+        18%, 70%  { opacity: 0.6; }
+        100%      { transform: translateX(300px) skewX(-18deg); opacity: 0; }
+      }
       @media (prefers-reduced-motion: reduce) {
-        .cham-bob, .pupil, .lid { animation: none; }
+        .cham-bob, .pupil, .lid, .ray, .sparkle, .glint { animation: none; }
         .lid { transform: scaleY(0); }
+        .ray { opacity: 1; transform: none; }
+        .sparkle { opacity: 0; }
+        .glint { opacity: 0; }
       }
     </style>
   </defs>
@@ -33,15 +53,23 @@
     <circle cx="120" cy="120" r="84" fill="#EAF8EF"></circle>
     <circle cx="120" cy="120" r="84" fill="none" stroke="#CDEAD8" stroke-width="2"></circle>
   </g>
+  <g clip-path="url(#disc)">
+    <rect class="glint" x="-30" y="0" width="42" height="240" fill="#ffffff" opacity="0.55"></rect>
+  </g>
   <g stroke="#7CCB9C" stroke-width="3.4" stroke-linecap="round">
-    <line x1="120" y1="30" x2="120" y2="38"></line>
-    <line x1="210" y1="120" x2="202" y2="120"></line>
-    <line x1="120" y1="210" x2="120" y2="202"></line>
-    <line x1="30" y1="120" x2="38" y2="120"></line>
-    <line x1="56" y1="56" x2="62" y2="62"></line>
-    <line x1="184" y1="56" x2="178" y2="62"></line>
-    <line x1="184" y1="184" x2="178" y2="178"></line>
-    <line x1="56" y1="184" x2="62" y2="178"></line>
+    <line class="ray" style="animation-delay:0s"     x1="120" y1="30"  x2="120" y2="38"></line>
+    <line class="ray" style="animation-delay:.2s"    x1="210" y1="120" x2="202" y2="120"></line>
+    <line class="ray" style="animation-delay:.4s"    x1="120" y1="210" x2="120" y2="202"></line>
+    <line class="ray" style="animation-delay:.6s"    x1="30"  y1="120" x2="38"  y2="120"></line>
+    <line class="ray" style="animation-delay:.1s"    x1="56"  y1="56"  x2="62"  y2="62"></line>
+    <line class="ray" style="animation-delay:.3s"    x1="184" y1="56"  x2="178" y2="62"></line>
+    <line class="ray" style="animation-delay:.5s"    x1="184" y1="184" x2="178" y2="178"></line>
+    <line class="ray" style="animation-delay:.7s"    x1="56"  y1="184" x2="62"  y2="178"></line>
+  </g>
+  <g fill="#F4CE63">
+    <g transform="translate(186 58)"><path class="sparkle" style="animation-delay:0s"  d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z"></path></g>
+    <g transform="translate(54 176)"><path class="sparkle" style="animation-delay:.9s" d="M0 -5 L1.3 -1.3 L5 0 L1.3 1.3 L0 5 L-1.3 1.3 L-5 0 L-1.3 -1.3 Z"></path></g>
+    <g transform="translate(120 26)"><path class="sparkle" style="animation-delay:1.5s" d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z"></path></g>
   </g>
   <svg x="58" y="64" width="124" height="116" viewBox="0 0 120 112">
     <g class="cham-bob">
