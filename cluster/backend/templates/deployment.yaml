@@ -24,12 +24,12 @@ spec:
           {{ "{{ if .Data.data.jwtPassphrase }}" }}
           export JWT_PASSPHRASE={{ "\"{{ .Data.data.jwtPassphrase }}\"" }}
           {{ "{{ end }}" }}
-          {{ if .Data.data.mailerDsn }}
+          {{ "{{ if .Data.data.mailerDsn }}" }}
           export MAILER_DSN={{ "\"{{ .Data.data.mailerDsn }}\"" }}
-          {{ end }}
-          {{ if .Data.data.INTERNAL_SECRET }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.INTERNAL_SECRET }}" }}
           export INTERNAL_SECRET={{ "\"{{ .Data.data.INTERNAL_SECRET }}\"" }}
-          {{ end }}
+          {{ "{{ end }}" }}
           {{ "{{- end -}}" }}
         vault.hashicorp.com/agent-inject-secret-minio: "{{ .Values.vault.minioSecretPath }}"
         vault.hashicorp.com/agent-inject-template-minio: |
