@@ -9,7 +9,8 @@ class UserMapper
 {
     public function __construct(
         private SkillMapper $skillMapper,
-        private UserLinkMapper $linkMapper
+        private UserLinkMapper $linkMapper,
+        private ExperienceMapper $experienceMapper
     ) {}
 
     public function toDto(User $user): UserResponse
@@ -28,7 +29,9 @@ class UserMapper
         $dto->bio = $user->getBio();
         $dto->location = $user->getLocation();
         $dto->availability = $user->getAvailability()?->value;
-        $dto->experiences = $user->getExperiences();
+        $experiences = $user->getExperienceEntities()->toArray();
+        usort($experiences, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
+        $dto->experiences = array_map([$this->experienceMapper, 'toDto'], $experiences);
         $dto->skills = array_map(
             [$this->skillMapper, 'toDto'],
             $user->getSkills()->toArray()

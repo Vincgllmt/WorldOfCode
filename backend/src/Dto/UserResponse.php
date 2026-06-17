@@ -112,18 +112,9 @@ class UserResponse
     public ?string $availability = null;
 
     #[OA\Property(
-        description: "Experiences professionnelles (JSON)",
+        description: "Experiences professionnelles structurees",
         type: "array",
-        items: new OA\Items(
-            properties: [
-                new OA\Property(property: 'title', type: 'string'),
-                new OA\Property(property: 'company', type: 'string'),
-                new OA\Property(property: 'startDate', type: 'string', description: 'Format YYYY-MM'),
-                new OA\Property(property: 'endDate', type: 'string', description: 'Format YYYY-MM, null si poste actuel', nullable: true),
-                new OA\Property(property: 'description', type: 'string')
-            ],
-            type: 'object'
-        ),
+        items: new OA\Items(ref: new \Nelmio\ApiDocBundle\Attribute\Model(type: ExperienceResponse::class)),
         nullable: true
     )]
     public ?array $experiences = null;

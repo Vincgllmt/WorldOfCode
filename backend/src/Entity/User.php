@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Enum\UserRole;
 use App\Enum\Availability;
+use App\Entity\Experience;
 use App\Entity\TechGroup;
 use App\Entity\Skill;
 use App\Entity\UserLink;
@@ -112,6 +113,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: UserLink::class, mappedBy: 'user', orphanRemoval: true, cascade: ['persist', 'remove'])]
     private Collection $links;
 
+    #[ORM\OneToMany(targetEntity: Experience::class, mappedBy: 'user', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    private Collection $experienceEntities;
+
 
     public function __construct()
     {
@@ -121,6 +125,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->joinedGroups = new ArrayCollection();
         $this->skills = new ArrayCollection();
         $this->links = new ArrayCollection();
+        $this->experienceEntities = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -434,6 +439,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->links->removeElement($link)) {
             // orphanRemoval handles deletion
         }
+        return $this;
+    }
+
+    public function getExperienceEntities(): Collection
+    {
+        return $this->experienceEntities;
+    }
+
+    public function addExperienceEntity(Experience $experience): self
+    {
+        if (!$this->experienceEntities->contains($experience)) {
+            $this->experienceEntities[] = $experience;
+            $experience->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeExperienceEntity(Experience $experience): self
+    {
+        $this->experienceEntities->removeElement($experience);
         return $this;
     }
 
