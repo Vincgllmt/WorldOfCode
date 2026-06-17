@@ -14,8 +14,8 @@ parameters:
   env(MINIO_BUCKET): 'woc'
   env(MINIO_PUBLIC_URL): 'http://localhost:9000/woc'
   env(ELASTICSEARCH_HOST): 'http://elasticsearch:9200'
-  env(ELASTICSEARCH_USERNAME): ''
-  env(ELASTICSEARCH_PASSWORD): ''
+  env(ELASTICSEARCH_USERNAME): 'elastic'
+  env(ELASTICSEARCH_PASSWORD): 'changeme'
 
 services:
   # default configuration for services in *this* file
