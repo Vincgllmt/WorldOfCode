@@ -39,6 +39,34 @@ export default function ReplayPlayer({
     const viewer = viewerFactory()
     viewerRef.current = viewer
 
+    let ro: ResizeObserver | null = null
+    let relayoutTimer: number | null = null
+    let relaying = false
+    let pending = false
+
+    // Recalcule la mise en page du viewer pour la taille courante du canvas,
+    // puis rejoue les frames jusqu'à l'image courante pour reconstituer l'état.
+    const relayout = async () => {
+      if (destroyed || !appRef.current) return
+      if (relaying) {
+        pending = true
+        return
+      }
+      relaying = true
+      do {
+        pending = false
+        viewer.teardown(appRef.current)
+        // eslint-disable-next-line no-await-in-loop
+        await viewer.setup(appRef.current, replay.init)
+        if (destroyed) break
+        const idx = Math.min(anim.current.index, last)
+        for (let k = 0; k <= idx; k++) {
+          viewer.renderFrame(frames[k], k === idx ? Math.min(anim.current.t, 1) : 1, k > 0 ? frames[k - 1] : null)
+        }
+      } while (pending && !destroyed)
+      relaying = false
+    }
+
     app
       .init({ resizeTo: host, antialias: true, background: 0x0b1f14, autoDensity: true, resolution: window.devicePixelRatio || 1 })
       .then(async () => {
@@ -76,10 +104,19 @@ export default function ReplayPlayer({
           const prev = s.index > 0 ? frames[s.index - 1] : null
           viewer.renderFrame(cur, Math.min(s.t, 1), prev)
         })
+
+        // Adapte la grille à la taille du panneau (initial + redimensionnement manuel).
+        ro = new ResizeObserver(() => {
+          if (relayoutTimer) clearTimeout(relayoutTimer)
+          relayoutTimer = window.setTimeout(relayout, 80)
+        })
+        ro.observe(host)
       })
 
     return () => {
       destroyed = true
+      if (relayoutTimer) clearTimeout(relayoutTimer)
+      ro?.disconnect()
       try {
         if (appRef.current) viewer.teardown(appRef.current)
       } catch {

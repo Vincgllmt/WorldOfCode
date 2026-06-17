@@ -123,8 +123,8 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   const [leftTab, setLeftTab] = useState<'sujet' | 'tests'>('sujet')
 
   // Tailles des panneaux redimensionnables (px)
-  const [leftWidth, setLeftWidth] = useState(480)
-  const [vizHeight, setVizHeight] = useState(240)
+  const [leftWidth, setLeftWidth] = useState(560)
+  const [vizHeight, setVizHeight] = useState(440)
   const [sortieHeight, setSortieHeight] = useState(240)
 
   const isGame = !!GAME_VIEWERS[slug]
@@ -219,7 +219,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     const startH = kind === 'viz' ? vizHeight : sortieHeight
     const move = (ev: MouseEvent) => {
       const next = startH - (ev.clientY - startY)
-      if (kind === 'viz') setVizHeight(clamp(next, 120, 560))
+      if (kind === 'viz') setVizHeight(clamp(next, 120, 760))
       else setSortieHeight(clamp(next, 120, 620))
     }
     const stop = () => {
