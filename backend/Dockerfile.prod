@@ -1,6 +1,6 @@
 FROM php:8.4-fpm
 
-WORKDIR /var/www/backend
+WORKDIR /var/www/backend 
 
 # 1. Installation des dépendances système
 RUN apt-get update && apt-get install -y \
