@@ -1,0 +1,12 @@
+{
+  "title": "Caméléon Caméléon",
+  "difficulty": "hard",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 150,
+  "image": null,
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Premier festin", "description": "Compléter les séries requises pour la première fois." },
+    { "code": "combo_master", "name": "Combo parfait", "description": "Compléter toutes les séries sans jamais casser le combo." }
+  ]
+}

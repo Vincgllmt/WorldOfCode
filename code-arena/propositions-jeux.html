@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Festin du Caméléon — 3 designs détaillés</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-2: #1c2430;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent-2: #d2a8ff;
+    --green: #3fb950;
+    --orange: #f0883e;
+    --red: #f85149;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6; padding: 0 0 80px;
+  }
+  header {
+    background: linear-gradient(135deg, #1f6feb22, #d2a8ff14);
+    border-bottom: 1px solid var(--border); padding: 46px 24px 34px; text-align: center;
+  }
+  header h1 { margin: 0 0 8px; font-size: 2rem; letter-spacing: -0.5px; }
+  header .sub { color: var(--text-dim); font-size: 1.05rem; max-width: 760px; margin: 0 auto; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+  .note {
+    margin: 30px 0; padding: 18px 22px; background: var(--bg-card);
+    border: 1px solid var(--border); border-left: 3px solid var(--orange); border-radius: 8px;
+  }
+  .note h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--orange); }
+  .note p { margin: 6px 0; color: var(--text-dim); }
+  .note .ok { color: var(--green); } .note .ko { color: var(--red); }
+
+  .game {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+    margin: 30px 0; overflow: hidden;
+  }
+  .game-head {
+    display: flex; align-items: center; gap: 16px; padding: 22px 26px;
+    background: linear-gradient(90deg, var(--bg-card-2), transparent); border-bottom: 1px solid var(--border);
+  }
+  .game-num {
+    flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center;
+    border-radius: 12px; font-size: 1.6rem; background: var(--accent-2); color: #04101f;
+  }
+  .game-title { flex: 1; }
+  .game-title h2 { margin: 0; font-size: 1.45rem; }
+  .game-title .slug { font-family: var(--mono); font-size: 0.84rem; color: var(--accent-2); }
+  .impl {
+    text-align: right; font-size: 0.78rem; color: var(--text-dim); white-space: nowrap;
+  }
+  .impl .stars { font-size: 1.05rem; letter-spacing: 2px; display: block; }
+  .impl .compat { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; }
+  .compat.good { background: #13351f; color: var(--green); border: 1px solid #1b5c30; }
+  .compat.warn { background: #3a2a12; color: var(--orange); border: 1px solid #6a4a18; }
+
+  .game-body { padding: 8px 26px 26px; }
+  .game-body h3 {
+    font-size: 0.76rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent); margin: 24px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px;
+  }
+  .pitch { font-size: 1.08rem; font-style: italic; color: var(--text); margin: 8px 0 0; }
+  code, .mono { font-family: var(--mono); font-size: 0.88em; color: var(--accent-2); }
+  ul { margin: 6px 0; padding-left: 22px; } li { margin: 4px 0; }
+
+  pre.block {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem;
+    color: var(--text); margin: 8px 0;
+  }
+  pre.block .c { color: var(--text-dim); }    /* commentaire */
+  pre.block .k { color: var(--accent); }       /* mot-clé */
+  pre.block .o { color: var(--green); }         /* sortie */
+
+  .io { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px){ .io { grid-template-columns: 1fr; } }
+  .io .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin: 8px 0 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; }
+  td .tc { font-family: var(--mono); color: var(--accent-2); }
+
+  .files { list-style: none; padding: 0; margin: 8px 0; }
+  .files li { padding: 5px 0 5px 26px; position: relative; font-size: 0.9rem; }
+  .files li::before { content: "📄"; position: absolute; left: 0; }
+  .files .fp { font-family: var(--mono); color: var(--accent-2); }
+  .files .new { color: var(--green); font-size: 0.74rem; margin-left: 6px; }
+  .files .reuse { color: var(--orange); font-size: 0.74rem; margin-left: 6px; }
+
+  .breakdown { margin-top: 8px; }
+  .bar-row { display: grid; grid-template-columns: 150px 1fr 40px; gap: 10px; align-items: center; margin: 5px 0; font-size: 0.85rem; }
+  .bar { height: 8px; border-radius: 4px; background: var(--bg-card-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--orange)); }
+  .bar-row .val { color: var(--text-dim); font-size: 0.8rem; text-align: right; }
+
+  /* --- Section calibrage difficulté --- */
+  .calib { margin: 30px 0; }
+  .calib > h2 { font-size: 1.5rem; margin-bottom: 4px; }
+  .calib > p.lead { color: var(--text-dim); margin-top: 0; }
+  .lever { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; margin: 20px 0; overflow: hidden; }
+  .lever-head { padding: 16px 22px; background: linear-gradient(90deg, var(--bg-card-2), transparent); border-bottom: 1px solid var(--border); }
+  .lever-head h3 { margin: 0; font-size: 1.2rem; border: none; color: var(--text); text-transform: none; letter-spacing: 0; padding: 0; }
+  .lever-head .sub { color: var(--text-dim); font-size: 0.9rem; }
+  .lvl-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 760px){ .lvl-pair { grid-template-columns: 1fr; } }
+  .lvl-card { padding: 18px 22px; }
+  .lvl-card + .lvl-card { border-left: 1px solid var(--border); }
+  @media (max-width: 760px){ .lvl-card + .lvl-card { border-left: none; border-top: 1px solid var(--border); } }
+  .lvl-tag { display: inline-block; font-size: 0.74rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; }
+  .lvl-tag.easy { background: #13351f; color: var(--green); border: 1px solid #1b5c30; }
+  .lvl-tag.hard { background: #3a1518; color: var(--red); border: 1px solid #6a2228; }
+  .lvl-card p { font-size: 0.9rem; margin: 8px 0; }
+  .lvl-card .why { font-size: 0.84rem; color: var(--text-dim); border-left: 2px solid var(--border); padding-left: 10px; margin-top: 10px; }
+  .board { display: inline-grid; gap: 2px; background: var(--border); padding: 2px; border-radius: 6px; margin: 4px 0 8px; }
+  .board .c { width: 26px; height: 26px; display: grid; place-items: center; background: #143b25; border-radius: 3px; font-size: 14px; line-height: 1; }
+  .board .c.wall { background: #0a160f; }
+  .board .c.start { background: #2a3a48; box-shadow: 0 0 0 2px var(--accent) inset; }
+  .board .c.path { background: #2a2f17; }
+  .board .c.detour { background: #1d2f1a; box-shadow: 0 0 0 2px var(--green) inset; }
+  .inv { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; font-size: 0.9rem; }
+  .inv .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+  .partition { font-family: var(--mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .partition .ok { color: var(--green); }
+  .budgetbar { margin: 8px 0; }
+  .budgetbar .lab { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 3px; }
+  .budgetbar .track { height: 14px; border-radius: 7px; background: var(--bg-card-2); position: relative; overflow: hidden; border: 1px solid var(--border); }
+  .budgetbar .track > i { display: block; height: 100%; }
+  .budgetbar .track > i.fit { background: var(--green); }
+  .budgetbar .track > i.over { background: var(--red); }
+  .budgetbar .cap { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; }
+  .verdict { margin-top: 28px; padding: 22px 26px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; }
+  .verdict h2 { margin-top: 0; }
+  .pick { color: var(--green); font-weight: 700; }
+  footer { text-align: center; color: var(--text-dim); margin-top: 40px; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🦎 Le Festin du Caméléon</h1>
+  <p class="sub">Le caméléon doit <strong>manger le plus de fruits possible</strong> sur une grille — un défi de code d'optimisation. Voici les <strong>3 designs retenus</strong>, entièrement spécifiés pour servir de référence à l'implémentation.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="note">
+    <h3>⚙️ Contrainte d'architecture à connaître avant de coder</h3>
+    <p>Le moteur actuel (<span class="mono">GameRunner.php</span>) est <strong>« one-shot »</strong> : le code joueur s'exécute <strong>une seule fois</strong> (toute sa sortie d'un coup), puis le référé simule et renvoie <span class="mono">verdict + score + replay</span>. <strong>Il n'y a pas encore de boucle tour par tour interactive.</strong></p>
+    <p><span class="ok">✅ Compatible directement :</span> tout jeu où la grille est connue d'avance et le joueur émet sa séquence complète d'actions → <strong>Design 1 (Langue)</strong> et <strong>Design 2 (Couleurs)</strong>.</p>
+    <p><span class="ko">⚠️ Nécessite une adaptation :</span> tout jeu « réactif » (le joueur découvre la carte au fil du jeu) → <strong>Design 3 (Brouillard)</strong>. Faisable seulement en version « parcours aveugle », ou en construisant une infra interactive (gros chantier).</p>
+  </div>
+
+  <!-- ============ DESIGN 1 : LANGUE ============ -->
+  <div class="game">
+    <div class="game-head">
+      <div class="game-num">👅</div>
+      <div class="game-title">
+        <h2>Design 1 — La Langue Extensible</h2>
+        <span class="slug">chameleon-tongue</span>
+      </div>
+      <div class="impl">
+        Mise en place<span class="stars" style="color:var(--orange)">★★☆☆</span>
+        <span class="compat good">one-shot ✓ compatible</span>
+      </div>
+    </div>
+    <div class="game-body">
+      <p class="pitch">Marche pour te déplacer, ou tire ta langue pour gober un fruit à distance — chaque action compte, dose-les bien.</p>
+
+      <h3>Objectif</h3>
+      <p>Le caméléon dispose d'un <strong>budget d'actions</strong>. Une action = soit avancer d'une case, soit tirer sa langue dans une direction pour manger le <strong>premier fruit aligné</strong> à portée. L'enjeu : maximiser les fruits mangés. Tirer la langue permet d'économiser des déplacements → c'est le cœur de l'optimisation.</p>
+
+      <h3>Contrat d'entrée / sortie</h3>
+      <div class="io">
+        <div>
+          <div class="lbl">Entrée (stdin) — connue d'avance</div>
+<pre class="block"><span class="c"># cols rows portee budget</span>
+8 6 3 12
+<span class="c"># grille : . sol  # mur  S départ  F fruit</span>
+S....F..
+..#..#..
+..F...F.
+....#...
+F..#..F.
+......F.</pre>
+        </div>
+        <div>
+          <div class="lbl">Sortie (stdout) — 1 action / ligne</div>
+<pre class="block"><span class="o">MOVE R</span>   <span class="c"># avance d'une case</span>
+<span class="o">MOVE R</span>
+<span class="o">TONGUE R</span> <span class="c"># gobe le 1er fruit à droite</span>
+<span class="o">MOVE D</span>
+<span class="o">TONGUE D</span>
+<span class="c"># ... ≤ budget actions</span></pre>
+        </div>
+      </div>
+
+      <h3>Mécanique de simulation (logique du référé)</h3>
+      <ul>
+        <li><span class="mono">MOVE U|D|L|R</span> : déplace d'une case. Viser un mur ou sortir de la grille = action perdue (le caméléon ne bouge pas), pas de crash.</li>
+        <li><span class="mono">TONGUE U|D|L|R</span> : projette la langue jusqu'à <span class="mono">portee</span> cases. Elle s'arrête sur le <strong>premier fruit</strong> rencontré (mangé) ou sur le <strong>premier mur</strong> (rien mangé).</li>
+        <li>Chaque action consomme 1 du budget. Les actions au-delà du budget sont ignorées.</li>
+        <li>Chaque fruit ne peut être mangé qu'une fois.</li>
+      </ul>
+
+      <h3>Score & victoire</h3>
+      <p>Score proportionnel aux fruits mangés : <span class="mono">score = round(maxScore × fruits_mangés / total_fruits)</span>. Verdict <span class="mono">passed</span> si tous les fruits sont mangés, sinon <span class="mono">failed</span> mais le score partiel récompense l'effort.</p>
+
+      <h3>Jeux de tests (★ → ★★★)</h3>
+      <table>
+        <tr><th>Code</th><th>Nom</th><th>Diff.</th><th>Idée pédagogique</th></tr>
+        <tr><td class="tc">ct-1</td><td>Premier Coup de Langue</td><td>★</td><td>fruits alignés, budget large → découvrir TONGUE</td></tr>
+        <tr><td class="tc">ct-2</td><td>Marcher ou Lécher</td><td>★</td><td>arbitrer entre se déplacer et tirer la langue</td></tr>
+        <tr><td class="tc">ct-3</td><td>Les Murs Gênants</td><td>★★</td><td>murs qui bloquent la langue → repositionnement</td></tr>
+        <tr><td class="tc">ct-4</td><td>Le Festin Optimal</td><td>★★★</td><td>budget serré, beaucoup de fruits → vraie optimisation d'ordre</td></tr>
+      </table>
+
+      <h3>Structure du replay (types frontend)</h3>
+<pre class="block"><span class="k">interface</span> TongueInit {
+  cols: number; rows: number;
+  walls: [number, number][];
+  start: [number, number];
+  fruits: [number, number][];
+  range: number;
+}
+<span class="k">interface</span> TongueFrame {
+  pos: [number, number];
+  action: <span class="o">'move' | 'tongue' | 'blocked'</span>;
+  dir: <span class="o">'U' | 'D' | 'L' | 'R'</span>;
+  tongueTip?: [number, number];   <span class="c">// extrémité de la langue (anim)</span>
+  eaten?: [number, number];        <span class="c">// fruit gobé ce tour</span>
+  score: number;
+}</pre>
+
+      <h3>Notes référé (referee.py)</h3>
+      <ul>
+        <li>Parse la grille, place murs / fruits / départ.</li>
+        <li>Rejoue chaque action, applique le « raycast » de la langue (boucle jusqu'à portée, stop au 1er fruit/mur).</li>
+        <li>Émet une <span class="mono">frame</span> par action (avec <span class="mono">tongueTip</span> pour animer la langue).</li>
+      </ul>
+
+      <h3>Notes viewer (PixiJS)</h3>
+      <ul>
+        <li>Base = viewer du Labyrinthe (grille + sprite caméléon). <strong>~80 % réutilisable.</strong></li>
+        <li>Ajout : fruits (sprites qui disparaissent), et une <strong>langue animée</strong> (un trait/segment qui se déploie de la bouche vers <span class="mono">tongueTip</span> puis se rétracte).</li>
+      </ul>
+
+      <h3>Fichiers à créer</h3>
+      <ul class="files">
+        <li><span class="fp">code-arena/games/chameleon-tongue/game.json</span><span class="new">nouveau</span></li>
+        <li><span class="fp">code-arena/games/chameleon-tongue/statement.md</span><span class="new">nouveau</span></li>
+        <li><span class="fp">code-arena/games/chameleon-tongue/referee.py</span><span class="new">nouveau</span> — sim + raycast langue</li>
+        <li><span class="fp">code-arena/games/chameleon-tongue/input.txt</span><span class="new">nouveau</span></li>
+        <li><span class="fp">frontend/.../games/chameleon-tongue/types.ts · viewer.ts · mock.ts</span><span class="new">nouveau</span></li>
+        <li><span class="fp">frontend/.../games/registry.ts</span><span class="reuse">+1 ligne</span></li>
+      </ul>
+
+      <h3>Difficulté de mise en place</h3>
+      <div class="breakdown">
+        <div class="bar-row"><span>Référé</span><span class="bar"><i style="width:55%"></i></span><span class="val">moyen</span></div>
+        <div class="bar-row"><span>Viewer (anim langue)</span><span class="bar"><i style="width:65%"></i></span><span class="val">moyen+</span></div>
+        <div class="bar-row"><span>Infra plateforme</span><span class="bar"><i style="width:5%"></i></span><span class="val">aucune</span></div>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.88rem">Le seul vrai travail est l'animation de la langue côté viewer ; toute la logique tient dans le référé one-shot.</p>
+    </div>
+  </div>
+
+  <!-- ============ DESIGN 2 : COULEURS ============ -->
+  <div class="game">
+    <div class="game-head">
+      <div class="game-num">🎨</div>
+      <div class="game-title">
+        <h2>Design 2 — Caméléon Caméléon (couleurs)</h2>
+        <span class="slug">chameleon-colors</span>
+      </div>
+      <div class="impl">
+        Mise en place<span class="stars" style="color:var(--green)">★★☆☆</span>
+        <span class="compat good">one-shot ✓ compatible</span>
+      </div>
+    </div>
+    <div class="game-body">
+      <p class="pitch">Un caméléon ne mange un fruit que s'il a pris sa couleur — planifie tes changements de peau pour perdre le moins d'actions possible.</p>
+
+      <h3>Objectif</h3>
+      <p>Chaque fruit a une couleur. Pour manger un fruit, le caméléon doit d'abord <strong>changer la couleur de sa peau</strong> pour qu'elle corresponde. L'enjeu : ordonner ses visites pour <strong>minimiser à la fois les déplacements ET les changements de couleur</strong> (un TSP enrichi d'un coût de transition).</p>
+
+      <h3>Contrat d'entrée / sortie</h3>
+      <div class="io">
+        <div>
+          <div class="lbl">Entrée (stdin) — connue d'avance</div>
+<pre class="block"><span class="c"># cols rows budget</span>
+8 5 16
+<span class="c"># . sol  # mur  S départ</span>
+<span class="c"># R/G/B = fruit rouge/vert/bleu</span>
+S...R..G
+..#...#.
+.B...R..
+..#.G.#.
+.....B.R</pre>
+        </div>
+        <div>
+          <div class="lbl">Sortie (stdout) — 1 action / ligne</div>
+<pre class="block"><span class="o">MOVE R</span>
+<span class="o">SKIN R</span>   <span class="c"># devient rouge</span>
+<span class="o">MOVE R</span>   <span class="c"># arrive sur un fruit R → mangé</span>
+<span class="o">SKIN G</span>
+<span class="o">MOVE D</span>
+<span class="c"># ...</span></pre>
+        </div>
+      </div>
+
+      <h3>Mécanique de simulation (logique du référé)</h3>
+      <ul>
+        <li><span class="mono">MOVE U|D|L|R</span> : déplace d'une case (mur/bord = action perdue).</li>
+        <li><span class="mono">SKIN R|G|B</span> : change la couleur de peau courante (coûte 1 action).</li>
+        <li>Quand le caméléon est sur une case fruit <strong>et que sa peau == couleur du fruit</strong> → le fruit est mangé automatiquement. Mauvaise couleur = rien ne se passe (le fruit reste).</li>
+        <li>Chaque action consomme 1 du budget.</li>
+      </ul>
+
+      <h3>Score & victoire</h3>
+      <p>Identique au Design 1 : <span class="mono">score = round(maxScore × fruits_mangés / total)</span>, <span class="mono">passed</span> si tout est mangé. Le budget serré force à minimiser les <span class="mono">SKIN</span> superflus.</p>
+
+      <h3>Jeux de tests (★ → ★★★)</h3>
+      <table>
+        <tr><th>Code</th><th>Nom</th><th>Diff.</th><th>Idée pédagogique</th></tr>
+        <tr><td class="tc">cc-1</td><td>Une Seule Couleur</td><td>★</td><td>tous les fruits rouges → 1 seul SKIN</td></tr>
+        <tr><td class="tc">cc-2</td><td>Deux Teintes</td><td>★</td><td>regrouper les fruits par couleur</td></tr>
+        <tr><td class="tc">cc-3</td><td>L'Arc-en-Ciel</td><td>★★</td><td>3 couleurs mêlées → ordonner pour limiter les SKIN</td></tr>
+        <tr><td class="tc">cc-4</td><td>Le Peintre Économe</td><td>★★★</td><td>budget juste : optimiser trajet + transitions de couleur</td></tr>
+      </table>
+
+      <h3>Structure du replay (types frontend)</h3>
+<pre class="block"><span class="k">type</span> Color = <span class="o">'R' | 'G' | 'B'</span>;
+<span class="k">interface</span> ColorsInit {
+  cols: number; rows: number;
+  walls: [number, number][];
+  start: [number, number];
+  fruits: { pos: [number, number]; color: Color }[];
+}
+<span class="k">interface</span> ColorsFrame {
+  pos: [number, number];
+  skin: Color;                     <span class="c">// couleur courante du caméléon</span>
+  event: <span class="o">'move' | 'skin' | 'eat' | 'blocked'</span>;
+  eaten?: [number, number];
+  score: number;
+}</pre>
+
+      <h3>Notes référé (referee.py)</h3>
+      <ul>
+        <li>Parse la grille + couleur de chaque fruit. État = (position, peau).</li>
+        <li>Rejoue les actions ; après chaque MOVE, teste si peau == couleur du fruit sous le caméléon → mange.</li>
+        <li>Émet une frame par action avec la peau courante (pour le teintage du sprite).</li>
+      </ul>
+
+      <h3>Notes viewer (PixiJS)</h3>
+      <ul>
+        <li>Base = viewer du Labyrinthe. <strong>~85 % réutilisable</strong> (le plus simple des trois côté rendu).</li>
+        <li>Ajout : fruits colorés + <strong>teintage du sprite caméléon</strong> (PixiJS <span class="mono">sprite.tint</span>) qui change à chaque <span class="mono">SKIN</span> — visuellement « waouh » et trivial techniquement.</li>
+      </ul>
+
+      <h3>Fichiers à créer</h3>
+      <ul class="files">
+        <li><span class="fp">code-arena/games/chameleon-colors/game.json · statement.md · referee.py · input.txt</span><span class="new">nouveaux</span></li>
+        <li><span class="fp">frontend/.../games/chameleon-colors/types.ts · viewer.ts · mock.ts</span><span class="new">nouveaux</span></li>
+        <li><span class="fp">frontend/.../games/registry.ts</span><span class="reuse">+1 ligne</span></li>
+      </ul>
+
+      <h3>Difficulté de mise en place</h3>
+      <div class="breakdown">
+        <div class="bar-row"><span>Référé</span><span class="bar"><i style="width:50%"></i></span><span class="val">moyen</span></div>
+        <div class="bar-row"><span>Viewer (tint sprite)</span><span class="bar"><i style="width:40%"></i></span><span class="val">facile</span></div>
+        <div class="bar-row"><span>Infra plateforme</span><span class="bar"><i style="width:5%"></i></span><span class="val">aucune</span></div>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.88rem">Le teintage de sprite est natif PixiJS → c'est le design le plus simple à rendre, pour un effet très lisible.</p>
+    </div>
+  </div>
+
+  <!-- ============ DESIGN 3 : BROUILLARD ============ -->
+  <div class="game">
+    <div class="game-head">
+      <div class="game-num">🌫️</div>
+      <div class="game-title">
+        <h2>Design 3 — Vision Limitée (brouillard)</h2>
+        <span class="slug">chameleon-fog</span>
+      </div>
+      <div class="impl">
+        Mise en place<span class="stars" style="color:var(--red)">★★★★</span>
+        <span class="compat warn">⚠ adaptation requise</span>
+      </div>
+    </div>
+    <div class="game-body">
+      <p class="pitch">Le caméléon ne voit que les fruits proches : il doit explorer pour les découvrir tout en les collectant.</p>
+
+      <h3>Objectif</h3>
+      <p>Le caméléon ne « voit » que les fruits dans un rayon de vision. Il doit <strong>explorer la carte</strong> pour révéler les fruits cachés puis les manger, dans une limite de tours. C'est un mélange exploration + collecte.</p>
+
+      <h3>⚠️ Le point bloquant</h3>
+      <p>Cette idée, dans sa version <strong>réactive</strong> (le joueur reçoit à chaque tour les fruits visibles et décide en conséquence), suppose un <strong>dialogue tour par tour</strong> entre le code joueur et le référé. Or le <span class="mono">GameRunner</span> actuel ne fait <strong>qu'un seul échange</strong> (le joueur écrit tout, puis le référé lit tout). Deux voies possibles :</p>
+
+      <table>
+        <tr><th>Voie</th><th>Description</th><th>Coût</th></tr>
+        <tr>
+          <td><b>A — Parcours aveugle</b><br><span style="color:var(--green)">faisable maintenant</span></td>
+          <td>Le joueur connaît les murs mais PAS les fruits. Il émet un parcours fixe ; le référé mange tout fruit qui entre dans son rayon de vision pendant le trajet. Score = fruits trouvés. → devient un défi de <strong>couverture de terrain</strong> (one-shot, compatible).</td>
+          <td><span class="mono">★★</span> comme les autres</td>
+        </tr>
+        <tr>
+          <td><b>B — Vrai tour par tour</b><br><span style="color:var(--red)">gros chantier</span></td>
+          <td>Construire une infra interactive : exécuter le code joueur en mode boucle, lui réinjecter l'état à chaque tour. Modifie <span class="mono">GameRunner</span>, <span class="mono">PistonService</span> et le protocole. Réutilisable ensuite pour Botnet / Don't Panic.</td>
+          <td><span class="mono">★★★★+</span> + risque</td>
+        </tr>
+      </table>
+
+      <h3>Contrat (voie A — parcours aveugle, one-shot)</h3>
+      <div class="io">
+        <div>
+          <div class="lbl">Entrée (stdin)</div>
+<pre class="block"><span class="c"># cols rows vision max_tours</span>
+10 8 2 40
+<span class="c"># murs connus, fruits CACHÉS</span>
+S.........
+..####....
+..........
+....##....
+..........</pre>
+        </div>
+        <div>
+          <div class="lbl">Sortie (stdout)</div>
+<pre class="block"><span class="o">MOVE R</span>
+<span class="o">MOVE R</span>
+<span class="o">MOVE D</span>
+<span class="c"># un parcours couvrant la carte</span>
+<span class="c"># le référé mange les fruits</span>
+<span class="c"># vus dans le rayon `vision`</span></pre>
+        </div>
+      </div>
+
+      <h3>Structure du replay (types frontend — voie A)</h3>
+<pre class="block"><span class="k">interface</span> FogInit {
+  cols: number; rows: number;
+  walls: [number, number][];
+  start: [number, number];
+  vision: number;
+  fruits: [number, number][];   <span class="c">// rendus, mais cachés au joueur</span>
+}
+<span class="k">interface</span> FogFrame {
+  pos: [number, number];
+  revealed: [number, number][]; <span class="c">// fruits dévoilés ce tour</span>
+  eaten?: [number, number];
+  score: number;
+}</pre>
+
+      <h3>Jeux de tests (★ → ★★★) — voie A</h3>
+      <table>
+        <tr><th>Code</th><th>Nom</th><th>Diff.</th><th>Idée</th></tr>
+        <tr><td class="tc">cf-1</td><td>Petite Pièce</td><td>★</td><td>petite carte, vision large</td></tr>
+        <tr><td class="tc">cf-2</td><td>Le Balayage</td><td>★</td><td>parcours en lignes (boustrophédon)</td></tr>
+        <tr><td class="tc">cf-3</td><td>Les Recoins</td><td>★★</td><td>murs créant des angles morts</td></tr>
+        <tr><td class="tc">cf-4</td><td>Couverture Maximale</td><td>★★★</td><td>tours limités → maximiser les cases vues</td></tr>
+      </table>
+
+      <h3>Notes viewer (PixiJS)</h3>
+      <ul>
+        <li>Base = viewer Labyrinthe + <strong>masque de brouillard</strong> (overlay sombre, halo clair autour du caméléon) — un peu plus de travail graphique.</li>
+        <li>Les fruits apparaissent (fade-in) quand ils entrent dans le halo.</li>
+      </ul>
+
+      <h3>Difficulté de mise en place</h3>
+      <div class="breakdown">
+        <div class="bar-row"><span>Référé (voie A)</span><span class="bar"><i style="width:55%"></i></span><span class="val">moyen</span></div>
+        <div class="bar-row"><span>Viewer (brouillard)</span><span class="bar"><i style="width:70%"></i></span><span class="val">moyen+</span></div>
+        <div class="bar-row"><span>Infra (voie B)</span><span class="bar"><i style="width:95%"></i></span><span class="val">lourd</span></div>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.88rem">En voie A, c'est faisable (★★). En voie B (vrai temps réel), c'est un projet à part entière qui débloque aussi les futurs jeux tour par tour.</p>
+    </div>
+  </div>
+
+  <!-- ============ CALIBRAGE DIFFICULTÉ (Caméléon Caméléon) ============ -->
+  <div class="calib">
+    <h2>🎚️ Calibrer la difficulté — niveau 1 vs niveau 5</h2>
+    <p class="lead">Les 3 leviers principaux du jeu <strong>Caméléon Caméléon</strong>, illustrés par un exemple facile et un exemple difficile. 🦎 = caméléon · 🔴🟢🔵 = fruits.</p>
+
+    <!-- LEVIER 1 : CIBLE DE SÉRIES -->
+    <div class="lever">
+      <div class="lever-head">
+        <h3>🎯 1. La cible de séries</h3>
+        <span class="sub">Le nombre de séries de tailles croissantes (1, 2, 3…) à compléter.</span>
+      </div>
+      <div class="lvl-pair">
+        <div class="lvl-card">
+          <span class="lvl-tag easy">NIVEAU 1 · cible = 2</span>
+          <div class="board" style="grid-template-columns:repeat(5,26px)">
+            <div class="c start">🦎</div><div class="c"></div><div class="c">🔵</div><div class="c"></div><div class="c">🟢</div>
+            <div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c">🟢</div>
+          </div>
+          <p><b>Série 1</b> = 🔵 (1 fruit), <b>série 2</b> = 🟢🟢 (2 fruits). Terminé.</p>
+          <p class="why">Il y a plein de façons de réussir. Aucun calcul : on prend ce qui passe.</p>
+        </div>
+        <div class="lvl-card">
+          <span class="lvl-tag hard">NIVEAU 5 · cible = 5</span>
+          <div class="inv">
+            <span class="chip">🔴 ×9</span><span class="chip">🟢 ×5</span><span class="chip">🔵 ×1</span>
+          </div>
+          <p>Il faut les séries <b>1+2+3+4+5 = 15 fruits</b>, chaque série monochrome. Une seule répartition marche :</p>
+          <div class="partition">
+            série 5 → 🔴🔴🔴🔴🔴  <span class="ok">(5 rouges)</span><br>
+            série 4 → 🔴🔴🔴🔴    <span class="ok">(4 rouges) → 9 rouges OK</span><br>
+            série 3 → 🟢🟢🟢      <span class="ok">(3 verts)</span><br>
+            série 2 → 🟢🟢        <span class="ok">(2 verts) → 5 verts OK</span><br>
+            série 1 → 🔵          <span class="ok">(1 bleu) OK</span>
+          </div>
+          <p class="why">Le code doit <strong>résoudre un puzzle d'affectation</strong> couleur↔taille avant de bouger. Se tromper de répartition = blocage.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVIER 2 : ÉVITER DE MANGER PAR ERREUR -->
+    <div class="lever">
+      <div class="lever-head">
+        <h3>🪤 2. Éviter de manger par erreur</h3>
+        <span class="sub">Manger est automatique : on ne peut pas traverser un fruit de sa propre couleur de peau.</span>
+      </div>
+      <div class="lvl-pair">
+        <div class="lvl-card">
+          <span class="lvl-tag easy">NIVEAU 1 · peau 🔴, cible 🔴 dégagée</span>
+          <div class="board" style="grid-template-columns:repeat(6,26px)">
+            <div class="c start">🦎</div><div class="c path"></div><div class="c path"></div><div class="c path"></div><div class="c path"></div><div class="c">🔴</div>
+          </div>
+          <p>Aucun autre fruit sur le chemin → le caméléon fonce <b>tout droit</b> jusqu'au 🔴.</p>
+          <p class="why">Le plus court chemin marche. Même un algo naïf réussit.</p>
+        </div>
+        <div class="lvl-card">
+          <span class="lvl-tag hard">NIVEAU 5 · peau 🔴, 🔴 sur le chemin direct</span>
+          <div class="board" style="grid-template-columns:repeat(6,26px)">
+            <div class="c start">🦎</div><div class="c">🔴</div><div class="c">🔴</div><div class="c"></div><div class="c"></div><div class="c">🔴</div>
+            <div class="c detour"></div><div class="c detour"></div><div class="c detour"></div><div class="c detour"></div><div class="c detour"></div><div class="c detour"></div>
+          </div>
+          <p>Tout droit (en haut) = on gobe 2 🔴 par erreur → combo cassé. Il faut <b>contourner par le bas</b> (vert).</p>
+          <p class="why">Le code doit faire un <strong>BFS qui interdit les cases de sa couleur</strong>. C'est le « aha ! » du jeu.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVIER 3 : BUDGET SERRÉ -->
+    <div class="lever">
+      <div class="lever-head">
+        <h3>⏱️ 3. Le budget serré</h3>
+        <span class="sub">Le nombre max d'actions (MOVE + SKIN). Au-delà, tout est ignoré. (Solution optimale ≈ 32 actions.)</span>
+      </div>
+      <div class="lvl-pair">
+        <div class="lvl-card">
+          <span class="lvl-tag easy">NIVEAU 1 · budget = 60</span>
+          <div class="budgetbar">
+            <div class="lab">trajet gaspilleur : 55 actions</div>
+            <div class="track"><i class="fit" style="width:91%"></i></div>
+          </div>
+          <p>Énorme marge : même un trajet brouillon, avec des allers-retours et trop de <span class="mono">SKIN</span>, <b>passe</b>.</p>
+          <p class="why">Pas besoin d'optimiser. On ramasse dans le désordre.</p>
+        </div>
+        <div class="lvl-card">
+          <span class="lvl-tag hard">NIVEAU 5 · budget = 35</span>
+          <div class="budgetbar">
+            <div class="lab">trajet gaspilleur : 55 actions → ❌ tronqué</div>
+            <div class="track"><i class="over" style="width:100%"></i><span class="cap" style="left:63%"></span></div>
+          </div>
+          <div class="budgetbar">
+            <div class="lab">trajet optimisé : 32 actions → ✅</div>
+            <div class="track"><i class="fit" style="width:91%"></i><span class="cap" style="left:100%"></span></div>
+          </div>
+          <p>La barre blanche = le budget. Le gaspilleur déborde et ne finit pas ses séries.</p>
+          <p class="why">Le code doit <strong>minimiser trajet + changements de peau</strong> : un mini problème du voyageur de commerce (TSP).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict">
+    <h2>🎯 Mon conseil</h2>
+    <ul>
+      <li><span class="pick">Design 2 — Caméléon Caméléon (couleurs)</span> : le meilleur rapport effet/effort. Rendu très lisible (le caméléon change de teinte, c'est sa signature), logique propre, <strong>zéro changement d'infra</strong>. Idéal pour un premier ajout.</li>
+      <li><span class="pick">Design 1 — La Langue</span> : tout aussi compatible, un cran plus de travail sur l'animation, mais gameplay original et « caméléon ».</li>
+      <li><span style="color:var(--orange);font-weight:700">Design 3 — Brouillard</span> : à réserver pour plus tard. En voie A c'est jouable, mais la version intéressante (voie B) demande de construire le tour par tour — utile seulement si on veut aussi Botnet & Don't Panic ensuite.</li>
+    </ul>
+    <p>Dis-moi lequel tu choisis et je crée tous les fichiers listés ci-dessus (backend + frontend + registry), en m'appuyant sur cette page comme cahier des charges.</p>
+  </div>
+
+  <footer>
+    CodeArena · Le Festin du Caméléon · 3 designs · 17 juin 2026 · réf. architecture : GameRunner one-shot + replay PixiJS
+  </footer>
+</div>
+</body>
+</html>
