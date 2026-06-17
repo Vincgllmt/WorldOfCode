@@ -1,0 +1,129 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Command;
+
+use App\Entity\Badge;
+use App\Entity\Challenge;
+use App\Entity\ChallengeTest;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
+/**
+ * Synchronise les jeux définis dans games/<slug>/ vers la base (idempotent).
+ *
+ * Chaque dossier = un défi (slug = nom du dossier) :
+ *   game.json (méta) · statement.md · referee.* · input.txt
+ */
+#[AsCommand(name: 'app:arena:sync', description: 'Synchronise les jeux de games/<slug>/ vers la base.')]
+final class SyncGamesCommand extends Command
+{
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
+    ) {
+        parent::__construct();
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+        $base = $this->projectDir . '/games';
+
+        if (!is_dir($base)) {
+            $io->warning('Aucun dossier games/.');
+
+            return Command::SUCCESS;
+        }
+
+        $dirs = glob($base . '/*', \GLOB_ONLYDIR) ?: [];
+        $count = 0;
+
+        foreach ($dirs as $dir) {
+            $slug = basename($dir);
+            $metaPath = $dir . '/game.json';
+            if (!is_file($metaPath)) {
+                continue;
+            }
+
+            $meta = json_decode((string) file_get_contents($metaPath), true);
+            if (!is_array($meta) || !isset($meta['title'], $meta['difficulty'], $meta['languages'])) {
+                $io->error(sprintf('%s : game.json invalide (title/difficulty/languages requis).', $slug));
+
+                continue;
+            }
+
+            $statement = is_file($dir . '/statement.md') ? (string) file_get_contents($dir . '/statement.md') : '';
+
+            $refereeFiles = glob($dir . '/referee.*') ?: [];
+            sort($refereeFiles);
+            $refereeCode = $refereeFiles ? (string) file_get_contents($refereeFiles[0]) : null;
+
+            $gameInput = is_file($dir . '/input.txt') ? (string) file_get_contents($dir . '/input.txt') : null;
+
+            $repo = $this->em->getRepository(Challenge::class);
+            $challenge = $repo->findOneBy(['slug' => $slug]) ?? (new Challenge())->setSlug($slug);
+
+            $challenge
+                ->setTitle((string) $meta['title'])
+                ->setStatement($statement)
+                ->setDifficulty((string) $meta['difficulty'])
+                ->setLanguages(array_values((array) $meta['languages']))
+                ->setMaxScore((int) ($meta['maxScore'] ?? 100))
+                ->setImage($meta['image'] ?? null)
+                ->setRefereeCode($refereeCode)
+                ->setRefereeLanguage($meta['refereeLanguage'] ?? null)
+                ->setUpdatedAt(new \DateTime());
+
+            $this->em->persist($challenge);
+            $this->em->flush();
+
+            // Input : on remplace les cas de test existants par l'input du jeu.
+            foreach ($challenge->getTests() as $existing) {
+                $this->em->remove($existing);
+            }
+            $this->em->flush();
+
+            if (null !== $gameInput) {
+                $test = (new ChallengeTest())
+                    ->setChallenge($challenge)
+                    ->setStdin($gameInput)
+                    ->setExpectedOutput('')
+                    ->setIsPublic(false)
+                    ->setWeight(1)
+                    ->setPosition(0);
+                $this->em->persist($test);
+            }
+
+            // Badges : upsert par (challenge, code).
+            $badgeRepo = $this->em->getRepository(Badge::class);
+            foreach ((array) ($meta['badges'] ?? []) as $b) {
+                if (!isset($b['code'], $b['name'])) {
+                    continue;
+                }
+                $badge = $badgeRepo->findOneBy(['challenge' => $challenge, 'code' => $b['code']])
+                    ?? (new Badge())->setChallenge($challenge)->setCode((string) $b['code']);
+                $badge
+                    ->setName((string) $b['name'])
+                    ->setDescription($b['description'] ?? null)
+                    ->setIcon($b['icon'] ?? null);
+                $this->em->persist($badge);
+            }
+
+            $this->em->flush();
+            $io->writeln(sprintf('  <info>✓</info> %s', $slug));
+            ++$count;
+        }
+
+        $io->success(sprintf('%d jeu(x) synchronisé(s).', $count));
+
+        return Command::SUCCESS;
+    }
+}

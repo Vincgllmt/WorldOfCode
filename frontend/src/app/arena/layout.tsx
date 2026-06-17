@@ -1,32 +1,60 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { usePathname } from 'next/navigation'
+import { useTheme } from 'next-themes'
+import { ArrowLeft } from 'lucide-react'
+
+import { cn } from '@/lib/utils'
 
 export default function ArenaLayout({ children }: { children: ReactNode }) {
+  const { resolvedTheme } = useTheme()
+  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'cyberpunk-dark'
+  const logoSrc = mounted ? (isDark ? '/logo_white.png' : '/logo2.png') : '/logo_white.png'
+
+  // Pages profondes (jeu, sandbox) = plein écran sans padding ; la liste reste paddée.
+  const fullBleed = pathname.startsWith('/arena/')
+
   return (
-    <div className="min-h-screen bg-[#EEF1F0]">
-      <div className="mx-auto min-h-screen max-w-[1280px] bg-white">
-        {/* App bar dédiée Code Arena (remplace la navbar WOC) */}
-        <header className="flex h-[62px] items-center justify-between bg-gradient-to-r from-[#0C9A48] to-[#17B95B] px-5 sm:px-[30px]">
-          <Link href="/arena" className="flex items-center gap-[11px]">
-            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border border-white/35 bg-white/[0.18] font-mono text-[13px] font-bold text-white">
-              {'</>'}
+    <div className={cn('bg-background', fullBleed ? 'flex h-screen flex-col overflow-hidden' : 'min-h-screen')}>
+      {/* Barre Code Arena, au style de la navbar WOC */}
+      <header className="navbar-themed sticky top-0 z-50 w-full shrink-0 border-b px-6 py-4 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/arena" className="flex items-center gap-3">
+            <Image
+              src={logoSrc}
+              alt="World of Code"
+              width={140}
+              height={44}
+              className="h-9 w-auto"
+              priority
+            />
+            <span className="hidden font-mono text-base font-bold text-foreground sm:inline">
+              / Code Arena
             </span>
-            <span className="font-mono text-[17px] font-bold text-white">Code Arena</span>
           </Link>
 
           <Link
             href="/home"
-            className="flex items-center gap-[7px] rounded-[10px] border border-white/[0.28] bg-white/[0.16] px-[14px] py-2 text-[13px] font-semibold text-white transition hover:bg-white/25"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-accent hover:text-primary"
           >
-            <span aria-hidden>←</span>
+            <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Retour à </span>World of Code
           </Link>
-        </header>
+        </div>
+      </header>
 
-        <div className="px-4 pb-10 pt-6 sm:px-9 sm:pt-[30px]">{children}</div>
-      </div>
+      {fullBleed ? (
+        <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+      ) : (
+        <div className="w-full px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+      )}
     </div>
   )
 }

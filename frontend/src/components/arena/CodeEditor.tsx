@@ -8,6 +8,10 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false 
 const MONACO_LANGUAGE: Record<string, string> = {
   javascript: 'javascript',
   php: 'php',
+  python: 'python',
+  java: 'java',
+  cpp: 'cpp',
+  typescript: 'typescript',
 }
 
 interface CodeEditorProps {

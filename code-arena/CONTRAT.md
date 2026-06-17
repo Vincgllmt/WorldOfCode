@@ -11,9 +11,9 @@ avec scoring, leaderboard et badges.
 - **Utilisateur** : référencé par `user_id` scalaire (entier, → `user.id`). Pas d'entité `User` côté Code Arena.
 - **Auth** : validation JWT RS256 via clé publique partagée (volume `jwt_keys`), sans appel au backend.
 
-> Frontière avec le runner Piston (qui appelle Piston, format des cas de test) : **à trancher plus tard**.
-> En attendant, l'endpoint de soumission est branché en *stub* (résultat factice) et les colonnes
-> d'exécution (`execution_time_ms`, `stderr`, statuts détaillés) seront ajoutées à `submission` ultérieurement.
+- **Exécution (résolu)** : modèle générique « referee dans Piston ». Le code joueur **et** le referee
+  (propre à chaque jeu) s'exécutent dans Piston ; le referee juge la sortie et produit le replay.
+  → Fonctionnement complet, cycle de vie d'une partie et ajout d'un jeu : voir [`docs/README.md`](docs/README.md).
 
 ## Modèle de données
 
@@ -28,8 +28,14 @@ avec scoring, leaderboard et badges.
 | languages | JSON | langages autorisés, ex. `["javascript","python"]` |
 | max_score | INT | défaut 100 |
 | image | VARCHAR(255) | URL de couverture (optionnelle, affichée sur la carte) |
+| referee_code | LONGTEXT | code du referee exécuté dans Piston (nullable) |
+| referee_language | VARCHAR(20) | langage du referee, ex. `python` (nullable) |
 | created_at | DATETIME | |
 | updated_at | DATETIME | |
+
+> Pour un **jeu** (CodinGame-lite), `challenge_test` sert d'**input du jeu** (donné au code joueur)
+> et le `referee_code` juge la sortie. Le mode I/O simple (comparaison `expected_output`) reste possible
+> pour des défis sans referee.
 
 ### `challenge_test` — cas de test d'un défi
 | colonne | type | note |
@@ -95,7 +101,13 @@ Le leaderboard et les badges renvoient des `userId` ; le front résout pseudo/av
 |---|---|---|
 | GET | `/api/arena/challenges` | `[{id, slug, title, difficulty, languages, maxScore, image, solved}]` |
 | GET | `/api/arena/challenges/{slug}` | `{id, slug, title, statement, difficulty, languages, maxScore, image, publicTests:[{stdin, expectedOutput}]}` |
-| POST | `/api/arena/challenges/{slug}/submit` | body `{language, code}` → `{submissionId, status, score, testsPassed, testsTotal, badgeAwarded}` *(stub au début)* |
+| POST | `/api/arena/challenges/{slug}/play` | body `{language, code}` → `{submissionId, verdict, score, replay:{init,frames}, playerStderr, error}` — **joue** (code joueur + referee) |
+| POST | `/api/arena/run` | body `{language, code, stdin?}` → `{stdout, stderr, exitCode, timedOut}` — exécution brute (sandbox/debug) |
+| POST | `/api/arena/challenges/{slug}/submit` | body `{language, code}` → `{submissionId, status, score, testsPassed, testsTotal, badgesAwarded}` *(stub legacy, sans referee)* |
 | GET | `/api/arena/submissions/{id}` | `{id, challengeSlug, language, status, score, testsPassed, testsTotal, createdAt}` |
-| GET | `/api/arena/leaderboard` | `[{rank, userId, totalScore, badgesCount}]` |
+| GET | `/api/arena/leaderboard` | `[{rank, userId, username, totalScore, badgesCount, isCurrentUser}]` |
 | GET | `/api/arena/users/{userId}/badges` | `[{badgeId, name, description, icon, challengeSlug, awardedAt}]` |
+
+### Contrat du referee (exécuté dans Piston)
+- **stdin** : JSON `{ "input": "...", "output": "<sortie du code joueur>" }`
+- **stdout** : JSON `{ "verdict": "passed|failed", "score": int, "replay": { "init": ..., "frames": [...] } }`

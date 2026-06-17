@@ -136,23 +136,29 @@ services:
     #   docker exec projet_piston piston ppman install node
 
   piston-install:
-    image: ghcr.io/engineer-man/piston
+    image: curlimages/curl:latest
     container_name: projet_piston_install
-    environment:
-      PISTON_URL: http://piston:2000
-    entrypoint: >
-      sh -c "
-        echo 'Attente du démarrage de Piston...' &&
-        sleep 8 &&
-        piston ppman install php &&
-        piston ppman install node &&
-        echo 'Runtimes installés.'
-      "
     depends_on:
       - piston
     networks:
       - projet_network
     restart: "no"
+    # Installe les runtimes via l'API Piston (le CLI "piston ppman" n'existe pas dans l'image).
+    # Idempotent : réinstaller un runtime déjà présent renvoie "Already installed".
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo 'Attente du démarrage de Piston...'
+        until curl -sf http://piston:2000/api/v2/runtimes >/dev/null 2>&1; do sleep 2; done
+        echo 'Piston prêt. Installation des runtimes...'
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"node","version":"20.11.1"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"php","version":"8.2.3"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"python","version":"3.12.0"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"java","version":"15.0.2"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"gcc","version":"10.2.0"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"typescript","version":"5.0.3"}'; echo
+        echo 'Runtimes installes.'
 
   code-arena:
     build: ./code-arena

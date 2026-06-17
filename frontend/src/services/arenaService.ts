@@ -1,8 +1,18 @@
 import { getCookie } from 'cookies-next'
 
 import { ArenaChallenge, ArenaChallengeDetail, LeaderboardEntry, RunResult, SubmitResult } from '@/interfaces/arena'
+import type { Replay } from '@/components/arena/gameViewer'
 
 export type { RunResult, SubmitResult, ArenaChallengeDetail }
+
+export interface PlayResult {
+  submissionId: number
+  verdict: 'passed' | 'failed' | 'error'
+  score: number
+  replay: Replay | null
+  playerStderr: string
+  error: string | null
+}
 
 // Code Arena est un microservice distinct du backend principal : il a sa propre URL.
 const ARENA_API_URL =
@@ -19,6 +29,22 @@ export const getArenaChallenges = async (): Promise<ArenaChallenge[]> => {
 
   if (!res.ok) {
     throw new Error('Erreur lors du chargement des défis')
+  }
+
+  return res.json()
+}
+
+export const getArenaChallenge = async (slug: string): Promise<ArenaChallengeDetail> => {
+  const token = getCookie('token')
+
+  const res = await fetch(`${ARENA_API_URL}/api/arena/challenges/${slug}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Erreur lors du chargement du défi')
   }
 
   return res.json()
@@ -71,6 +97,26 @@ export const runCode = async (language: string, code: string, stdin?: string): P
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error((data as { error?: string }).error ?? "Erreur lors de l'exécution du code")
+  }
+
+  return res.json()
+}
+
+export const playGame = async (slug: string, language: string, code: string): Promise<PlayResult> => {
+  const token = getCookie('token')
+
+  const res = await fetch(`${ARENA_API_URL}/api/arena/challenges/${slug}/play`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ language, code }),
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { error?: string }).error ?? 'Erreur lors de la partie')
   }
 
   return res.json()
