@@ -1,5 +1,7 @@
 export type Availability = 'open_to_work' | 'employed' | 'freelance' | 'student'
 
+export type Visibility = 'PUBLIC' | 'CONNECTED' | 'PRIVATE'
+
 export type LinkType = 'github' | 'gitlab' | 'linkedin' | 'portfolio' | 'other'
 
 export type SkillCategory =
@@ -20,18 +22,38 @@ export interface UserLink {
 }
 
 export interface Experience {
+  id: string
   title: string
   company: string
   startDate: string
   endDate: string | null
-  description: string
+  description: string | null
+  location?: string | null
+  position: number
+  visibility: Visibility
+  skills?: Skill[]
+}
+
+export interface ProfileHighlight {
+  id: string
+  position: number
+  visibility: Visibility
+  postId: number
+  postContent: string
+  postAuthor: string
+}
+
+export interface EngagementSummary {
+  postCount: number
+  contributionCount: number
+  mentorRating: number | null
 }
 
 export interface User {
   id: number
   username: string
   role: 'ROLE_USER' | 'ROLE_ADMIN'
-  email: string
+  email: string | null
   firstname: string | null
   lastname: string | null
   creationDate: string
@@ -44,6 +66,9 @@ export interface User {
   experiences?: Experience[] | null
   skills?: Skill[]
   links?: UserLink[]
+  highlights?: ProfileHighlight[] | null
+  fieldVisibility?: Record<string, string> | null
+  cvPublicToken?: string | null
 }
 
 export interface UpdateUserPayload {
