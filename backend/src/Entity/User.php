@@ -97,6 +97,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'field_visibility', type: 'json', nullable: true)]
     private ?array $fieldVisibility = null;
 
+    #[ORM\Column(length: 36, nullable: true, unique: true)]
+    private ?string $cvPublicToken = null;
+
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
 
@@ -412,6 +415,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFieldVisibility(array $fieldVisibility): self
     {
         $this->fieldVisibility = $fieldVisibility;
+        return $this;
+    }
+
+    public function getCvPublicToken(): ?string
+    {
+        return $this->cvPublicToken;
+    }
+
+    public function setCvPublicToken(?string $cvPublicToken): self
+    {
+        $this->cvPublicToken = $cvPublicToken;
         return $this;
     }
 

@@ -33,6 +33,7 @@ security:
     - { path: ^/doc, roles: ROLE_ADMIN }
     - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }
     - { path: ^/api/payment/webhook, roles: PUBLIC_ACCESS }
+    - { path: ^/api/cv/, roles: PUBLIC_ACCESS }
     - { path: ^/doc.json, roles: ROLE_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 

@@ -136,9 +136,18 @@ class UserResponse
     public ?array $links = null;
 
     #[OA\Property(
-        description: "Visibilite par champ (bio, location, availability, email)",
+        description: "Visibilite par champ (bio, location, availability, email) — null pour les visiteurs anonymes",
         type: "object",
+        nullable: true,
         example: ["bio" => "PUBLIC", "location" => "PUBLIC", "availability" => "PUBLIC", "email" => "PRIVATE"]
     )]
-    public array $fieldVisibility = [];
+    public ?array $fieldVisibility = null;
+
+    #[OA\Property(
+        description: "Token UUID de partage public du CV — expose uniquement au proprietaire",
+        type: "string",
+        nullable: true,
+        example: "550e8400-e29b-41d4-a716-446655440000"
+    )]
+    public ?string $cvPublicToken = null;
 }

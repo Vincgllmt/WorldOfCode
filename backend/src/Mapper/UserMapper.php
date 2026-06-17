@@ -2,8 +2,10 @@
 
 namespace App\Mapper;
 
+use App\Entity\Experience;
 use App\Entity\User;
 use App\Dto\UserResponse;
+use App\Enum\Visibility;
 
 class UserMapper
 {
@@ -36,11 +38,13 @@ class UserMapper
         $dto->location = $this->applyVisibility($user->getLocation(), $fv['location'], $isOwner, $isAuthenticated);
         $dto->availability = $this->applyVisibility($user->getAvailability()?->value, $fv['availability'], $isOwner, $isAuthenticated);
 
-        $dto->fieldVisibility = $fv;
+        $dto->fieldVisibility = $isAuthenticated ? $fv : null;
+        $dto->cvPublicToken = $isOwner ? $user->getCvPublicToken() : null;
 
         $experiences = $user->getExperienceEntities()->toArray();
         usort($experiences, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
-        $dto->experiences = array_map([$this->experienceMapper, 'toDto'], $experiences);
+        $filtered = $this->filterExperiences($experiences, $isOwner, $isAuthenticated);
+        $dto->experiences = array_map([$this->experienceMapper, 'toDto'], $filtered);
 
         $dto->skills = array_map(
             [$this->skillMapper, 'toDto'],
@@ -61,5 +65,17 @@ class UserMapper
             'PRIVATE'   => $isOwner ? $value : null,
             default     => null,
         };
+    }
+
+    /** @param Experience[] $experiences */
+    private function filterExperiences(array $experiences, bool $isOwner, bool $isAuthenticated): array
+    {
+        return array_values(array_filter($experiences, function (Experience $exp) use ($isOwner, $isAuthenticated) {
+            return match ($exp->getVisibility()) {
+                Visibility::PUBLIC    => true,
+                Visibility::CONNECTED => $isAuthenticated,
+                Visibility::PRIVATE   => $isOwner,
+            };
+        }));
     }
 }
