@@ -29,23 +29,17 @@ final class ChallengeController extends AbstractController
         );
         $solvedIds = array_map('intval', $solvedIds);
 
-        // Taux de réussite par défi = soumissions réussies / total des soumissions.
-        // On ne compte, par utilisateur et par défi, que les soumissions allant jusqu'à
-        // la première réussie incluse : les replays après une première victoire ne doivent
-        // pas gonfler le taux. Les utilisateurs n'ayant jamais réussi comptent toutes leurs
-        // tentatives (COALESCE retombe sur s.id, donc la condition est toujours vraie).
+        // Progression personnelle par défi = meilleur ratio de tests réussis parmi
+        // MES soumissions (tests_passed / tests_total). La barre reflète ainsi
+        // l'avancement de l'utilisateur courant sur les tests du défi : 100 % une fois
+        // résolu, une valeur partielle (ex. 67 % pour 2/3 tests) sinon, 0 % si jamais tenté.
         $rates = $connection->fetchAllKeyValue(
-            "SELECT challenge_id,
-                    ROUND(100 * SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) / COUNT(*)) AS rate
-             FROM submission s
-             WHERE s.id <= COALESCE(
-                 (SELECT MIN(p.id) FROM submission p
-                  WHERE p.user_id = s.user_id
-                    AND p.challenge_id = s.challenge_id
-                    AND p.status = 'passed'),
-                 s.id
-             )
-             GROUP BY challenge_id",
+            'SELECT challenge_id,
+                    ROUND(MAX(100 * tests_passed / tests_total)) AS rate
+             FROM submission
+             WHERE user_id = ? AND tests_total > 0
+             GROUP BY challenge_id',
+            [$user->getId()],
         );
 
         $data = array_map(static fn (Challenge $c): array => [
