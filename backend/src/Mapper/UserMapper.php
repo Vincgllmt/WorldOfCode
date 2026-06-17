@@ -2,17 +2,21 @@
 
 namespace App\Mapper;
 
+use App\Dto\ProfileHighlightResponse;
 use App\Entity\Experience;
+use App\Entity\ProfileHighlight;
 use App\Entity\User;
 use App\Dto\UserResponse;
 use App\Enum\Visibility;
+use App\Repository\ProfileHighlightRepository;
 
 class UserMapper
 {
     public function __construct(
         private SkillMapper $skillMapper,
         private UserLinkMapper $linkMapper,
-        private ExperienceMapper $experienceMapper
+        private ExperienceMapper $experienceMapper,
+        private ProfileHighlightRepository $highlightRepo
     ) {}
 
     public function toDto(User $user, ?User $viewer = null): UserResponse
@@ -46,6 +50,10 @@ class UserMapper
         $filtered = $this->filterExperiences($experiences, $isOwner, $isAuthenticated);
         $dto->experiences = array_map([$this->experienceMapper, 'toDto'], $filtered);
 
+        $highlights = $this->highlightRepo->findByUserOrderedByPosition($user);
+        $filteredHighlights = $this->filterHighlights($highlights, $isOwner, $isAuthenticated);
+        $dto->highlights = array_map([$this, 'highlightToDto'], $filteredHighlights);
+
         $dto->skills = array_map(
             [$this->skillMapper, 'toDto'],
             $user->getSkills()->toArray()
@@ -77,5 +85,32 @@ class UserMapper
                 Visibility::PRIVATE   => $isOwner,
             };
         }));
+    }
+
+    /** @param ProfileHighlight[] $highlights */
+    private function filterHighlights(array $highlights, bool $isOwner, bool $isAuthenticated): array
+    {
+        return array_values(array_filter($highlights, function (ProfileHighlight $h) use ($isOwner, $isAuthenticated) {
+            return match ($h->getVisibility()) {
+                Visibility::PUBLIC    => true,
+                Visibility::CONNECTED => $isAuthenticated,
+                Visibility::PRIVATE   => $isOwner,
+            };
+        }));
+    }
+
+    private function highlightToDto(ProfileHighlight $highlight): ProfileHighlightResponse
+    {
+        $post = $highlight->getPost();
+        $content = $post->getContent() ?? '';
+
+        $dto = new ProfileHighlightResponse();
+        $dto->id          = $highlight->getId();
+        $dto->position    = $highlight->getPosition();
+        $dto->visibility  = $highlight->getVisibility()->value;
+        $dto->postId      = $post->getId();
+        $dto->postContent = mb_strlen($content) > 280 ? mb_substr($content, 0, 280) . '…' : $content;
+        $dto->postAuthor  = $post->getAuthor()->getUsername();
+        return $dto;
     }
 }

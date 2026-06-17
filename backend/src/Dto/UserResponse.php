@@ -150,4 +150,12 @@ class UserResponse
         example: "550e8400-e29b-41d4-a716-446655440000"
     )]
     public ?string $cvPublicToken = null;
+
+    #[OA\Property(
+        description: "Posts epingles en Temps forts",
+        type: "array",
+        items: new OA\Items(ref: new \Nelmio\ApiDocBundle\Attribute\Model(type: ProfileHighlightResponse::class)),
+        nullable: true
+    )]
+    public ?array $highlights = null;
 }
