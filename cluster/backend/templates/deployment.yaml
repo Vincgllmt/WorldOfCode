@@ -39,6 +39,11 @@ spec:
           export ELASTICSEARCH_PASSWORD={{ "\"{{ .Data.data.password }}\"" }}
           {{ "{{- end -}}" }}
     spec:
+      # SEC-12 : aucun conteneur ne tourne en root
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
 
@@ -47,6 +52,12 @@ spec:
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["/bin/sh", "-c"]
           {{- if .Values.migrations.enabled }}
           args:
@@ -97,9 +108,15 @@ spec:
               mountPath: /var/www/backend/config/jwt
               readOnly: true
 
-        # --- Conteneur Nginx ---
+        # --- Conteneur Nginx (image non-root, uid 101) ---
         - name: nginx
-          image: nginx:stable-alpine
+          image: nginxinc/nginx-unprivileged:stable-alpine
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8090
           volumeMounts:

@@ -22,6 +22,13 @@ spec:
           export DB_PASS={{ "\"{{ .Data.data.password }}\"" }}
           {{ "{{- end -}}" }}
     spec:
+      # SEC-12 : exécution non-root (node = uid 1000)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       # 1. Activation optionnelle du hostNetwork
       {{- if .Values.hostNetwork }}
       hostNetwork: {{ .Values.hostNetwork }}
@@ -41,6 +48,10 @@ spec:
         - name: messagerie
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["/bin/sh", "-c"]
           args: [". /vault/secrets/config && exec npm run start"]
           ports:

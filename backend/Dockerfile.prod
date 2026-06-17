@@ -41,6 +41,10 @@ RUN chmod +x /usr/local/bin/entrypoint-prod.sh
 RUN mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.orig
 COPY www.conf /usr/local/etc/php-fpm.d/www.conf
 
+# SEC-12 : exécution non-root (www-data = uid 33). var/ est déjà chown www-data,
+# php-fpm écoute sur 9000 (port non privilégié).
+USER www-data
+
 ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
 CMD ["php-fpm"]
 

@@ -22,7 +22,9 @@ echo "→ Cache warmup..."
 php bin/console cache:warmup --env=prod --no-interaction
 
 echo "→ Fix permissions (var)..."
-chown -R www-data:www-data var
+# SEC-12 : le conteneur tourne en www-data ; var/ lui appartient déjà.
+# Le chown reste best-effort et ne doit pas faire échouer le boot en non-root.
+chown -R www-data:www-data var 2>/dev/null || true
 
 echo "→ Lancement PHP-FPM"
 exec "$@"
