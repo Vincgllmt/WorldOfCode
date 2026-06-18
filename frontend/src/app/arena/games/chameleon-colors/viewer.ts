@@ -1,4 +1,4 @@
-import { AnimatedSprite, Application, Assets, Container, Graphics, Rectangle, Text, Texture, Ticker } from 'pixi.js'
+import { AnimatedSprite, Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, Ticker } from 'pixi.js'
 
 import type { GameViewer } from '@/components/arena/gameViewer'
 
@@ -12,6 +12,14 @@ const COLOR = {
 
 // Couleurs des fruits et teintes de peau correspondantes.
 const FRUIT_HEX: Record<SkinColor, number> = { R: 0xf85149, G: 0x3fb950, B: 0x58a6ff }
+const FRUIT_EMOJI: Record<SkinColor, string> = { R: '🍓', G: '🍏', B: '🫐' }
+// Images optionnelles : déposer fruit-r.png / fruit-g.png / fruit-b.png
+// dans frontend/public/games/chameleon-colors/. Sinon, on retombe sur les emojis.
+const FRUIT_PNG: Record<SkinColor, string> = {
+  R: '/games/chameleon-colors/fruit-r.png',
+  G: '/games/chameleon-colors/fruit-g.png',
+  B: '/games/chameleon-colors/fruit-b.png',
+}
 const NEUTRAL_TINT = 0xffffff // peau neutre = sprite tel quel
 const COLOR_NAME: Record<SkinColor, string> = { R: 'Rouge', G: 'Vert', B: 'Bleu' }
 const CONFETTI = [0xf85149, 0x3fb950, 0x58a6ff, 0xf0d000, 0xffffff, 0xd2a8ff]
@@ -42,7 +50,7 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
   let hud: Text | null = null
   let fxBanner: Container | null = null
   let confetti: Confetti[] = []
-  const fruitGfx = new Map<string, Graphics>()
+  const fruitGfx = new Map<string, Container>()
 
   let target = 0
   let cell = 0
@@ -123,14 +131,37 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
       const s = center(init.start[0], init.start[1])
       board.addChild(new Graphics().circle(s.x, s.y, cell * 0.26).fill({ color: COLOR.start, alpha: 0.9 }))
 
-      // Fruits colorés.
+      // Précharge les images de fruits (si présentes), sinon on utilisera les emojis.
+      const fruitTex: Partial<Record<SkinColor, Texture>> = {}
+      await Promise.all(
+        (['R', 'G', 'B'] as SkinColor[]).map(async (col) => {
+          try {
+            fruitTex[col] = await Assets.load<Texture>(FRUIT_PNG[col])
+          } catch {
+            /* pas d'image -> emoji */
+          }
+        }),
+      )
+
+      // Fruits : image PNG si disponible, sinon emoji.
       for (const fruit of init.fruits) {
         const c = center(fruit.pos[0], fruit.pos[1])
-        const g = new Graphics()
-        g.circle(c.x, c.y, cell * 0.28).fill(FRUIT_HEX[fruit.color])
-        g.circle(c.x - cell * 0.08, c.y - cell * 0.08, cell * 0.08).fill({ color: 0xffffff, alpha: 0.5 })
-        board.addChild(g)
-        fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, g)
+        const tex = fruitTex[fruit.color]
+        let node: Container
+        if (tex) {
+          const sprite = new Sprite(tex)
+          sprite.anchor.set(0.5)
+          sprite.width = cell * 0.72
+          sprite.height = cell * 0.72
+          node = sprite
+        } else {
+          const t = new Text({ text: FRUIT_EMOJI[fruit.color], style: { fontSize: Math.round(cell * 0.62) } })
+          t.anchor.set(0.5)
+          node = t
+        }
+        node.position.set(c.x, c.y)
+        board.addChild(node)
+        fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, node)
       }
 
       // Caméléon animé.
