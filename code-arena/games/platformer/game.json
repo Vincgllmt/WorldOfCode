@@ -1,0 +1,12 @@
+{
+  "title": "Cameleon Bros",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 100,
+  "image": "/games/platformer/chamelionbros.png",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Premier portail", "description": "Franchir le premier portail pour la première fois." },
+    { "code": "perfect", "name": "Sans faute", "description": "Ouvrir tous les portails sans erreur." }
+  ]
+}

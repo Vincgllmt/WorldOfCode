@@ -4,6 +4,8 @@ import { buildChameleonColorsPreview } from './chameleon-colors/preview'
 import { createChameleonColorsViewer } from './chameleon-colors/viewer'
 import { buildMazePreview } from './maze/preview'
 import { createMazeViewer } from './maze/viewer'
+import { buildPlatformerPreview } from './platformer/preview'
+import { createPlatformerViewer } from './platformer/viewer'
 
 /**
  * Module front d'un jeu : tout ce dont l'IDE a besoin pour un slug donné.
@@ -23,4 +25,5 @@ export interface GameModule {
 export const GAMES: Record<string, GameModule> = {
   maze: { createViewer: createMazeViewer, buildPreview: buildMazePreview },
   'chameleon-colors': { createViewer: createChameleonColorsViewer, buildPreview: buildChameleonColorsPreview },
+  platformer: { createViewer: createPlatformerViewer, buildPreview: buildPlatformerPreview },
 }
