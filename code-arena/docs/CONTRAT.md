@@ -13,7 +13,7 @@ avec scoring, leaderboard et badges.
 
 - **Exécution (résolu)** : modèle générique « referee dans Piston ». Le code joueur **et** le referee
   (propre à chaque jeu) s'exécutent dans Piston ; le referee juge la sortie et produit le replay.
-  → Fonctionnement complet, cycle de vie d'une partie et ajout d'un jeu : voir [`docs/README.md`](docs/README.md).
+  → Fonctionnement complet, cycle de vie d'une partie et ajout d'un jeu : voir [`./README.md`](./README.md).
 
 ## Modèle de données
 
@@ -99,11 +99,12 @@ Le leaderboard et les badges renvoient des `userId` ; le front résout pseudo/av
 
 | méthode | route | corps / réponse |
 |---|---|---|
-| GET | `/api/arena/challenges` | `[{id, slug, title, difficulty, languages, maxScore, image, solved}]` |
+| GET | `/api/arena/challenges` | `[{id, slug, title, difficulty, languages, maxScore, image, solved, successRate}]` (`successRate` = progression perso : meilleur ratio `testsPassed/testsTotal`) |
 | GET | `/api/arena/challenges/{slug}` | `{id, slug, title, statement, difficulty, languages, maxScore, image, publicTests:[{stdin, expectedOutput}]}` |
-| POST | `/api/arena/challenges/{slug}/play` | body `{language, code}` → `{submissionId, verdict, score, replay:{init,frames}, playerStderr, error}` — **joue** (code joueur + referee) |
+| POST | `/api/arena/challenges/{slug}/play` | body `{language, code}` → `{submissionId, verdict, score, testsPassed, testsTotal, results:[{index, verdict, score, replay:{init,frames}, playerStderr, error}], badgesAwarded}` — **soumission notée** : code joueur + referee sur **tous** les cas (`passed` ssi tous passent) |
+| POST | `/api/arena/challenges/{slug}/run-tests` | body `{language, code, testIndex?}` → `{results:[…]}` (même forme que `play.results`) — **essai non noté** : un cas (`testIndex`) ou tous, rien de persisté |
 | POST | `/api/arena/run` | body `{language, code, stdin?}` → `{stdout, stderr, exitCode, timedOut}` — exécution brute (sandbox/debug) |
-| POST | `/api/arena/challenges/{slug}/submit` | body `{language, code}` → `{submissionId, status, score, testsPassed, testsTotal, badgesAwarded}` *(stub legacy, sans referee)* |
+| POST | `/api/arena/challenges/{slug}/submit` | body `{language, code}` → `{submissionId, status, score, testsPassed, testsTotal, badgesAwarded}` — soumission notée par comparaison `stdout == expectedOutput`, **sans referee ni replay** (défis I/O classiques) |
 | GET | `/api/arena/submissions/{id}` | `{id, challengeSlug, language, status, score, testsPassed, testsTotal, createdAt}` |
 | GET | `/api/arena/leaderboard` | `[{rank, userId, username, totalScore, badgesCount, isCurrentUser}]` |
 | GET | `/api/arena/users/{userId}/badges` | `[{badgeId, name, description, icon, challengeSlug, awardedAt}]` |
