@@ -17,6 +17,8 @@ export interface Replay<Init = unknown, Frame = unknown> {
 export interface GameViewer<Init = unknown, Frame = unknown> {
   setup(app: Application, init: Init): void | Promise<void>
   renderFrame(frame: Frame, t: number, prev: Frame | null): void
+  /** Appelé quand le canvas change de taille → le viewer réajuste sa mise en page. */
+  resize?(app: Application): void
   teardown(app: Application): void
 }
 

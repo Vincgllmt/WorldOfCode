@@ -56,6 +56,10 @@ export default function ReplayPlayer({
     const viewer = viewerFactory()
     viewerRef.current = viewer
 
+    // Pixi (resizeTo) ne réagit qu'au resize de la fenêtre : on observe le
+    // conteneur pour rester responsive quand les poignées redimensionnent le panneau.
+    let resizeObs: ResizeObserver | undefined
+
     app
       .init({ resizeTo: host, antialias: true, background: 0x0b1f14, autoDensity: true, resolution: window.devicePixelRatio || 1 })
       .then(async () => {
@@ -68,6 +72,17 @@ export default function ReplayPlayer({
         await viewer.setup(app, replay.init)
         if (destroyed) return
         viewer.renderFrame(frames[0], 0, null)
+
+        resizeObs = new ResizeObserver(() => {
+          const { clientWidth, clientHeight } = host
+          if (!clientWidth || !clientHeight) return
+          app.renderer.resize(clientWidth, clientHeight)
+          viewerRef.current?.resize?.(app)
+          // Re-dessine la frame courante à la nouvelle échelle (utile en pause).
+          const i = Math.min(anim.current.index, last)
+          viewerRef.current?.renderFrame(frames[i], 0, i > 0 ? frames[i - 1] : null)
+        })
+        resizeObs.observe(host)
 
         // Démarre l'animation automatiquement (relancée à chaque "Jouer" via key).
         if (autoPlay && last > 0) {
@@ -103,6 +118,7 @@ export default function ReplayPlayer({
     return () => {
       destroyed = true
       if (endTimer) clearTimeout(endTimer)
+      resizeObs?.disconnect()
       try {
         if (appRef.current) viewer.teardown(appRef.current)
       } catch {

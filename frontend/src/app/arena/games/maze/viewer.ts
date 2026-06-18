@@ -25,33 +25,43 @@ const WALK_FRAMES = 4
 export function createMazeViewer(): GameViewer<MazeInit, MazeFrame> {
   let board: Container | null = null
   let token: AnimatedSprite | null = null
-  let cell = 0
-  let ox = 0
-  let oy = 0
+  let initRef: MazeInit | null = null
+
+  // Le plateau est dessiné en coordonnées « logiques » (une case = CELL),
+  // puis le Container entier est mis à l'échelle pour remplir le canvas.
+  // Ainsi la visualisation reste responsive : un simple re-scale au resize.
+  const CELL = 100
+  const PAD = 16
 
   const center = (x: number, y: number) => ({
-    x: ox + x * cell + cell / 2,
-    y: oy + y * cell + cell / 2,
+    x: x * CELL + CELL / 2,
+    y: y * CELL + CELL / 2,
   })
+
+  // Met le plateau à l'échelle et le centre dans le canvas courant.
+  const layout = (app: Application) => {
+    if (!board || !initRef) return
+    const w = app.screen.width
+    const h = app.screen.height
+    const natW = initRef.cols * CELL
+    const natH = initRef.rows * CELL
+    const scale = Math.max(0, Math.min((w - 2 * PAD) / natW, (h - 2 * PAD) / natH))
+    board.scale.set(scale)
+    board.position.set((w - natW * scale) / 2, (h - natH * scale) / 2)
+  }
 
   return {
     async setup(app: Application, init: MazeInit) {
+      initRef = init
       board = new Container()
       app.stage.addChild(board)
-
-      const pad = 16
-      const w = app.screen.width
-      const h = app.screen.height
-      cell = Math.floor(Math.min((w - 2 * pad) / init.cols, (h - 2 * pad) / init.rows))
-      ox = (w - cell * init.cols) / 2
-      oy = (h - cell * init.rows) / 2
 
       const wallSet = new Set(init.walls.map(([x, y]) => `${x},${y}`))
       for (let y = 0; y < init.rows; y++) {
         for (let x = 0; x < init.cols; x++) {
           const isWall = wallSet.has(`${x},${y}`)
           const g = new Graphics()
-          g.roundRect(ox + x * cell + 1.5, oy + y * cell + 1.5, cell - 3, cell - 3, 5).fill(
+          g.roundRect(x * CELL + 1.5, y * CELL + 1.5, CELL - 3, CELL - 3, 5).fill(
             isWall ? COLOR.wall : COLOR.floor,
           )
           board.addChild(g)
@@ -59,12 +69,12 @@ export function createMazeViewer(): GameViewer<MazeInit, MazeFrame> {
       }
 
       const s = center(init.start[0], init.start[1])
-      board.addChild(new Graphics().circle(s.x, s.y, cell * 0.26).fill({ color: COLOR.start, alpha: 0.9 }))
+      board.addChild(new Graphics().circle(s.x, s.y, CELL * 0.26).fill({ color: COLOR.start, alpha: 0.9 }))
 
       const g = center(init.goal[0], init.goal[1])
       board.addChild(
         new Graphics()
-          .roundRect(g.x - cell * 0.26, g.y - cell * 0.26, cell * 0.52, cell * 0.52, 5)
+          .roundRect(g.x - CELL * 0.26, g.y - CELL * 0.26, CELL * 0.52, CELL * 0.52, 5)
           .fill(COLOR.goal),
       )
 
@@ -84,10 +94,16 @@ export function createMazeViewer(): GameViewer<MazeInit, MazeFrame> {
       token.anchor.set(0.5)
       token.animationSpeed = 0.12
       token.play()
-      token.width = cell * 0.82
-      token.height = cell * 0.82
+      token.width = CELL * 0.82
+      token.height = CELL * 0.82
       board.addChild(token)
       token.position.set(s.x, s.y)
+
+      layout(app)
+    },
+
+    resize(app: Application) {
+      layout(app)
     },
 
     renderFrame(frame: MazeFrame, t: number, prev: MazeFrame | null) {
@@ -107,6 +123,7 @@ export function createMazeViewer(): GameViewer<MazeInit, MazeFrame> {
       board?.destroy({ children: true })
       board = null
       token = null
+      initRef = null
     },
   }
 }
