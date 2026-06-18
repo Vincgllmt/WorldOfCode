@@ -93,9 +93,9 @@ function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null;
           passed ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500',
         )}>
           {passed ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <XCircle className="h-5 w-5 shrink-0" />}
-          <span>{passed ? 'Tous les tests passés !' : 'Des tests ont échoué.'}</span>
+          <span>{passed ? 'Tous les niveaux réussis !' : 'Des niveaux ont échoué.'}</span>
           <span className="ml-auto font-bold">
-            {submitResult.testsPassed}/{submitResult.testsTotal} tests · {submitResult.score} pts
+            {submitResult.testsPassed}/{submitResult.testsTotal} niveaux · {submitResult.score} pts
           </span>
         </div>
         {submitResult.badgesAwarded.length > 0 && (
@@ -512,7 +512,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
             <TabsList className="flex shrink-0 gap-1 rounded-none border-b border-[#EAEFEC] bg-transparent px-4 pt-2">
               <TabsTrigger value="sujet" className="min-w-0">Sujet</TabsTrigger>
               <TabsTrigger value="tests" className="min-w-0 gap-1.5">
-                Tests
+                Niveaux
                 <span className="rounded-full bg-[#E3EAE6] px-1.5 text-[11px] font-semibold text-[#5C6B63]">
                   {challenge.publicTests.length}
                 </span>
@@ -539,9 +539,9 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
               <TabsContent value="tests">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-extrabold">Jeu de tests</h3>
+                    <h3 className="text-lg font-extrabold">Niveaux</h3>
                     <p className="mt-0.5 font-mono text-xs text-[#94A099]">
-                      {isGame ? `${gameTests.length} cas` : `${challenge.publicTests.length} cas public(s)`}
+                      {isGame ? `${gameTests.length} niveaux` : `${challenge.publicTests.length} niveau(x) public(s)`}
                     </p>
                   </div>
                   {isGame && gameTests.length > 0 && (
@@ -568,7 +568,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                           'mt-3 rounded-xl px-3 py-2 text-xs font-semibold',
                           runSummary.passed === runSummary.total ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-500',
                         )}>
-                          Essai · {runSummary.passed}/{runSummary.total} cas réussis
+                          Essai · {runSummary.passed}/{runSummary.total} niveaux réussis
                         </div>
                       )}
                       <div className="mt-3 space-y-2">
@@ -589,7 +589,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                                 title="Voir l'état de départ"
                               >
                                 <TestStatusDot run={run} />
-                                <span className="text-sm font-semibold">Cas {i + 1}</span>
+                                <span className="text-sm font-semibold">Niveau {i + 1}</span>
                                 {run && (
                                   <span className={cn('text-xs font-medium', VERDICT_META[run.verdict].color)}>
                                     {VERDICT_META[run.verdict].label}
@@ -599,7 +599,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                               <button
                                 onClick={() => handleRunTest(i)}
                                 disabled={busy || !code.trim()}
-                                title="Lancer ce cas"
+                                title="Lancer ce niveau"
                                 className="rounded-lg p-1.5 text-[#5C6B63] transition hover:bg-[#E6F2EA] hover:text-[#0E9F4A] disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 {runningTest === i
@@ -611,12 +611,12 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                         })}
                       </div>
                       <p className="mt-3 text-xs leading-relaxed text-[#94A099]">
-                        Clique un cas pour voir son état de départ, ▶ pour l&apos;essayer (non noté),
-                        ou « Jouer » pour la soumission notée sur tous les cas.
+                        Clique un niveau pour voir son état de départ, ▶ pour l&apos;essayer (non noté),
+                        ou « Jouer » pour la soumission notée sur tous les niveaux.
                       </p>
                     </>
                   ) : (
-                    <p className="mt-3 text-sm text-[#94A099]">Aucun cas de test pour ce jeu.</p>
+                    <p className="mt-3 text-sm text-[#94A099]">Aucun niveau pour ce jeu.</p>
                   )
                 ) : challenge.publicTests.length > 0 ? (
                   <div className="mt-4 space-y-3">
@@ -624,7 +624,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                       <div key={i} className="space-y-2 rounded-2xl border border-[#EAEFEC] bg-white p-4">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-[#D6DED9]" />
-                          <span className="text-sm font-bold">Cas {i + 1}</span>
+                          <span className="text-sm font-bold">Niveau {i + 1}</span>
                           <span className="ml-auto rounded-full bg-[#E3F6EA] px-2 py-0.5 text-[11px] font-semibold text-[#0B8F45]">Public</span>
                         </div>
                         {test.stdin && (
@@ -641,7 +641,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-[#94A099]">Aucun test public — l&apos;input est fourni à ton programme au lancement.</p>
+                  <p className="mt-4 text-sm text-[#94A099]">Aucun niveau public — l&apos;input est fourni à ton programme au lancement.</p>
                 )}
               </TabsContent>
             </div>
@@ -665,7 +665,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                         'text-xs font-semibold',
                         currentRun ? VERDICT_META[currentRun.verdict].color : 'text-[#5C6B63]',
                       )}>
-                        Cas {currentReplay.index + 1}{currentRun ? ` · ${VERDICT_META[currentRun.verdict].label}` : ''}
+                        Niveau {currentReplay.index + 1}{currentRun ? ` · ${VERDICT_META[currentRun.verdict].label}` : ''}
                         {replayQueue.length > 1 ? ` · ${queuePos + 1}/${replayQueue.length}` : ''}
                       </span>
                     )}
@@ -676,10 +676,10 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                       )}>
                         {playResult.verdict === 'passed'
                           ? `✓ Réussi · ${playResult.testsPassed}/${playResult.testsTotal} · ${playResult.score} pts`
-                          : playResult.verdict === 'failed' ? `✗ ${playResult.testsPassed}/${playResult.testsTotal} cas` : '⚠ Erreur'}
+                          : playResult.verdict === 'failed' ? `✗ ${playResult.testsPassed}/${playResult.testsTotal} niveaux` : '⚠ Erreur'}
                       </span>
                     ) : !currentReplay && previewReplay ? (
-                      <span className="text-xs font-medium text-[#94A099]">Cas {selectedTest + 1} · état de départ</span>
+                      <span className="text-xs font-medium text-[#94A099]">Niveau {selectedTest + 1} · état de départ</span>
                     ) : null}
                   </div>
                 </div>
@@ -708,7 +708,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                     <ReplayPlayer key={`preview-${selectedTest}`} replay={previewReplay} viewerFactory={game.createViewer} autoPlay={false} />
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#D8E1DC] bg-[#FAFCFB] p-4 text-center text-xs text-[#94A099]">
-                      Sélectionne un cas de test pour voir son état de départ.
+                      Sélectionne un niveau pour voir son état de départ.
                     </div>
                   )}
                 </div>

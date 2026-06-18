@@ -223,7 +223,7 @@ export default function BadgeUnlockOverlay({ badge, unlocked = true, onClose }: 
             transition={{ delay: reduced ? 0 : 0.35, duration: 0.4 }}
           >
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">
-              {unlocked ? 'Badge débloqué !' : 'Tous les tests réussis !'}
+              {unlocked ? 'Badge débloqué !' : 'Tous les niveaux réussis !'}
             </p>
             <p className="mt-1 text-2xl font-bold text-white drop-shadow">{badge.name}</p>
             <p className="mt-3 text-xs text-white/60">Clique n&apos;importe où pour fermer</p>

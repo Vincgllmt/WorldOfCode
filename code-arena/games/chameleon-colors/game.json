@@ -3,7 +3,7 @@
   "difficulty": "hard",
   "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
   "maxScore": 150,
-  "image": null,
+  "image": "/games/chameleon-colors/cover.jpg",
   "refereeLanguage": "python",
   "badges": [
     { "code": "first_solve", "name": "Premier festin", "description": "Compléter les séries requises pour la première fois." },
