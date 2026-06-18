@@ -2,6 +2,8 @@ import type { GameViewerFactory, Replay } from '@/components/arena/gameViewer'
 
 import { buildMazePreview } from './maze/preview'
 import { createMazeViewer } from './maze/viewer'
+import { buildPlatformerPreview } from './platformer/preview'
+import { createPlatformerViewer } from './platformer/viewer'
 
 /**
  * Module front d'un jeu : tout ce dont l'IDE a besoin pour un slug donné.
@@ -19,5 +21,6 @@ export interface GameModule {
 
 /** Registre des jeux : slug → module. */
 export const GAMES: Record<string, GameModule> = {
-  maze: { createViewer: createMazeViewer, buildPreview: buildMazePreview },
+  maze:       { createViewer: createMazeViewer,       buildPreview: buildMazePreview },
+  platformer: { createViewer: createPlatformerViewer, buildPreview: buildPlatformerPreview },
 }

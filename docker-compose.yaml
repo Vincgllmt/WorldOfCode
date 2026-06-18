@@ -125,6 +125,8 @@ services:
     privileged: true
     ports:
       - "2000:2000"
+    environment:
+      PISTON_OUTPUT_MAX_SIZE: 65536
     tmpfs:
       - /piston/jobs
     volumes:
