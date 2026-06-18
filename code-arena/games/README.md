@@ -10,8 +10,16 @@ games/<slug>/
   game.json      # métadonnées (requis)
   statement.md   # énoncé (markdown)
   referee.<ext>  # validateur exécuté dans Piston (un seul fichier referee.*)
-  input.txt      # input du jeu donné au code joueur (stdin)
+  tests/         # un fichier .txt par cas de test (stdin donné au code joueur)
+    01.txt
+    02.txt
+    ...
+  input.txt      # repli si tests/ absent : un unique cas de test
 ```
+
+Les cas de `tests/` sont triés par nom de fichier (`01.txt`, `02.txt`, …) ; cet ordre
+fixe la position des cas affichés et exécutés. Tous sont publics (le joueur voit l'input).
+`input.txt` reste accepté pour un jeu à un seul cas (rétro-compatibilité).
 
 `game.json` :
 
@@ -31,16 +39,29 @@ games/<slug>/
 
 ## Contrat du referee (exécuté dans Piston)
 
-- **stdin** : JSON `{ "input": "<input.txt>", "output": "<sortie du code joueur>" }`
+- **stdin** : JSON `{ "input": "<un cas de tests/>", "output": "<sortie du code joueur>" }`
 - **stdout** : JSON `{ "verdict": "passed|failed", "score": int, "replay": { "init": ..., "frames": [...] } }`
+
+Le referee juge **un** cas à la fois ; le backend l'exécute par cas (essai non noté via
+`/run-tests`, ou soumission notée sur tous les cas via `/play`).
 
 `init`/`frames` sont propres au jeu et interprétés par **son viewer** côté front :
 `frontend/src/app/arena/games/<slug>/viewer.ts` (enregistré dans `registry.ts`).
 
+## Côté front : viewer + aperçu de l'état de départ
+
+Chaque jeu est un `GameModule` dans `frontend/src/app/arena/games/registry.ts` :
+
+- `createViewer` : le viewer PixiJS qui rejoue `init`/`frames` ;
+- `buildPreview(input)` : transforme l'input brut d'un cas en `Replay` figé d'une frame
+  (l'état de départ), pour l'afficher dans la visualisation **sans exécuter de code**
+  (sélection d'un cas, ou cas 1 à l'arrivée sur la page).
+
 ## Ajouter un jeu
 
-1. Créer `games/<slug>/` (game.json, statement.md, referee.*, input.txt).
-2. Créer le viewer front `frontend/src/app/arena/games/<slug>/viewer.ts` + l'enregistrer dans le registre.
+1. Créer `games/<slug>/` (game.json, statement.md, referee.*, tests/*.txt).
+2. Créer le viewer front + `buildPreview` dans `frontend/src/app/arena/games/<slug>/`
+   et enregistrer le `GameModule` dans `registry.ts`.
 3. `php bin/console app:arena:sync` (ou redémarrer le conteneur code-arena).
 
 Aucun code backend à modifier.

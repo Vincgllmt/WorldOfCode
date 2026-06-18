@@ -66,7 +66,13 @@ final class SyncGamesCommand extends Command
             sort($refereeFiles);
             $refereeCode = $refereeFiles ? (string) file_get_contents($refereeFiles[0]) : null;
 
-            $gameInput = is_file($dir . '/input.txt') ? (string) file_get_contents($dir . '/input.txt') : null;
+            // Jeu de tests : un fichier par cas dans tests/*.txt (triés par nom),
+            // sinon repli sur l'unique input.txt (rétro-compatibilité).
+            $testFiles = glob($dir . '/tests/*.txt') ?: [];
+            sort($testFiles);
+            if (!$testFiles && is_file($dir . '/input.txt')) {
+                $testFiles = [$dir . '/input.txt'];
+            }
 
             $repo = $this->em->getRepository(Challenge::class);
             $challenge = $repo->findOneBy(['slug' => $slug]) ?? (new Challenge())->setSlug($slug);
@@ -85,20 +91,21 @@ final class SyncGamesCommand extends Command
             $this->em->persist($challenge);
             $this->em->flush();
 
-            // Input : on remplace les cas de test existants par l'input du jeu.
+            // Jeu de tests : on remplace les cas existants par les inputs du jeu.
+            // Chaque cas est public (le joueur voit la grille) ; l'ordre = position.
             foreach ($challenge->getTests() as $existing) {
                 $this->em->remove($existing);
             }
             $this->em->flush();
 
-            if (null !== $gameInput) {
+            foreach ($testFiles as $i => $file) {
                 $test = (new ChallengeTest())
                     ->setChallenge($challenge)
-                    ->setStdin($gameInput)
+                    ->setStdin((string) file_get_contents($file))
                     ->setExpectedOutput('')
-                    ->setIsPublic(false)
+                    ->setIsPublic(true)
                     ->setWeight(1)
-                    ->setPosition(0);
+                    ->setPosition($i);
                 $this->em->persist($test);
             }
 

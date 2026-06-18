@@ -1,24 +1,26 @@
 import type { GameViewerFactory, Replay } from '@/components/arena/gameViewer'
 
-import { chameleonColorsMock } from './chameleon-colors/mock'
+import { buildChameleonColorsPreview } from './chameleon-colors/preview'
 import { createChameleonColorsViewer } from './chameleon-colors/viewer'
-import { mazeMock } from './maze/mock'
+import { buildMazePreview } from './maze/preview'
 import { createMazeViewer } from './maze/viewer'
 
 /**
- * Registre des jeux : slug → viewer PixiJS.
- * Ajouter un jeu = écrire son viewer et l'enregistrer ici.
+ * Module front d'un jeu : tout ce dont l'IDE a besoin pour un slug donné.
+ * Ajouter un jeu = écrire son viewer + son parseur d'état initial, puis l'enregistrer ici.
  */
-export const GAME_VIEWERS: Record<string, GameViewerFactory> = {
-  maze: createMazeViewer,
-  'chameleon-colors': createChameleonColorsViewer,
+export interface GameModule {
+  /** Viewer PixiJS (factory : une instance fraîche par montage du ReplayPlayer). */
+  createViewer: GameViewerFactory
+  /**
+   * Construit l'état de départ (replay figé d'1 frame) à partir de l'input brut
+   * d'un cas de test, pour le prévisualiser dans la visualisation sans exécution.
+   */
+  buildPreview: (input: string) => Replay
 }
 
-/**
- * Replays mockés en attendant le referee réel (Piston).
- * Permettent de développer/démontrer le visuel sans exécution serveur.
- */
-export const GAME_MOCKS: Record<string, Replay> = {
-  maze: mazeMock,
-  'chameleon-colors': chameleonColorsMock,
+/** Registre des jeux : slug → module. */
+export const GAMES: Record<string, GameModule> = {
+  maze: { createViewer: createMazeViewer, buildPreview: buildMazePreview },
+  'chameleon-colors': { createViewer: createChameleonColorsViewer, buildPreview: buildChameleonColorsPreview },
 }

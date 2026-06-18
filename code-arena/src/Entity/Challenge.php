@@ -55,6 +55,7 @@ class Challenge
 
     /** @var Collection<int, ChallengeTest> */
     #[ORM\OneToMany(targetEntity: ChallengeTest::class, mappedBy: 'challenge')]
+    #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $tests;
 
     /** @var Collection<int, Badge> */

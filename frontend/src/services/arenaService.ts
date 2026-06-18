@@ -5,13 +5,23 @@ import type { Replay } from '@/components/arena/gameViewer'
 
 export type { RunResult, SubmitResult, ArenaChallengeDetail }
 
-export interface PlayResult {
-  submissionId: number
+/** Résultat sur un cas de test (essai non noté ou cas d'une soumission). */
+export interface TestRunResult {
+  index: number
   verdict: 'passed' | 'failed' | 'error'
   score: number
   replay: Replay | null
   playerStderr: string
   error: string | null
+}
+
+export interface PlayResult {
+  submissionId: number
+  verdict: 'passed' | 'failed' | 'error'
+  score: number
+  testsPassed: number
+  testsTotal: number
+  results: TestRunResult[]
   badgesAwarded: string[]
 }
 
@@ -137,6 +147,36 @@ export const playGame = async (slug: string, language: string, code: string): Pr
   }
 
   return res.json()
+}
+
+/**
+ * Essai NON noté : exécute le code sur un cas précis (`testIndex`) ou sur tous
+ * les cas si `testIndex` est omis. Ne crée aucune soumission, n'attribue aucun badge.
+ */
+export const runTests = async (
+  slug: string,
+  language: string,
+  code: string,
+  testIndex?: number,
+): Promise<TestRunResult[]> => {
+  const token = getCookie('token')
+
+  const res = await fetch(`${ARENA_API_URL}/api/arena/challenges/${slug}/run-tests`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ language, code, ...(testIndex !== undefined ? { testIndex } : {}) }),
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as { error?: string }).error ?? "Erreur lors de l'exécution des tests")
+  }
+
+  const data = (await res.json()) as { results: TestRunResult[] }
+  return data.results
 }
 
 export const submitCode = async (slug: string, language: string, code: string): Promise<SubmitResult> => {
