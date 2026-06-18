@@ -1,11 +1,12 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, Play, Send, CheckCircle2, XCircle, Trophy, Clock, AlertTriangle, Loader2, ListChecks } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { getChallenge, playGame, runCode, runTests, submitCode, type PlayResult, type RunResult, type SubmitResult, type TestRunResult } from '@/services/arenaService'
+import { loadSavedCode, saveCode, loadSavedLang, saveLang, loadProgress, saveProgress, type SavedProgress } from '@/lib/arenaPersistence'
 import type { Replay } from '@/components/arena/gameViewer'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -68,7 +69,7 @@ const VERDICT_META: Record<TestRunResult['verdict'], { label: string; color: str
 
 /* Pastille d'état d'un cas : neutre tant qu'il n'a pas été essayé. */
 function TestStatusDot({ run }: { run?: TestRunResult }) {
-  if (!run) return <span className="h-2 w-2 shrink-0 rounded-full bg-[#D6DED9]" />
+  if (!run) return <span className="h-2 w-2 shrink-0 rounded-full bg-border" />
   if (run.verdict === 'passed') return <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
   if (run.verdict === 'failed') return <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
   return <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
@@ -78,7 +79,7 @@ function TestStatusDot({ run }: { run?: TestRunResult }) {
 function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null; submitResult: SubmitResult | null }) {
   if (!runResult && !submitResult) {
     return (
-      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-[#9AA6A0]">
+      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
         Lance le code ou soumets ta solution pour voir les résultats.
       </div>
     )
@@ -126,8 +127,8 @@ function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null;
         )}
         {runResult.stdout && (
           <div>
-            <p className="mb-1 font-sans text-xs text-[#94A099]">stdout</p>
-            <pre className="whitespace-pre-wrap break-all rounded-lg bg-[#F3F7F5] p-3 text-[#15241C]">{runResult.stdout}</pre>
+            <p className="mb-1 font-sans text-xs text-muted-foreground">stdout</p>
+            <pre className="whitespace-pre-wrap break-all rounded-lg bg-muted p-3 text-foreground">{runResult.stdout}</pre>
           </div>
         )}
         {runResult.stderr && (
@@ -137,9 +138,9 @@ function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null;
           </div>
         )}
         {!runResult.stdout && !runResult.stderr && (
-          <p className="font-sans text-xs text-[#94A099]">Aucune sortie.</p>
+          <p className="font-sans text-xs text-muted-foreground">Aucune sortie.</p>
         )}
-        <p className="font-sans text-xs text-[#94A099]">Exit code : {runResult.exitCode}</p>
+        <p className="font-sans text-xs text-muted-foreground">Exit code : {runResult.exitCode}</p>
       </div>
     )
   }
@@ -206,24 +207,47 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   const currentReplay = replayQueue[queuePos] ?? null
   const currentRun = currentReplay ? testRuns[currentReplay.index] : undefined
 
-  // Initialise langage + code au chargement
+  // Initialise langage + code au chargement : on restaure le dernier langage choisi
+  // (s'il est toujours proposé pour ce défi), le code, puis l'avancement mémorisé.
   if (challenge && !language) {
-    const defaultLang = challenge.languages[0] ?? 'javascript'
-    setLanguage(defaultLang)
-    setCode(DEFAULT_CODE[defaultLang] ?? '')
+    const saved = loadSavedLang(slug)
+    const initialLang =
+      (saved && challenge.languages.includes(saved) ? saved : challenge.languages[0]) ?? 'javascript'
+    setLanguage(initialLang)
+    setCode(loadSavedCode(slug, initialLang) ?? DEFAULT_CODE[initialLang] ?? '')
+    applyProgress(loadProgress(slug, initialLang))
+  }
+
+  // Persiste le code à chaque modification pour le retrouver au rechargement / plus tard.
+  useEffect(() => {
+    if (!language) return
+    saveCode(slug, language, code)
+  }, [slug, language, code])
+
+  // Persiste l'avancement (verdicts par cas, résumé, résultat noté) par langage.
+  useEffect(() => {
+    if (!language) return
+    saveProgress(slug, language, { testRuns, runSummary, submitResult, playResult })
+  }, [slug, language, testRuns, runSummary, submitResult, playResult])
+
+  /* Applique un avancement mémorisé aux états affichés (ou repart à zéro si null). */
+  function applyProgress(p: SavedProgress | null) {
+    setTestRuns(p?.testRuns ?? {})
+    setRunSummary(p?.runSummary ?? null)
+    setSubmitResult(p?.submitResult ?? null)
+    setPlayResult(p?.playResult ?? null)
   }
 
   function handleLanguageChange(lang: string) {
     setLanguage(lang)
-    setCode(DEFAULT_CODE[lang] ?? '')
+    saveLang(slug, lang)
+    setCode(loadSavedCode(slug, lang) ?? DEFAULT_CODE[lang] ?? '')
     setRunResult(null)
-    setSubmitResult(null)
     setRuntimeError(null)
-    // Le code change : les essais précédents ne sont plus valides → on revient à l'aperçu.
+    // Le code change : les replays en cours ne valent plus → retour à l'aperçu,
+    // mais on restaure l'avancement déjà mémorisé pour ce langage (verdicts, résumé…).
     clearReplays()
-    setPlayResult(null)
-    setTestRuns({})
-    setRunSummary(null)
+    applyProgress(loadProgress(slug, lang))
   }
 
   /* Vide la file de replays → la visualisation revient à l'aperçu du cas sélectionné. */
@@ -460,13 +484,13 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#FBFDFC] text-[#15241C]">
+    <div className="flex h-full flex-col bg-background text-foreground">
       {/* ── Toolbar ── */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-[#EAEFEC] bg-white px-6 py-3">
-        <Link href="/arena" className="flex items-center gap-1 text-sm text-[#5C6B63] transition hover:text-[#0E9F4A]">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-6 py-3">
+        <Link href="/arena" className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-primary">
           <ChevronLeft className="h-4 w-4" /> Arena
         </Link>
-        <span className="text-[#C0C9C3]">/</span>
+        <span className="text-muted-foreground/40">/</span>
         <span className="truncate text-sm font-semibold">{challenge.title}</span>
         <span className={cn('rounded-full px-2 py-0.5 text-[11.5px] font-bold', DIFF_PILL[challenge.difficulty])}>
           {DIFFICULTY_LABEL[challenge.difficulty] ?? challenge.difficulty}
@@ -476,7 +500,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
           <select
             value={language}
             onChange={(e) => handleLanguageChange(e.target.value)}
-            className="rounded-lg border border-[#DCE4DF] bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#0E9F4A]"
+            className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {challenge.languages.map((lang) => (
               <option key={lang} value={lang}>{lang}</option>
@@ -498,7 +522,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
             size="sm"
             onClick={isGame ? handlePlay : handleSubmit}
             disabled={busy}
-            className="gap-1.5 bg-[#11A84F] text-white shadow-[0_6px_16px_-6px_rgba(17,168,79,.6)] hover:bg-[#0E9F4A]"
+            className="gap-1.5"
           >
             <Send className="h-3.5 w-3.5" />
             {isGame ? (isPlaying ? 'Lancement…' : 'Jouer') : (isSubmitting ? 'Envoi…' : 'Soumettre')}
@@ -510,13 +534,13 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
       <div className="flex min-h-0 flex-1">
 
         {/* ── Colonne gauche (redimensionnable) ── */}
-        <div style={{ width: leftWidth }} className="flex min-h-0 shrink-0 flex-col border-r border-[#EAEFEC] bg-[#FBFDFC]">
+        <div style={{ width: leftWidth }} className="flex min-h-0 shrink-0 flex-col border-r border-border bg-background">
           <Tabs value={leftTab} onValueChange={(v) => setLeftTab(v as 'sujet' | 'tests')} className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="flex shrink-0 gap-1 rounded-none border-b border-[#EAEFEC] bg-transparent px-4 pt-2">
+            <TabsList className="flex shrink-0 gap-1 rounded-none border-b border-border bg-transparent px-4 pt-2">
               <TabsTrigger value="sujet" className="min-w-0">Sujet</TabsTrigger>
               <TabsTrigger value="tests" className="min-w-0 gap-1.5">
                 Niveaux
-                <span className="rounded-full bg-[#E3EAE6] px-1.5 text-[11px] font-semibold text-[#5C6B63]">
+                <span className="rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
                   {challenge.publicTests.length}
                 </span>
               </TabsTrigger>
@@ -528,13 +552,13 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                   <span className={cn('rounded-full px-2.5 py-0.5 text-[11.5px] font-bold', DIFF_PILL[challenge.difficulty])}>
                     {DIFFICULTY_LABEL[challenge.difficulty] ?? challenge.difficulty}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E3F6EA] px-2.5 py-0.5 font-mono text-[11.5px] font-bold text-[#0B8F45]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#0B8F45]" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-[11.5px] font-bold text-primary">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                     +{challenge.maxScore} pts
                   </span>
                 </div>
                 <h2 className="mt-3 text-[22px] font-extrabold leading-tight tracking-tight">{challenge.title}</h2>
-                <div className="mt-4 rounded-2xl border border-[#E5EDE8] bg-[#F5F9F7] p-5">
+                <div className="mt-4 rounded-2xl border border-border bg-muted p-5">
                   <ChallengeStatement statement={challenge.statement} />
                 </div>
               </TabsContent>
@@ -543,7 +567,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-extrabold">Niveaux</h3>
-                    <p className="mt-0.5 font-mono text-xs text-[#94A099]">
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                       {isGame ? `${gameTests.length} niveaux` : `${challenge.publicTests.length} niveau(x) public(s)`}
                     </p>
                   </div>
@@ -583,7 +607,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                               key={i}
                               className={cn(
                                 'flex items-center gap-2 rounded-xl border p-2.5 transition',
-                                isSel ? 'border-[#11A84F] bg-[#F2FBF5]' : 'border-[#EAEFEC] bg-white hover:border-[#CFE7D8]',
+                                isSel ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
                               )}
                             >
                               <button
@@ -603,7 +627,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                                 onClick={() => handleRunTest(i)}
                                 disabled={busy || !code.trim()}
                                 title="Lancer ce niveau"
-                                className="rounded-lg p-1.5 text-[#5C6B63] transition hover:bg-[#E6F2EA] hover:text-[#0E9F4A] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 {runningTest === i
                                   ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -613,38 +637,38 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                           )
                         })}
                       </div>
-                      <p className="mt-3 text-xs leading-relaxed text-[#94A099]">
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                         Clique un niveau pour voir son état de départ, ▶ pour l&apos;essayer (non noté),
                         ou « Jouer » pour la soumission notée sur tous les niveaux.
                       </p>
                     </>
                   ) : (
-                    <p className="mt-3 text-sm text-[#94A099]">Aucun niveau pour ce jeu.</p>
+                    <p className="mt-3 text-sm text-muted-foreground">Aucun niveau pour ce jeu.</p>
                   )
                 ) : challenge.publicTests.length > 0 ? (
                   <div className="mt-4 space-y-3">
                     {challenge.publicTests.map((test, i) => (
-                      <div key={i} className="space-y-2 rounded-2xl border border-[#EAEFEC] bg-white p-4">
+                      <div key={i} className="space-y-2 rounded-2xl border border-border bg-card p-4">
                         <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-[#D6DED9]" />
+                          <span className="h-2 w-2 rounded-full bg-border" />
                           <span className="text-sm font-bold">Niveau {i + 1}</span>
-                          <span className="ml-auto rounded-full bg-[#E3F6EA] px-2 py-0.5 text-[11px] font-semibold text-[#0B8F45]">Public</span>
+                          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Public</span>
                         </div>
                         {test.stdin && (
                           <div className="font-mono text-xs">
-                            <p className="mb-1 text-[#94A099]">IN</p>
-                            <pre className="whitespace-pre-wrap rounded-lg bg-[#F3F7F5] p-2 text-[#15241C]">{test.stdin}</pre>
+                            <p className="mb-1 text-muted-foreground">IN</p>
+                            <pre className="whitespace-pre-wrap rounded-lg bg-muted p-2 text-foreground">{test.stdin}</pre>
                           </div>
                         )}
                         <div className="font-mono text-xs">
-                          <p className="mb-1 text-[#94A099]">OUT</p>
-                          <pre className="whitespace-pre-wrap rounded-lg bg-[#F3F7F5] p-2 text-[#15241C]">{test.expectedOutput}</pre>
+                          <p className="mb-1 text-muted-foreground">OUT</p>
+                          <pre className="whitespace-pre-wrap rounded-lg bg-muted p-2 text-foreground">{test.expectedOutput}</pre>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-[#94A099]">Aucun niveau public — l&apos;input est fourni à ton programme au lancement.</p>
+                  <p className="mt-4 text-sm text-muted-foreground">Aucun niveau public — l&apos;input est fourni à ton programme au lancement.</p>
                 )}
               </TabsContent>
             </div>
@@ -655,18 +679,18 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
             <>
               <div
                 onMouseDown={(e) => startRowResize(e, 'viz')}
-                className="flex h-2.5 shrink-0 cursor-row-resize items-center justify-center border-y border-[#EAEFEC] bg-[#F4F8F6] transition hover:bg-[#E6F2EA]"
+                className="flex h-2.5 shrink-0 cursor-row-resize items-center justify-center border-y border-border bg-muted transition hover:bg-accent"
               >
-                <span className="h-[3px] w-11 rounded-full bg-[#C7D0CB]" />
+                <span className="h-[3px] w-11 rounded-full bg-border" />
               </div>
-              <div style={{ height: vizHeight }} className="flex shrink-0 flex-col bg-white p-4">
+              <div style={{ height: vizHeight }} className="flex shrink-0 flex-col bg-card p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[.08em] text-[#94A099]">Visualisation</span>
+                  <span className="text-[11px] font-bold uppercase tracking-[.08em] text-muted-foreground">Visualisation</span>
                   <div className="flex items-center gap-2">
                     {currentReplay && (
                       <span className={cn(
                         'text-xs font-semibold',
-                        currentRun ? VERDICT_META[currentRun.verdict].color : 'text-[#5C6B63]',
+                        currentRun ? VERDICT_META[currentRun.verdict].color : 'text-muted-foreground',
                       )}>
                         Niveau {currentReplay.index + 1}{currentRun ? ` · ${VERDICT_META[currentRun.verdict].label}` : ''}
                         {replayQueue.length > 1 ? ` · ${queuePos + 1}/${replayQueue.length}` : ''}
@@ -682,7 +706,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                           : playResult.verdict === 'failed' ? `✗ ${playResult.testsPassed}/${playResult.testsTotal} niveaux` : '⚠ Erreur'}
                       </span>
                     ) : !currentReplay && previewReplay ? (
-                      <span className="text-xs font-medium text-[#94A099]">Niveau {selectedTest + 1} · état de départ</span>
+                      <span className="text-xs font-medium text-muted-foreground">Niveau {selectedTest + 1} · état de départ</span>
                     ) : null}
                   </div>
                 </div>
@@ -710,7 +734,7 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                   ) : previewReplay ? (
                     <ReplayPlayer key={`preview-${selectedTest}`} replay={previewReplay} viewerFactory={game.createViewer} autoPlay={false} />
                   ) : (
-                    <div className="flex h-full items-center justify-center rounded-2xl border-[1.5px] border-dashed border-[#D8E1DC] bg-[#FAFCFB] p-4 text-center text-xs text-[#94A099]">
+                    <div className="flex h-full items-center justify-center rounded-2xl border-[1.5px] border-dashed border-border bg-muted/40 p-4 text-center text-xs text-muted-foreground">
                       Sélectionne un niveau pour voir son état de départ.
                     </div>
                   )}
@@ -723,9 +747,9 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
         {/* ── Poignée verticale ── */}
         <div
           onMouseDown={startColResize}
-          className="flex w-2.5 shrink-0 cursor-col-resize items-center justify-center bg-[#F4F8F6] transition hover:bg-[#E6F2EA]"
+          className="flex w-2.5 shrink-0 cursor-col-resize items-center justify-center bg-muted transition hover:bg-accent"
         >
-          <span className="h-11 w-[3px] rounded-full bg-[#C7D0CB]" />
+          <span className="h-11 w-[3px] rounded-full bg-border" />
         </div>
 
         {/* ── Colonne droite : éditeur + sortie ── */}
@@ -736,14 +760,14 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
 
           <div
             onMouseDown={(e) => startRowResize(e, 'sortie')}
-            className="flex h-2.5 shrink-0 cursor-row-resize items-center justify-center border-y border-[#EAEFEC] bg-[#F4F8F6] transition hover:bg-[#E6F2EA]"
+            className="flex h-2.5 shrink-0 cursor-row-resize items-center justify-center border-y border-border bg-muted transition hover:bg-accent"
           >
-            <span className="h-[3px] w-11 rounded-full bg-[#C7D0CB]" />
+            <span className="h-[3px] w-11 rounded-full bg-border" />
           </div>
 
-          <div style={{ height: sortieHeight }} className="flex shrink-0 flex-col bg-white">
-            <div className="flex items-center gap-4 border-b border-[#F1F4F2] px-6 py-3">
-              <span className="text-xs font-bold uppercase tracking-[.08em] text-[#15241C]">Sortie</span>
+          <div style={{ height: sortieHeight }} className="flex shrink-0 flex-col bg-card">
+            <div className="flex items-center gap-4 border-b border-border px-6 py-3">
+              <span className="text-xs font-bold uppercase tracking-[.08em] text-foreground">Sortie</span>
             </div>
             <div className="min-h-0 flex-1 overflow-hidden">
               {runtimeError ? (

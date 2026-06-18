@@ -127,14 +127,14 @@ function renderInline(text: string): React.ReactNode[] {
       nodes.push(
         <code
           key={key++}
-          className="rounded-md bg-[#EAF2EC] px-1.5 py-0.5 font-mono text-[12.5px] font-medium text-[#0B7A3E]"
+          className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[12.5px] font-medium text-primary"
         >
           {tok.slice(1, -1)}
         </code>,
       )
     } else if (tok.startsWith('**')) {
       nodes.push(
-        <strong key={key++} className="font-bold text-[#15241C]">
+        <strong key={key++} className="font-bold text-foreground">
           {tok.slice(2, -2)}
         </strong>,
       )
@@ -154,7 +154,7 @@ function renderInline(text: string): React.ReactNode[] {
             href={link[2]}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[#0E9F4A] underline underline-offset-2 hover:text-[#0B8F45]"
+            className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
           >
             {link[1]}
           </a>,
@@ -171,9 +171,9 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 const HEADING_CLASS: Record<number, string> = {
-  1: 'mt-6 mb-2 text-xl font-extrabold tracking-tight text-[#15241C]',
-  2: 'mt-7 mb-2 text-[12px] font-bold uppercase tracking-[.07em] text-[#0E9F4A]',
-  3: 'mt-5 mb-1.5 text-[15px] font-bold text-[#15241C]',
+  1: 'mt-6 mb-2 text-xl font-extrabold tracking-tight text-foreground',
+  2: 'mt-7 mb-2 text-[12px] font-bold uppercase tracking-[.07em] text-primary',
+  3: 'mt-5 mb-1.5 text-[15px] font-bold text-foreground',
 }
 
 function renderBlock(block: Block, key: number): React.ReactNode {
@@ -188,7 +188,7 @@ function renderBlock(block: Block, key: number): React.ReactNode {
     }
     case 'paragraph':
       return (
-        <p key={key} className="mt-3.5 text-[14.5px] leading-relaxed text-[#3A453F]">
+        <p key={key} className="mt-3.5 text-[14.5px] leading-relaxed text-foreground/85">
           {renderInline(block.text)}
         </p>
       )
@@ -196,7 +196,7 @@ function renderBlock(block: Block, key: number): React.ReactNode {
       return (
         <pre
           key={key}
-          className="mt-3.5 overflow-x-auto rounded-xl border border-[#E2EAE5] bg-white p-3.5 font-mono text-[12.5px] leading-relaxed text-[#15241C]"
+          className="mt-3.5 overflow-x-auto rounded-xl border border-border bg-card p-3.5 font-mono text-[12.5px] leading-relaxed text-foreground"
         >
           <code>{block.text}</code>
         </pre>
@@ -207,7 +207,7 @@ function renderBlock(block: Block, key: number): React.ReactNode {
         <Tag
           key={key}
           className={cn(
-            'mt-3.5 space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-[#3A453F] marker:text-[#0E9F4A]',
+            'mt-3.5 space-y-1.5 pl-5 text-[14.5px] leading-relaxed text-foreground/85 marker:text-primary',
             block.ordered ? 'list-decimal' : 'list-disc',
           )}
         >

@@ -22,13 +22,15 @@ interface CodeEditorProps {
 
 export default function CodeEditor({ language, value, onChange }: CodeEditorProps) {
   const { resolvedTheme } = useTheme()
+  // `dark:` côté CSS couvre .dark ET .cyberpunk-dark : on aligne Monaco dessus.
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'cyberpunk-dark'
 
   return (
     <MonacoEditor
       height="100%"
       language={MONACO_LANGUAGE[language] ?? language}
       value={value}
-      theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'}
+      theme={isDark ? 'vs-dark' : 'light'}
       onChange={(val) => onChange(val ?? '')}
       options={{
         fontSize: 14,
