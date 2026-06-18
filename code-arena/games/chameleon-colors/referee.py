@@ -1,46 +1,56 @@
 """
-Referee de « Caméléon Caméléon » (exécuté dans Piston).
+Referee de « Caméléon Gourmand » (exécuté dans Piston) — modèle « ordre + couleur ».
 
-Entrée  (stdin) : JSON { "input": "<grille>", "output": "<actions joueur>" }
-Sortie  (stdout): JSON { "verdict": "passed|failed", "score": int,
-                         "replay": { "init": {...}, "frames": [...] } }
+Le joueur ne gère PAS le déplacement : il indique seulement quelle peau prendre
+(SKIN) et quel fruit manger (EAT <numéro>). Le moteur (ce referee) déplace le
+caméléon jusqu'au fruit via le plus court chemin (BFS, en contournant les
+obstacles) et anime le tout.
 
-Règle du combo croissant : les fruits mangés forment des séries de tailles
-1, 2, 3, …  Chaque série est monochrome (couleur libre d'une série à l'autre).
-Manger un fruit de la mauvaise couleur au milieu d'une série casse le combo.
+Entrée (stdin) : JSON { "input": "<niveau>", "output": "<actions joueur>" }
+
+  Format du niveau :
+    cols rows cible
+    <nbFruits>
+    fx fy couleur        (une ligne par fruit ; le numéro = l'ordre, à partir de 0)
+    <nbObstacles>
+    ox oy                (une ligne par obstacle)
+
+  Le caméléon démarre toujours en (0,0).
+
+Sortie (stdout) : JSON { "verdict", "score", "replay": { "init", "frames" } }
 """
 import sys
 import json
+from collections import deque
 
 MAX_SCORE = 150
 COLORS = ("R", "G", "B")
-DELTA = {"U": (0, -1), "D": (0, 1), "L": (-1, 0), "R": (1, 0)}
+DELTA = ((0, -1), (0, 1), (-1, 0), (1, 0))
 
 data = json.load(sys.stdin)
 raw_input = data.get("input", "")
 raw_output = data.get("output", "")
 
-# --- Parsing de la grille -------------------------------------------------
 lines = [l for l in raw_input.splitlines() if l.strip() != ""]
-header = lines[0].split()
-cols, rows, budget, target = (int(x) for x in header[:4])
-grid = lines[1:1 + rows]
+cols, rows, target = (int(x) for x in lines[0].split()[:3])
+
+idx = 1
+n_fruits = int(lines[idx]); idx += 1
+fruits = []  # [{ "pos": [x, y], "color": "R" }]
+for _ in range(n_fruits):
+    p = lines[idx].split(); idx += 1
+    fruits.append({"pos": [int(p[0]), int(p[1])], "color": p[2]})
 
 walls = []
+if idx < len(lines):
+    n_obst = int(lines[idx]); idx += 1
+    for _ in range(n_obst):
+        if idx < len(lines):
+            p = lines[idx].split(); idx += 1
+            walls.append([int(p[0]), int(p[1])])
+
 start = [0, 0]
-fruits = []          # [{ "pos": [x, y], "color": "R" }]
-fruit_map = {}       # (x, y) -> "R"
-for y in range(rows):
-    row = grid[y] if y < len(grid) else ""
-    for x in range(cols):
-        c = row[x] if x < len(row) else "."
-        if c == "#":
-            walls.append([x, y])
-        elif c == "S":
-            start = [x, y]
-        elif c in COLORS:
-            fruits.append({"pos": [x, y], "color": c})
-            fruit_map[(x, y)] = c
+wall_set = {(w[0], w[1]) for w in walls}
 
 init = {
     "cols": cols,
@@ -49,33 +59,55 @@ init = {
     "start": start,
     "fruits": fruits,
     "target": target,
-    "budget": budget,
+    "budget": 0,
 }
 
-wall_set = {(w[0], w[1]) for w in walls}
 
-# --- Parsing des actions joueur -------------------------------------------
+def bfs(src, dst, avoid=frozenset()):
+    """Plus court chemin (liste de cases, src incluse) entre deux cases, ou None.
+    `avoid` = cases à ne pas traverser (ex. les fruits non ciblés)."""
+    if src == dst:
+        return [list(src)]
+    prev = {(src[0], src[1]): None}
+    q = deque([(src[0], src[1])])
+    while q:
+        x, y = q.popleft()
+        for dx, dy in DELTA:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < cols and 0 <= ny < rows and (nx, ny) not in wall_set and (nx, ny) not in avoid and (nx, ny) not in prev:
+                prev[(nx, ny)] = (x, y)
+                if [nx, ny] == dst:
+                    path = [(nx, ny)]
+                    cur = (x, y)
+                    while cur is not None:
+                        path.append(cur)
+                        cur = prev[cur]
+                    path.reverse()
+                    return [list(p) for p in path]
+                q.append((nx, ny))
+    return None
+
+
+# --- Parsing des actions joueur (SKIN <couleur> / EAT <numéro>) ----------
 actions = []
 for line in raw_output.upper().splitlines():
-    parts = line.split()
-    if len(parts) < 2:
+    p = line.split()
+    if len(p) < 2:
         continue
-    verb, arg = parts[0], parts[1]
-    if verb == "MOVE" and arg in DELTA:
-        actions.append(("MOVE", arg))
-    elif verb == "SKIN" and arg in COLORS:
-        actions.append(("SKIN", arg))
+    if p[0] == "SKIN" and p[1] in COLORS:
+        actions.append(("SKIN", p[1]))
+    elif p[0] == "EAT" and p[1].lstrip("-").isdigit():
+        actions.append(("EAT", int(p[1])))
 
 # --- Simulation -----------------------------------------------------------
 pos = list(start)
 skin = None
 eaten = set()
-
-target_size = 1      # taille de la série en cours de constitution
-series_color = None  # couleur fixée par le 1er fruit de la série
-series_count = 0     # fruits mangés dans la série courante
-completed = 0        # séries entièrement complétées
-broken = False       # le combo a-t-il été cassé ?
+target_size = 1
+series_color = None
+series_count = 0
+completed = 0
+broken = False
 
 
 def current_score():
@@ -91,26 +123,43 @@ def frame(event, eaten_cell=None, eaten_color=None):
         "event": event,
         "eaten": list(eaten_cell) if eaten_cell else None,
         "eatenColor": eaten_color,
-        "series": {
-            "target": target_size,
-            "count": series_count,
-            "color": series_color,
-            "completed": completed,
-        },
+        "series": {"target": target_size, "count": series_count, "color": series_color, "completed": completed},
         "score": current_score(),
     }
 
 
-def try_eat():
-    """Mange le fruit sous le caméléon si la peau correspond. Retourne sa couleur ou None."""
-    global series_color, series_count, target_size, completed, broken
-    key = (pos[0], pos[1])
-    if key not in fruit_map or key in eaten or skin != fruit_map[key]:
-        return None
+frames = [frame("start")]
 
-    eaten.add(key)
-    color = fruit_map[key]
+for verb, arg in actions:
+    if verb == "SKIN":
+        skin = arg
+        frames.append(frame("skin"))
+        continue
 
+    # EAT <numéro>
+    i = arg
+    if i < 0 or i >= n_fruits or i in eaten:
+        continue
+    color = fruits[i]["color"]
+    if skin != color:  # mauvaise peau → on ne peut pas manger
+        continue
+    # On contourne les autres fruits non mangés (on ne traverse que la cible).
+    occupied = {(fruits[j]["pos"][0], fruits[j]["pos"][1]) for j in range(n_fruits) if j not in eaten}
+    occupied.discard((fruits[i]["pos"][0], fruits[i]["pos"][1]))
+    path = bfs(pos, fruits[i]["pos"], occupied)
+    if path is None:
+        path = bfs(pos, fruits[i]["pos"])  # repli si encerclé : peut traverser
+    if path is None:
+        continue
+
+    steps = path[1:]
+    for cell in steps[:-1]:
+        pos = list(cell)
+        frames.append(frame("move"))
+    if steps:
+        pos = list(steps[-1])
+
+    eaten.add(i)
     if not broken:
         if series_count == 0:
             series_color = color
@@ -118,36 +167,14 @@ def try_eat():
         elif color == series_color:
             series_count += 1
         else:
-            broken = True  # mauvaise couleur en pleine série → combo cassé
-
+            broken = True
         if not broken and series_count == target_size:
             completed += 1
             target_size += 1
             series_count = 0
             series_color = None
-    return color
 
-
-frames = [frame("start")]
-
-for i, (verb, arg) in enumerate(actions):
-    if i >= budget:
-        break
-
-    if verb == "SKIN":
-        skin = arg
-        color = try_eat()  # changer de peau sur un fruit peut le manger aussitôt
-        frames.append(frame("eat" if color else "skin", pos if color else None, color))
-
-    else:  # MOVE
-        dx, dy = DELTA[arg]
-        nx, ny = pos[0] + dx, pos[1] + dy
-        if nx < 0 or ny < 0 or nx >= cols or ny >= rows or (nx, ny) in wall_set:
-            frames.append(frame("blocked"))
-            continue
-        pos = [nx, ny]
-        color = try_eat()
-        frames.append(frame("eat" if color else "move", pos if color else None, color))
+    frames.append(frame("eat", pos, color))
 
 verdict = "passed" if completed >= target else "failed"
 

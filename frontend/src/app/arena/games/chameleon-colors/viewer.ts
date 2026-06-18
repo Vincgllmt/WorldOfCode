@@ -4,14 +4,6 @@ import type { GameViewer } from '@/components/arena/gameViewer'
 
 import type { ColorsFrame, ColorsInit, SkinColor } from './types'
 
-const COLOR = {
-  floor: 0x143b25,
-  wall: 0x0a160f,
-  start: 0xcfd6dc,
-}
-
-// Couleurs des fruits et teintes de peau correspondantes.
-const FRUIT_HEX: Record<SkinColor, number> = { R: 0xf85149, G: 0x3fb950, B: 0x58a6ff }
 const FRUIT_EMOJI: Record<SkinColor, string> = { R: '🍓', G: '🍏', B: '🫐' }
 // Images optionnelles : déposer fruit-r.png / fruit-g.png / fruit-b.png
 // dans frontend/public/games/chameleon-colors/. Sinon, on retombe sur les emojis.
@@ -20,12 +12,19 @@ const FRUIT_PNG: Record<SkinColor, string> = {
   G: '/games/chameleon-colors/fruit-g.png',
   B: '/games/chameleon-colors/fruit-b.png',
 }
-const NEUTRAL_TINT = 0xffffff // peau neutre = sprite tel quel
+// Images d'obstacles optionnelles (buisson / arbre) ; sinon buisson dessiné en vectoriel.
+const BUSH_PNG = '/games/chameleon-colors/buisson.png'
+const TREE_PNG = '/games/chameleon-colors/arbre.png'
 const COLOR_NAME: Record<SkinColor, string> = { R: 'Rouge', G: 'Vert', B: 'Bleu' }
 const CONFETTI = [0xf85149, 0x3fb950, 0x58a6ff, 0xf0d000, 0xffffff, 0xd2a8ff]
 
-// Spritesheet caméléon réutilisée du Labyrinthe (4×4, frames de 128×128).
-const SHEET = '/games/maze/cameleon.png'
+// Spritesheets caméléon (4×4, frames 128×128), un par couleur de peau.
+const CHAM_SHEET: Record<SkinColor, string> = {
+  R: '/games/chameleon-colors/cameleon-r.png',
+  G: '/games/chameleon-colors/cameleon-v.png',
+  B: '/games/chameleon-colors/cameleon-b.png',
+}
+const NEUTRAL_SHEET = '/games/chameleon-colors/cameleon-v.png' // vert au départ
 const FRAME = 128
 const WALK_ROW = 0
 const WALK_FRAMES = 4
@@ -47,8 +46,10 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
   let appRef: Application | null = null
   let board: Container | null = null
   let token: AnimatedSprite | null = null
+  let walkNeutral: Texture[] = []
+  let walkByColor: Record<SkinColor, Texture[]> = { R: [], G: [], B: [] }
+  let curSkin: SkinColor | null | undefined = undefined
   let hud: Text | null = null
-  let fxBanner: Container | null = null
   let confetti: Confetti[] = []
   const fruitGfx = new Map<string, Container>()
 
@@ -80,7 +81,6 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
   const startCelebration = () => {
     celebrating = true
     celebT = 0
-    if (fxBanner) fxBanner.visible = true
     confetti.forEach((p) => {
       p.g.visible = true
       p.g.x = Math.random() * screenW
@@ -92,10 +92,6 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
     celebrating = false
     celebrated = false
     celebT = 0
-    if (fxBanner) {
-      fxBanner.visible = false
-      fxBanner.scale.set(0)
-    }
     confetti.forEach((p) => (p.g.visible = false))
     if (token) token.scale.set(tokenBaseScale)
   }
@@ -116,20 +112,55 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
       ox = (w - cell * init.cols) / 2
       oy = (h - cell * init.rows) / 2 + 14 // place pour le bandeau
 
-      const wallSet = new Set(init.walls.map(([x, y]) => `${x},${y}`))
-      for (let y = 0; y < init.rows; y++) {
-        for (let x = 0; x < init.cols; x++) {
-          const isWall = wallSet.has(`${x},${y}`)
-          const g = new Graphics()
-          g.roundRect(ox + x * cell + 1.5, oy + y * cell + 1.5, cell - 3, cell - 3, 5).fill(
-            isWall ? COLOR.wall : COLOR.floor,
-          )
-          board.addChild(g)
+      // Rendu « nature » : pas de grille visible, une prairie 2D (la logique reste en cases).
+      const boardW = init.cols * cell
+      const boardH = init.rows * cell
+      board.addChild(new Graphics().roundRect(ox, oy, boardW, boardH, 14).fill(0x2e6b3c))
+
+      // Obstacles optionnels en image (buisson / arbre) ; sinon buisson vectoriel.
+      const obstacleTex: Texture[] = []
+      for (const url of [BUSH_PNG, TREE_PNG]) {
+        try {
+          obstacleTex.push(await Assets.load<Texture>(url))
+        } catch {
+          /* image absente -> ignorée */
         }
       }
 
+      // Murs → obstacles (buisson / arbre en alternance, ou buisson vectoriel en repli).
+      for (let wi = 0; wi < init.walls.length; wi++) {
+        const [wx, wy] = init.walls[wi]
+        const c = center(wx, wy)
+        if (obstacleTex.length) {
+          const tex = obstacleTex[wi % obstacleTex.length]
+          // ombre au sol (pour « poser » l'obstacle)
+          board.addChild(new Graphics().ellipse(c.x, c.y + cell * 0.34, cell * 0.24, cell * 0.07).fill({ color: 0x123018, alpha: 0.32 }))
+          const sprite = new Sprite(tex)
+          sprite.anchor.set(0.5, 1) // posé par la base
+          const hsize = cell * 0.92 // tient dans la case (hauteur) → pas de débordement
+          sprite.height = hsize
+          sprite.width = hsize * (tex.width / tex.height) // ratio conservé
+          sprite.position.set(c.x, c.y + cell * 0.38)
+          board.addChild(sprite)
+          continue
+        }
+        const bush = new Graphics()
+        // ombre portée au sol
+        bush.ellipse(c.x, c.y + cell * 0.17, cell * 0.2, cell * 0.06).fill({ color: 0x143018, alpha: 0.4 })
+        // masse du buisson (lobes vert foncé)
+        for (const [dx, dy, r] of [[-0.13, 0.05, 0.14], [0.13, 0.05, 0.14], [0, -0.05, 0.16], [-0.06, -0.02, 0.12], [0.07, -0.01, 0.12]] as const) {
+          bush.circle(c.x + dx * cell, c.y + dy * cell, r * cell).fill(0x1a4a28)
+        }
+        // reflets clairs
+        for (const [dx, dy, r] of [[-0.07, -0.06, 0.055], [0.05, -0.07, 0.045], [-0.01, 0, 0.05]] as const) {
+          bush.circle(c.x + dx * cell, c.y + dy * cell, r * cell).fill({ color: 0x6fcf7a, alpha: 0.55 })
+        }
+        board.addChild(bush)
+      }
+
+      // Point de départ (discret).
       const s = center(init.start[0], init.start[1])
-      board.addChild(new Graphics().circle(s.x, s.y, cell * 0.26).fill({ color: COLOR.start, alpha: 0.9 }))
+      board.addChild(new Graphics().circle(s.x, s.y, cell * 0.22).fill({ color: 0xffffff, alpha: 0.16 }))
 
       // Précharge les images de fruits (si présentes), sinon on utilisera les emojis.
       const fruitTex: Partial<Record<SkinColor, Texture>> = {}
@@ -164,13 +195,23 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
         fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, node)
       }
 
-      // Caméléon animé.
-      const sheet = await Assets.load<Texture>(SHEET)
-      const walk: Texture[] = []
-      for (let c = 0; c < WALK_FRAMES; c++) {
-        walk.push(new Texture({ source: sheet.source, frame: new Rectangle(c * FRAME, WALK_ROW * FRAME, FRAME, FRAME) }))
+      // Caméléon : un spritesheet par couleur de peau (rouge / vert / bleu).
+      const buildWalk = (sheet: Texture) => {
+        const frames: Texture[] = []
+        for (let c = 0; c < WALK_FRAMES; c++) {
+          frames.push(new Texture({ source: sheet.source, frame: new Rectangle(c * FRAME, WALK_ROW * FRAME, FRAME, FRAME) }))
+        }
+        return frames
       }
-      token = new AnimatedSprite(walk)
+      const [sheetV, sheetR, sheetB] = await Promise.all([
+        Assets.load<Texture>(NEUTRAL_SHEET),
+        Assets.load<Texture>(CHAM_SHEET.R),
+        Assets.load<Texture>(CHAM_SHEET.B),
+      ])
+      walkNeutral = buildWalk(sheetV)
+      walkByColor = { R: buildWalk(sheetR), G: walkNeutral, B: buildWalk(sheetB) }
+
+      token = new AnimatedSprite(walkNeutral)
       token.anchor.set(0.5)
       token.animationSpeed = 0.12
       token.play()
@@ -179,6 +220,7 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
       tokenBaseScale = token.scale.x
       board.addChild(token)
       token.position.set(s.x, s.y)
+      curSkin = undefined
 
       // Bandeau combo + score.
       hud = new Text({
@@ -199,28 +241,11 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
         confetti.push({ g, vx: (Math.random() - 0.5) * 0.6, vy: 1.6 + Math.random() * 2.2, vr: (Math.random() - 0.5) * 0.2 })
       }
 
-      // Bannière de réussite.
-      fxBanner = new Container()
-      fxBanner.addChild(new Graphics().roundRect(-95, -28, 190, 56, 14).fill({ color: 0x11a84f, alpha: 0.95 }))
-      const bannerTxt = new Text({
-        text: 'RÉUSSI !',
-        style: { fill: 0xffffff, fontSize: 26, fontFamily: 'monospace', fontWeight: 'bold' },
-      })
-      bannerTxt.anchor.set(0.5)
-      fxBanner.addChild(bannerTxt)
-      fxBanner.position.set(w / 2, h * 0.42)
-      fxBanner.scale.set(0)
-      fxBanner.visible = false
-      board.addChild(fxBanner)
-
-      // Boucle d'animation de la célébration (indépendante du replay).
+      // Boucle d'animation de la célébration (confettis, indépendante du replay).
       celebrateTick = (ticker: Ticker) => {
-        if (!celebrating || !fxBanner || !token) return
+        if (!celebrating || !token) return
         const dt = ticker.deltaMS
         celebT += dt
-        const grow = Math.min(1, celebT / 220)
-        const eased = 1 - Math.pow(1 - grow, 3)
-        fxBanner.scale.set(eased * (1 + 0.1 * Math.sin(celebT / 90)))
         token.scale.set(tokenBaseScale * (1 + 0.08 * Math.sin(celebT / 110)))
         for (const p of confetti) {
           p.g.x += p.vx * dt * 0.06
@@ -254,8 +279,12 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
       const dy = b.y - a.y
       if (dx !== 0 || dy !== 0) token.rotation = Math.atan2(dy, dx) - Math.PI / 2
 
-      // Teinte selon la peau.
-      token.tint = frame.skin ? FRUIT_HEX[frame.skin] : NEUTRAL_TINT
+      // Couleur de peau : on échange le spritesheet (rouge/vert/bleu, sinon vert neutre).
+      if (frame.skin !== curSkin) {
+        token.textures = frame.skin ? walkByColor[frame.skin] : walkNeutral
+        token.play()
+        curSkin = frame.skin
+      }
 
       // Le fruit mangé disparaît.
       if (frame.eaten) {
@@ -281,7 +310,6 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
       board = null
       token = null
       hud = null
-      fxBanner = null
       confetti = []
       fruitGfx.clear()
       appRef = null

@@ -1,63 +1,68 @@
-CAMÉLÉON GOURMAND
+# Caméléon Gourmand
 
-Un caméléon gourmand veut manger un maximum de fruits colorés. Il ne mange
-un fruit que si sa peau est de la MÊME couleur que lui, et il mange par
-séries de taille croissante : 1 fruit, puis 2, puis 3...
+Un caméléon gourmand veut manger un maximum de fruits colorés. Il ne mange un fruit
+que si sa peau a la **même couleur**, et il mange par **séries de taille croissante** :
+d'abord `1` fruit, puis `2`, puis `3`…
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-LE BUT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tu n'as **pas** à gérer les déplacements : tu indiques seulement **quelle peau prendre**
+et **quel fruit manger**, le caméléon s'y rend tout seul (en contournant les obstacles).
 
-Compléter le plus de séries possible :
+## But
 
-   - série 1  ->  1 fruit
-   - série 2  ->  2 fruits
-   - série 3  ->  3 fruits   ...
+Compléter le plus de séries possible. Tous les fruits d'une **même série** sont de la
+**même couleur** (mais la couleur peut changer d'une série à l'autre).
 
-Tous les fruits d'une même série sont de la MÊME couleur (mais la couleur
-peut changer d'une série à l'autre).
+- série 1 → 1 fruit
+- série 2 → 2 fruits
+- série 3 → 3 fruits…
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ENTRÉE (stdin)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Entrée (stdin)
 
-Ligne 1 :   cols  rows  budget  cible
-Puis « rows » lignes de grille :
+    cols rows cible
+    <nbFruits>
+    fx fy couleur        (un fruit par ligne ; son numéro = l'ordre, à partir de 0)
+    <nbObstacles>
+    ox oy                (un obstacle par ligne)
 
-   .  sol      #  mur      S  départ
-   R  rouge    G  vert     B  bleu
+`couleur` vaut `R` (rouge), `G` (vert) ou `B` (bleu). Le caméléon démarre en `(0,0)`.
 
-Le caméléon démarre sur S avec une peau neutre.
+Pour ta stratégie, **seules les couleurs des fruits comptent** : le moteur gère tous les
+déplacements, tu peux donc **ignorer les positions et les obstacles**.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SORTIE (stdout)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Sortie (stdout)
 
-Une action par ligne (au-delà du budget, elles sont ignorées) :
+Une action par ligne :
 
-   MOVE U / MOVE D / MOVE L / MOVE R   avancer d'une case
-   SKIN R / SKIN G / SKIN B            changer la couleur de peau
+- `SKIN R` · `SKIN G` · `SKIN B` — changer la couleur de peau
+- `EAT <numéro>` — aller manger ce fruit (le caméléon s'y déplace tout seul)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RÈGLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`EAT` ne fonctionne que si ta peau est de la couleur du fruit : pense à faire `SKIN`
+de la bonne couleur **avant**.
 
-   - Tu manges automatiquement un fruit si ta peau est de sa couleur
-     (sinon tu passes dessus sans y toucher).
-   - Manger un fruit d'une autre couleur en pleine série casse le combo.
-   - Avancer vers un mur ou hors de la grille = action perdue.
+## Règles
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONSEIL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Tu manges les fruits dans l'ordre de tes `EAT`, en séries de taille `1, 2, 3…`,
+  chaque série d'une **seule couleur**.
+- Manger un fruit d'une autre couleur en pleine série **casse le combo** (le score
+  garde les séries déjà complétées).
 
-Tu vas produire beaucoup d'actions. Le mieux est de créer deux petites
-fonctions : une pour avancer (MOVE) et une pour changer de peau (SKIN).
-Ton code restera court et lisible, au lieu d'aligner des console.log.
+## Conseil
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCORE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Regroupe les fruits **par couleur**. Pour chaque série : `SKIN` la bonne couleur, puis
+`EAT` le bon nombre de fruits de cette couleur. Pense à réserver les couleurs les plus
+fournies pour les **grandes** séries.
 
-Le score est proportionnel au nombre de séries complétées.
-Le défi est réussi lorsque tu atteins la « cible » de séries.
+## Exemple
+
+Fruits : `0` rouge, `1` vert, `2` vert. Cible = 2.
+
+    SKIN R
+    EAT 0        -> série 1 terminée (1 rouge)
+    SKIN G
+    EAT 1
+    EAT 2        -> série 2 terminée (2 verts)
+
+## Score
+
+Le score est proportionnel au nombre de séries complétées. Ta solution est évaluée sur
+**plusieurs niveaux** : lis la liste de fruits et résous chaque niveau de façon générique.
