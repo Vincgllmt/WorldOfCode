@@ -15,6 +15,7 @@ import type { PlayResult, SubmitResult, TestRunResult } from '@/services/arenaSe
 export const codeStorageKey = (slug: string, lang: string) => `arena:code:${slug}:${lang}`
 export const langStorageKey = (slug: string) => `arena:lang:${slug}`
 export const progressStorageKey = (slug: string, lang: string) => `arena:progress:${slug}:${lang}`
+export const playbackSpeedStorageKey = 'arena:playback-speed'
 
 /** Avancement mémorisé d'un défi (par langage). Les replays en sont retirés avant stockage. */
 export interface SavedProgress {
@@ -22,6 +23,27 @@ export interface SavedProgress {
   runSummary: { passed: number; total: number } | null
   submitResult: SubmitResult | null
   playResult: PlayResult | null
+}
+
+/* ── Vitesse de lecture ── */
+
+export function loadPlaybackSpeed(): number {
+  if (typeof window === 'undefined') return 1
+  try {
+    const s = window.localStorage.getItem(playbackSpeedStorageKey)
+    return s ? Number(s) : 1
+  } catch {
+    return 1
+  }
+}
+
+export function savePlaybackSpeed(speed: number) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(playbackSpeedStorageKey, speed.toString())
+  } catch {
+    /* ignore */
+  }
 }
 
 /* ── Code ── */

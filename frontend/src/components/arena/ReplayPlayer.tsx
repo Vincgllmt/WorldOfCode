@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Application } from 'pixi.js'
 import { Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react'
 
+import { loadPlaybackSpeed, savePlaybackSpeed } from '@/lib/arenaPersistence'
 import type { GameViewer, GameViewerFactory, Replay } from './gameViewer'
 
 const FRAME_MS = 420 // durée d'une frame à vitesse 1x
@@ -29,7 +30,7 @@ export default function ReplayPlayer({
 
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [speed, setSpeed] = useState(1)
+  const [speed, setSpeed] = useState(() => loadPlaybackSpeed())
 
   // onEnded gardé dans une ref pour ne pas relancer l'effet (qui remonterait PixiJS).
   const onEndedRef = useRef(onEnded)
@@ -134,6 +135,7 @@ export default function ReplayPlayer({
 
   useEffect(() => {
     anim.current.speed = speed
+    savePlaybackSpeed(speed)
   }, [speed])
 
   const renderAt = (i: number) => {
