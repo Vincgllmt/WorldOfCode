@@ -178,35 +178,35 @@ export default function ReplayPlayer({
     <div className="flex h-full flex-col gap-2">
       <div
         ref={hostRef}
-        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-[#E8EEEA] bg-[#0b1f14]"
+        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-border bg-[#0b1f14]"
       />
 
       {/* Contrôles de replay */}
       <div className="flex shrink-0 items-center gap-3">
         <button
           onClick={() => scrub(0)}
-          className="rounded-lg p-2 text-[#5C6B63] transition hover:bg-[#F2F6F3]"
+          className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted"
           title="Revenir au début"
         >
           <RotateCcw className="h-4 w-4" />
         </button>
         <button
           onClick={() => step(-1)}
-          className="rounded-lg p-2 text-[#5C6B63] transition hover:bg-[#F2F6F3]"
+          className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted"
           title="Frame précédente"
         >
           <SkipBack className="h-4 w-4" />
         </button>
         <button
           onClick={playing ? pause : play}
-          className="rounded-full bg-[#11A84F] p-2.5 text-white transition hover:bg-[#0E9F4A]"
+          className="rounded-full bg-primary p-2.5 text-primary-foreground transition hover:bg-primary/90"
           title={playing ? 'Pause' : 'Lecture'}
         >
           {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </button>
         <button
           onClick={() => step(1)}
-          className="rounded-lg p-2 text-[#5C6B63] transition hover:bg-[#F2F6F3]"
+          className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted"
           title="Frame suivante"
         >
           <SkipForward className="h-4 w-4" />
@@ -218,17 +218,17 @@ export default function ReplayPlayer({
           max={last}
           value={index}
           onChange={(e) => scrub(Number(e.target.value))}
-          className="h-1.5 flex-1 accent-[#11A84F]"
+          className="h-1.5 flex-1 accent-primary"
         />
 
-        <span className="w-12 text-right font-mono text-xs text-[#94A099]">
+        <span className="w-12 text-right font-mono text-xs text-muted-foreground">
           {index}/{last}
         </span>
 
         <select
           value={speed}
           onChange={(e) => setSpeed(Number(e.target.value))}
-          className="rounded-lg border border-[#E6ECE8] bg-[#F7FAF8] px-2 py-1 text-xs text-[#3A453F]"
+          className="rounded-lg border border-border bg-muted px-2 py-1 text-xs text-foreground"
         >
           {SPEEDS.map((s) => (
             <option key={s} value={s}>
