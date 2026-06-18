@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, Play, Send, CheckCircle2, XCircle, Trophy, Clock, AlertTriangle, Loader2, ListChecks } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { getChallenge, playGame, runCode, runTests, submitCode, type PlayResult, type RunResult, type SubmitResult, type TestRunResult } from '@/services/arenaService'
+import { loadSavedCode, saveCode, loadSavedLang, saveLang, loadProgress, saveProgress, type SavedProgress } from '@/lib/arenaPersistence'
 import type { Replay } from '@/components/arena/gameViewer'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -26,29 +27,6 @@ const DEFAULT_CODE: Record<string, string> = {
   python: `# Écris ton code ici\n`,
   java: `public class Main {\n    public static void main(String[] args) {\n        // Écris ton code ici\n    }\n}\n`,
   cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Écris ton code ici\n    return 0;\n}\n`,
-}
-
-/* ── Persistance locale du code (par défi + langage) ── */
-/* Le code écrit est conservé dans localStorage pour être retrouvé au rechargement
-   ou à une visite ultérieure ; une clé par langage afin de ne rien écraser en changeant. */
-const codeStorageKey = (slug: string, lang: string) => `arena:code:${slug}:${lang}`
-
-function loadSavedCode(slug: string, lang: string): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return window.localStorage.getItem(codeStorageKey(slug, lang))
-  } catch {
-    return null
-  }
-}
-
-function saveCode(slug: string, lang: string, code: string) {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(codeStorageKey(slug, lang), code)
-  } catch {
-    /* quota dépassé / navigation privée : on ignore silencieusement */
-  }
 }
 
 const DIFFICULTY_LABEL: Record<string, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }
@@ -229,11 +207,15 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
   const currentReplay = replayQueue[queuePos] ?? null
   const currentRun = currentReplay ? testRuns[currentReplay.index] : undefined
 
-  // Initialise langage + code au chargement (code restauré depuis localStorage si présent)
+  // Initialise langage + code au chargement : on restaure le dernier langage choisi
+  // (s'il est toujours proposé pour ce défi), le code, puis l'avancement mémorisé.
   if (challenge && !language) {
-    const defaultLang = challenge.languages[0] ?? 'javascript'
-    setLanguage(defaultLang)
-    setCode(loadSavedCode(slug, defaultLang) ?? DEFAULT_CODE[defaultLang] ?? '')
+    const saved = loadSavedLang(slug)
+    const initialLang =
+      (saved && challenge.languages.includes(saved) ? saved : challenge.languages[0]) ?? 'javascript'
+    setLanguage(initialLang)
+    setCode(loadSavedCode(slug, initialLang) ?? DEFAULT_CODE[initialLang] ?? '')
+    applyProgress(loadProgress(slug, initialLang))
   }
 
   // Persiste le code à chaque modification pour le retrouver au rechargement / plus tard.
@@ -242,17 +224,30 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     saveCode(slug, language, code)
   }, [slug, language, code])
 
+  // Persiste l'avancement (verdicts par cas, résumé, résultat noté) par langage.
+  useEffect(() => {
+    if (!language) return
+    saveProgress(slug, language, { testRuns, runSummary, submitResult, playResult })
+  }, [slug, language, testRuns, runSummary, submitResult, playResult])
+
+  /* Applique un avancement mémorisé aux états affichés (ou repart à zéro si null). */
+  function applyProgress(p: SavedProgress | null) {
+    setTestRuns(p?.testRuns ?? {})
+    setRunSummary(p?.runSummary ?? null)
+    setSubmitResult(p?.submitResult ?? null)
+    setPlayResult(p?.playResult ?? null)
+  }
+
   function handleLanguageChange(lang: string) {
     setLanguage(lang)
+    saveLang(slug, lang)
     setCode(loadSavedCode(slug, lang) ?? DEFAULT_CODE[lang] ?? '')
     setRunResult(null)
-    setSubmitResult(null)
     setRuntimeError(null)
-    // Le code change : les essais précédents ne sont plus valides → on revient à l'aperçu.
+    // Le code change : les replays en cours ne valent plus → retour à l'aperçu,
+    // mais on restaure l'avancement déjà mémorisé pour ce langage (verdicts, résumé…).
     clearReplays()
-    setPlayResult(null)
-    setTestRuns({})
-    setRunSummary(null)
+    applyProgress(loadProgress(slug, lang))
   }
 
   /* Vide la file de replays → la visualisation revient à l'aperçu du cas sélectionné. */
