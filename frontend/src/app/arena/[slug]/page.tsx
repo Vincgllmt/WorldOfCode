@@ -34,6 +34,13 @@ const DIFF_PILL: Record<string, string> = {
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 
+/* Libellés lisibles pour les codes de badge connus (repli sur le code brut). */
+const BADGE_LABELS: Record<string, string> = {
+  perfect: 'Sans faute',
+  first_solve: 'Première résolution',
+}
+const badgeLabel = (code: string) => BADGE_LABELS[code] ?? code
+
 /* ── Panneau de résultats ── */
 function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null; submitResult: SubmitResult | null }) {
   if (!runResult && !submitResult) {
@@ -59,10 +66,17 @@ function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null;
           </span>
         </div>
         {submitResult.badgesAwarded.length > 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-            <Trophy className="h-4 w-4 text-primary" />
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+            <Trophy className="h-4 w-4 shrink-0 text-primary" />
             <span className="font-medium">Badge{submitResult.badgesAwarded.length > 1 ? 's' : ''} :</span>
-            <span className="text-primary">{submitResult.badgesAwarded.join(', ')}</span>
+            {submitResult.badgesAwarded.map((code) => (
+              <span
+                key={code}
+                className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
+              >
+                {badgeLabel(code)}
+              </span>
+            ))}
           </div>
         )}
       </div>
@@ -382,6 +396,19 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
                     </span>
                   )}
                 </div>
+                {playResult && playResult.badgesAwarded.length > 0 && (
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    {playResult.badgesAwarded.map((code) => (
+                      <span
+                        key={code}
+                        className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                      >
+                        {badgeLabel(code)}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="min-h-0 flex-1">
                   {replay ? (
                     <ReplayPlayer key={replayKey} replay={replay} viewerFactory={GAME_VIEWERS[slug]} />

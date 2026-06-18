@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Badge caméléon — animé">
+  <defs>
+    <filter id="ds" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#1C5A36" flood-opacity="0.26"></feDropShadow>
+    </filter>
+    <style>
+      .cham-bob { transform-box: fill-box; transform-origin: 50% 62%; animation: bob 3.2s ease-in-out infinite; }
+      .pupil    { transform-box: fill-box; transform-origin: center; animation: look 4.5s ease-in-out infinite; }
+      .lid      { transform-box: fill-box; transform-origin: center; transform: scaleY(0); animation: blink 5.5s ease-in-out infinite; }
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50%      { transform: translateY(-3px) rotate(-2deg); }
+      }
+      @keyframes look {
+        0%, 100% { transform: translateX(0); }
+        30%      { transform: translateX(1.4px); }
+        65%      { transform: translateX(-1.1px); }
+      }
+      @keyframes blink {
+        0%, 90%, 100% { transform: scaleY(0); }
+        94%           { transform: scaleY(1); }
+        97%           { transform: scaleY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cham-bob, .pupil, .lid { animation: none; }
+        .lid { transform: scaleY(0); }
+      }
+    </style>
+  </defs>
+  <g filter="url(#ds)">
+    <circle cx="120" cy="120" r="112" fill="#1F9B5A"></circle>
+    <circle cx="120" cy="120" r="98" fill="#27AE68"></circle>
+    <circle cx="120" cy="120" r="84" fill="#EAF8EF"></circle>
+    <circle cx="120" cy="120" r="84" fill="none" stroke="#CDEAD8" stroke-width="2"></circle>
+  </g>
+  <g stroke="#7CCB9C" stroke-width="3.4" stroke-linecap="round">
+    <line x1="120" y1="30" x2="120" y2="38"></line>
+    <line x1="210" y1="120" x2="202" y2="120"></line>
+    <line x1="120" y1="210" x2="120" y2="202"></line>
+    <line x1="30" y1="120" x2="38" y2="120"></line>
+    <line x1="56" y1="56" x2="62" y2="62"></line>
+    <line x1="184" y1="56" x2="178" y2="62"></line>
+    <line x1="184" y1="184" x2="178" y2="178"></line>
+    <line x1="56" y1="184" x2="62" y2="178"></line>
+  </g>
+  <svg x="58" y="64" width="124" height="116" viewBox="0 0 120 112">
+    <g class="cham-bob">
+      <path d="M22 72 C12 61 15 44 30 38 C30 29 37 25 45 28 C62 23 82 30 99 45 C109 52 112 58 107 64 C101 70 91 70 83 67 C69 74 47 76 37 73 C29 73 25 73 22 72 Z" fill="#5BBE74"></path>
+      <path d="M31 41 C45 34 64 34 82 42 C70 42 52 45 41 53 C36 50 32 46 31 41 Z" fill="#46B79C" opacity="0.5"></path>
+      <path d="M26 67 C38 74 58 75 73 70 C63 76 49 78 40 76 C33 75 28 72 26 67 Z" fill="#49AC64"></path>
+      <path d="M48 41 C39 22 53 5 68 10 C79 13 81 26 70 29 C62 31 58 23 64 20" fill="none" stroke="#3FB7A6" stroke-width="9.5" stroke-linecap="round"></path>
+      <path d="M53 39 C47 24 57 13 68 17" fill="none" stroke="#F2D06A" stroke-width="4" stroke-linecap="round"></path>
+      <circle cx="67" cy="23" r="3.3" fill="#EBA0B6"></circle>
+      <path d="M106 63 C96 71 85 70 78 66" fill="none" stroke="#2E8A4C" stroke-width="3.4" stroke-linecap="round"></path>
+      <circle cx="101" cy="58" r="2.1" fill="#2E8A4C"></circle>
+      <circle cx="65" cy="52" r="17" fill="#54B56C"></circle>
+      <circle cx="65" cy="52" r="17" fill="none" stroke="#46A65E" stroke-width="2.4"></circle>
+      <circle cx="69" cy="53" r="7.6" fill="#F4CE63"></circle>
+      <g class="pupil">
+        <circle cx="70.5" cy="53" r="3.6" fill="#1E2B22"></circle>
+        <circle cx="72" cy="51" r="1.4" fill="#fff"></circle>
+      </g>
+      <circle class="lid" cx="69" cy="53" r="8.4" fill="#54B56C"></circle>
+    </g>
+  </svg>
+  <g transform="translate(120 188)">
+    <circle cx="0" cy="0" r="15" fill="#fff"></circle>
+    <path d="M0 -9 L2.6 -3 L9 -2.4 L4.3 2 L5.6 8.4 L0 5.2 L-5.6 8.4 L-4.3 2 L-9 -2.4 L-2.6 -3 Z" fill="#F2B441"></path>
+  </g>
+</svg>

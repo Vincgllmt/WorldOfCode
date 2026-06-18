@@ -45,6 +45,10 @@ Le backend ne connaît **aucun jeu**. Un jeu = des **données + du code** charg�
 
 `init`/`frames` sont **propres au jeu** et interprétés par **son** viewer.
 
+> **Score** : le referee renvoie une **qualité 0–100** (100 = parfait). `PlayController` la met
+> à l'échelle de `maxScore` du défi — `score_final = round(score / 100 × maxScore)` — qui reste
+> la **valeur de points unique** du jeu, affichée à l'identique sur la carte et dans l'énoncé.
+
 ---
 
 ## 3. Cycle de vie d'une partie (end-to-end)
