@@ -338,7 +338,10 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
     setSubmitResult(null)
     setRuntimeError(null)
     try {
-      setRunResult(await runCode(language, code))
+      // Pour un jeu, on fournit l'entrée du niveau sélectionné → le code peut la lire
+      // (et l'on voit sa sortie + ses console.error dans le panneau Sortie).
+      const stdin = isGame ? (gameTests[selectedTest]?.stdin ?? gameTests[0]?.stdin ?? undefined) : undefined
+      setRunResult(await runCode(language, code, stdin ?? undefined))
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {

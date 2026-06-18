@@ -174,26 +174,43 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
         }),
       )
 
-      // Fruits : image PNG si disponible, sinon emoji.
-      for (const fruit of init.fruits) {
+      // Fruits : image (ou emoji) + leur NUMÉRO affiché (= le numéro à utiliser dans EAT).
+      init.fruits.forEach((fruit, idx) => {
         const c = center(fruit.pos[0], fruit.pos[1])
+        const cont = new Container()
+
         const tex = fruitTex[fruit.color]
-        let node: Container
         if (tex) {
           const sprite = new Sprite(tex)
           sprite.anchor.set(0.5)
-          sprite.width = cell * 0.72
-          sprite.height = cell * 0.72
-          node = sprite
+          sprite.width = cell * 0.7
+          sprite.height = cell * 0.7
+          cont.addChild(sprite)
         } else {
-          const t = new Text({ text: FRUIT_EMOJI[fruit.color], style: { fontSize: Math.round(cell * 0.62) } })
+          const t = new Text({ text: FRUIT_EMOJI[fruit.color], style: { fontSize: Math.round(cell * 0.6) } })
           t.anchor.set(0.5)
-          node = t
+          cont.addChild(t)
         }
-        node.position.set(c.x, c.y)
-        board.addChild(node)
-        fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, node)
-      }
+
+        // Numéro du fruit, au-dessus, bien lisible (contour sombre).
+        const label = new Text({
+          text: String(idx),
+          style: {
+            fill: 0xffffff,
+            fontSize: Math.max(11, Math.round(cell * 0.26)),
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+            stroke: { color: 0x0a160f, width: 3 },
+          },
+        })
+        label.anchor.set(0.5)
+        label.position.set(0, -cell * 0.36)
+        cont.addChild(label)
+
+        cont.position.set(c.x, c.y)
+        board.addChild(cont)
+        fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, cont)
+      })
 
       // Caméléon : un spritesheet par couleur de peau (rouge / vert / bleu).
       const buildWalk = (sheet: Texture) => {

@@ -6,7 +6,7 @@
   "image": "/games/chameleon-colors/cover.jpg",
   "refereeLanguage": "python",
   "badges": [
-    { "code": "first_solve", "name": "Premier festin", "description": "Compléter les séries requises pour la première fois." },
-    { "code": "combo_master", "name": "Combo parfait", "description": "Compléter toutes les séries sans jamais casser le combo." }
+    { "code": "first_solve", "name": "Premier festin", "description": "Être le premier à réussir le Caméléon Gourmand." },
+    { "code": "perfect", "name": "Festin parfait", "description": "Réussir tous les niveaux du Caméléon Gourmand.", "icon": "/badges/cameleon-fruit.svg" }
   ]
 }

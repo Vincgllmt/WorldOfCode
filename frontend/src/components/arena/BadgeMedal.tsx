@@ -10,6 +10,7 @@ import type { ArenaBadge } from '@/interfaces/arena'
  */
 const MEDALS: Record<string, { anime: string; statique: string }> = {
   maze: { anime: '/badges/cameleon-anime.svg', statique: '/badges/cameleon-statique.svg' },
+  'chameleon-colors': { anime: '/badges/cameleon-anime.svg', statique: '/badges/cameleon-statique.svg' },
 }
 
 type BadgeMedalProps = {
@@ -19,10 +20,12 @@ type BadgeMedalProps = {
 
 export default function BadgeMedal({ badge, size = 48 }: BadgeMedalProps) {
   const medal = MEDALS[badge.challengeSlug]
-  const [src, setSrc] = useState(medal?.anime ?? '')
+  // Icône propre au badge (chemin d'image dans game.json) → prioritaire sur la médaille du jeu.
+  const iconPath = badge.icon && /^\/|\.(svg|png|jpe?g|webp)$/i.test(badge.icon) ? badge.icon : null
+  const [src, setSrc] = useState(iconPath ?? medal?.anime ?? '')
 
-  // Pas de visuel dédié : pastille avec l'icône (emoji) du badge.
-  if (!medal) {
+  // Ni icône d'image ni médaille : pastille avec l'icône (emoji) du badge.
+  if (!src) {
     return (
       <span
         className="flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
