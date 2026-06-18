@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { ArenaChallenge, ChallengeDifficulty, LeaderboardEntry } from '@/interfaces/arena'
 import { Skeleton } from '@/components/ui/skeleton'
 import ArenaBadgeMedal, { ArenaMedalDefs } from '@/components/arena/ArenaBadgeMedal'
+import BadgeMedal from '@/components/arena/BadgeMedal'
 
 /* ---------- Design tokens ---------- */
 
@@ -217,7 +218,11 @@ export default function ArenaPage() {
               <div className="grid grid-cols-2 gap-[18px] sm:grid-cols-3 lg:grid-cols-4">
                 {badgeSlots.map(({ challenge, badge, earned }) => (
                   <div key={challenge.id} className="flex flex-col items-center text-center">
-                    <ArenaBadgeMedal earned={earned} size={84} />
+                    {earned && badge?.icon ? (
+                      <BadgeMedal badge={badge} size={84} />
+                    ) : (
+                      <ArenaBadgeMedal earned={earned} size={84} />
+                    )}
                     <div
                       className={`mt-2.5 text-[13.5px] font-extrabold tracking-tight ${
                         earned ? 'text-foreground' : 'text-muted-foreground'
