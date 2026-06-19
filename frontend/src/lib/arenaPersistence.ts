@@ -12,9 +12,20 @@ import type { PlayResult, SubmitResult, TestRunResult } from '@/services/arenaSe
  * (quota dépassé, navigation privée).
  */
 
-export const codeStorageKey = (slug: string, lang: string) => `arena:code:${slug}:${lang}`
-export const langStorageKey = (slug: string) => `arena:lang:${slug}`
-export const progressStorageKey = (slug: string, lang: string) => `arena:progress:${slug}:${lang}`
+/**
+ * Identifiant du joueur courant pour cloisonner le stockage : les clés sont
+ * préfixées par cet identifiant afin qu'un autre compte connecté sur le même
+ * navigateur ne récupère PAS le code / langage / avancement (verdicts de tests)
+ * du compte précédent. `null`/`undefined` (déconnecté) → espace « guest ».
+ */
+export type UserScope = number | string | null | undefined
+const scope = (userId: UserScope) => (userId == null ? 'guest' : String(userId))
+
+export const codeStorageKey = (userId: UserScope, slug: string, lang: string) =>
+  `arena:code:${scope(userId)}:${slug}:${lang}`
+export const langStorageKey = (userId: UserScope, slug: string) => `arena:lang:${scope(userId)}:${slug}`
+export const progressStorageKey = (userId: UserScope, slug: string, lang: string) =>
+  `arena:progress:${scope(userId)}:${slug}:${lang}`
 export const playbackSpeedStorageKey = 'arena:playback-speed'
 
 /** Avancement mémorisé d'un défi (par langage). Les replays en sont retirés avant stockage. */
@@ -48,19 +59,19 @@ export function savePlaybackSpeed(speed: number) {
 
 /* ── Code ── */
 
-export function loadSavedCode(slug: string, lang: string): string | null {
+export function loadSavedCode(userId: UserScope, slug: string, lang: string): string | null {
   if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(codeStorageKey(slug, lang))
+    return window.localStorage.getItem(codeStorageKey(userId, slug, lang))
   } catch {
     return null
   }
 }
 
-export function saveCode(slug: string, lang: string, code: string) {
+export function saveCode(userId: UserScope, slug: string, lang: string, code: string) {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(codeStorageKey(slug, lang), code)
+    window.localStorage.setItem(codeStorageKey(userId, slug, lang), code)
   } catch {
     /* quota dépassé / navigation privée : on ignore silencieusement */
   }
@@ -68,19 +79,19 @@ export function saveCode(slug: string, lang: string, code: string) {
 
 /* ── Langage choisi ── */
 
-export function loadSavedLang(slug: string): string | null {
+export function loadSavedLang(userId: UserScope, slug: string): string | null {
   if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(langStorageKey(slug))
+    return window.localStorage.getItem(langStorageKey(userId, slug))
   } catch {
     return null
   }
 }
 
-export function saveLang(slug: string, lang: string) {
+export function saveLang(userId: UserScope, slug: string, lang: string) {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(langStorageKey(slug), lang)
+    window.localStorage.setItem(langStorageKey(userId, slug), lang)
   } catch {
     /* quota dépassé / navigation privée : on ignore silencieusement */
   }
@@ -95,24 +106,24 @@ export const stripReplays = (runs: Record<number, TestRunResult>): Record<number
   return out
 }
 
-export function loadProgress(slug: string, lang: string): SavedProgress | null {
+export function loadProgress(userId: UserScope, slug: string, lang: string): SavedProgress | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(progressStorageKey(slug, lang))
+    const raw = window.localStorage.getItem(progressStorageKey(userId, slug, lang))
     return raw ? (JSON.parse(raw) as SavedProgress) : null
   } catch {
     return null
   }
 }
 
-export function saveProgress(slug: string, lang: string, p: SavedProgress) {
+export function saveProgress(userId: UserScope, slug: string, lang: string, p: SavedProgress) {
   if (typeof window === 'undefined') return
   const isEmpty =
     Object.keys(p.testRuns).length === 0 && !p.runSummary && !p.submitResult && !p.playResult
   try {
     // Rien à mémoriser → on nettoie l'entrée plutôt que d'écrire un objet vide.
     if (isEmpty) {
-      window.localStorage.removeItem(progressStorageKey(slug, lang))
+      window.localStorage.removeItem(progressStorageKey(userId, slug, lang))
       return
     }
     const compact: SavedProgress = {
@@ -123,7 +134,7 @@ export function saveProgress(slug: string, lang: string, p: SavedProgress) {
         ? { ...p.playResult, results: p.playResult.results.map((r) => ({ ...r, replay: null })) }
         : null,
     }
-    window.localStorage.setItem(progressStorageKey(slug, lang), JSON.stringify(compact))
+    window.localStorage.setItem(progressStorageKey(userId, slug, lang), JSON.stringify(compact))
   } catch {
     /* quota dépassé / navigation privée : on ignore silencieusement */
   }

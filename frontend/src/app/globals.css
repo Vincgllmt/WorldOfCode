@@ -14,6 +14,33 @@
   background-size: 200% 100% !important;
 }
 
+/* ---------- Bannière niveau Code Arena : scène évolutive (ev-*) ---------- */
+@keyframes ev-driftR { from { transform: translateX(0); } to { transform: translateX(46px); } }
+@keyframes ev-driftL { from { transform: translateX(0); } to { transform: translateX(-40px); } }
+@keyframes ev-mist { 0%, 100% { transform: translateX(-14px); } 50% { transform: translateX(24px); } }
+@keyframes ev-tw { 0%, 100% { opacity: .18; } 50% { opacity: 1; } }
+@keyframes ev-aurora { 0% { transform: translateX(-22px) skewX(-6deg); } 50% { transform: translateX(20px) skewX(6deg); } 100% { transform: translateX(-22px) skewX(-6deg); } }
+@keyframes ev-rays { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@keyframes ev-bird { 0% { transform: translate(-60px, 8px); } 100% { transform: translate(880px, -30px); } }
+@keyframes ev-shoot { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 45% { opacity: 1; } 62% { opacity: 0; } 100% { transform: translate(300px, 120px); opacity: 0; } }
+@keyframes ev-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes ev-flame { 0%, 100% { transform: scaleY(.7); opacity: .8; } 50% { transform: scaleY(1.25); opacity: 1; } }
+.ev-driftR { animation: ev-driftR 24s ease-in-out infinite alternate; }
+.ev-driftL { animation: ev-driftL 28s ease-in-out infinite alternate; }
+.ev-mist { animation: ev-mist 14s ease-in-out infinite; }
+.ev-tw { animation: ev-tw 2.8s ease-in-out infinite; }
+.ev-aurora { transform-box: fill-box; animation: ev-aurora 11s ease-in-out infinite; }
+.ev-aurora2 { transform-box: fill-box; animation: ev-aurora 14s ease-in-out infinite; animation-delay: -4s; }
+.ev-rays { transform-box: fill-box; transform-origin: center; animation: ev-rays 5.5s ease-in-out infinite; }
+.ev-bird { animation: ev-bird 16s linear infinite; }
+.ev-shoot { animation: ev-shoot 6s ease-in infinite; animation-delay: 1.5s; }
+.ev-caret { animation: ev-caret 1.05s steps(1) infinite; }
+.ev-flame { transform-box: fill-box; transform-origin: top center; animation: ev-flame .28s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ev-driftR, .ev-driftL, .ev-mist, .ev-tw, .ev-aurora, .ev-aurora2,
+  .ev-rays, .ev-bird, .ev-shoot, .ev-caret, .ev-flame { animation: none; }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
