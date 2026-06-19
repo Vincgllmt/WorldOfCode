@@ -32,6 +32,8 @@ build:frontend:
         --build-arg NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}" \
         --build-arg NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}" \
         --build-arg NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage" \
+        --build-arg NEXT_PUBLIC_ARENA_API_URL="https://${API_DOMAIN}" \
+        --build-arg NEXT_PUBLIC_ARENA_URL="https://${API_DOMAIN}" \
         --insecure \
         --skip-tls-verify \
         --cache=true \
