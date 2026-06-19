@@ -1,13 +1,10 @@
 #!/bin/bash
 set -ex
 
-# 0) Installer AWS SDK si absent
-if [ ! -d "vendor/aws" ]; then
-  composer require aws/aws-sdk-php --no-interaction --prefer-dist
+# 1) Installer les dépendances uniquement si vendor/ est absent ou vide
+if [ ! -f "vendor/autoload.php" ]; then
+  composer install --no-interaction --prefer-dist
 fi
-
-# 1) Installer / mettre à jour les dépendances
-composer install --no-interaction --prefer-dist
 
 # 2) Attendre la base de données
 echo "Attente de la base de données..."
@@ -91,6 +88,6 @@ fi
 echo "Fetch initial des actualités tech..."
 php bin/console app:fetch-tech-news || true
 
-# 8) Lancement du serveur Symfony
-echo "Lancement du serveur Symfony sur le port 8090..."
-php -S 0.0.0.0:8090 -t public
+# 8) Lancement de la commande passée en argument (symfony serve via docker-compose)
+echo "Lancement du serveur..."
+exec "$@"

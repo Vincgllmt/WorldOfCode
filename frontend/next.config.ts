@@ -4,6 +4,7 @@ const storageUrl = new URL(process.env.NEXT_PUBLIC_STORAGE_URL || 'http://localh
 
 // SEC-19 : origines externes autorisées, dérivées des variables d'env (s'adapte dev/prod).
 const apiOrigin = new URL(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8090').origin
+const arenaOrigin = new URL(process.env.NEXT_PUBLIC_ARENA_API_URL || 'http://localhost:8082').origin
 const socketHttpOrigin = new URL(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8081').origin
 const socketWsOrigin = socketHttpOrigin.replace(/^http/, 'ws')
 const nsfwCdns = 'https://esm.sh https://cdn.jsdelivr.net https://ga.jspm.io'
@@ -19,7 +20,7 @@ const csp = [
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${nsfwCdns}`,
-  `connect-src 'self' ${apiOrigin} ${socketHttpOrigin} ${socketWsOrigin} ${nsfwCdns}`,
+  `connect-src 'self' ${apiOrigin} ${arenaOrigin} ${socketHttpOrigin} ${socketWsOrigin} ${nsfwCdns}`,
   "worker-src 'self' blob:",
 ].join('; ')
 
