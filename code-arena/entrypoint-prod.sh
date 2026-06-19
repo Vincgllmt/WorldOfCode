@@ -23,5 +23,10 @@ php bin/console cache:warmup --env=prod --no-interaction
 echo "→ Fix permissions (var)..."
 chown -R www-data:www-data var
 
+# Synchronisation des jeux (games/<slug>/ -> base). Idempotent ; non bloquant :
+# le schéma appartient au backend, la table peut être absente au tout premier boot.
+echo "→ Synchronisation des jeux..."
+php bin/console app:arena:sync --env=prod --no-interaction || echo "Avertissement : sync des jeux ignorée (tables absentes ?)."
+
 echo "→ Lancement PHP-FPM"
 exec "$@"

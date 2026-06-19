@@ -47,6 +47,8 @@ spec:
               until php bin/console dbal:run-sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
               echo "→ Attente de la clé publique JWT..."
               until [ -f config/jwt/public.pem ]; do sleep 2; done
+              echo "→ Synchronisation des jeux..."
+              php bin/console app:arena:sync --env=prod --no-interaction || echo "Avertissement : sync des jeux ignorée (tables absentes ?)."
               echo "→ Démarrage du serveur PHP intégré..."
               exec php -S 0.0.0.0:9001 -t public
           {{- else }}
