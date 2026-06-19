@@ -24,5 +24,6 @@ export interface GameModule {
 /** Registre des jeux : slug → module. */
 export const GAMES: Record<string, GameModule> = {
   maze: { createViewer: createMazeViewer, buildPreview: buildMazePreview },
+  platformer: { createViewer: createPlatformerViewer, buildPreview: buildPlatformerPreview },
   'mars-lander': { createViewer: createMarsLanderViewer, buildPreview: buildMarsLanderPreview },
 }
