@@ -39,7 +39,8 @@ deploy:k6:
 
     # 4. Génération du JWT token depuis le backend et stockage dans Vault + Secret K8s
     - |
-      VAULT_TOKEN=$(python3 -c "import json; d=json.load(open('cluster/vault/vault-keys.json')); print(d['root_token'])")
+      test -n "$VAULT_ROOT_TOKEN" || { echo "Variable CI VAULT_ROOT_TOKEN manquante"; exit 1; }
+      VAULT_TOKEN="$VAULT_ROOT_TOKEN"
       BACKEND_POD=$(kubectl get pods -n dev -l app=backend -o jsonpath='{.items[0].metadata.name}')
       JWT=$(kubectl exec -n dev "$BACKEND_POD" -c php-fpm -- sh -c \
         ". /vault/secrets/config && php bin/console lexik:jwt:generate-token hichem --no-ansi 2>/dev/null" \
@@ -62,7 +63,6 @@ deploy:k6:
 
     # Régénération du JWT token (valide 4h) depuis le backend + mise à jour du Secret
     - |
-      VAULT_TOKEN=$(python3 -c "import json; d=json.load(open('cluster/vault/vault-keys.json')); print(d['root_token'])")
       BACKEND_NAMESPACE=$(echo "$BASE_URL" | grep -q "prod" && echo "production" || echo "dev")
       BACKEND_POD=$(kubectl get pods -n "$BACKEND_NAMESPACE" -l app=backend -o jsonpath='{.items[0].metadata.name}')
       JWT=$(kubectl exec -n "$BACKEND_NAMESPACE" "$BACKEND_POD" -c php-fpm -- sh -c \
