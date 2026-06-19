@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woc-piston.fullname" . }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "woc-piston.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-piston.name" . }}
+    spec:
+      containers:
+        - name: piston
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Isolation des jobs d'exécution : Piston exige le mode privilégié.
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+          env:
+            - name: PISTON_OUTPUT_MAX_SIZE
+              value: {{ .Values.env.PISTON_OUTPUT_MAX_SIZE | quote }}
+          volumeMounts:
+            # tmpfs : sandbox éphémère des jobs en cours d'exécution.
+            - name: piston-jobs
+              mountPath: /piston/jobs
+            # Persistance des runtimes installés (node, php, python, ...).
+            - name: piston-packages
+              mountPath: /piston/packages
+          {{- if .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: piston-jobs
+          emptyDir:
+            medium: Memory
+        - name: piston-packages
+          persistentVolumeClaim:
+            claimName: {{ include "woc-piston.fullname" . }}-packages
