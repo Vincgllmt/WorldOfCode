@@ -123,27 +123,16 @@ services:
     image: ghcr.io/engineer-man/piston
     container_name: projet_piston
     privileged: true
-    # Limite de sortie par défaut de Piston = 1 Ko, trop faible pour les replays
-    # des jeux de l'arène (le referee renvoie init + frames en JSON). On l'augmente
-    # à 1 Mo, sinon le sandbox tue le process (« Sandbox keeper received fatal signal 6 »).
     environment:
-      PISTON_OUTPUT_MAX_SIZE: "1048576"
+      PISTON_OUTPUT_MAX_SIZE: "5242880"
     ports:
       - "2000:2000"
-    environment:
-      # Plafond de sortie par exécution. Défaut Piston = 1024 o, bien trop bas pour
-      # les replays des jeux (trace init+frames). On le relève pour que le referee
-      # puisse émettre sa trace de visualisation.
-      PISTON_OUTPUT_MAX_SIZE: "5242880"
     tmpfs:
       - /piston/jobs
     volumes:
       - piston_packages:/piston/packages
     networks:
       - projet_network
-    # Installer les runtimes au premier démarrage (une seule fois, persistés dans le volume) :
-    #   docker exec projet_piston piston ppman install php
-    #   docker exec projet_piston piston ppman install node
 
   piston-install:
     image: curlimages/curl:latest
@@ -153,8 +142,6 @@ services:
     networks:
       - projet_network
     restart: "no"
-    # Installe les runtimes via l'API Piston (le CLI "piston ppman" n'existe pas dans l'image).
-    # Idempotent : réinstaller un runtime déjà présent renvoie "Already installed".
     entrypoint:
       - sh
       - -c
@@ -176,7 +163,6 @@ services:
     ports:
       - "8082:8082"
     environment:
-      # Base partagée projet_web (schéma possédé par le backend, jamais migré ici)
       DATABASE_URL: "mysql://application:password@db:3306/projet_web?serverVersion=8.0&charset=utf8mb4"
       APP_ENV: dev
       CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
