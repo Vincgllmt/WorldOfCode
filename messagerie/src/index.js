@@ -1,4 +1,5 @@
 import http from "http";
+import crypto from "crypto";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -16,10 +17,30 @@ if (!process.env.CORS_ORIGIN) {
 }
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
 
+// SEC-14 : secret partagé backend ↔ messagerie pour authentifier /api/notify
+if (!process.env.INTERNAL_SECRET) {
+    throw new Error("INTERNAL_SECRET is required (shared secret backend ↔ messagerie for /api/notify).");
+}
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
+
+// Comparaison à temps constant pour éviter les attaques temporelles
+function isValidInternalSecret(provided) {
+    if (typeof provided !== "string") return false;
+    const a = Buffer.from(provided);
+    const b = Buffer.from(INTERNAL_SECRET);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
     if (req.method === 'POST' && req.url === '/api/notify') {
+        // SEC-14 : refuser tout appel sans le bon secret interne
+        if (!isValidInternalSecret(req.headers['x-internal-secret'])) {
+            res.writeHead(401);
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {

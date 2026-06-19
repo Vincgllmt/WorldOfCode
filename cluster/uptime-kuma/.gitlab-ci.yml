@@ -1,5 +1,6 @@
 deploy:uptime-kuma:
   stage: deploy-monitoring
+  needs: []
   variables:
     UPTIME_KUMA_NAMESPACE: "monitoring"
     UPTIME_KUMA_RELEASE: "uptime-kuma"

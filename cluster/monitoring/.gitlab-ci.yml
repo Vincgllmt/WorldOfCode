@@ -16,6 +16,7 @@ variables:
 # --- Job 1 : VictoriaMetrics & Grafana ---
 deploy:vm-stack:
   stage: deploy-monitoring
+  needs: []
   when: manual
   script:
     - helm repo add vm $VM_CHART_REPO
@@ -36,6 +37,7 @@ deploy:vm-stack:
 # --- Job 3 : Alerting Grafana (via API Grafana) ---
 deploy:monitoring:alerting:
   stage: deploy-monitoring
+  needs: []
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       changes:
@@ -52,6 +54,7 @@ deploy:monitoring:alerting:
 # --- Job : Dashboards Grafana ---
 deploy:monitoring:dashboards:
   stage: deploy-monitoring
+  needs: []
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       changes:
@@ -77,6 +80,7 @@ deploy:monitoring:dashboards:
 # --- Job 2 : Loki & Promtail ---
 deploy:loki-stack:
   stage: deploy-monitoring
+  needs: []
   when: manual
   script:
     # 1. Ajout des repos

@@ -17,6 +17,13 @@ spec:
           export DATABASE_URL="{{ .Data.data.url }}"
           {{- end -}}
     spec:
+      # SEC-12 : exécution non-root (www-data = uid 33)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        seccompProfile:
+          type: RuntimeDefault
       restartPolicy: Never
       imagePullSecrets:
         - name: woc-regcred
@@ -24,6 +31,10 @@ spec:
         - name: migrate
           image: registry.woc:32000/backend:backend-v1.0.2
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           workingDir: /var/www/backend
           command: ["/bin/sh", "-c"]
           args:

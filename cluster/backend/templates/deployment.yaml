@@ -18,6 +18,18 @@ spec:
         vault.hashicorp.com/agent-inject-template-config: |
           {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
           export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
+          {{ "{{ if .Data.data.appSecret }}" }}
+          export APP_SECRET={{ "\"{{ .Data.data.appSecret }}\"" }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.jwtPassphrase }}" }}
+          export JWT_PASSPHRASE={{ "\"{{ .Data.data.jwtPassphrase }}\"" }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.mailerDsn }}" }}
+          export MAILER_DSN={{ "\"{{ .Data.data.mailerDsn }}\"" }}
+          {{ "{{ end }}" }}
+          {{ "{{ if .Data.data.INTERNAL_SECRET }}" }}
+          export INTERNAL_SECRET={{ "\"{{ .Data.data.INTERNAL_SECRET }}\"" }}
+          {{ "{{ end }}" }}
           {{ "{{- end -}}" }}
         vault.hashicorp.com/agent-inject-secret-minio: "{{ .Values.vault.minioSecretPath }}"
         vault.hashicorp.com/agent-inject-template-minio: |
@@ -30,6 +42,11 @@ spec:
           export ELASTICSEARCH_PASSWORD={{ "\"{{ .Data.data.password }}\"" }}
           {{ "{{- end -}}" }}
     spec:
+      # SEC-12 : aucun conteneur ne tourne en root
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
 
@@ -38,6 +55,12 @@ spec:
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["/bin/sh", "-c"]
           {{- if .Values.migrations.enabled }}
           args:
@@ -69,6 +92,10 @@ spec:
               value: {{ .Values.env.RESET_PASSWORD_URL | quote }}
             - name: MESSAGERIE_URL
               value: {{ .Values.env.MESSAGERIE_URL | quote }}
+            {{- if .Values.env.INTERNAL_SECRET }}
+            - name: INTERNAL_SECRET
+              value: {{ .Values.env.INTERNAL_SECRET | quote }}
+            {{- end }}
             - name: MINIO_ENDPOINT
               value: {{ .Values.env.MINIO_ENDPOINT | quote }}
             - name: MINIO_ACCESS_KEY
@@ -88,9 +115,15 @@ spec:
               mountPath: /var/www/backend/config/jwt
               readOnly: true
 
-        # --- Conteneur Nginx ---
+        # --- Conteneur Nginx (image non-root, uid 101) ---
         - name: nginx
-          image: nginx:stable-alpine
+          image: nginxinc/nginx-unprivileged:stable-alpine
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8090
           volumeMounts:

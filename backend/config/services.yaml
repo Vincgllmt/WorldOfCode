@@ -4,6 +4,18 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+  env(LOCK_DSN): 'flock'
+  env(CORS_ALLOW_ORIGIN): '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
+  env(IP_HASH_SALT): 'changeme'
+  env(MESSAGERIE_URL): 'http://messagerie:3000'
+  env(MINIO_ENDPOINT): 'http://minio:9000'
+  env(MINIO_ACCESS_KEY): 'minioadmin'
+  env(MINIO_SECRET_KEY): 'minioadmin'
+  env(MINIO_BUCKET): 'woc'
+  env(MINIO_PUBLIC_URL): 'http://localhost:9000/woc'
+  env(ELASTICSEARCH_HOST): 'http://elasticsearch:9200'
+  env(ELASTICSEARCH_USERNAME): 'elastic'
+  env(ELASTICSEARCH_PASSWORD): 'changeme'
 
 services:
   # default configuration for services in *this* file
@@ -25,6 +37,7 @@ services:
   App\Service\NotificationService:
     arguments:
       $messagerieUrl: '%env(MESSAGERIE_URL)%'
+      $internalSecret: '%env(INTERNAL_SECRET)%'
 
   App\EventListener\TwoFactorJWTListener:
     tags:

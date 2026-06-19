@@ -12,13 +12,28 @@ spec:
       labels:
         app: {{ include "woc-backoffice.name" . }}
     spec:
+      # SEC-12 : exécution non-root (node = uid 1000)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
       - name: {{ .Values.registry.imagePullSecretName }}
       containers:
       - name: woc-backoffice
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         ports:
         - containerPort: {{ .Values.containerPort }}
+        volumeMounts:
+        - name: next-cache
+          mountPath: /app/.next/cache
         {{- if .Values.env }}
         env:
         {{- range $key, $value := .Values.env }}
@@ -26,3 +41,6 @@ spec:
             value: {{ $value | quote }}
         {{- end }}
         {{- end }}
+      volumes:
+      - name: next-cache
+        emptyDir: {}

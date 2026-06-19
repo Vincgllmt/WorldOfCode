@@ -3,7 +3,7 @@ nelmio_cors:
         # 1. Autoriser l'interprétation des regex dans allow_origin
         origin_regex: true
         # 2. Utiliser la variable d'environnement définie dans Kubernetes
-        allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
+        allow_origin: ['%env(default::CORS_ALLOW_ORIGIN)%']
         allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
         allow_headers: ['Content-Type', 'Authorization']
         allow_credentials: true

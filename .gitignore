@@ -17,5 +17,11 @@ MONITORING_USER_ERRORS.md
 
 # Projet IPTV — appartient uniquement à la branche iptv
 cluster/iptv/
-# Vault init credentials (secrets — never commit)
+
+# --- Secrets : ne jamais committer (SEC-1) ---
+.env
+.env.*
+!.env.example
+!.env.exemple
+# Matériel de descellement Vault — conserver hors-bande, jamais dans git
 cluster/vault/vault-keys.*

@@ -37,6 +37,7 @@ database:
 env:
   PORT: "3000"
   CORS_ORIGIN: "https://woc-dev.duckdns.org" 
+  INTERNAL_SECRET: "dev-internal-secret-woc" 
 
 ingress:
   enabled: true
