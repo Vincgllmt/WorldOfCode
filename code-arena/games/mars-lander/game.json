@@ -1,0 +1,12 @@
+{
+  "title": "Mars Lander",
+  "difficulty": "hard",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 300,
+  "image": "/games/mars-lander/cover.jpg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Opportunity posé", "description": "Faire atterrir Mars Lander sans crash pour la première fois." },
+    { "code": "perfect", "name": "Pilote de la NASA", "description": "Réussir l'atterrissage sur tous les scénarios." }
+  ]
+}

@@ -59,7 +59,7 @@ export default function ProfileArenaBadges({ userId, isOwnProfile }: ProfileAren
                 key={badge.badgeId}
                 className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-3"
               >
-                <BadgeMedal badge={badge} size={44} />
+                <BadgeMedal slug={badge.challengeSlug} name={badge.name} icon={badge.icon} size={44} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{badge.name}</p>
                   {badge.description && (

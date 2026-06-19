@@ -233,7 +233,12 @@ Couverts : `GameRunner` (orchestration + referee invalide), `PistonService` (req
   Les autres codes de badge éventuels ne sont pas encore gérés.
 - **Cas de test multiples mais statiques** : plusieurs cas par jeu (`tests/*`), mais pas de
   générateur ; **tous les cas sont publics** (pas de cas cachés).
-- **Limites Piston minimales** : timeout d'exécution seulement (pas de cap mémoire/sortie, pas de rate-limiting).
+- **Limites Piston** : timeout d'exécution (`RUN_TIMEOUT_MS`) + **plafond de sortie** par
+  exécution. Le défaut Piston (`output_max_size` = 1024 o) est **trop bas pour un replay**
+  (la trace `init`+`frames` du referee le dépasse vite → process tué « Sandbox keeper
+  received fatal signal 6 », rendu côté front par « Referee invalide »). Il est relevé via
+  `PISTON_OUTPUT_MAX_SIZE` (service `piston` du `docker-compose.yaml`). Garder malgré tout
+  les replays compacts (valeurs entières). Pas de cap mémoire ni de rate-limiting.
 - **Viewers** importés statiquement (tout dans le bundle) : OK à petite échelle.
 - **CI** : les tests code-arena ne sont pas encore lancés par la CI (job à ajouter, calqué sur `coverage:backend`).
   `BadgeAwarder` et `PlayController` (multi-cas) ne sont pas encore couverts par des tests unitaires.
