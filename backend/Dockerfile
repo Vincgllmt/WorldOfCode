@@ -54,6 +54,10 @@ RUN --mount=type=cache,target=/root/.composer/cache \
 # Copier le reste du code
 COPY . .
 
+# .env requis par le runtime Symfony (bootEnv) — non tracké dans git depuis SEC-1.
+# On le génère depuis le template ; les secrets réels sont injectés via Vault/env au runtime.
+RUN cp .env.example .env
+
 # Copier le script d'entrée et le rendre exécutable
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && \
