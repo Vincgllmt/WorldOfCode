@@ -1,6 +1,7 @@
 # Job pour créer les secrets (JWT) en DEV
 setup:secrets:dev:
-  stage: deploy-infra 
+  stage: deploy-infra
+  needs: []
   image:
     name: bitnami/kubectl:latest
     entrypoint: [""]
@@ -26,6 +27,7 @@ setup:secrets:dev:
 # Job pour créer les secrets (JWT) en PRODUCTION
 setup:secrets:prod:
   stage: deploy-infra
+  needs: []
   image:
     name: bitnami/kubectl:latest
     entrypoint: [""]

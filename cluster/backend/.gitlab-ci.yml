@@ -53,6 +53,9 @@ build:faker:
 
 deploy:backend:dev:
   stage: deploy-apps
+  needs:
+    - job: "build:backend:dev"
+      optional: true
   environment:
     name: dev
   variables:
@@ -81,6 +84,9 @@ deploy:backend:dev:
 
 deploy:backend:prod:
   stage: deploy-apps
+  needs:
+    - job: "build:backend:prod"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: production
@@ -95,6 +101,11 @@ deploy:backend:prod:
 
 seed:backend:dev:
   stage: deploy-apps
+  needs:
+    - job: "deploy:backend:dev"
+      optional: true
+    - job: "build:faker"
+      optional: true
   image: alpine/k8s:1.31.13
   environment:
     name: dev

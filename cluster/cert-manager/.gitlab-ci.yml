@@ -1,5 +1,6 @@
 deploy:cert-manager:
   stage: deploy-infra
+  needs: []
   when: manual
   variables:
     CERT_MANAGER_NAMESPACE: "cert-manager"
