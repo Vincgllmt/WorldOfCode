@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useTheme } from 'next-themes'
 
 import { useArenaChallenges, useArenaLeaderboard, useUserBadges } from '@/hooks/useArenaChallenges'
 import { useAuth } from '@/hooks/useAuth'
 import { ArenaChallenge, ChallengeDifficulty, LeaderboardEntry } from '@/interfaces/arena'
 import { Skeleton } from '@/components/ui/skeleton'
-import ArenaBadgeMedal, { ArenaMedalDefs } from '@/components/arena/ArenaBadgeMedal'
 import BadgeMedal from '@/components/arena/BadgeMedal'
+import LevelBackground from '@/components/arena/LevelBackground'
 
 /* ---------- Design tokens ---------- */
 
@@ -65,13 +64,6 @@ const titleForLevel = (lvl: number) =>
 
 const fr = (n: number) => n.toLocaleString('fr-FR')
 
-// Dégradé de la bannière niveau adapté au thème (texte blanc sur surface
-// colorée) : vert pour light/dark, cyan→violet pour les thèmes cyberpunk.
-const HERO_GRADIENT = {
-  base: 'linear-gradient(118deg,#0a9245 0%,#13ae54 52%,#1fc465 100%)',
-  cyber: 'linear-gradient(118deg,#06b6d4 0%,#4f46e5 50%,#a855f7 100%)',
-}
-
 const LEADERS_PREVIEW = 5
 
 /* ---------- Page ---------- */
@@ -81,8 +73,6 @@ export default function ArenaPage() {
   const { leaderboard } = useArenaLeaderboard()
   const { user } = useAuth()
   const { badges: myBadges } = useUserBadges(user?.id ?? 0)
-  const { resolvedTheme } = useTheme()
-  const heroBg = resolvedTheme?.startsWith('cyberpunk') ? HERO_GRADIENT.cyber : HERO_GRADIENT.base
 
   const [activeFilter, setActiveFilter] = useState<ChallengeDifficulty | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -145,24 +135,13 @@ export default function ArenaPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
-      <ArenaMedalDefs />
-
       {/* ---------- Hero : niveau + badges (gauche) · classement (droite) ---------- */}
       <section className="flex flex-col gap-[22px] lg:flex-row lg:items-stretch">
         {/* Colonne gauche */}
         <div className="flex min-w-0 flex-1 flex-col gap-[22px]">
           {/* Bannière niveau */}
-          <div
-            style={{ background: heroBg }}
-            className="relative flex flex-col justify-center gap-[18px] overflow-hidden rounded-[20px] px-7 py-6 shadow-[0_20px_44px_-24px_rgba(13,60,33,.5)]"
-          >
-            <div
-              className="pointer-events-none absolute inset-0 opacity-50"
-              style={{
-                backgroundImage: 'radial-gradient(rgba(255,255,255,.13) 1px, transparent 1px)',
-                backgroundSize: '18px 18px',
-              }}
-            />
+          <div className="relative flex flex-col justify-center gap-[18px] overflow-hidden rounded-[20px] px-7 py-6 shadow-[0_20px_44px_-24px_rgba(13,60,33,.5)]">
+            <LevelBackground level={level} />
 
             <div className="relative flex items-center gap-[18px]">
               <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[17px] border border-white/[0.34] bg-white/[0.16] font-mono text-[25px] font-bold text-white">
@@ -218,11 +197,13 @@ export default function ArenaPage() {
               <div className="grid grid-cols-2 gap-[18px] sm:grid-cols-3 lg:grid-cols-4">
                 {badgeSlots.map(({ challenge, badge, earned }) => (
                   <div key={challenge.id} className="flex flex-col items-center text-center">
-                    {earned && badge?.icon ? (
-                      <BadgeMedal badge={badge} size={84} />
-                    ) : (
-                      <ArenaBadgeMedal earned={earned} size={84} />
-                    )}
+                    <BadgeMedal
+                      slug={challenge.slug}
+                      name={badge?.name ?? challenge.title}
+                      icon={badge?.icon}
+                      earned={earned}
+                      size={84}
+                    />
                     <div
                       className={`mt-2.5 text-[13.5px] font-extrabold tracking-tight ${
                         earned ? 'text-foreground' : 'text-muted-foreground'

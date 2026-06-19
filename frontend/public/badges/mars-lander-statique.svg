@@ -1,0 +1,64 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="bpds" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#5A1C3A" flood-opacity="0.26"/></filter>
+    <symbol id="bpcham" viewBox="0 0 120 112">
+      <path d="M22 72 C12 61 15 44 30 38 C30 29 37 25 45 28 C62 23 82 30 99 45 C109 52 112 58 107 64 C101 70 91 70 83 67 C69 74 47 76 37 73 C29 73 25 73 22 72 Z" fill="#5BBE74"/>
+      <path d="M31 41 C45 34 64 34 82 42 C70 42 52 45 41 53 C36 50 32 46 31 41 Z" fill="#46B79C" opacity="0.5"/>
+      <path d="M26 67 C38 74 58 75 73 70 C63 76 49 78 40 76 C33 75 28 72 26 67 Z" fill="#49AC64"/>
+      <path d="M48 41 C39 22 53 5 68 10 C79 13 81 26 70 29 C62 31 58 23 64 20" fill="none" stroke="#3FB7A6" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="M53 39 C47 24 57 13 68 17" fill="none" stroke="#F2D06A" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="67" cy="23" r="3.3" fill="#EBA0B6"/>
+      <path d="M106 63 C96 71 85 70 78 66" fill="none" stroke="#2E8A4C" stroke-width="3.4" stroke-linecap="round"/>
+      <circle cx="101" cy="58" r="2.1" fill="#2E8A4C"/>
+      <circle cx="65" cy="52" r="17" fill="#54B56C"/>
+      <circle cx="65" cy="52" r="17" fill="none" stroke="#46A65E" stroke-width="2.4"/>
+      <circle cx="69" cy="53" r="7.6" fill="#F4CE63"/>
+      <circle cx="70.5" cy="53" r="3.6" fill="#1E2B22"/>
+      <circle cx="72" cy="51" r="1.4" fill="#fff"/>
+    </symbol>
+    <symbol id="bpship" viewBox="0 0 170 120">
+      <path d="M44 52 L36 26 L62 50 Z" fill="#4FB36A" stroke="#2E8A4C" stroke-width="2.6" stroke-linejoin="round"/>
+      <path d="M45 50 L41 34 L55 48 Z" fill="#E07CA3" opacity="0.8"/>
+      <path d="M38 64 C46 47 76 39 110 41 C134 42 152 50 160 62 C152 74 134 80 110 81 C76 83 46 80 38 64 Z" fill="#5BBE74" stroke="#2E8A4C" stroke-width="2.6"/>
+      <path d="M44 70 C76 84 120 82 152 68 C142 78 120 84 100 84 C72 84 54 78 44 70 Z" fill="#3FB7A6" opacity="0.55"/>
+      <path d="M48 60 C84 53 124 54 152 61 C124 58 84 57 48 60 Z" fill="#E07CA3"/>
+      <path d="M156 56 C169 58 169 66 156 68 Z" fill="#E5A0B8" stroke="#2E8A4C" stroke-width="2"/>
+      <circle cx="96" cy="71" r="3.1" fill="#F4CE63"/>
+      <circle cx="110" cy="71" r="3.1" fill="#F4CE63"/>
+      <circle cx="124" cy="69" r="3.1" fill="#F4CE63"/>
+      <path d="M74 76 L48 100 L98 84 Z" fill="#3E9E5C" stroke="#2E8A4C" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M60 90 L48 100 L76 92 Z" fill="#E07CA3" opacity="0.85"/>
+      <use href="#bpcham" x="82" y="12" width="50" height="47"/>
+      <path d="M76 47 C84 22 120 22 128 47 Z" fill="#BFEAF2" opacity="0.42" stroke="#8FCBD8" stroke-width="2.4"/>
+      <path d="M84 41 C92 31 104 29 112 31" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.7"/>
+    </symbol>
+  </defs>
+
+  <g filter="url(#bpds)">
+    <circle cx="120" cy="120" r="112" fill="#C85B86"/>
+    <circle cx="120" cy="120" r="112" fill="none" stroke="#B14C77" stroke-width="2"/>
+    <circle cx="120" cy="120" r="98" fill="#E782AC"/>
+    <circle cx="120" cy="120" r="84" fill="#EDEFFB"/>
+    <circle cx="120" cy="120" r="84" fill="none" stroke="#D3D7F2" stroke-width="2"/>
+  </g>
+  <g stroke="#EFB6CE" stroke-width="3.4" stroke-linecap="round">
+    <line x1="120" y1="30" x2="120" y2="38"/><line x1="210" y1="120" x2="202" y2="120"/>
+    <line x1="120" y1="210" x2="120" y2="202"/><line x1="30" y1="120" x2="38" y2="120"/>
+    <line x1="56" y1="56" x2="62" y2="62"/><line x1="184" y1="56" x2="178" y2="62"/>
+    <line x1="184" y1="184" x2="178" y2="178"/><line x1="56" y1="184" x2="62" y2="178"/>
+  </g>
+  <g class="bp-fly">
+    <g class="bp-flame">
+      <path d="M80 126 C56 113 43 118 33 126 C43 134 56 139 80 126 Z" fill="#E07CA3"/>
+      <path d="M77 126 C58 117 47 120 39 126 C47 132 58 135 77 126 Z" fill="#F4B3CB"/>
+      <path d="M72 126 C59 120 50 121 44 126 C50 131 59 132 72 126 Z" fill="#7FD4E0"/>
+      <path d="M70 114 C58 112 50 114 43 117" fill="none" stroke="#E07CA3" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+      <path d="M70 138 C58 140 50 138 43 135" fill="none" stroke="#7FD4E0" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    </g>
+    <use href="#bpship" x="38" y="66" width="164" height="116"/>
+  </g>
+  <g transform="translate(120 188)">
+    <circle cx="0" cy="0" r="15" fill="#fff"/>
+    <path d="M0 -9 L2.6 -3 L9 -2.4 L4.3 2 L5.6 8.4 L0 5.2 L-5.6 8.4 L-4.3 2 L-9 -2.4 L-2.6 -3 Z" fill="#F2D06A"/>
+  </g>
+</svg>

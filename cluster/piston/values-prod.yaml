@@ -1,0 +1,38 @@
+# Service nommé "piston" → joignable en http://piston:2000 dans le namespace.
+fullnameOverride: piston
+
+image:
+  repository: ghcr.io/engineer-man/piston
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 2000
+
+containerPort: 2000
+
+env:
+  PISTON_OUTPUT_MAX_SIZE: "65536"
+
+pvc:
+  storageClass: "local-path"
+  size: 8Gi
+
+runtimes:
+  installerImage: curlimages/curl:latest
+  packages:
+    - { language: node, version: "20.11.1" }
+    - { language: php, version: "8.2.3" }
+    - { language: python, version: "3.12.0" }
+    - { language: java, version: "15.0.2" }
+    - { language: gcc, version: "10.2.0" }
+    - { language: typescript, version: "5.0.3" }
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"

@@ -1,0 +1,38 @@
+replicaCount: 1
+
+server:
+  type: fpm
+
+vault:
+  # Base partagée projet_web : credential DB réutilisé depuis le secret du backend.
+  dbSecretPath: "secret/data/production/backend"
+  # Secret propre à Code Arena (APP_SECRET).
+  secretPath: "secret/data/production/code-arena"
+
+image:
+  repository: registry.woc:32000/code-arena
+  pullPolicy: IfNotPresent
+
+registry:
+  imagePullSecretName: woc-regcred
+
+service:
+  type: ClusterIP
+  port: 8082
+
+containerPort: 8082
+
+env:
+  APP_ENV: "prod"
+  CORS_ALLOW_ORIGIN: "^https?://(woc-prod\\.duckdns\\.org|api-woc-prod\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  PISTON_URL: "http://piston.production.svc.cluster.local:2000"
+  DEFAULT_URI: "https://api-woc-prod.duckdns.org"
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: api-woc-prod.duckdns.org
+      paths:
+        - path: /api/arena
+          pathType: Prefix

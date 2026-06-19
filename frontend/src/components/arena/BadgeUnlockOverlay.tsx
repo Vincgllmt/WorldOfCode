@@ -71,17 +71,23 @@ function badgeMotion(variant: UnlockVariant, reduced: boolean) {
 export default function BadgeUnlockOverlay({ badge, unlocked = true, onClose }: BadgeUnlockOverlayProps) {
   const reduced = useReducedMotion() ?? false
   const [mounted, setMounted] = useState(false)
-  const [variant, setVariant] = useState<UnlockVariant>('pop')
   const [size, setSize] = useState(300)
 
   // L'identité d'une apparition : régénère variante + confettis à chaque réussite.
   const key = badge?.awardedAt ?? null
 
-  useEffect(() => setMounted(true), [])
-
-  useEffect(() => {
+  // Variante tirée AU MOMENT de l'apparition, pendant le rendu (pas dans un effet) :
+  // l'animation d'entrée (framer-motion) lit la variante au montage du badge ; si on
+  // la posait dans un useEffect, l'entrée démarrait avec l'ancienne valeur (toujours
+  // « pop »). On suit la clé précédente pour ne re-tirer qu'à chaque nouvelle ouverture.
+  const [variant, setVariant] = useState<UnlockVariant>(pickVariant)
+  const [prevKey, setPrevKey] = useState<string | null>(key)
+  if (key !== prevKey) {
+    setPrevKey(key)
     if (key) setVariant(pickVariant())
-  }, [key])
+  }
+
+  useEffect(() => setMounted(true), [])
 
   // Taille du badge adaptée au viewport (≈ 60 % du plus petit côté, plafonné).
   useEffect(() => {
@@ -190,7 +196,7 @@ export default function BadgeUnlockOverlay({ badge, unlocked = true, onClose }: 
               />
             )}
 
-            <BadgeMedal badge={badge} size={size} />
+            <BadgeMedal slug={badge.challengeSlug} name={badge.name} icon={badge.icon} size={size} />
 
             {/* Balayage de lumière « révélation » */}
             {showSweep && (

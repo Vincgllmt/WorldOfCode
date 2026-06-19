@@ -536,75 +536,96 @@ export function createPlatformerViewer(): GameViewer<GauntletInit, GauntletFrame
   let appH = 0
   let savedInit: GauntletInit | null = null
 
+  // Rebuilds all static scene elements from scratch (sync). Called on setup and resize.
+  function buildScene(app: Application) {
+    if (!board || !savedInit) return
+    appW = app.screen.width
+    appH = app.screen.height
+    obstacleGfx = null
+
+    // Detach token before clearing, then re-attach on top after rebuild.
+    if (token) board.removeChild(token)
+    board.removeChildren()
+
+    const init      = savedInit
+    const groundY   = appH * 0.72
+    const blockSize = appH * 0.14
+    const theme     = THEMES[PROBLEM_THEME[init.problemType] ?? 'plains']
+
+    // Sky
+    board.addChild(new Graphics().rect(0, 0, appW, groundY * 0.65).fill(theme.skyTop))
+    board.addChild(new Graphics().rect(0, groundY * 0.65, appW, groundY * 0.35).fill({ color: theme.skyBot, alpha: 0.9 }))
+
+    // Theme background elements
+    theme.drawBg(board, appW, appH, groundY, blockSize)
+
+    // Ground base
+    board.addChild(new Graphics().rect(0, groundY, appW, appH - groundY).fill(theme.ground))
+
+    // Brick texture on ground
+    const brickH = blockSize * 0.32
+    const brickW = blockSize * 0.85
+    for (let row = 0; row < 3; row++) {
+      const rowY   = groundY + row * brickH
+      const offset = (row % 2) * brickW * 0.5
+      for (let col = -1; col < appW / brickW + 1; col++) {
+        const bx = col * brickW + offset
+        board.addChild(new Graphics()
+          .rect(bx + 1, rowY + 1, brickW - 2, brickH - 2)
+          .fill({ color: 0x000000, alpha: 0.12 }))
+      }
+    }
+    board.addChild(new Graphics().rect(0, groundY, appW, 3).fill({ color: 0x000000, alpha: 0.35 }))
+
+    // Obstacles
+    const blocks: GauntletBlock[] = init.blocks ?? [{
+      problemType: init.problemType,
+      x:           init.obstacleX,
+      cleared:     false,
+    }]
+
+    for (let i = 0; i < blocks.length; i++) {
+      const blk       = blocks[i]
+      const bx        = appW * blk.x
+      const isCurrent = i === (init.currentBlock ?? 0)
+
+      const g = new Graphics()
+      if (blk.cleared) {
+        g.circle(bx, groundY - blockSize*0.12, blockSize*0.22).fill({ color: 0x888888, alpha: 0.35 })
+      } else {
+        theme.drawObstacle(g, bx, groundY, blockSize)
+      }
+      board.addChild(g)
+      if (isCurrent) obstacleGfx = g
+    }
+
+    // Flag
+    const poleX = appW * 0.95
+    const poleH = blockSize * 3.0
+    board.addChild(new Graphics().rect(poleX - 2, groundY - poleH, 5, poleH).fill(0x8B6914))
+    board.addChild(new Graphics()
+      .poly([poleX+3, groundY-poleH, poleX+blockSize*0.58, groundY-poleH+blockSize*0.4, poleX+3, groundY-poleH+blockSize*0.8])
+      .fill(0x11A84F))
+
+    // Re-attach token on top with updated size
+    if (token) {
+      token.width  = blockSize * 0.95
+      token.height = blockSize * 0.95
+      board.addChild(token)
+    }
+  }
+
   return {
     async setup(app: Application, init: GauntletInit) {
       savedInit = init
-      board  = new Container()
+      board = new Container()
       app.stage.addChild(board)
-      appW = app.screen.width
-      appH = app.screen.height
 
+      buildScene(app)
+
+      // Cameleon (async asset load — done after buildScene so token lands on top)
       const groundY   = appH * 0.72
       const blockSize = appH * 0.14
-
-      const theme = THEMES[PROBLEM_THEME[init.problemType] ?? 'plains']
-
-      // Sky
-      board.addChild(new Graphics().rect(0, 0, appW, groundY * 0.65).fill(theme.skyTop))
-      board.addChild(new Graphics().rect(0, groundY * 0.65, appW, groundY * 0.35).fill({ color: theme.skyBot, alpha: 0.9 }))
-
-      // Theme background elements
-      theme.drawBg(board, appW, appH, groundY, blockSize)
-
-      // Ground base
-      board.addChild(new Graphics().rect(0, groundY, appW, appH - groundY).fill(theme.ground))
-
-      // Brick texture on ground
-      const brickH = blockSize * 0.32
-      const brickW = blockSize * 0.85
-      for (let row = 0; row < 3; row++) {
-        const rowY   = groundY + row * brickH
-        const offset = (row % 2) * brickW * 0.5
-        for (let col = -1; col < appW / brickW + 1; col++) {
-          const bx = col * brickW + offset
-          board.addChild(new Graphics()
-            .rect(bx + 1, rowY + 1, brickW - 2, brickH - 2)
-            .fill({ color: 0x000000, alpha: 0.12 }))
-        }
-      }
-      board.addChild(new Graphics().rect(0, groundY, appW, 3).fill({ color: 0x000000, alpha: 0.35 }))
-
-      // Obstacles
-      const blocks: GauntletBlock[] = init.blocks ?? [{
-        problemType: init.problemType,
-        x:           init.obstacleX,
-        cleared:     false,
-      }]
-
-      for (let i = 0; i < blocks.length; i++) {
-        const blk       = blocks[i]
-        const bx        = appW * blk.x
-        const isCurrent = i === (init.currentBlock ?? 0)
-
-        const g = new Graphics()
-        if (blk.cleared) {
-          g.circle(bx, groundY - blockSize*0.12, blockSize*0.22).fill({ color: 0x888888, alpha: 0.35 })
-        } else {
-          theme.drawObstacle(g, bx, groundY, blockSize)
-        }
-        board.addChild(g)
-        if (isCurrent) obstacleGfx = g
-      }
-
-      // Flag
-      const poleX = appW * 0.95
-      const poleH = blockSize * 3.0
-      board.addChild(new Graphics().rect(poleX - 2, groundY - poleH, 5, poleH).fill(0x8B6914))
-      board.addChild(new Graphics()
-        .poly([poleX+3, groundY-poleH, poleX+blockSize*0.58, groundY-poleH+blockSize*0.4, poleX+3, groundY-poleH+blockSize*0.8])
-        .fill(0x11A84F))
-
-      // Cameleon
       const sheet = await Assets.load<Texture>(SHEET)
       const walk: Texture[] = []
       for (let c = 0; c < WALK_FRAMES; c++)
@@ -618,6 +639,10 @@ export function createPlatformerViewer(): GameViewer<GauntletInit, GauntletFrame
       token.rotation = FACE_RIGHT
       token.position.set(appW * 0.05, groundY)
       board.addChild(token)
+    },
+
+    resize(app: Application) {
+      buildScene(app)
     },
 
     renderFrame(frame: GauntletFrame, t: number, prev: GauntletFrame | null) {

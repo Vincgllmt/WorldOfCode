@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "woc-code-arena.fullname" . }}-nginx-config
+data:
+  nginx.conf: |
+    server {
+        listen {{ .Values.containerPort }};
+        server_name _;
+
+        access_log /dev/stdout;
+        error_log /dev/stderr warn;
+
+        client_max_body_size 10M;
+
+        root /app/public;
+        index index.php;
+
+        {{- if eq .Values.server.type "builtin" }}
+        # Proxy direct vers le serveur PHP intégré (dev).
+        location / {
+            proxy_pass http://127.0.0.1:9001;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        {{- else }}
+        # Symfony via PHP-FPM (prod).
+        location / {
+            try_files $uri /index.php$is_args$args;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $document_root;
+        }
+        {{- end }}
+    }
