@@ -1,6 +1,6 @@
 {
   "title": "Caméléon Gourmand",
-  "difficulty": "hard",
+  "difficulty": "medium",
   "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
   "maxScore": 200,
   "image": "/games/chameleon-colors/cover.jpg",
