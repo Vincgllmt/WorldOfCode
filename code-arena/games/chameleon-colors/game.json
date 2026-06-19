@@ -2,7 +2,7 @@
   "title": "Caméléon Gourmand",
   "difficulty": "hard",
   "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
-  "maxScore": 150,
+  "maxScore": 200,
   "image": "/games/chameleon-colors/cover.jpg",
   "refereeLanguage": "python",
   "badges": [
