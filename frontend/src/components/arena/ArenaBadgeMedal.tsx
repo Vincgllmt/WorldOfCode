@@ -5,15 +5,24 @@
  * + crantage) avec, au centre, la mascotte caméléon si le badge est débloqué, ou
  * un cadenas s'il est verrouillé.
  *
- * Les couleurs du cadre sont pilotées par les variables de thème :
- *   - débloqué  → dérivé de `--primary` (vert WOC, cyan/violet en cyberpunk…)
- *   - verrouillé → dérivé de `--muted` / `--border` / `--muted-foreground`
- * Seules les couleurs d'illustration de la mascotte et l'étoile d'award restent
- * fixes (ce sont des éléments décoratifs, pas du chrome thémé).
+ * Les couleurs du cadre sont *fixes* (palette WOC verte, indépendante du thème) :
+ *   - débloqué  → vert WOC (#16a34a)
+ *   - verrouillé → neutres clairs (slate)
+ * La médaille est une surface auto-portante, comme un badge réel : elle ne doit
+ * pas virer au cyan/violet quand on bascule en thème cyberpunk. Les couleurs
+ * d'illustration de la mascotte et l'étoile d'award sont elles aussi fixes.
  *
  * On passe par `style={{ fill / stroke }}` plutôt que par les attributs SVG car
- * `color-mix()` / `var()` ne sont fiables qu'en CSS, pas en attribut de présentation.
+ * `color-mix()` n'est fiable qu'en CSS, pas en attribut de présentation.
  */
+
+// Palette figée (reprise du thème clair WOC) : la médaille garde le même rendu
+// quel que soit le thème actif.
+const WOC_GREEN = '#16a34a'
+const SURFACE = '#ffffff'
+const BORDER = '#e2e8f0'
+const MUTED = '#f1f5f9'
+const MUTED_FG = '#64748b'
 
 const TICKS: [number, number, number, number][] = [
   [120, 30, 120, 38],
@@ -67,15 +76,15 @@ type ArenaBadgeMedalProps = {
 }
 
 export default function ArenaBadgeMedal({ earned, size = 84 }: ArenaBadgeMedalProps) {
-  // Couleurs du cadre, dérivées du thème.
-  const rim = earned ? 'var(--primary)' : 'var(--border)'
+  // Couleurs du cadre, figées sur la palette WOC verte (insensibles au thème).
+  const rim = earned ? WOC_GREEN : BORDER
   const ring = earned
-    ? 'color-mix(in srgb, var(--primary) 78%, #fff)'
-    : 'color-mix(in srgb, var(--border) 55%, var(--card))'
-  const tint = earned ? 'color-mix(in srgb, var(--primary) 14%, var(--card))' : 'var(--muted)'
+    ? `color-mix(in srgb, ${WOC_GREEN} 78%, #fff)`
+    : `color-mix(in srgb, ${BORDER} 55%, ${SURFACE})`
+  const tint = earned ? `color-mix(in srgb, ${WOC_GREEN} 14%, ${SURFACE})` : MUTED
   const ticks = earned
-    ? 'color-mix(in srgb, var(--primary) 45%, #fff)'
-    : 'color-mix(in srgb, var(--muted-foreground) 35%, var(--card))'
+    ? `color-mix(in srgb, ${WOC_GREEN} 45%, #fff)`
+    : `color-mix(in srgb, ${MUTED_FG} 35%, ${SURFACE})`
 
   return (
     <svg
@@ -119,12 +128,12 @@ export default function ArenaBadgeMedal({ earned, size = 84 }: ArenaBadgeMedalPr
             width="52"
             height="42"
             rx="9"
-            style={{ fill: 'color-mix(in srgb, var(--muted-foreground) 42%, var(--card))' }}
+            style={{ fill: `color-mix(in srgb, ${MUTED_FG} 42%, ${SURFACE})` }}
           />
           <path
             d="M-16 -4 V-20 a16 16 0 0 1 32 0 V-4"
             fill="none"
-            style={{ stroke: 'color-mix(in srgb, var(--muted-foreground) 28%, var(--card))' }}
+            style={{ stroke: `color-mix(in srgb, ${MUTED_FG} 28%, ${SURFACE})` }}
             strokeWidth="9"
             strokeLinecap="round"
             strokeLinejoin="round"

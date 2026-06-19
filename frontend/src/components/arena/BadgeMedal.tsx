@@ -62,6 +62,7 @@ export default function BadgeMedal({ slug, name, icon, earned = true, size = 48 
           width: size,
           height: size,
           fontSize: Math.round(size * 0.5),
+          // Teintes figées (indépendantes du thème) ; grisé en plus si verrouillé.
           background: 'rgba(148,163,184,0.16)',
           color: '#64748b',
           ...lockedStyle,

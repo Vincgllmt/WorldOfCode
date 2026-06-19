@@ -7,6 +7,7 @@ import { ChevronLeft, Play, Send, CheckCircle2, XCircle, Trophy, Clock, AlertTri
 import dynamic from 'next/dynamic'
 import { getChallenge, playGame, runCode, runTests, submitCode, type PlayResult, type RunResult, type SubmitResult, type TestRunResult } from '@/services/arenaService'
 import { loadSavedCode, saveCode, loadSavedLang, saveLang, loadProgress, saveProgress, type SavedProgress } from '@/lib/arenaPersistence'
+import { useAuth } from '@/hooks/useAuth'
 import type { Replay } from '@/components/arena/gameViewer'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -152,6 +153,13 @@ function OutputPanel({ runResult, submitResult }: { runResult: RunResult | null;
 export default function ArenaIDEPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
 
+  // Identifiant du joueur courant : cloisonne la persistance locale (code / langage /
+  // verdicts de tests) par compte, pour qu'un autre utilisateur sur le même navigateur
+  // ne voie pas l'avancement du précédent. On attend la résolution de l'auth avant
+  // d'initialiser, sinon on lirait l'espace « guest » pour un compte connecté.
+  const { user, isLoading: authLoading } = useAuth()
+  const uid = user?.id ?? null
+
   const { data: challenge, isLoading, error } = useQuery({
     queryKey: ['arena-challenge', slug],
     queryFn: () => getChallenge(slug),
@@ -209,26 +217,26 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
 
   // Initialise langage + code au chargement : on restaure le dernier langage choisi
   // (s'il est toujours proposé pour ce défi), le code, puis l'avancement mémorisé.
-  if (challenge && !language) {
-    const saved = loadSavedLang(slug)
+  if (challenge && !language && !authLoading) {
+    const saved = loadSavedLang(uid, slug)
     const initialLang =
       (saved && challenge.languages.includes(saved) ? saved : challenge.languages[0]) ?? 'javascript'
     setLanguage(initialLang)
-    setCode(loadSavedCode(slug, initialLang) ?? DEFAULT_CODE[initialLang] ?? '')
-    applyProgress(loadProgress(slug, initialLang))
+    setCode(loadSavedCode(uid, slug, initialLang) ?? DEFAULT_CODE[initialLang] ?? '')
+    applyProgress(loadProgress(uid, slug, initialLang))
   }
 
   // Persiste le code à chaque modification pour le retrouver au rechargement / plus tard.
   useEffect(() => {
     if (!language) return
-    saveCode(slug, language, code)
-  }, [slug, language, code])
+    saveCode(uid, slug, language, code)
+  }, [uid, slug, language, code])
 
   // Persiste l'avancement (verdicts par cas, résumé, résultat noté) par langage.
   useEffect(() => {
     if (!language) return
-    saveProgress(slug, language, { testRuns, runSummary, submitResult, playResult })
-  }, [slug, language, testRuns, runSummary, submitResult, playResult])
+    saveProgress(uid, slug, language, { testRuns, runSummary, submitResult, playResult })
+  }, [uid, slug, language, testRuns, runSummary, submitResult, playResult])
 
   /* Applique un avancement mémorisé aux états affichés (ou repart à zéro si null). */
   function applyProgress(p: SavedProgress | null) {
@@ -240,14 +248,14 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
 
   function handleLanguageChange(lang: string) {
     setLanguage(lang)
-    saveLang(slug, lang)
-    setCode(loadSavedCode(slug, lang) ?? DEFAULT_CODE[lang] ?? '')
+    saveLang(uid, slug, lang)
+    setCode(loadSavedCode(uid, slug, lang) ?? DEFAULT_CODE[lang] ?? '')
     setRunResult(null)
     setRuntimeError(null)
     // Le code change : les replays en cours ne valent plus → retour à l'aperçu,
     // mais on restaure l'avancement déjà mémorisé pour ce langage (verdicts, résumé…).
     clearReplays()
-    applyProgress(loadProgress(slug, lang))
+    applyProgress(loadProgress(uid, slug, lang))
   }
 
   /* Vide la file de replays → la visualisation revient à l'aperçu du cas sélectionné. */
@@ -315,6 +323,10 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
         if (res.error) setRuntimeError(res.error)
         startReplayQueue([res])
       }
+      // Jeu : persiste la progression en arrière-plan (playGame rejoue tous les cas
+      // et enregistre tests_passed/tests_total) pour que la carte reflète les tests
+      // réussis, même via un essai sur un seul niveau.
+      if (isGame) playGame(challenge.slug, language, code).catch(() => {})
     } catch (e) {
       setRuntimeError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -341,6 +353,10 @@ export default function ArenaIDEPage({ params }: { params: Promise<{ slug: strin
       const firstError = results.find((r) => r.error)?.error
       if (firstError) setRuntimeError(firstError)
       startReplayQueue(results)
+      // Jeu : persiste la progression en arrière-plan (playGame rejoue et enregistre
+      // tests_passed/tests_total) pour que la carte reflète les tests réussis, même
+      // quand on passe par l'essai « Lancer les tests » plutôt que par « Jouer ».
+      if (isGame) playGame(challenge.slug, language, code).catch(() => {})
       // Essai non noté : célébration sans badge si tous les cas passent, déclenchée
       // seulement à la fin de la visualisation (la lecture s'arrête au 1er échec).
       if (results.length > 0 && results.every((r) => r.verdict === 'passed')) {

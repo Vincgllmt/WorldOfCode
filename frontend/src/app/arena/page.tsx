@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { ArenaChallenge, ChallengeDifficulty, LeaderboardEntry } from '@/interfaces/arena'
 import { Skeleton } from '@/components/ui/skeleton'
 import BadgeMedal from '@/components/arena/BadgeMedal'
-import LevelBackground from '@/components/arena/LevelBackground'
+import LevelScene from '@/components/arena/LevelScene'
 
 /* ---------- Design tokens ---------- */
 
@@ -139,42 +139,55 @@ export default function ArenaPage() {
       <section className="flex flex-col gap-[22px] lg:flex-row lg:items-stretch">
         {/* Colonne gauche */}
         <div className="flex min-w-0 flex-1 flex-col gap-[22px]">
-          {/* Bannière niveau */}
-          <div className="relative flex flex-col justify-center gap-[18px] overflow-hidden rounded-[20px] px-7 py-6 shadow-[0_20px_44px_-24px_rgba(13,60,33,.5)]">
-            <LevelBackground level={level} />
+          {/* Bannière niveau : scène évolutive (niveau 1 → 10) */}
+          <div
+            style={{ background: '#0B3122' }}
+            className="relative flex min-h-[176px] flex-col justify-center gap-[18px] overflow-hidden rounded-[20px] px-7 py-6 shadow-[0_20px_44px_-24px_rgba(13,60,33,.5)]"
+          >
+            <LevelScene level={level} />
 
             <div className="relative flex items-center gap-[18px]">
-              <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[17px] border border-white/[0.34] bg-white/[0.16] font-mono text-[25px] font-bold text-white">
+              <div
+                className={`flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[17px] border border-white/[0.34] bg-white/[0.16] font-mono font-bold text-white backdrop-blur-[3px] ${
+                  level >= 10 ? 'text-[21px]' : 'text-[25px]'
+                }`}
+              >
                 {level}
               </div>
               <div className="min-w-0">
-                <h1 className="m-0 font-mono text-[25px] font-bold tracking-tight text-white">
+                <h1
+                  className="m-0 font-mono text-[25px] font-bold tracking-tight text-white"
+                  style={{ textShadow: '0 1px 13px rgba(0,0,0,.45)' }}
+                >
                   Niveau {level}
                 </h1>
-                <div className="mt-0.5 text-sm text-white/90">
+                <div className="mt-0.5 text-sm text-white/90" style={{ textShadow: '0 1px 8px rgba(0,0,0,.45)' }}>
                   {titleForLevel(level)} · {solvedCount} défi{solvedCount > 1 ? 's' : ''} résolu
                   {solvedCount > 1 ? 's' : ''}
                 </div>
               </div>
-              <span className="ml-auto inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap rounded-xl border border-white/30 bg-white/[0.18] px-4 py-2.5 text-[13.5px] font-bold text-white">
+              <span className="ml-auto inline-flex shrink-0 items-center gap-[7px] whitespace-nowrap rounded-xl border border-white/30 bg-white/[0.18] px-4 py-2.5 text-[13.5px] font-bold text-white backdrop-blur-[3px]">
                 ✦ {list.length} défi{list.length > 1 ? 's' : ''} disponible{list.length > 1 ? 's' : ''}
               </span>
             </div>
 
             <div className="relative">
-              <div className="mb-2 flex items-baseline justify-between font-mono text-xs text-white/[0.88]">
+              <div
+                className="mb-2 flex items-baseline justify-between font-mono text-xs text-white/[0.88]"
+                style={{ textShadow: '0 1px 8px rgba(0,0,0,.45)' }}
+              >
                 <span className="font-bold text-white">{fr(score)} XP</span>
                 <span>
                   Niveau {level + 1} · {fr(nextThreshold)} XP
                 </span>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.24]">
+              <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.24] shadow-[0_1px_4px_rgba(0,0,0,.3)]">
                 <div
                   className="h-full rounded-full bg-white transition-[width] duration-700"
                   style={{ width: `${xpPct}%` }}
                 />
               </div>
-              <div className="mt-2.5 text-[12.5px] text-white/[0.82]">
+              <div className="mt-2.5 text-[12.5px] text-white/[0.82]" style={{ textShadow: '0 1px 8px rgba(0,0,0,.45)' }}>
                 Plus que <b className="text-white">{fr(xpRemaining)} XP</b> avant le niveau {level + 1}
               </div>
             </div>

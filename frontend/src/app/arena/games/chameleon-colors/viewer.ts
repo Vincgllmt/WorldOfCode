@@ -502,7 +502,7 @@ export function createChameleonColorsViewer(): GameViewer<ColorsInit, ColorsFram
         cont.addChild(label)
 
         cont.position.set(c.x, c.y)
-        board.addChild(cont)
+        board?.addChild(cont)
         fruitGfx.set(`${fruit.pos[0]},${fruit.pos[1]}`, cont)
       })
 
