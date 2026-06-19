@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
-# 1) Dépendances PHP (le volume monté en dev peut masquer le vendor de l'image)
-composer install --no-interaction --prefer-dist
+# 1) Dépendances PHP uniquement si vendor/ est absent
+if [ ! -f "vendor/autoload.php" ]; then
+  composer install --no-interaction --prefer-dist
+fi
 
 # 2) Attente de la base de données partagée (projet_web)
 echo "Attente de la base de données..."

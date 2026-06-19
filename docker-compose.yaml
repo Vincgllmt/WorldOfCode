@@ -37,7 +37,7 @@ services:
     dns: # mail dev
       - 8.8.8.8 # mail dev
       - 1.1.1.1 # mail dev
-    command: ["symfony", "serve", "--no-tls", "--port=8090"]
+    command: ["symfony", "serve", "--no-tls", "--port=8090", "--allow-all-ip"]
 
   backend-cron:
     build: ./backend

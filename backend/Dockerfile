@@ -1,7 +1,10 @@
+# syntax=docker/dockerfile:1
 FROM php:8.4-cli
 
 # Installer dépendances système + extensions PHP
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y \
     git \
     unzip \
@@ -21,16 +24,13 @@ RUN apt-get update && \
     cron \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) intl pdo pdo_mysql pdo_sqlite zip gd exif \
-    && rm -rf /var/lib/apt/lists/* \
     && pecl install pcov \
     && docker-php-ext-enable pcov
 
-# Augmenter les limites d'upload PHP
+# Augmenter les limites d'upload PHP + OPcache
 RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size = 12M" >> /usr/local/etc/php/conf.d/uploads.ini
-
-# Vérifier la version de PHP installée
-RUN php -v
+COPY docker/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Installer Symfony CLI
 COPY --link \
@@ -46,9 +46,9 @@ WORKDIR /var/www/backend
 # Copier uniquement les fichiers composer pour profiter du cache
 COPY composer.json composer.lock ./
 
-# Installer les dépendances PHP
-# - ajouter --no-dev si prod
-RUN composer install --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress && \
+# Installer les dépendances PHP (cache persisté entre les builds)
+RUN --mount=type=cache,target=/root/.composer/cache \
+    composer install --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress && \
     composer dump-autoload --optimize
 
 # Copier le reste du code
