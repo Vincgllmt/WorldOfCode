@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "woc-code-arena.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "woc-code-arena.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-code-arena.name" . }}
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app"
+        # DATABASE_URL : réutilise le secret du backend (base partagée projet_web,
+        # schéma possédé par le backend — Code Arena ne migre jamais).
+        vault.hashicorp.com/agent-inject-secret-config: "{{ .Values.vault.dbSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ print "{{- with secret \"" .Values.vault.dbSecretPath "\" -}}" }}
+          export DATABASE_URL={{ "\"{{ .Data.data.url }}\"" }}
+          {{ "{{- end -}}" }}
+        # APP_SECRET : secret propre à Code Arena.
+        vault.hashicorp.com/agent-inject-secret-appsecret: "{{ .Values.vault.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-appsecret: |
+          {{ print "{{- with secret \"" .Values.vault.secretPath "\" -}}" }}
+          export APP_SECRET={{ "\"{{ .Data.data.appSecret }}\"" }}
+          {{ "{{- end -}}" }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.registry.imagePullSecretName }}
+
+      containers:
+        # --- Conteneur PHP ---
+        - name: php-fpm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          workingDir: /app
+          command: ["/bin/sh", "-c"]
+          {{- if eq .Values.server.type "builtin" }}
+          args:
+            - |
+              . /vault/secrets/config
+              . /vault/secrets/appsecret
+              echo "→ Attente de la base de données..."
+              until php bin/console dbal:run-sql "SELECT 1" > /dev/null 2>&1; do sleep 2; done
+              echo "→ Attente de la clé publique JWT..."
+              until [ -f config/jwt/public.pem ]; do sleep 2; done
+              echo "→ Démarrage du serveur PHP intégré..."
+              exec php -S 0.0.0.0:9001 -t public
+          {{- else }}
+          args: [". /vault/secrets/config && . /vault/secrets/appsecret && exec /usr/local/bin/entrypoint-prod.sh php-fpm"]
+          {{- end }}
+          ports:
+            {{- if eq .Values.server.type "builtin" }}
+            - containerPort: 9001
+            {{- else }}
+            - containerPort: 9000
+            {{- end }}
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env.APP_ENV | quote }}
+            - name: CORS_ALLOW_ORIGIN
+              value: {{ .Values.env.CORS_ALLOW_ORIGIN | quote }}
+            - name: PISTON_URL
+              value: {{ .Values.env.PISTON_URL | quote }}
+            - name: DEFAULT_URI
+              value: {{ .Values.env.DEFAULT_URI | quote }}
+
+          # Clé publique JWT partagée par le backend (validation uniquement).
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /app/config/jwt
+              readOnly: true
+
+        # --- Conteneur Nginx ---
+        - name: nginx
+          image: nginx:stable-alpine
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "woc-code-arena.fullname" . }}-nginx-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+
+        - name: jwt-keys
+          secret:
+            secretName: jwt-keys

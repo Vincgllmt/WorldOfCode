@@ -39,7 +39,7 @@ services:
     dns: # mail dev
       - 8.8.8.8 # mail dev
       - 1.1.1.1 # mail dev
-    command: ["symfony", "serve", "--no-tls", "--port=8090"]
+    command: ["symfony", "serve", "--no-tls", "--port=8090", "--allow-all-ip"]
 
   backend-cron:
     build: ./backend
@@ -68,6 +68,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8090/api
+      NEXT_PUBLIC_ARENA_API_URL: http://localhost:8082
       NEXT_PUBLIC_SOCKET_URL: http://localhost:8081
     volumes:
       - ./frontend:/app
@@ -121,6 +122,67 @@ services:
       - backend
     networks:
       - projet_network
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: projet_piston
+    privileged: true
+    environment:
+      PISTON_OUTPUT_MAX_SIZE: "5242880"
+    ports:
+      - "2000:2000"
+    tmpfs:
+      - /piston/jobs
+    volumes:
+      - piston_packages:/piston/packages
+    networks:
+      - projet_network
+
+  piston-install:
+    image: curlimages/curl:latest
+    container_name: projet_piston_install
+    depends_on:
+      - piston
+    networks:
+      - projet_network
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo 'Attente du démarrage de Piston...'
+        until curl -sf http://piston:2000/api/v2/runtimes >/dev/null 2>&1; do sleep 2; done
+        echo 'Piston prêt. Installation des runtimes...'
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"node","version":"20.11.1"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"php","version":"8.2.3"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"python","version":"3.12.0"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"java","version":"15.0.2"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"gcc","version":"10.2.0"}'; echo
+        curl -s -X POST http://piston:2000/api/v2/packages -H 'Content-Type: application/json' -d '{"language":"typescript","version":"5.0.3"}'; echo
+        echo 'Runtimes installes.'
+
+  code-arena:
+    build: ./code-arena
+    container_name: projet_code_arena
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: "mysql://application:password@db:3306/projet_web?serverVersion=8.0&charset=utf8mb4"
+      APP_ENV: dev
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$'
+      PISTON_URL: http://piston:2000
+    volumes:
+      - ./code-arena:/app
+      - /app/vendor
+      - jwt_keys:/app/config/jwt
+    depends_on:
+      - db
+      - backend
+      - piston
+    networks:
+      - projet_network
+    working_dir: /app
+    command: ["symfony", "serve", "--no-tls", "--port=8082", "--allow-all-ip"]
 
   db:
     image: mysql:8.0
@@ -195,6 +257,7 @@ volumes:
   minio_data:
   jwt_keys:
   elasticsearch_data:
+  piston_packages:
 
 networks:
   projet_network:

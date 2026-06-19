@@ -1,0 +1,20 @@
+security:
+    # Provider en lecture seule : résout le username (claim JWT) en utilisateur
+    # via une requête sur la table `user` de la base partagée projet_web.
+    providers:
+        arena_users:
+            id: App\Security\ArenaUserProvider
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt)/
+            security: false
+        api:
+            pattern: ^/
+            stateless: true
+            provider: arena_users
+            jwt: ~
+
+    access_control:
+        - { path: ^/api/arena/health, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

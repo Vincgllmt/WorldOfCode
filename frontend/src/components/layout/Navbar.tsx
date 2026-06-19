@@ -113,6 +113,7 @@ export default function Navbar() {
     const navLinks = [
         { label: "Accueil", href: "/home" },
         { label: "Groupes", href: "/group" },
+        { label: "Code Arena", href: "/arena", newTab: true },
         { label: "Messagerie", href: "/message", icon: MessageCircle, iconOnly: true },
     ]
 
@@ -137,6 +138,8 @@ export default function Navbar() {
                         <Link
                             key={link.href}
                             href={link.href}
+                            target={'newTab' in link && link.newTab ? '_blank' : undefined}
+                            rel={'newTab' in link && link.newTab ? 'noopener noreferrer' : undefined}
                             className={cn(
                                 "relative text-sm font-medium transition hover:text-primary pb-1",
                                 isActive(link.href, pathname)

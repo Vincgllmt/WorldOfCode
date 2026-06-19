@@ -1,0 +1,38 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        server_version: '8.0'
+        charset: utf8mb4
+        profiling_collect_backtrace: '%kernel.debug%'
+    orm:
+        # IMPORTANT : Code Arena NE possède PAS le schéma.
+        # Les tables sont créées par les migrations Doctrine du backend (projet_web).
+        # Ne JAMAIS lancer doctrine:schema:update ni doctrine:schema:drop depuis cette appli.
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'App\Entity'
+                alias: App
+
+when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system
