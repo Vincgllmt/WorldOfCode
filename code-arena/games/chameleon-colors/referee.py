@@ -23,7 +23,7 @@ import sys
 import json
 from collections import deque
 
-MAX_SCORE = 150
+MAX_SCORE = 200
 COLORS = ("R", "G", "B")
 DELTA = ((0, -1), (0, 1), (-1, 0), (1, 0))
 

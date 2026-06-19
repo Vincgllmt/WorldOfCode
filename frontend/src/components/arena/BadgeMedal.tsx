@@ -37,8 +37,24 @@ export default function BadgeMedal({ slug, name, icon, earned = true, size = 48 
   // Verrouillé : désaturé + atténué (couleurs fixes, indépendantes du thème).
   const lockedStyle = earned ? undefined : { filter: 'grayscale(1)', opacity: 0.4 }
 
-  // Pas de visuel dédié : pastille neutre avec l'emoji du badge (teintes fixes).
+  // Pas de visuel dédié au slug : si l'icône du badge est un chemin d'image
+  // (ex. /badges/cameleon-fraise-or.svg), on l'affiche en <img> ; sinon emoji.
   if (!medal) {
+    const isImagePath = !!icon && (icon.startsWith('/') || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon))
+    if (isImagePath) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={icon as string}
+          alt={name}
+          title={name}
+          width={size}
+          height={size}
+          style={{ width: size, height: size, ...lockedStyle }}
+          className="shrink-0"
+        />
+      )
+    }
     return (
       <span
         className="flex shrink-0 items-center justify-center rounded-full"

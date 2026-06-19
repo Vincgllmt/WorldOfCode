@@ -13,6 +13,9 @@ WORKDIR /app
 
 COPY . .
 
+# .env requis par le runtime Symfony (bootEnv) — non tracké dans git depuis SEC-1.
+RUN cp .env.example .env
+
 # 3. Installer toutes les dépendances (y compris dev)
 RUN composer install --no-interaction --prefer-dist
 

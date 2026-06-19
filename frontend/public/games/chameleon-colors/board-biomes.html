@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Caméléon Gourmand · 20 biomes de plateau</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px 24px 64px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #e6edf3; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #8b949e; font-size: 14px; margin: 0 0 28px; max-width: 760px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 22px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 14px; padding: 14px; transition: transform .12s ease, border-color .12s ease; }
+  .card:hover { transform: translateY(-3px); border-color: #58a6ff; }
+  .card canvas { width: 100%; height: auto; border-radius: 10px; display: block; }
+  .card .meta { margin-top: 10px; }
+  .card .num { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 6px; background: #1f6feb; color: #fff; font-size: 12px; font-weight: 700; margin-right: 8px; }
+  .card .name { font-weight: 700; font-size: 15px; }
+  .card .desc { color: #8b949e; font-size: 13px; margin-top: 5px; line-height: 1.45; }
+  .legend { color: #6e7681; font-size: 12px; margin-top: 36px; }
+</style>
+</head>
+<body>
+  <h1>Caméléon Gourmand — 20 biomes de plateau</h1>
+  <p class="sub">Idée : alterner le biome à chaque niveau (seed stable dérivé de la disposition du niveau → biome fixe par niveau). Même disposition partout, seul le décor naturel change. Dis-moi lesquels garder dans la rotation.</p>
+  <div class="grid" id="grid"></div>
+  <p class="legend">Maquettes indicatives (fruits en emoji, caméléon stylisé). Dans le jeu, les vrais sprites PNG sont utilisés.</p>
+
+<script>
+const COLS = 8, ROWS = 5, CELL = 42, PAD = 14, HUD = 30;
+const BW = COLS * CELL, BH = ROWS * CELL;
+const CW = BW + PAD * 2, CH = BH + PAD * 2 + HUD;
+const OX = PAD, OY = PAD + HUD;
+
+const FRUITS = [
+  { n:0, x:5, y:0, c:'B' }, { n:1, x:6, y:0, c:'B' }, { n:2, x:0, y:1, c:'R' },
+  { n:3, x:7, y:1, c:'R' }, { n:4, x:3, y:2, c:'R' }, { n:5, x:7, y:2, c:'R' }, { n:6, x:5, y:3, c:'G' },
+];
+const OBSTACLES = [ { x:2,y:0 }, { x:3,y:1 }, { x:1,y:3 }, { x:4,y:3 }, { x:2,y:4 } ];
+const START = { x:0, y:0 };
+const FRUIT_EMOJI = { R:'🍓', G:'🍏', B:'🫐' };
+
+const cx = (x) => OX + x*CELL + CELL/2;
+const cy = (y) => OY + y*CELL + CELL/2;
+
+function rng(seed){ let s=seed>>>0; return ()=>{ s+=0x6d2b79f5; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+function roundRectPath(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function clipBoard(ctx){ roundRectPath(ctx,OX,OY,BW,BH,14); ctx.clip(); }
+function vgrad(ctx, top, bot){ const g=ctx.createLinearGradient(0,OY,0,OY+BH); g.addColorStop(0,top); g.addColorStop(1,bot); ctx.fillStyle=g; ctx.fillRect(OX,OY,BW,BH); }
+function glow(ctx,x,y,r,color){ const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,color); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); }
+function tuft(ctx,x,y,s,color){ ctx.fillStyle=color; for(const off of [-0.55,-0.18,0.18,0.55]){ const bx=x+off*s; ctx.beginPath(); ctx.moveTo(bx-s*0.07,y); ctx.quadraticCurveTo(bx+off*s*0.5,y-s*0.78,bx+off*s*0.55,y-s); ctx.quadraticCurveTo(bx+off*s*0.5,y-s*0.7,bx+s*0.07,y); ctx.fill(); } }
+function flower(ctx,x,y,s,petal,heart){ ctx.fillStyle=petal; for(let k=0;k<5;k++){ const a=(k/5)*Math.PI*2; ctx.beginPath(); ctx.arc(x+Math.cos(a)*s*0.5,y+Math.sin(a)*s*0.5,s*0.34,0,7); ctx.fill(); } ctx.fillStyle=heart; ctx.beginPath(); ctx.arc(x,y,s*0.36,0,7); ctx.fill(); }
+function scatter(ctx,n,seed,fn){ const r=rng(seed); for(let i=0;i<n;i++) fn(OX+r()*BW, OY+r()*BH, r, i); }
+
+// ----- Acteurs (identiques sur tous les biomes) -----
+function drawTree(ctx,x,y){ ctx.fillStyle='rgba(10,20,12,0.3)'; ctx.beginPath(); ctx.ellipse(x,y+CELL*0.34,CELL*0.24,CELL*0.07,0,0,7); ctx.fill(); ctx.fillStyle='#5b3a1e'; ctx.fillRect(x-CELL*0.05,y,CELL*0.1,CELL*0.34); ctx.fillStyle='#2f7d3a'; for(const [dx,dy,r] of [[0,-0.18,0.26],[-0.16,-0.05,0.18],[0.16,-0.05,0.18]]){ ctx.beginPath(); ctx.arc(x+dx*CELL,y+dy*CELL,r*CELL,0,7); ctx.fill(); } }
+function drawBush(ctx,x,y){ ctx.fillStyle='rgba(10,20,12,0.3)'; ctx.beginPath(); ctx.ellipse(x,y+CELL*0.18,CELL*0.2,CELL*0.06,0,0,7); ctx.fill(); ctx.fillStyle='#1f5a2b'; for(const [dx,dy,r] of [[-0.13,0.05,0.15],[0.13,0.05,0.15],[0,-0.06,0.17]]){ ctx.beginPath(); ctx.arc(x+dx*CELL,y+dy*CELL,r*CELL,0,7); ctx.fill(); } }
+function drawFruit(ctx,f){ const px=cx(f.x), py=cy(f.y); ctx.fillStyle='rgba(10,20,12,0.28)'; ctx.beginPath(); ctx.ellipse(px,py+CELL*0.3,CELL*0.2,CELL*0.06,0,0,7); ctx.fill(); ctx.font=Math.round(CELL*0.56)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(FRUIT_EMOJI[f.c],px,py); ctx.font='700 '+Math.round(CELL*0.3)+'px monospace'; ctx.lineWidth=3; ctx.strokeStyle='#0a160f'; ctx.fillStyle='#fff'; ctx.strokeText(String(f.n),px,py-CELL*0.36); ctx.fillText(String(f.n),px,py-CELL*0.36); }
+function drawChameleon(ctx,x,y){ ctx.font=Math.round(CELL*0.7)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🦎',x,y); }
+function drawActors(ctx,hud){ OBSTACLES.forEach((o,i)=> i<4 ? drawTree(ctx,cx(o.x),cy(o.y)) : drawBush(ctx,cx(o.x),cy(o.y))); FRUITS.forEach(f=>drawFruit(ctx,f)); drawChameleon(ctx,cx(START.x),cy(START.y)); ctx.font='13px monospace'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle=hud||'#e6edf3'; ctx.fillText('Séries ✓ 0/4     Score 0',OX,12); ctx.fillText('Série en cours : 0/1',OX,12+16); }
+
+// ----- Les 20 biomes -----
+const BIOMES = [
+  { name:'Prairie d’été', desc:'Herbe verte vive, touffes et fleurs multicolores. Lumineux et estival.', draw(ctx){ vgrad(ctx,'#57a85d','#235a30'); const tc=['#3f8a47','#57b35e','#2f7a3a']; const pal=[['#fff','#f7c948'],['#f7a8c4','#fff3b0'],['#c9a8ff','#fff3b0'],['#ffd166','#fff']]; scatter(ctx,70,11,(x,y,r)=>tuft(ctx,x,y,CELL*(0.18+r()*0.16),tc[Math.floor(r()*3)])); scatter(ctx,22,12,(x,y,r)=>{const p=pal[Math.floor(r()*4)]; flower(ctx,x,y,CELL*(0.1+r()*0.06),p[0],p[1]);}); } },
+  { name:'Jungle tropicale', desc:'Verts profonds, fougères et feuillage dense. Atmosphère touffue et humide.', draw(ctx){ vgrad(ctx,'#1f5e3a','#0e3320'); scatter(ctx,40,21,(x,y,r)=>tuft(ctx,x,y,CELL*(0.22+r()*0.25),['#2e7d46','#3fa05a','#1c5a32'][Math.floor(r()*3)])); scatter(ctx,9,22,(x,y,r)=>{ ctx.strokeStyle='rgba(120,200,130,0.35)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+20,y-30,x+4,y-60); ctx.stroke(); }); } },
+  { name:'Désert de dunes', desc:'Sable doré ondulé et quelques cactus. Chaud, minimal, contrasté.', draw(ctx){ vgrad(ctx,'#e8c98a','#c99a5b'); ctx.strokeStyle='rgba(150,110,60,0.25)'; ctx.lineWidth=2; for(let i=0;i<7;i++){ ctx.beginPath(); ctx.moveTo(OX, OY+BH*(i+1)/8); ctx.quadraticCurveTo(OX+BW/2, OY+BH*(i+1)/8 - 10, OX+BW, OY+BH*(i+1)/8); ctx.stroke(); } scatter(ctx,5,31,(x,y,r)=>{ ctx.fillStyle='#3f7d44'; ctx.fillRect(x-2,y-14,4,16); ctx.fillRect(x-8,y-8,4,6); ctx.fillRect(x+4,y-10,4,6); }); } },
+  { name:'Banquise arctique', desc:'Glace bleutée et craquelures. Froid, lumineux, très lisible.', draw(ctx){ vgrad(ctx,'#dff0f5','#9cc7d6'); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1.5; scatter(ctx,14,41,(x,y,r)=>{ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+(r()-0.5)*40,y+(r()-0.5)*40); ctx.lineTo(x+(r()-0.5)*40,y+(r()-0.5)*40); ctx.stroke(); }); ctx.fillStyle='rgba(120,170,200,0.25)'; scatter(ctx,8,42,(x,y,r)=>{ ctx.beginPath(); ctx.arc(x,y,8+r()*14,0,7); ctx.fill(); }); } },
+  { name:'Savane sèche', desc:'Hautes herbes jaunies et terre ocre. Ambiance africaine ensoleillée.', draw(ctx){ vgrad(ctx,'#cdb15a','#9c8a3e'); scatter(ctx,80,51,(x,y,r)=>tuft(ctx,x,y,CELL*(0.2+r()*0.22),['#b8a14a','#caa84e','#9c8638'][Math.floor(r()*3)])); } },
+  { name:'Marécage', desc:'Eaux troubles vert-de-gris, nénuphars et roseaux. Mystérieux et embrumé.', draw(ctx){ vgrad(ctx,'#2c4a3a','#16302a'); ctx.fillStyle='rgba(60,120,90,0.4)'; scatter(ctx,10,61,(x,y,r)=>{ ctx.beginPath(); ctx.ellipse(x,y,10+r()*8,7+r()*5,0,0,7); ctx.fill(); }); ctx.strokeStyle='rgba(90,140,90,0.5)'; ctx.lineWidth=2; scatter(ctx,18,62,(x,y,r)=>{ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+(r()-0.5)*6,y-18-r()*14); ctx.stroke(); }); } },
+  { name:'Plaine volcanique', desc:'Basalte sombre fissuré de lave incandescente. Dramatique, fort contraste.', draw(ctx){ vgrad(ctx,'#2a2326','#161214'); ctx.save(); ctx.shadowColor='rgba(255,120,30,0.9)'; ctx.shadowBlur=8; ctx.strokeStyle='rgba(255,110,20,0.9)'; ctx.lineWidth=2; scatter(ctx,9,71,(x,y,r)=>{ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+(r()-0.5)*60,y+(r()-0.5)*40); ctx.lineTo(x+(r()-0.5)*60,y+(r()-0.5)*40); ctx.stroke(); }); ctx.restore(); scatter(ctx,30,72,(x,y,r)=>glow(ctx,x,y,3+r()*3,'rgba(255,160,40,0.8)')); } },
+  { name:'Lagon de plage', desc:'Eau turquoise rencontrant le sable, écume et coquillages. Vacances.', draw(ctx){ const g=ctx.createLinearGradient(0,OY,0,OY+BH); g.addColorStop(0,'#33b5c4'); g.addColorStop(0.5,'#7fd6df'); g.addColorStop(0.52,'#ecd9a8'); g.addColorStop(1,'#d8bd84'); ctx.fillStyle=g; ctx.fillRect(OX,OY,BW,BH); ctx.fillStyle='rgba(255,255,255,0.5)'; scatter(ctx,30,81,(x,y,r)=>{ if(y<OY+BH*0.52){ ctx.beginPath(); ctx.arc(x,y,1+r()*2,0,7); ctx.fill(); } }); } },
+  { name:'Toundra', desc:'Mousses gris-vert, lichens et plaques de neige. Sobre et nordique.', draw(ctx){ vgrad(ctx,'#6b7a5a','#4a5a42'); ctx.fillStyle='rgba(180,200,170,0.3)'; scatter(ctx,18,91,(x,y,r)=>{ ctx.beginPath(); ctx.arc(x,y,4+r()*8,0,7); ctx.fill(); }); ctx.fillStyle='rgba(255,255,255,0.55)'; scatter(ctx,7,92,(x,y,r)=>{ ctx.beginPath(); ctx.ellipse(x,y,10+r()*12,5+r()*6,0,0,7); ctx.fill(); }); } },
+  { name:'Forêt d’automne', desc:'Herbe ocre dorée jonchée de feuilles mortes. Palette chaude et nostalgique.', draw(ctx){ vgrad(ctx,'#8a8a3a','#5c6b2e'); const lv=['#c1440e','#e09f3e','#9e2a2b','#bb8a3c']; scatter(ctx,70,101,(x,y,r)=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(r()*7); ctx.fillStyle=lv[Math.floor(r()*4)]; const s=2+r()*3; ctx.beginPath(); ctx.ellipse(0,0,s,s*0.5,0,0,7); ctx.fill(); ctx.restore(); }); } },
+  { name:'Récif corallien', desc:'Fond sous-marin bleu, coraux colorés et bulles. Original et immersif.', draw(ctx){ vgrad(ctx,'#1b6fa0','#0a3a5e'); const cor=['#ff7a7a','#ff9e4f','#ff5fa2','#ffd166']; scatter(ctx,16,111,(x,y,r)=>{ ctx.fillStyle=cor[Math.floor(r()*4)]; for(let k=0;k<4;k++){ ctx.beginPath(); ctx.arc(x+(r()-0.5)*14,y+(r()-0.5)*14,3+r()*4,0,7); ctx.fill(); } }); ctx.strokeStyle='rgba(255,255,255,0.4)'; scatter(ctx,20,112,(x,y,r)=>{ ctx.beginPath(); ctx.arc(x,y,1+r()*3,0,7); ctx.stroke(); }); } },
+  { name:'Bambouseraie', desc:'Tiges de bambou verticales sur fond vert tendre. Zen et graphique.', draw(ctx){ vgrad(ctx,'#4f8f50','#356a39'); const r=rng(121); for(let i=0;i<14;i++){ const x=OX+r()*BW; ctx.fillStyle='rgba(150,200,120,'+(0.3+r()*0.3)+')'; ctx.fillRect(x,OY,5+r()*3,BH); ctx.strokeStyle='rgba(60,110,50,0.5)'; ctx.lineWidth=2; for(let yy=OY+10; yy<OY+BH; yy+=22){ ctx.beginPath(); ctx.moveTo(x,yy); ctx.lineTo(x+7,yy); ctx.stroke(); } } } },
+  { name:'Montagne enneigée', desc:'Roche grise et plaques de neige. Altitude, froid et minéral.', draw(ctx){ vgrad(ctx,'#8a93a0','#5a6470'); ctx.fillStyle='rgba(255,255,255,0.7)'; scatter(ctx,10,131,(x,y,r)=>{ ctx.beginPath(); ctx.ellipse(x,y,12+r()*16,6+r()*8,0,0,7); ctx.fill(); }); ctx.fillStyle='rgba(40,46,54,0.4)'; scatter(ctx,40,132,(x,y,r)=>{ ctx.beginPath(); ctx.arc(x,y,1+r()*2,0,7); ctx.fill(); }); } },
+  { name:'Champ de lavande', desc:'Rangées violettes parfumées sur terre verte. Provençal et coloré.', draw(ctx){ vgrad(ctx,'#7a8a6a','#5a6a4a'); const r=rng(141); for(let row=0; row<8; row++){ const yy=OY+ (row+0.5)*BH/8; for(let i=0;i<26;i++){ const x=OX+ i*BW/26 + (r()-0.5)*6; ctx.fillStyle=['#9d7bd8','#7e57c2','#b39ddb'][Math.floor(r()*3)]; ctx.beginPath(); ctx.ellipse(x,yy,2,5,0.3,0,7); ctx.fill(); } } } },
+  { name:'Grotte cristalline', desc:'Obscurité piquetée de cristaux lumineux cyan et violet. Féérique et sombre.', draw(ctx){ vgrad(ctx,'#1a1726','#0c0a14'); scatter(ctx,18,151,(x,y,r)=>{ const col=['rgba(120,220,255,','rgba(190,140,255,'][Math.floor(r()*2)]; glow(ctx,x,y,12,col+'0.5)'); ctx.fillStyle=col+'0.9)'; ctx.beginPath(); ctx.moveTo(x,y-8); ctx.lineTo(x+4,y+5); ctx.lineTo(x-4,y+5); ctx.closePath(); ctx.fill(); }); } },
+  { name:'Mangrove', desc:'Eau saumâtre et racines arquées brunes. Exotique et entrelacé.', draw(ctx){ vgrad(ctx,'#3a6e5a','#1d4038'); ctx.strokeStyle='rgba(90,60,35,0.7)'; ctx.lineWidth=3; scatter(ctx,12,161,(x,y,r)=>{ ctx.beginPath(); ctx.moveTo(x-14,y+14); ctx.quadraticCurveTo(x,y-16,x+14,y+14); ctx.stroke(); }); ctx.fillStyle='rgba(255,255,255,0.18)'; scatter(ctx,14,162,(x,y,r)=>{ ctx.beginPath(); ctx.ellipse(x,y,6+r()*6,2,0,0,7); ctx.fill(); }); } },
+  { name:'Prairie nocturne', desc:'Nuit verte tranquille piquée de lucioles dorées. Calme et magique.', draw(ctx){ vgrad(ctx,'#16352a','#0a1c14'); scatter(ctx,30,171,(x,y,r)=>tuft(ctx,x,y,CELL*(0.16+r()*0.12),'rgba(40,90,55,0.7)')); scatter(ctx,24,172,(x,y,r)=>glow(ctx,x,y,7,'rgba(255,236,140,0.9)')); } },
+  { name:'Forêt enchantée', desc:'Sous-bois mauve aux champignons phosphorescents. Onirique, fantasy.', draw(ctx){ vgrad(ctx,'#241a33','#10202a'); scatter(ctx,14,181,(x,y,r)=>{ glow(ctx,x,y-6,14,'rgba(120,255,220,0.4)'); ctx.fillStyle='#ff6b8b'; ctx.beginPath(); ctx.ellipse(x,y-6,6,4,0,Math.PI,0); ctx.fill(); ctx.fillStyle='#ffe0e8'; ctx.fillRect(x-1.5,y-6,3,7); }); scatter(ctx,30,182,(x,y,r)=>glow(ctx,x,y,2,'rgba(180,255,240,0.9)')); } },
+  { name:'Rizières en terrasses', desc:'Bandes d’eau et de jeunes pousses étagées. Asiatique, ordonné.', draw(ctx){ for(let i=0;i<6;i++){ const yy=OY+BH*i/6; const water=i%2===0; ctx.fillStyle= water?'#6fae9a':'#7cb342'; ctx.fillRect(OX,yy,BW,BH/6+1); if(water){ ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(OX,yy,BW,3); } } } },
+  { name:'Canyon de mesa', desc:'Strates de roche rouge et orange. Désert américain, chaud et structuré.', draw(ctx){ const cols=['#a8432a','#c9663b','#b8542f','#d98c4a','#9c3d28']; for(let i=0;i<5;i++){ ctx.fillStyle=cols[i]; ctx.fillRect(OX,OY+BH*i/5,BW,BH/5+1); } ctx.strokeStyle='rgba(60,20,10,0.3)'; ctx.lineWidth=1.5; for(let i=1;i<5;i++){ ctx.beginPath(); ctx.moveTo(OX,OY+BH*i/5); ctx.lineTo(OX+BW,OY+BH*i/5); ctx.stroke(); } } },
+];
+
+const grid = document.getElementById('grid');
+const dpr = window.devicePixelRatio || 1;
+const darkHud = new Set([2,4,7,18,19]); // biomes clairs → HUD foncé
+BIOMES.forEach((b,i)=>{
+  const card=document.createElement('div'); card.className='card';
+  const canvas=document.createElement('canvas'); canvas.width=CW*dpr; canvas.height=CH*dpr; canvas.style.aspectRatio=CW+' / '+CH;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.fillStyle='#0d1117'; ctx.fillRect(0,0,CW,CH);
+  ctx.save(); clipBoard(ctx); b.draw(ctx); ctx.restore();
+  // vignette douce commune
+  ctx.save(); clipBoard(ctx); ctx.strokeStyle='rgba(10,20,12,0.18)'; ctx.lineWidth=CELL*0.55; roundRectPath(ctx,OX,OY,BW,BH,14); ctx.stroke(); ctx.restore();
+  drawActors(ctx, darkHud.has(i)?'#2a1c0e':'#eef3f7');
+  card.appendChild(canvas);
+  const meta=document.createElement('div'); meta.className='meta';
+  meta.innerHTML='<div><span class="num">'+(i+1)+'</span><span class="name">'+b.name+'</span></div><div class="desc">'+b.desc+'</div>';
+  card.appendChild(meta); grid.appendChild(card);
+});
+</script>
+</body>
+</html>
