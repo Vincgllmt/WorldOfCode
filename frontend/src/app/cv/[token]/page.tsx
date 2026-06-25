@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import type { PublicUser } from '@/interfaces/user'
 import PublicCvContent from './PublicCvContent'
+import AutoPrint from './AutoPrint'
 
 type Props = {
   params: Promise<{ token: string }>
+  searchParams: Promise<{ print?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -24,8 +26,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function PublicCvPage({ params }: Props) {
+export default async function PublicCvPage({ params, searchParams }: Props) {
   const { token } = await params
+  const { print } = await searchParams
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/cv/${token}`,
     { cache: 'no-store' }
@@ -35,5 +38,10 @@ export default async function PublicCvPage({ params }: Props) {
 
   const user: PublicUser = await res.json()
 
-  return <PublicCvContent user={user} />
+  return (
+    <>
+      {print === 'true' && <AutoPrint />}
+      <PublicCvContent user={user} />
+    </>
+  )
 }

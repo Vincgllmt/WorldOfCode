@@ -16,6 +16,7 @@ import { useReorderExperiences } from '@/hooks/useReorderExperiences'
 import { useUpdateFieldVisibility } from '@/hooks/useUpdateFieldVisibility'
 import { VisibilityToggle } from '@/components/profile/VisibilityToggle'
 import ShareCvDialog from '@/components/profile/ShareCvDialog'
+import { useShareCvLink } from '@/hooks/useShareCvLink'
 import type { Visibility } from '@/interfaces/user'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
@@ -71,7 +72,17 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const isOwnProfile = viewerId === user?.id
   const { mutate: reorderExperiences } = useReorderExperiences(userId)
   const { mutate: updateFieldVisibility } = useUpdateFieldVisibility(userId)
+  const { generateLinkAsync } = useShareCvLink(userId, user?.cvPublicToken)
   const sortedGroups = useMemo(() => sortGroups(groups), [groups])
+
+  async function handleExportPdf() {
+    let token = user?.cvPublicToken
+    if (!token) {
+      const data = await generateLinkAsync()
+      token = data.token
+    }
+    window.open(`/cv/${token}?print=true`, '_blank')
+  }
 
   if (authLoading || userLoading) {
     return (
@@ -141,7 +152,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => console.log('Exporter PDF')}
+                  onClick={handleExportPdf}
                   className="gap-1.5"
                 >
                   <Download className="h-4 w-4" />

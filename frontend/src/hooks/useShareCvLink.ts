@@ -10,7 +10,7 @@ export function useShareCvLink(userId: number, initialToken?: string | null) {
   const queryClient = useQueryClient()
   const [token, setToken] = useState<string | null>(initialToken ?? null)
 
-  const { mutate: generateLink, isPending: isGenerating } = useMutation({
+  const { mutate: generateLink, mutateAsync: generateLinkAsync, isPending: isGenerating } = useMutation({
     mutationFn: async () => {
       const res = await fetchWithAuth(`/user/${userId}/cv/share-link`, {
         method: 'POST',
@@ -31,5 +31,5 @@ export function useShareCvLink(userId: number, initialToken?: string | null) {
         : `/cv/${token}`
       : null
 
-  return { token, url, generateLink, isGenerating }
+  return { token, url, generateLink, generateLinkAsync, isGenerating }
 }
