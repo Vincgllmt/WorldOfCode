@@ -44,6 +44,8 @@ class UserMapper
 
         $dto->fieldVisibility = $isAuthenticated ? $fv : null;
         $dto->cvPublicToken = $isOwner ? $user->getCvPublicToken() : null;
+        $dto->cvLayout = $user->getCvLayout();
+        $dto->cvAccentColor = $user->getCvAccentColor();
 
         $experiences = $user->getExperienceEntities()->toArray();
         usort($experiences, fn($a, $b) => $a->getPosition() <=> $b->getPosition());

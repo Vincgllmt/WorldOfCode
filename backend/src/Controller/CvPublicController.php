@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Dto\CvLayoutRequest;
 use App\Mapper\UserMapper;
 use App\Repository\UserRepository;
 use OpenApi\Attributes as OA;
@@ -9,15 +10,18 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use App\Dto\UserResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[OA\Tag(name: 'CV Public')]
 final class CvPublicController extends AbstractController
 {
     public function __construct(
         private UserRepository $userRepo,
-        private UserMapper $mapper
+        private UserMapper $mapper,
+        private ValidatorInterface $validator
     ) {}
 
     #[Route('api/user/{id}/cv/share-link', name: 'cv_share_link_generate', methods: ['POST'])]
@@ -82,5 +86,59 @@ final class CvPublicController extends AbstractController
         }
 
         return $this->json($this->mapper->toDto($user, null));
+    }
+
+    #[Route('api/user/{id}/cv/layout', name: 'cv_layout_update', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Met a jour le template et la couleur d\'accent du CV',
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Layout mis a jour', content: new Model(type: UserResponse::class)),
+            new OA\Response(response: 403, description: 'Acces interdit'),
+            new OA\Response(response: 404, description: 'Utilisateur non trouve'),
+            new OA\Response(response: 422, description: 'Erreurs de validation')
+        ]
+    )]
+    public function updateCvLayout(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $currentUser = $this->getUser();
+
+        $user = $this->userRepo->find($id);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+        if ($user !== $currentUser) {
+            return $this->json(['error' => 'Access denied'], 403);
+        }
+
+        $payload = json_decode($request->getContent(), true);
+        if (!is_array($payload)) {
+            return $this->json(['error' => 'Invalid JSON payload'], 400);
+        }
+
+        $dto = new CvLayoutRequest();
+        $dto->cvLayout = $payload['cvLayout'] ?? null;
+        $dto->cvAccentColor = $payload['cvAccentColor'] ?? null;
+
+        $violations = $this->validator->validate($dto);
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $v) {
+                $errors[$v->getPropertyPath()] = $v->getMessage();
+            }
+            return $this->json(['error' => 'Validation failed', 'details' => $errors], 422);
+        }
+
+        if (array_key_exists('cvLayout', $payload) && $dto->cvLayout !== null) {
+            $user->setCvLayout($dto->cvLayout);
+        }
+        if (array_key_exists('cvAccentColor', $payload)) {
+            $user->setCvAccentColor($dto->cvAccentColor);
+        }
+
+        $this->userRepo->save($user, true);
+
+        return $this->json($this->mapper->toDto($user, $currentUser));
     }
 }

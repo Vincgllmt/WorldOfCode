@@ -153,6 +153,22 @@ class UserResponse
     public ?string $cvPublicToken = null;
 
     #[OA\Property(
+        description: "Template de mise en page du CV : sidebar-left | sidebar-right | single-column",
+        type: "string",
+        nullable: true,
+        example: "sidebar-left"
+    )]
+    public string $cvLayout = 'sidebar-left';
+
+    #[OA\Property(
+        description: "Couleur d'accent du CV en hex (null = vert WOC par defaut)",
+        type: "string",
+        nullable: true,
+        example: "#2563eb"
+    )]
+    public ?string $cvAccentColor = null;
+
+    #[OA\Property(
         description: "Posts epingles en Temps forts",
         type: "array",
         items: new OA\Items(ref: new \Nelmio\ApiDocBundle\Attribute\Model(type: ProfileHighlightResponse::class)),

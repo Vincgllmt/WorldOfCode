@@ -100,6 +100,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 36, nullable: true, unique: true)]
     private ?string $cvPublicToken = null;
 
+    #[ORM\Column(length: 30, nullable: true, options: ['default' => 'sidebar-left'])]
+    private ?string $cvLayout = 'sidebar-left';
+
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $cvAccentColor = null;
+
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
 
@@ -426,6 +432,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCvPublicToken(?string $cvPublicToken): self
     {
         $this->cvPublicToken = $cvPublicToken;
+        return $this;
+    }
+
+    public function getCvLayout(): string
+    {
+        return $this->cvLayout ?? 'sidebar-left';
+    }
+
+    public function setCvLayout(?string $cvLayout): self
+    {
+        $this->cvLayout = $cvLayout;
+        return $this;
+    }
+
+    public function getCvAccentColor(): ?string
+    {
+        return $this->cvAccentColor;
+    }
+
+    public function setCvAccentColor(?string $cvAccentColor): self
+    {
+        $this->cvAccentColor = $cvAccentColor;
         return $this;
     }
 
