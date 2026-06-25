@@ -16,6 +16,7 @@ import { useReorderExperiences } from '@/hooks/useReorderExperiences'
 import { useUpdateFieldVisibility } from '@/hooks/useUpdateFieldVisibility'
 import { VisibilityToggle } from '@/components/profile/VisibilityToggle'
 import ShareCvDialog from '@/components/profile/ShareCvDialog'
+import EditorShell from '@/components/profile/EditorShell'
 import { useShareCvLink } from '@/hooks/useShareCvLink'
 import type { Visibility } from '@/interfaces/user'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
@@ -114,6 +115,16 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
       <p className="text-sm text-destructive">
         Impossible de charger le profil pour le moment.
       </p>
+    )
+  }
+
+  if (isOwnProfile && isEditMode) {
+    return (
+      <EditorShell
+        user={user}
+        userId={userId}
+        onClose={() => setIsEditMode(false)}
+      />
     )
   }
 

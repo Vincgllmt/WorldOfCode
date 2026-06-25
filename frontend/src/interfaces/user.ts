@@ -1,5 +1,7 @@
 export type Availability = 'open_to_work' | 'employed' | 'freelance' | 'student'
 
+export type CvLayout = 'sidebar-left' | 'sidebar-right' | 'single-column'
+
 export type Visibility = 'PUBLIC' | 'CONNECTED' | 'PRIVATE'
 
 export type LinkType = 'github' | 'gitlab' | 'linkedin' | 'portfolio' | 'other'
@@ -69,6 +71,8 @@ export interface User {
   highlights?: ProfileHighlight[] | null
   fieldVisibility?: Record<string, string> | null
   cvPublicToken?: string | null
+  cvLayout?: CvLayout
+  cvAccentColor?: string | null
 }
 
 export interface UpdateUserPayload {
