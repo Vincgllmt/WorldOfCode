@@ -24,15 +24,15 @@ containerPort: 8082
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(woc-prod\\.duckdns\\.org|api-woc-prod\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   PISTON_URL: "http://piston.production.svc.cluster.local:2000"
-  DEFAULT_URI: "https://api-woc-prod.duckdns.org"
+  DEFAULT_URI: "https://api-worldofcode.duckdns.org"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: api-woc-prod.duckdns.org
+    - host: api-worldofcode.duckdns.org
       paths:
         - path: /api/arena
           pathType: Prefix

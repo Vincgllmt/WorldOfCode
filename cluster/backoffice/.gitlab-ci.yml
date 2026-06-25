@@ -16,7 +16,7 @@ build:backoffice:
     - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
-        export API_DOMAIN="api-woc-prod.duckdns.org"
+        export API_DOMAIN="api-worldofcode.duckdns.org"
       else
         export API_DOMAIN="api-woc-dev.duckdns.org"
       fi
