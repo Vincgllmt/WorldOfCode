@@ -10,7 +10,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/cv/${token}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/cv/${token}`,
     { cache: 'no-store' }
   )
   if (!res.ok) {
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PublicCvPage({ params }: Props) {
   const { token } = await params
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/cv/${token}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/cv/${token}`,
     { cache: 'no-store' }
   )
 

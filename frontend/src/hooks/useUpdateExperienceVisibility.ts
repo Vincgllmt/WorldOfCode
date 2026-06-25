@@ -8,7 +8,7 @@ export function useUpdateExperienceVisibility(expId: string, userId: number) {
 
   return useMutation({
     mutationFn: async (visibility: Visibility) => {
-      const res = await fetchWithAuth(`/api/experiences/${expId}/visibility`, {
+      const res = await fetchWithAuth(`/experiences/${expId}/visibility`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility }),

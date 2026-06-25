@@ -10,7 +10,7 @@ export function useUpdateFieldVisibility(userId: number) {
     mutationFn: async (patch: Record<string, Visibility>) => {
       const current = queryClient.getQueryData<User>(['user', userId])
       const merged = { ...(current?.fieldVisibility ?? {}), ...patch }
-      const res = await fetchWithAuth(`/api/user/${userId}/profile`, {
+      const res = await fetchWithAuth(`/user/${userId}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fieldVisibility: merged }),

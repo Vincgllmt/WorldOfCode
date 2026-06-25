@@ -7,7 +7,7 @@ export function useHighlights(userId: number) {
   return useQuery<ProfileHighlight[]>({
     queryKey: ['highlights', userId],
     queryFn: async () => {
-      const res = await fetchWithAuth(`/api/user/${userId}/highlights`)
+      const res = await fetchWithAuth(`/user/${userId}/highlights`)
       if (!res.ok) throw new Error('Failed to fetch highlights')
       return res.json()
     },
@@ -19,7 +19,7 @@ export function usePinPost(userId: number) {
 
   return useMutation({
     mutationFn: async (postId: number) => {
-      const res = await fetchWithAuth(`/api/posts/${postId}/pin-to-profile`, {
+      const res = await fetchWithAuth(`/posts/${postId}/pin-to-profile`, {
         method: 'POST',
       })
       if (!res.ok) {
@@ -41,7 +41,7 @@ export function useUnpinPost(userId: number) {
 
   return useMutation({
     mutationFn: async (postId: number) => {
-      const res = await fetchWithAuth(`/api/posts/${postId}/pin-to-profile`, {
+      const res = await fetchWithAuth(`/posts/${postId}/pin-to-profile`, {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Impossible de désépingler ce post')

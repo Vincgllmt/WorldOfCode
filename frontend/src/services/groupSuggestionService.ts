@@ -15,7 +15,7 @@ export const postGroupSuggestion = async (data: GroupSuggestionRequest): Promise
     payload.rssFeedUrl = data.rssFeedUrl.trim()
   }
 
-  const res = await fetchWithAuth('/api/group-suggestions', {
+  const res = await fetchWithAuth('/group-suggestions', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

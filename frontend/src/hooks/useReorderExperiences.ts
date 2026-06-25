@@ -7,7 +7,7 @@ export function useReorderExperiences(userId: number) {
 
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const res = await fetchWithAuth(`/api/user/${userId}/experiences/reorder`, {
+      const res = await fetchWithAuth(`/user/${userId}/experiences/reorder`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: orderedIds }),

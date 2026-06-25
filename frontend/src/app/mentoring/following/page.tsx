@@ -27,7 +27,7 @@ export default function FollowingFeedPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchWithAuth('/api/mentoring/feed/following')
+    fetchWithAuth('/mentoring/feed/following')
       .then(r => r.json())
       .then((data: { data: ActivityEvent[]; meta: FeedMeta }) => {
         setEvents(data.data)
