@@ -15,8 +15,8 @@ class TechWatchSourceMapper
         $dto->techGroupName = $source->getTechGroup()->getName();
         $dto->feedUrl = $source->getFeedUrl();
         $dto->name = $source->getName();
-        $dto->lastFetchedAt = $source->getLastFetchedAt()?->format('Y-m-d H:i:s');
-        $dto->createdAt = $source->getCreatedAt()->format('Y-m-d H:i:s');
+        $dto->lastFetchedAt = $source->getLastFetchedAt()?->format('c');
+        $dto->createdAt = $source->getCreatedAt()->format('c');
         return $dto;
     }
 }

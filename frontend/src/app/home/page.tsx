@@ -195,11 +195,6 @@ export default function HomePage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                {activeCount > 0
-                  ? `Tu as ${activeCount} demande${activeCount > 1 ? 's' : ''} en attente d'un mentor.`
-                  : 'Retrouve l\'historique de toutes tes demandes de mentorat.'}
-              </p>
               <Link
                 href="/mentoring/my-requests"
                 className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium border border-border hover:bg-muted transition-colors"

@@ -1,6 +1,9 @@
 .idea
 .claude/
 
+# macOS
+.DS_Store
+
 # CI/CD artifacts
 .npm
 lint-output.txt
@@ -11,3 +14,14 @@ coverage.xml
 .claude
 
 MONITORING_USER_ERRORS.md
+
+# Projet IPTV — appartient uniquement à la branche iptv
+cluster/iptv/
+
+# --- Secrets : ne jamais committer (SEC-1) ---
+.env
+.env.*
+!.env.example
+!.env.exemple
+# Matériel de descellement Vault — conserver hors-bande, jamais dans git
+cluster/vault/vault-keys.*

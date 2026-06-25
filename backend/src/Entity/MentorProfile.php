@@ -7,6 +7,7 @@ use App\Repository\MentorProfileRepository;
 use App\Enum\TeachingStyle;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\TechGroup;
 
 #[ORM\Entity(repositoryClass: MentorProfileRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -33,7 +34,7 @@ class MentorProfile
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $mentorBio = null;
 
-    #[ORM\ManyToMany(targetEntity: Skill::class)]
+    #[ORM\ManyToMany(targetEntity: TechGroup::class)]
     #[ORM\JoinTable(name: 'mentor_profile_specialties')]
     private Collection $specialties;
 
@@ -134,17 +135,17 @@ class MentorProfile
         return $this->specialties;
     }
 
-    public function addSpecialty(Skill $skill): self
+    public function addSpecialty(TechGroup $group): self
     {
-        if (!$this->specialties->contains($skill)) {
-            $this->specialties->add($skill);
+        if (!$this->specialties->contains($group)) {
+            $this->specialties->add($group);
         }
         return $this;
     }
 
-    public function removeSpecialty(Skill $skill): self
+    public function removeSpecialty(TechGroup $group): self
     {
-        $this->specialties->removeElement($skill);
+        $this->specialties->removeElement($group);
         return $this;
     }
 

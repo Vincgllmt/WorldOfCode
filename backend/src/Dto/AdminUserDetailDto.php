@@ -28,5 +28,8 @@ class AdminUserDetailDto
         /** @var AdminPostSummaryDto[] */
         public readonly array $lastFivePosts,
         public readonly int $reportCountOnPosts,
+        public readonly bool $isBanned,
+        public readonly ?string $bannedAt,
+        public readonly ?string $bannedReason,
     ) {}
 }

@@ -26,6 +26,7 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
   )
   const [localPin, setLocalPin] = useState(request.pin ?? null)
   const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const [accepted, setAccepted] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
 
   const handlePin = async (e: React.MouseEvent) => {
@@ -148,10 +149,15 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
             </button>
           )}
           <button
-            onClick={e => { e.stopPropagation(); setShowAcceptModal(true) }}
-            className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            onClick={e => { e.stopPropagation(); if (!accepted) setShowAcceptModal(true) }}
+            disabled={accepted}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+              accepted
+                ? 'bg-muted text-muted-foreground cursor-default'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
           >
-            Accepter
+            {accepted ? '✓ Acceptée' : 'Accepter'}
           </button>
         </div>
       </div>
@@ -164,6 +170,7 @@ export default function MentoringRequestCard({ request, isSelected, onClick, onR
         juniorId={request.junior.id}
         onClose={() => setShowAcceptModal(false)}
         onAccepted={(_session: MentoringSession) => {
+          setAccepted(true)
           setShowAcceptModal(false)
           onRefetch()
           onSessionAccepted?.()

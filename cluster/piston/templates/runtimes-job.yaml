@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "woc-piston.fullname" . }}-runtimes
+  annotations:
+    # Installe les runtimes après chaque (ré)installation du chart.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: {{ include "woc-piston.name" . }}-runtimes
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: install-runtimes
+          image: {{ .Values.runtimes.installerImage }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              PISTON="http://{{ include "woc-piston.fullname" . }}:{{ .Values.service.port }}"
+              echo "Attente du démarrage de Piston..."
+              until curl -sf "$PISTON/api/v2/runtimes" >/dev/null 2>&1; do sleep 3; done
+              echo "Piston prêt. Installation des runtimes (idempotent)..."
+              {{- range .Values.runtimes.packages }}
+              echo "→ {{ .language }} {{ .version }}"
+              curl -s -X POST "$PISTON/api/v2/packages" \
+                -H 'Content-Type: application/json' \
+                -d '{"language":"{{ .language }}","version":"{{ .version }}"}'; echo
+              {{- end }}
+              echo "Runtimes installés."

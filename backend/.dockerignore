@@ -1,2 +1,9 @@
 vendor/
 node_modules/
+.git
+.gitignore
+# Secrets hors image (SEC-1) — .env de prod fourni via Vault/CI
+.env.dev
+.env.test
+.env.local
+.env.*.local

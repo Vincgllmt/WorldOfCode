@@ -1,0 +1,42 @@
+# Piston : sandbox d'exécution de code requis par Code Arena.
+# Image upstream publique (ghcr.io/engineer-man/piston) → aucun build, aucun imagePullSecret.
+
+deploy:piston:dev:
+  stage: deploy-services
+  environment:
+    name: dev
+  variables:
+    APP_NAMESPACE: "dev"
+    RELEASE_NAME: "piston"
+    CHART_PATH: "cluster/piston"
+    VALUES_FILE: "cluster/piston/values-dev.yaml"
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Déploiement Helm de Piston sur le namespace $APP_NAMESPACE"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - cluster/piston/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+
+deploy:piston:prod:
+  stage: deploy-services
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "piston"
+    CHART_PATH: "cluster/piston"
+    VALUES_FILE: "cluster/piston/values-prod.yaml"
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Déploiement Helm de Piston sur le namespace $APP_NAMESPACE"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE"
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^code-arena-v.*$/'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true

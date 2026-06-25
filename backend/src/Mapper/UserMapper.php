@@ -21,8 +21,8 @@ class UserMapper
         $dto->lastname = $user->getLastname();
         $dto->email = $user->getEmail();
         $dto->role = $user->getRole()->value;
-        $dto->creationDate = $user->getCreationDate()?->format('Y-m-d H:i:s');
-        $dto->updatedDate = $user->getUpdatedDate()?->format('Y-m-d H:i:s');
+        $dto->creationDate = $user->getCreationDate()?->format('c');
+        $dto->updatedDate = $user->getUpdatedDate()?->format('c');
         $dto->theme = $user->getTheme();
         $dto->avatarUrl = $user->getAvatarUrl();
         $dto->bio = $user->getBio();

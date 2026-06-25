@@ -72,8 +72,21 @@ class AuthenticationController extends AbstractController
     public function register(
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        RateLimiterFactory $registerAttemptsLimiter
     ): JsonResponse {
+        $limiter = $registerAttemptsLimiter->create($request->getClientIp());
+        if (false === $limiter->consume(1)->isAccepted()) {
+            $this->userErrorLogger->warning('Too many register attempts', [
+                'route'       => 'register',
+                'method'      => $request->getMethod(),
+                'ip'          => $request->getClientIp(),
+                'user'        => 'anonymous',
+                'status_code' => 429,
+            ]);
+            return $this->json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         $username = $data['username'] ?? null;
@@ -113,9 +126,10 @@ class AuthenticationController extends AbstractController
             ->setRole(UserRole::ROLE_USER)
             ->setAvatarUrl($avatarUrl);
 
-        if (count($userRepository->findAll()) === 0) {
-            $user->setRole(UserRole::ROLE_ADMIN);
-        }
+        // SEC-3 (fixé) : l'auto-élévation du premier inscrit en ROLE_ADMIN
+        // a été retirée (race condition / privilege escalation en prod).
+        // Les administrateurs sont gérés via les fixtures (seed initial) et
+        // peuvent être modifiés depuis le backoffice (interface admin).
 
         $userRepository->save($user);
 
@@ -423,8 +437,21 @@ class AuthenticationController extends AbstractController
     public function requestPasswordReset(
         Request $request,
         UserRepository $userRepository,
-        PasswordResetService $passwordResetService
+        PasswordResetService $passwordResetService,
+        RateLimiterFactory $passwordResetAttemptsLimiter
     ): JsonResponse {
+
+        $limiter = $passwordResetAttemptsLimiter->create($request->getClientIp());
+        if (false === $limiter->consume(1)->isAccepted()) {
+            $this->userErrorLogger->warning('Too many password reset requests', [
+                'route'       => 'reset_password_request',
+                'method'      => $request->getMethod(),
+                'ip'          => $request->getClientIp(),
+                'user'        => 'anonymous',
+                'status_code' => 429,
+            ]);
+            return $this->json(['error' => 'Trop de demandes. Veuillez réessayer plus tard.'], 429);
+        }
 
         $data = json_decode($request->getContent(), true);
         $email = $data['email'] ?? null;

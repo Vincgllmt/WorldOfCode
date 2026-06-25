@@ -14,13 +14,13 @@ service:
 containerPort: 3000
 
 env:
-  NEXT_PUBLIC_API_URL: "https://api-woc-prod.duckdns.org"
+  NEXT_PUBLIC_API_URL: "https://api-worldofcode.duckdns.org"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: backoffice-woc-prod.duckdns.org
+    - host: backoffice-worldofcode.duckdns.org
       paths:
         - path: /
           pathType: Prefix

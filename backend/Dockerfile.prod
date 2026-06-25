@@ -1,6 +1,6 @@
 FROM php:8.4-fpm
 
-WORKDIR /var/www/backend
+WORKDIR /var/www/backend 
 
 # 1. Installation des dépendances système
 RUN apt-get update && apt-get install -y \
@@ -28,6 +28,10 @@ RUN composer install \
 
 COPY . .
 
+# .env requis par le runtime Symfony (bootEnv) — non tracké dans git depuis SEC-1.
+# On le génère depuis le template ; les secrets réels sont injectés via Vault/env au runtime.
+RUN cp .env.example .env
+
 # 5. Génération de l'autoloader optimisé maintenant que le code est présent
 RUN composer dump-autoload --optimize --classmap-authoritative
 
@@ -40,6 +44,10 @@ RUN chmod +x /usr/local/bin/entrypoint-prod.sh
 
 RUN mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.orig
 COPY www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# SEC-12 : exécution non-root (www-data = uid 33). var/ est déjà chown www-data,
+# php-fpm écoute sur 9000 (port non privilégié).
+USER www-data
 
 ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
 CMD ["php-fpm"]

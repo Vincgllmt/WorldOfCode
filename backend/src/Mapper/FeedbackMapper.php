@@ -22,7 +22,7 @@ class FeedbackMapper
         $dto->npsScore = $feedback->getNpsScore();
         $dto->comment = $feedback->getComment();
         $dto->status = $feedback->getStatus()->value;
-        $dto->createdAt = $feedback->getCreatedAt()->format('Y-m-d H:i:s');
+        $dto->createdAt = $feedback->getCreatedAt()->format('c');
 
         return $dto;
     }

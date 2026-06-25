@@ -15,7 +15,8 @@ class NotificationService
         private NotificationRepository $repo,
         private NotificationMapper $mapper,
         private HttpClientInterface $httpClient,
-        private string $messagerieUrl
+        private string $messagerieUrl,
+        private string $internalSecret
     ) {}
 
     public function createAndPush(
@@ -44,6 +45,8 @@ class NotificationService
 
         try {
             $this->httpClient->request('POST', $this->messagerieUrl . '/api/notify', [
+                // SEC-14 : secret partagé pour authentifier l'appel interne backend → messagerie
+                'headers' => ['X-Internal-Secret' => $this->internalSecret],
                 'json' => [
                     'recipientId' => $recipient->getId(),
                     'notification' => (array) $dto,

@@ -47,7 +47,7 @@ class UserSearchControllerTest extends TestCase
 
         // Spécialités mock
         $specialties = array_map(function (string $name) {
-            $skill = $this->createMock(\App\Entity\Skill::class);
+            $skill = $this->createMock(\App\Entity\TechGroup::class);
             $skill->method('getName')->willReturn($name);
             return $skill;
         }, $specialtyNames);
@@ -142,5 +142,26 @@ class UserSearchControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame([], $payload);
+    }
+
+    public function testSearchExcludesCurrentUser(): void
+    {
+        $alice = $this->buildUser(1, 'AliceJunior');
+        $bob   = $this->buildUser(2, 'BobMentor');
+
+        $aliceProfile = $this->buildMentorProfile(10, $alice, ['PHP']);
+        $bobProfile   = $this->buildMentorProfile(11, $bob, ['JavaScript']);
+
+        $repo = $this->createMock(MentorProfileRepository::class);
+        $repo->method('searchMentors')->willReturn([$aliceProfile, $bobProfile]);
+
+        $request  = new Request(['isMentor' => 'true', 'q' => '']);
+        $response = $this->makeController($alice, $repo)->search($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(1, $payload);
+        $this->assertSame(2, $payload[0]['id']);
+        $this->assertSame('BobMentor', $payload[0]['username']);
     }
 }

@@ -14,8 +14,8 @@ class PostMapper
         $dto = new PostResponse();
         $dto->id = $post->getId();
         $dto->content = $post->getContent();
-        $dto->createdAt = $post->getCreatedAt()?->format('Y-m-d H:i:s');
-        $dto->updatedAt = $post->getUpdatedAt()?->format('Y-m-d H:i:s');
+        $dto->createdAt = $post->getCreatedAt()?->format('c');
+        $dto->updatedAt = $post->getUpdatedAt()?->format('c');
         $dto->authorId = $post->getAuthor()->getId();
         $dto->authorUsername = $post->getAuthor()->getUsername();
         $dto->authorAvatarUrl = $post->getAuthor()->getAvatarUrl();
@@ -40,8 +40,8 @@ class PostMapper
         $dto = new SharedPostResponse();
         $dto->id = $sharedPost->getId();
         $dto->content = $sharedPost->getContent();
-        $dto->createdAt = $sharedPost->getCreatedAt()?->format('Y-m-d H:i:s');
-        $dto->updatedAt = $sharedPost->getUpdatedAt()?->format('Y-m-d H:i:s');
+        $dto->createdAt = $sharedPost->getCreatedAt()?->format('c');
+        $dto->updatedAt = $sharedPost->getUpdatedAt()?->format('c');
         $dto->authorId = $sharedPost->getAuthor()->getId();
         $dto->authorUsername = $sharedPost->getAuthor()->getUsername();
         $dto->authorAvatarUrl = $sharedPost->getAuthor()->getAvatarUrl();

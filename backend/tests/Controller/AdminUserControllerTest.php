@@ -11,6 +11,7 @@ use App\Mapper\SkillMapper;
 use App\Mapper\UserLinkMapper;
 use App\Repository\ReportRepository;
 use App\Repository\UserRepository;
+use App\Service\UserBanNotificationService;
 use Doctrine\Common\Collections\ArrayCollection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -32,6 +33,23 @@ class AdminUserControllerTest extends TestCase
     // ======================================================================
     //  Helpers
     // ======================================================================
+
+    private function buildUser(int $id = 2, string $username = 'GarrusVakarian'): User
+    {
+        $user = new User();
+        $user->setUsername($username)
+            ->setEmail($username . '@normandy.sr2')
+            ->setFirstname('Garrus')
+            ->setLastname('Vakarian')
+            ->setPassword('Turian42')
+            ->setRole(UserRole::ROLE_USER);
+
+        $idProp = new \ReflectionProperty(User::class, 'id');
+        $idProp->setValue($user, $id);
+        $user->onCreate();
+
+        return $user;
+    }
 
     private function buildAdmin(int $id = 1, string $username = 'ShepardN7'): User
     {
@@ -86,12 +104,14 @@ class AdminUserControllerTest extends TestCase
         ?UserRepository $userRepo = null,
         ?ReportRepository $reportRepo = null,
         bool $isAdmin = true,
+        ?UserBanNotificationService $banNotification = null,
     ): AdminUserController {
         $controller = new AdminUserController(
-            $userRepo    ?? $this->createMock(UserRepository::class),
-            $reportRepo  ?? $this->createMock(ReportRepository::class),
+            $userRepo         ?? $this->createMock(UserRepository::class),
+            $reportRepo       ?? $this->createMock(ReportRepository::class),
             $this->createMock(SkillMapper::class),
             $this->createMock(UserLinkMapper::class),
+            $banNotification  ?? $this->createMock(UserBanNotificationService::class),
         );
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
 
@@ -423,5 +443,141 @@ class AdminUserControllerTest extends TestCase
         $this->expectException(AccessDeniedException::class);
         $this->makeController($admin, isAdmin: false)
             ->updateRole(1, $this->makeJsonRequest(['role' => 'ROLE_ADMIN']));
+    }
+
+    // ======================================================================
+    //  ban()
+    // ======================================================================
+
+    public function testBanUserSuccess(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildUser();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->with(2)->willReturn($target);
+        $userRepo->expects($this->once())->method('save')->with($target, true);
+
+        $banNotification = $this->createMock(UserBanNotificationService::class);
+        $banNotification->expects($this->once())->method('sendBanEmail')->with($target, null);
+
+        $request  = $this->makeJsonRequest([]);
+        $response = $this->makeController($admin, $userRepo, banNotification: $banNotification)->ban(2, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['success']);
+        $this->assertTrue($target->isBanned());
+    }
+
+    public function testBanUserWithReason(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildUser();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $banNotification = $this->createMock(UserBanNotificationService::class);
+        $banNotification->expects($this->once())->method('sendBanEmail')->with($target, 'Spam répété');
+
+        $request  = $this->makeJsonRequest(['reason' => 'Spam répété']);
+        $response = $this->makeController($admin, $userRepo, banNotification: $banNotification)->ban(2, $request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('Spam répété', $target->getBannedReason());
+    }
+
+    public function testBanUserReturns404WhenNotFound(): void
+    {
+        $admin    = $this->buildAdmin();
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn(null);
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->makeController($admin, $userRepo)->ban(999, $this->makeJsonRequest([]));
+    }
+
+    public function testBanUserReturns400WhenTargetIsAdmin(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildAdmin(2, 'TalisZorah'); // autre admin
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $response = $this->makeController($admin, $userRepo)->ban(2, $this->makeJsonRequest([]));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    public function testBanUserReturns400WhenAlreadyBanned(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildUser();
+        $target->setIsBanned(true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $response = $this->makeController($admin, $userRepo)->ban(2, $this->makeJsonRequest([]));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
+    }
+
+    // ======================================================================
+    //  unban()
+    // ======================================================================
+
+    public function testUnbanUserSuccess(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildUser();
+        $target->setIsBanned(true)->setBannedAt(new \DateTime())->setBannedReason('Spam');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->with(2)->willReturn($target);
+        $userRepo->expects($this->once())->method('save')->with($target, true);
+
+        $banNotification = $this->createMock(UserBanNotificationService::class);
+        $banNotification->expects($this->once())->method('sendUnbanEmail')->with($target);
+
+        $response = $this->makeController($admin, $userRepo, banNotification: $banNotification)->unban(2);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['success']);
+        $this->assertFalse($target->isBanned());
+        $this->assertNull($target->getBannedAt());
+        $this->assertNull($target->getBannedReason());
+    }
+
+    public function testUnbanUserReturns404WhenNotFound(): void
+    {
+        $admin    = $this->buildAdmin();
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn(null);
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->makeController($admin, $userRepo)->unban(999);
+    }
+
+    public function testUnbanUserReturns400WhenNotBanned(): void
+    {
+        $admin  = $this->buildAdmin();
+        $target = $this->buildUser(); // isBanned = false par défaut
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($target);
+
+        $response = $this->makeController($admin, $userRepo)->unban(2);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('error', $payload);
     }
 }

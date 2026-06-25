@@ -31,5 +31,11 @@ class AdminUserListItemDto
 
         #[OA\Property(description: 'URL avatar', nullable: true, example: 'http://localhost:9000/bucket/avatar.jpg')]
         public readonly ?string $avatarUrl,
+
+        #[OA\Property(description: 'Nombre de reports sur les posts de cet utilisateur', example: 3)]
+        public readonly int $reportCount,
+
+        #[OA\Property(description: 'Compte banni', example: false)]
+        public readonly bool $isBanned,
     ) {}
 }

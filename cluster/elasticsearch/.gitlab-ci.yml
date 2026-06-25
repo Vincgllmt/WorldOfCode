@@ -1,0 +1,25 @@
+deploy:elasticsearch:
+  stage: deploy-services
+  needs: []
+  environment:
+    name: infra
+  variables:
+    APP_NAMESPACE: "elasticsearch"
+    RELEASE_NAME: "elasticsearch"
+    CHART_PATH: "cluster/elasticsearch"
+    VALUES_FILE: "cluster/elasticsearch/values.yaml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      changes:
+        - cluster/elasticsearch/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+  script:
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl apply -f cluster/mysql/templates/storageclass.yaml
+    - echo "Deploiement Elasticsearch sur le namespace $APP_NAMESPACE"
+    - |
+      helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
+        --namespace "$APP_NAMESPACE" \
+        --values "$VALUES_FILE"

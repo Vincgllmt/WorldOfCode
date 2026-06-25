@@ -63,7 +63,7 @@ export const verify2FA = async (tempToken: string, code: string, rememberDevice 
 
     const { token }: TokenResponse = await res.json()
 
-    setCookie('token', token, { path: '/', maxAge: 14400 })
+    setCookie('token', token, { path: '/', maxAge: 900 })
 
     let meRes: Response
     try {
@@ -121,7 +121,7 @@ export const refreshToken = async (): Promise<string> => {
         throw new Error(await parseAuthErrorResponse(res, 'La session n’a pas pu être renouvelée.'))
     }
     const { token }: TokenResponse = await res.json()
-    setCookie('token', token, { path: '/', maxAge: 14400 })
+    setCookie('token', token, { path: '/', maxAge: 900 })
     return token
 }
 

@@ -1,0 +1,129 @@
+# ============================================================================
+# BUILD (Kaniko)
+# ============================================================================
+build:code-arena:dev:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - code-arena/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+  script:
+    - echo "Configuration de l'authentification Kaniko..."
+    - AUTH=$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')
+    - 'echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"${AUTH}\"}}}" > /kaniko/.docker/config.json'
+    - 'echo "Build Image: ${REGISTRY_HOST}/code-arena:dev-${CI_COMMIT_SHORT_SHA}"'
+    - /kaniko/executor --context "${CI_PROJECT_DIR}/code-arena" --dockerfile "${CI_PROJECT_DIR}/code-arena/Dockerfile" --destination "${REGISTRY_HOST}/code-arena:dev-${CI_COMMIT_SHORT_SHA}" --insecure --skip-tls-verify --cache=true
+
+build:code-arena:prod:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^code-arena-v.*$/'
+  script:
+    - export IMAGE_TAG=${CI_COMMIT_TAG}
+    - echo "Configuration de l'authentification Kaniko..."
+    - AUTH=$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')
+    - 'echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"${AUTH}\"}}}" > /kaniko/.docker/config.json'
+    - 'echo "Build Image: ${REGISTRY_HOST}/code-arena:${IMAGE_TAG}"'
+    - /kaniko/executor --context "${CI_PROJECT_DIR}/code-arena" --dockerfile "${CI_PROJECT_DIR}/code-arena/Dockerfile.prod" --destination "${REGISTRY_HOST}/code-arena:${IMAGE_TAG}" --insecure --skip-tls-verify --cache=true
+
+# ============================================================================
+# SEED VAULT : APP_SECRET de Code Arena (aucun secret en clair dans le repo)
+# La valeur provient de la variable CI masquée+protégée CODE_ARENA_APP_SECRET.
+# ============================================================================
+seed:code-arena:vault:dev:
+  stage: deploy-infra
+  environment:
+    name: dev
+  script:
+    - test -n "$CODE_ARENA_APP_SECRET" || (echo "Variable CI CODE_ARENA_APP_SECRET manquante" && exit 1)
+    - test -n "$VAULT_ROOT_TOKEN" || (echo "Variable CI VAULT_ROOT_TOKEN manquante" && exit 1)
+    - VAULT_TOKEN="$VAULT_ROOT_TOKEN"
+    - echo "Écriture de l'APP_SECRET Code Arena dans Vault (secret/code-arena)..."
+    - |
+      kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" \
+        vault kv patch secret/code-arena appSecret="$CODE_ARENA_APP_SECRET" || \
+      kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" \
+        vault kv put secret/code-arena appSecret="$CODE_ARENA_APP_SECRET"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+
+seed:code-arena:vault:prod:
+  stage: deploy-infra
+  environment:
+    name: production
+  script:
+    - test -n "$CODE_ARENA_APP_SECRET" || (echo "Variable CI CODE_ARENA_APP_SECRET manquante" && exit 1)
+    - test -n "$VAULT_ROOT_TOKEN" || (echo "Variable CI VAULT_ROOT_TOKEN manquante" && exit 1)
+    - VAULT_TOKEN="$VAULT_ROOT_TOKEN"
+    - echo "Écriture de l'APP_SECRET Code Arena dans Vault (secret/production/code-arena)..."
+    - |
+      kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" \
+        vault kv patch secret/production/code-arena appSecret="$CODE_ARENA_APP_SECRET" || \
+      kubectl exec vault-0 -n vault -- env VAULT_TOKEN="$VAULT_TOKEN" \
+        vault kv put secret/production/code-arena appSecret="$CODE_ARENA_APP_SECRET"
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^code-arena-v.*$/'
+      when: manual
+      allow_failure: true
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+
+# ============================================================================
+# DEPLOY (Helm)
+# ============================================================================
+deploy:code-arena:dev:
+  stage: deploy-apps
+  environment:
+    name: dev
+  variables:
+    APP_NAMESPACE: "dev"
+    RELEASE_NAME: "code-arena"
+    CHART_PATH: "cluster/code-arena"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/code-arena/values-dev.yaml"
+  script:
+    - export IMAGE_TAG="dev-${CI_COMMIT_SHORT_SHA}"
+    - kubectl create namespace "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - USER_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.username}')
+    - PASS_B64=$(kubectl get secret registry-client-credentials -n registry -o jsonpath='{.data.password}')
+    - REGISTRY_USER=$(echo -n "$USER_B64" | base64 -d)
+    - REGISTRY_PASSWORD=$(echo -n "$PASS_B64" | base64 -d)
+    - kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-server="$REGISTRY_HOST" --docker-username="$REGISTRY_USER" --docker-password="$REGISTRY_PASSWORD" -n "$APP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+    - echo "Déploiement Helm sur le namespace $APP_NAMESPACE avec l'image tag $IMAGE_TAG"
+    - helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" --namespace "$APP_NAMESPACE" --values "$VALUES_FILE" --set image.tag=$IMAGE_TAG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - code-arena/**/*
+        - cluster/code-arena/**/*
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+
+deploy:code-arena:prod:
+  stage: deploy-apps
+  extends: .deploy_helm_template
+  environment:
+    name: production
+  variables:
+    APP_NAMESPACE: "production"
+    RELEASE_NAME: "code-arena"
+    CHART_PATH: "cluster/code-arena"
+    IMAGE_PULL_SECRET: "woc-regcred"
+    VALUES_FILE: "cluster/code-arena/values-prod.yaml"
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^code-arena-v.*$/'

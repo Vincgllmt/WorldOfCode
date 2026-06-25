@@ -67,6 +67,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $resetToken = null;
 
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $resetTokenExpiresAt = null;
+
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $twoFactorCode = null;
 
@@ -92,6 +95,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $avatarUrl = null;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isBanned = false;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $bannedAt = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $bannedReason = null;
 
     #[ORM\ManyToMany(targetEntity: Skill::class, inversedBy: 'users')]
     #[ORM\JoinTable(name: 'user_skill')]
@@ -294,6 +306,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getResetTokenExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->resetTokenExpiresAt;
+    }
+
+    public function setResetTokenExpiresAt(?\DateTimeInterface $resetTokenExpiresAt): self
+    {
+        $this->resetTokenExpiresAt = $resetTokenExpiresAt;
+        return $this;
+    }
+
     public function getTwoFactorCode(): ?string
     {
         return $this->twoFactorCode;
@@ -422,6 +445,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setAvatarUrl(?string $avatarUrl): self
     {
         $this->avatarUrl = $avatarUrl;
+        return $this;
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->isBanned;
+    }
+
+    public function setIsBanned(bool $isBanned): self
+    {
+        $this->isBanned = $isBanned;
+        return $this;
+    }
+
+    public function getBannedAt(): ?\DateTimeInterface
+    {
+        return $this->bannedAt;
+    }
+
+    public function setBannedAt(?\DateTimeInterface $bannedAt): self
+    {
+        $this->bannedAt = $bannedAt;
+        return $this;
+    }
+
+    public function getBannedReason(): ?string
+    {
+        return $this->bannedReason;
+    }
+
+    public function setBannedReason(?string $bannedReason): self
+    {
+        $this->bannedReason = $bannedReason;
         return $this;
     }
 }

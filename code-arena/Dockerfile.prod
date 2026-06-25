@@ -1,0 +1,37 @@
+FROM php:8.4-fpm
+
+WORKDIR /app
+
+# 1. Dépendances système + extensions PHP
+RUN apt-get update && apt-get install -y \
+    git unzip libicu-dev libzip-dev libonig-dev \
+ && docker-php-ext-install intl pdo pdo_mysql zip opcache mbstring \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+ENV APP_ENV=prod APP_DEBUG=0
+
+# 2. Dépendances PHP (sans dev, sans autoloader pour l'instant)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader
+
+COPY . .
+
+# 3. Autoloader optimisé une fois le code présent
+RUN composer dump-autoload --optimize --classmap-authoritative
+
+# 4. Permissions cache/log
+RUN mkdir -p var/cache var/log && chown -R www-data:www-data var
+
+# 5. Entrypoint + configuration PHP-FPM
+COPY entrypoint-prod.sh /usr/local/bin/entrypoint-prod.sh
+RUN chmod +x /usr/local/bin/entrypoint-prod.sh
+
+RUN mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.orig
+COPY www.conf /usr/local/etc/php-fpm.d/www.conf
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-prod.sh"]
+CMD ["php-fpm"]
+
+EXPOSE 9000

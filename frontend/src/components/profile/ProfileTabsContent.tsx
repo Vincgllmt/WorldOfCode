@@ -7,6 +7,7 @@ import PostForm from '@/components/post/postForm'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileExperienceSection from '@/components/profile/ProfileExperienceSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
+import ProfileArenaBadges from '@/components/profile/ProfileArenaBadges'
 import EditBioDialog from '@/components/profile/EditBioDialog'
 import EditExperiencesDialog from '@/components/profile/EditExperiencesDialog'
 import EditSkillsDialog from '@/components/profile/EditSkillsDialog'
@@ -39,6 +40,9 @@ export default function ProfileTabsContent({
             <TabsTrigger value="profil" className="flex-1">
               Profil
             </TabsTrigger>
+            <TabsTrigger value="badges" className="flex-1">
+              Badges
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -69,6 +73,10 @@ export default function ProfileTabsContent({
               onEdit={() => setEditSkillsOpen(true)}
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="badges">
+          <ProfileArenaBadges userId={userId} isOwnProfile={isOwnProfile} />
         </TabsContent>
       </Tabs>
 

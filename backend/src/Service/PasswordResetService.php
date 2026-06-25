@@ -28,6 +28,8 @@ class PasswordResetService
     {
         $token = Uuid::v4()->toRfc4122();
         $user->setResetToken($token);
+        // SEC-9 : le token de réinitialisation expire au bout d'1h
+        $user->setResetTokenExpiresAt(new \DateTimeImmutable('+1 hour'));
         $this->userRepository->save($user);
 
         $resetLink = sprintf('%s/reset-password?token=%s', $this->frontendUrl, $token);
@@ -77,8 +79,18 @@ class PasswordResetService
             return false;
         }
 
+        // SEC-9 : refuser un token expiré (et le purger)
+        $expiresAt = $user->getResetTokenExpiresAt();
+        if (!$expiresAt || $expiresAt < new \DateTimeImmutable()) {
+            $user->setResetToken(null);
+            $user->setResetTokenExpiresAt(null);
+            $this->userRepository->save($user);
+            return false;
+        }
+
         $user->setPassword($hasher->hashPassword($user, $newPassword));
         $user->setResetToken(null);
+        $user->setResetTokenExpiresAt(null);
         $this->userRepository->save($user);
 
         // Révoquer tous les appareils de confiance après reset de mot de passe

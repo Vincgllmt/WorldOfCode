@@ -1,5 +1,6 @@
 deploy:mysql:dev:
   stage: deploy-services
+  needs: []
   environment:
     name: dev
   variables:
@@ -31,6 +32,7 @@ deploy:mysql:dev:
 
 deploy:mysql:prod:
   stage: deploy-services
+  needs: []
   environment:
     name: production
   variables:

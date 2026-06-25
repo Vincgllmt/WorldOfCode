@@ -1,5 +1,6 @@
 deploy:minio:dev:
   stage: deploy-services
+  needs: []
   environment:
     name: dev
   variables:
@@ -25,6 +26,7 @@ deploy:minio:dev:
 
 deploy:minio:prod:
   stage: deploy-services
+  needs: []
   environment:
     name: production
   variables:
