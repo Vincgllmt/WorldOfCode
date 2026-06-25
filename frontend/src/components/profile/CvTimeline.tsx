@@ -46,11 +46,15 @@ export default function CvTimeline({ experiences }: CvTimelineProps) {
           <motion.div key={exp.id} variants={itemVariants} className="relative flex gap-4">
             {/* Dot + vertical line */}
             <div className="flex flex-col items-center">
-              <div className={`mt-1.5 h-3 w-3 shrink-0 rounded-full border-2 ${
-                isCurrent
-                  ? 'border-primary bg-primary'
-                  : 'border-primary bg-background'
-              }`} />
+              <div
+                className="mt-1.5 h-3 w-3 shrink-0 rounded-full border-2"
+                style={{
+                  borderColor: 'var(--cv-accent, hsl(var(--primary)))',
+                  backgroundColor: isCurrent
+                    ? 'var(--cv-accent, hsl(var(--primary)))'
+                    : 'hsl(var(--background))',
+                }}
+              />
               {!isLast && <div className="w-px flex-1 bg-border" />}
             </div>
 
@@ -68,7 +72,7 @@ export default function CvTimeline({ experiences }: CvTimelineProps) {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {startFormatted} —{' '}
                 {endFormatted ?? (
-                  <span className="font-medium text-primary">Aujourd&apos;hui</span>
+                  <span className="font-medium" style={{ color: 'var(--cv-accent, hsl(var(--primary)))' }}>Aujourd&apos;hui</span>
                 )}
               </p>
               {exp.description && (

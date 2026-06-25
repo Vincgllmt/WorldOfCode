@@ -18,6 +18,7 @@ import { VisibilityToggle } from '@/components/profile/VisibilityToggle'
 import ShareCvDialog from '@/components/profile/ShareCvDialog'
 import EditorShell from '@/components/profile/EditorShell'
 import { useShareCvLink } from '@/hooks/useShareCvLink'
+import type { CSSProperties } from 'react'
 import type { Visibility } from '@/interfaces/user'
 import ProfileAboutSection from '@/components/profile/ProfileAboutSection'
 import ProfileSkillsSection from '@/components/profile/ProfileSkillsSection'
@@ -128,10 +129,26 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
     )
   }
 
+  const cvLayout = user.cvLayout ?? 'sidebar-left'
+  const isSingleCol = cvLayout === 'single-column'
+  const accentStyle: CSSProperties | undefined = user.cvAccentColor
+    ? { '--cv-accent': user.cvAccentColor } as CSSProperties
+    : undefined
+
+  const wrapperClass = {
+    'sidebar-left':  'flex flex-col gap-6 lg:flex-row lg:items-start',
+    'sidebar-right': 'flex flex-col gap-6 lg:flex-row-reverse lg:items-start',
+    'single-column': 'flex flex-col gap-6',
+  }[cvLayout]
+
+  const asideClass = isSingleCol
+    ? 'w-full'
+    : 'lg:w-[320px] lg:shrink-0 lg:sticky lg:top-[calc(var(--navbar-height)+2rem)] lg:max-h-[calc(100vh-var(--navbar-height)-2rem)] lg:overflow-y-auto lg:self-start'
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+    <div className={wrapperClass} style={accentStyle}>
       {/* Sidebar */}
-      <aside className="lg:sticky lg:top-[calc(var(--navbar-height)+2rem)] lg:max-h-[calc(100vh-var(--navbar-height)-2rem)] lg:overflow-y-auto lg:self-start">
+      <aside className={asideClass}>
         <ProfileSidebar
           user={user}
           viewerId={viewerId}
@@ -144,7 +161,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
       </aside>
 
       {/* Main content */}
-      <main className="space-y-6">
+      <main className={`space-y-6 min-w-0 ${isSingleCol ? 'w-full' : 'flex-1'}`}>
         {/* Toolbar row */}
         <div className="sticky top-[var(--navbar-height)] z-10 -mt-8 bg-background pt-8 pb-2">
           <div className="flex items-center justify-between gap-3">
