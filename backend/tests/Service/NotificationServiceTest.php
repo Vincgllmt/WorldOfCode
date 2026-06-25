@@ -47,13 +47,15 @@ class NotificationServiceTest extends TestCase
         ?NotificationRepository $repo = null,
         ?NotificationMapper $mapper = null,
         ?HttpClientInterface $httpClient = null,
-        string $messagerieUrl = 'http://messagerie.test'
+        string $messagerieUrl = 'http://messagerie.test',
+        string $internalSecret = 'test-internal-secret'
     ): NotificationService {
         return new NotificationService(
             $repo       ?? $this->createMock(NotificationRepository::class),
             $mapper     ?? $this->createMock(NotificationMapper::class),
             $httpClient ?? $this->createMock(HttpClientInterface::class),
-            $messagerieUrl
+            $messagerieUrl,
+            $internalSecret
         );
     }
 

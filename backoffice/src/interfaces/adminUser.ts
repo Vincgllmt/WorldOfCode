@@ -7,4 +7,6 @@ export interface AdminUserListItem {
   postCount: number
   followerCount: number
   avatarUrl: string | null
+  reportCount: number
+  isBanned: boolean
 }

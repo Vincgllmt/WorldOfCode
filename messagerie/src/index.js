@@ -1,4 +1,5 @@
 import http from "http";
+import crypto from "crypto";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -11,12 +12,35 @@ dotenv.config();
 await initMediaSoupWorker();
 
 const PORT = process.env.PORT || 8081;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+if (!process.env.CORS_ORIGIN) {
+    throw new Error("CORS_ORIGIN is required (no wildcard default). Set it to the allowed origin.");
+}
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
+
+// SEC-14 : secret partagé backend ↔ messagerie pour authentifier /api/notify
+if (!process.env.INTERNAL_SECRET) {
+    throw new Error("INTERNAL_SECRET is required (shared secret backend ↔ messagerie for /api/notify).");
+}
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
+
+// Comparaison à temps constant pour éviter les attaques temporelles
+function isValidInternalSecret(provided) {
+    if (typeof provided !== "string") return false;
+    const a = Buffer.from(provided);
+    const b = Buffer.from(INTERNAL_SECRET);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
     if (req.method === 'POST' && req.url === '/api/notify') {
+        // SEC-14 : refuser tout appel sans le bon secret interne
+        if (!isValidInternalSecret(req.headers['x-internal-secret'])) {
+            res.writeHead(401);
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
@@ -87,8 +111,16 @@ io.use((socket, next) => {
 
         const decoded = jwt.verify(token, publicKey, { algorithms: ["RS256"] });
 
+        // SEC-13 (fixé) : le userId est extrait DU JWT signé par le backend
+        // (via JWTCreatedListener Symfony) et non plus de socket.handshake.auth.
+        // Cette dernière source était envoyée par le client = usurpation possible.
         socket.data.user = decoded;
-        socket.data.userId = socket.handshake.auth?.userId;
+        socket.data.userId = decoded.userId;
+
+        if (!socket.data.userId) {
+            console.error("❌ JWT ne contient pas userId (JWTCreatedListener manquant côté backend ?)");
+            return next(new Error("Invalid token payload"));
+        }
 
         console.log(`✅ JWT valide pour ${decoded.username} (id: ${socket.data.userId})`);
 

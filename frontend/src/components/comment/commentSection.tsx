@@ -29,6 +29,14 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (seconds < 60) return "à l'instant"
+  if (seconds < 3600) return `il y a ${Math.floor(seconds / 60)} min`
+  if (seconds < 86400) return `il y a ${Math.floor(seconds / 3600)} h`
+  return `il y a ${Math.floor(seconds / 86400)} j`
+}
+
 export type CommentSectionHandle = { focusComposer: () => void }
 interface CommentSectionProps { postId: number }
 
@@ -155,6 +163,17 @@ const CommentSection = forwardRef<CommentSectionHandle, CommentSectionProps>(
 
                 <div className="mt-1 text-xs text-muted-foreground">
                   par <span className="font-medium">{comment.authorUsername}</span>
+                  {comment.createdAt && (
+                    <>
+                      {' · '}
+                      <time
+                        dateTime={comment.createdAt}
+                        title={new Date(comment.createdAt).toLocaleString('fr-FR')}
+                      >
+                        {timeAgo(comment.createdAt)}
+                      </time>
+                    </>
+                  )}
                 </div>
 
                 {isEditing && (

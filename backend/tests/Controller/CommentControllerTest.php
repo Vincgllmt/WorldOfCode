@@ -15,6 +15,9 @@ use App\Service\NotificationService;
 use App\Service\Moderation\TextModerationService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -120,14 +123,16 @@ class CommentControllerTest extends TestCase
         ?PostRepository $postRepo = null,
         bool $isAdmin = false,
         ?NotificationService $notifService = null,
-        ?TextModerationService $moderation = null
+        ?TextModerationService $moderation = null,
+        ?HtmlSanitizerInterface $sanitizer = null
     ): CommentController {
         $controller = new CommentController(
             $commentRepo,
             $postRepo        ?? $this->createMock(PostRepository::class),
             new CommentMapper(),
             $notifService    ?? $this->createMock(NotificationService::class),
-            $moderation      ?? $this->createMock(TextModerationService::class)
+            $moderation      ?? $this->createMock(TextModerationService::class),
+            $sanitizer       ?? new HtmlSanitizer((new HtmlSanitizerConfig())->allowSafeElements())
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
@@ -238,6 +243,36 @@ class CommentControllerTest extends TestCase
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('Would you kindly leave a comment?', $payload['content']);
         $this->assertSame('JackRyan', $payload['authorUsername']);
+    }
+
+    public function testCreateCommentSanitizesHtmlBeforePersist(): void
+    {
+        // SEC-21 : le HTML dangereux est retiré avant persistance.
+        $jack   = $this->buildUser(1);
+        $andrew = $this->buildUser(2, 'AndrewRyan');
+        $post   = $this->buildPost($andrew);
+
+        $commentRepo = $this->createMock(CommentRepository::class);
+        $commentRepo->method('save')->willReturnCallback(function (Comment $comment): void {
+            $comment->onCreate();
+            $idProp = new \ReflectionProperty(Comment::class, 'id');
+            $idProp->setValue($comment, 1);
+        });
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('find')->with(1)->willReturn($post);
+
+        $request = new Request(content: json_encode([
+            'content' => '<strong>Hello</strong><script>alert(1)</script>',
+            'postId'  => 1,
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($jack, $commentRepo, $postRepo)->create($request);
+
+        $this->assertSame(201, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('Hello', $payload['content']);
+        $this->assertStringNotContainsStringIgnoringCase('<script', $payload['content']);
     }
 
     public function testCreateCommentFailsWhenContentIsMissing(): void

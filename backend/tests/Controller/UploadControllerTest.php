@@ -283,8 +283,9 @@ class UploadControllerTest extends TestCase
         $request = new Request([], [], [], [], ['file' => $file]);
         $this->makeController()->upload($request, $s3, new ImageCompressionService());
 
-        // Clé attendue : <timestamp>-photo.webp
-        $this->assertMatchesRegularExpression('/^\d{10,}-photo\.webp$/', $capturedKey);
+        // SEC-4 (fixé) : clé non-devinable au format <timestamp>-<32 hex chars>.<ext>
+        // (32 hex = 16 bytes random = 128 bits d'entropie via random_bytes).
+        $this->assertMatchesRegularExpression('/^\d{10,}-[0-9a-f]{32}\.webp$/', $capturedKey);
     }
 
     public function testCompressedFileIsCleanedUpAfterUpload(): void

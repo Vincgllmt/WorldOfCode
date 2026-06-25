@@ -15,7 +15,7 @@ class ReportMapper
         $dto->reason = $report->getReason();
         $dto->userId = $report->getUser()->getId();
         $dto->username = $report->getUser()->getUsername();
-        $dto->createdAt = $report->getCreatedAt()->format('Y-m-d H:i:s');
+        $dto->createdAt = $report->getCreatedAt()->format('c');
         $dto->status = $report->getStatus()->value;
         $dto->claimedByUsername = $report->getClaimedBy()?->getUsername();
         $dto->resolvedByUsername = $report->getResolvedBy()?->getUsername();

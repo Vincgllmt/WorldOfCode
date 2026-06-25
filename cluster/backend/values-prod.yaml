@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 3
 
 migrations:
   enabled: false
@@ -9,6 +9,7 @@ server:
 vault:
   secretPath: "secret/data/production/backend"
   minioSecretPath: "secret/data/production/minio"
+  elasticsearchSecretPath: "secret/data/elasticsearch"
 
 image:
   repository: registry.woc:32000/backend
@@ -29,19 +30,21 @@ database:
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(woc-prod\\.duckdns\\.org|api-woc-prod\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.production.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"
   MINIO_BUCKET: "uploads"
-  MINIO_PUBLIC_URL: "https://api-woc-prod.duckdns.org/uploads"
-  RESET_PASSWORD_URL: "https://woc-prod.duckdns.org"
+  MINIO_PUBLIC_URL: "https://api-worldofcode.duckdns.org/uploads"
+  RESET_PASSWORD_URL: "https://worldofcode.duckdns.org"
   MESSAGERIE_URL: "http://messagerie.production.svc.cluster.local:8081"
+  ELASTICSEARCH_HOST: "http://elasticsearch.elasticsearch.svc.cluster.local:9200"
+  ELASTICSEARCH_USERNAME: "elastic"
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: api-woc-prod.duckdns.org
+    - host: api-worldofcode.duckdns.org
       paths:
         - path: /api
           pathType: Prefix

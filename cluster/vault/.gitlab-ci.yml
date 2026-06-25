@@ -1,5 +1,6 @@
 deploy:vault:
   stage: deploy-services
+  needs: []
   variables:
     APP_NAMESPACE: "vault"
     RELEASE_NAME: "vault"
@@ -23,6 +24,7 @@ deploy:vault:
 
 deploy:vault:auto-unseal:
   stage: deploy-services
+  needs: []
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
       when: manual

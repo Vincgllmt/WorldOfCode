@@ -17,11 +17,17 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_WOC_URL
 ARG NEXT_PUBLIC_STORAGE_URL
+# Code Arena est un microservice distinct : son URL doit être bakée au build,
+# sinon le bundle client retombe sur le défaut http://localhost:8082.
+ARG NEXT_PUBLIC_ARENA_API_URL
+ARG NEXT_PUBLIC_ARENA_URL
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_WOC_URL=$NEXT_PUBLIC_WOC_URL
 ENV NEXT_PUBLIC_STORAGE_URL=$NEXT_PUBLIC_STORAGE_URL
+ENV NEXT_PUBLIC_ARENA_API_URL=$NEXT_PUBLIC_ARENA_API_URL
+ENV NEXT_PUBLIC_ARENA_URL=$NEXT_PUBLIC_ARENA_URL
 
 RUN npm run build
 
@@ -36,6 +42,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# SEC-12 : exécution non-root (node = uid 1000)
+RUN mkdir -p .next/cache && chown -R node:node /app
+USER node
 
 EXPOSE 3000
 

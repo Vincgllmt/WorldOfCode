@@ -1,0 +1,88 @@
+# Mars Lander - Episode 2 : solution de reference (Python)
+#
+# Modele "batch" de Code Arena : pas de boucle interactive. On lit l'etat initial
+# une seule fois, et on ecrit d'un coup TOUTE la sequence de commandes "rotate power".
+#
+# Astuce : la physique est deterministe et connue. On simule donc la descente
+# nous-memes (exactement comme le referee), en pilotant en boucle fermee a chaque
+# tour ; on enregistre les commandes demandees et on les imprime. Rejouees en
+# open-loop par le referee, elles reproduisent la meme trajectoire -> atterrissage.
+
+import sys
+import math
+
+G = 3.711
+
+
+def main():
+    lines = [l.strip() for l in sys.stdin.read().splitlines() if l.strip() != ""]
+
+    # --- Entree : surface puis etat initial ---
+    n = int(lines[0].split()[0])
+    surface = [tuple(map(float, lines[1 + i].split()[:2])) for i in range(n)]
+    X, Y, hs, vs, fuel, rotate, power = (float(t) for t in lines[1 + n].split())
+    fuel, rotate, power = int(fuel), int(rotate), int(power)
+
+    # --- Zone d'atterrissage : segment plat le plus large ---
+    best, x1, x2, ly = -1.0, 0.0, 0.0, 0.0
+    for i in range(n - 1):
+        a, b = surface[i], surface[i + 1]
+        if a[1] == b[1] and abs(b[0] - a[0]) > best:
+            best = abs(b[0] - a[0])
+            x1, x2, ly = min(a[0], b[0]), max(a[0], b[0]), a[1]
+    cx = (x1 + x2) / 2.0
+
+    out = []
+    for _ in range(1200):
+        alt = Y - ly
+        centered = x1 + 150 < X < x2 - 150
+
+        # Vitesse horizontale visee : 0 au-dessus de la zone, sinon viser le centre.
+        target_hs = 0.0 if centered else max(-25.0, min(25.0, (cx - X) / 20.0))
+
+        # Angle : annuler la vitesse horizontale ; redresser (0) en approche finale.
+        if alt > 250:
+            angle = int(max(-40, min(40, -(target_hs - hs) * 2)))
+        else:
+            angle = 0 if abs(hs) <= 18 else int(max(-15, min(15, -hs * 2)))
+
+        # Vitesse verticale visee : maintien d'altitude tant qu'on n'est pas aligne,
+        # puis descente reguliere, douce pres du sol.
+        if alt > 200 and not (centered and abs(hs) < 15):
+            target_vs = -4.0
+        else:
+            target_vs = -min(36.0, 12.0 + alt * 0.04)
+
+        # Puissance pour atteindre la vitesse verticale visee compte tenu de l'angle.
+        c = math.cos(math.radians(angle))
+        power_req = int(max(0, min(4, round((target_vs - vs + G) / max(c, 0.4)))))
+
+        out.append("%d %d" % (angle, power_req))
+
+        # On avance l'etat avec EXACTEMENT la physique du referee (clamps inclus).
+        req_r = max(-90, min(90, angle))
+        req_p = max(0, min(4, power_req))
+        rotate = max(rotate - 15, min(rotate + 15, req_r))
+        power = max(power - 1, min(power + 1, req_p))
+        if power > fuel:
+            power = int(fuel)
+        fuel -= power
+        rad = math.radians(rotate)
+        ax = -math.sin(rad) * power
+        ay = math.cos(rad) * power - G
+        nX = X + hs + 0.5 * ax
+        nY = Y + vs + 0.5 * ay
+        hs += ax
+        vs += ay
+
+        # Stop des qu'on touche la zone plane (ou qu'on sort du cadre).
+        if nY <= ly and x1 <= nX <= x2:
+            break
+        if nX < 0 or nX >= 7000 or nY >= 3000:
+            break
+        X, Y = nX, nY
+
+    sys.stdout.write("\n".join(out) + "\n")
+
+
+main()

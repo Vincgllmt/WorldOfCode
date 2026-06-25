@@ -16,8 +16,8 @@ build:frontend:
     - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
-        export API_DOMAIN="api-woc-prod.duckdns.org"
-        export WOC_DOMAIN="woc-prod.duckdns.org"
+        export API_DOMAIN="api-worldofcode.duckdns.org"
+        export WOC_DOMAIN="worldofcode.duckdns.org"
       else
         export API_DOMAIN="api-woc-dev.duckdns.org"
         export WOC_DOMAIN="woc-dev.duckdns.org"
@@ -32,9 +32,13 @@ build:frontend:
         --build-arg NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}" \
         --build-arg NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}" \
         --build-arg NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage" \
+        --build-arg NEXT_PUBLIC_ARENA_API_URL="https://${API_DOMAIN}" \
+        --build-arg NEXT_PUBLIC_ARENA_URL="https://${API_DOMAIN}" \
         --insecure \
         --skip-tls-verify \
-        --cache=true
+        --cache=true \
+        --snapshotMode=redo \
+        --compressed-caching=false
 
 
 # scan:frontend:
@@ -54,6 +58,9 @@ build:frontend:
 
 deploy:frontend:dev:
   stage: deploy-apps
+  needs:
+    - job: "build:frontend"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: dev
@@ -73,6 +80,9 @@ deploy:frontend:dev:
 
 deploy:frontend:prod:
   stage: deploy-apps
+  needs:
+    - job: "build:frontend"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: production

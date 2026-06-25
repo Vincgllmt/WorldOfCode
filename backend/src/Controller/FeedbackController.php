@@ -117,6 +117,40 @@ class FeedbackController extends AbstractController
     ####
     ##
     ####
+    #[Route('/{id}/status', name: 'admin_feedback_status', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Mettre à jour le statut d\'un feedback (admin uniquement)',
+        responses: [
+            new OA\Response(response: 200, description: 'Statut mis à jour'),
+            new OA\Response(response: 403, description: 'Accès interdit'),
+            new OA\Response(response: 404, description: 'Feedback non trouvé'),
+            new OA\Response(response: 422, description: 'Statut invalide'),
+        ]
+    )]
+    public function updateStatus(int $id, Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $feedback = $this->feedbackRepo->find($id);
+        if (!$feedback) {
+            return $this->json(['error' => 'Feedback non trouvé.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $status = FeedbackStatus::tryFrom($data['status'] ?? '');
+        if (!$status) {
+            return $this->json(['error' => 'Statut invalide. Valeurs : new, read, processed.'], 422);
+        }
+
+        $feedback->setStatus($status);
+        $this->feedbackRepo->save($feedback);
+
+        return $this->json($this->mapper->toDto($feedback));
+    }
+
+    ####
+    ##
+    ####
     #[Route('', name: 'feedback_list', methods: ['GET'])]
     #[OA\Get(
         summary: 'Liste tous les feedbacks (admin uniquement)',

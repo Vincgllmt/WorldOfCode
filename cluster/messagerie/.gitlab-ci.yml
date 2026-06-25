@@ -41,6 +41,9 @@ build:messagerie:
 
 deploy:messagerie:dev:
   stage: deploy-apps
+  needs:
+    - job: "build:messagerie"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: dev
@@ -60,6 +63,9 @@ deploy:messagerie:dev:
 
 deploy:messagerie:prod:
   stage: deploy-apps
+  needs:
+    - job: "build:messagerie"
+      optional: true
   extends: .deploy_helm_template
   environment:
     name: production

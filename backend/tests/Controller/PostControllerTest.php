@@ -19,6 +19,9 @@ use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -117,7 +120,8 @@ class PostControllerTest extends TestCase
         bool $isAdmin = false,
         ?NotificationService $notifService = null,
         ?EntityManagerInterface $em = null,
-        ?TextModerationService $moderation = null
+        ?TextModerationService $moderation = null,
+        ?HtmlSanitizerInterface $sanitizer = null
     ): PostController {
         $controller = new PostController(
             $postRepo,
@@ -125,7 +129,8 @@ class PostControllerTest extends TestCase
             new PostMapper(),
             $notifService   ?? $this->createMock(NotificationService::class),
             $em             ?? $this->createMock(EntityManagerInterface::class),
-            $moderation     ?? $this->createMock(TextModerationService::class)
+            $moderation     ?? $this->createMock(TextModerationService::class),
+            $sanitizer      ?? new HtmlSanitizer((new HtmlSanitizerConfig())->allowSafeElements())
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isAdmin));
@@ -285,6 +290,30 @@ class PostControllerTest extends TestCase
         $this->assertSame(422, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('content_rejected', $payload['code']);
+    }
+
+    public function testCreatePostSanitizesHtmlBeforePersist(): void
+    {
+        // SEC-21 : le HTML dangereux est retiré avant persistance.
+        $tarnished = $this->buildUser(1);
+
+        $postRepo = $this->createMock(PostRepository::class);
+        $postRepo->method('save')->willReturnCallback(function (Post $post): void {
+            $post->onCreate();
+            $idProp = new \ReflectionProperty(Post::class, 'id');
+            $idProp->setValue($post, 1);
+        });
+
+        $request = new Request(content: json_encode([
+            'content' => '<p>Coucou</p><script>alert(1)</script>',
+        ], JSON_THROW_ON_ERROR));
+
+        $response = $this->makeController($tarnished, $postRepo)->create($request);
+
+        $this->assertSame(201, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('Coucou', $payload['content']);
+        $this->assertStringNotContainsStringIgnoringCase('<script', $payload['content']);
     }
 
     public function testCreatePostFailsWhenContentIsMissing(): void

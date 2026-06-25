@@ -9,10 +9,8 @@ data:
   smoke.js: |
     import http from 'k6/http';
     import { check, sleep, group } from 'k6';
-
     const BASE_URL = __ENV.BASE_URL || 'https://api-woc-dev.duckdns.org';
     const TOKEN    = __ENV.JWT_TOKEN;
-
     export const options = {
       vus: 1,
       duration: '2m',
@@ -22,50 +20,39 @@ data:
         'http_req_duration{name:post_list}': ['p(95)<2000'],
       },
     };
-
     export default function () {
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-
       group('feed', () => {
         const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
-
         if (postsOk) {
           let posts;
           try { posts = JSON.parse(postsRes.body); } catch { posts = []; }
           const list = Array.isArray(posts) ? posts : (posts.data || posts.items || []);
-
           if (list.length > 0) {
             const id = list[0].id;
             const postRes = http.get(`${BASE_URL}/api/post/${id}`, { headers, tags: { name: 'post_detail' } });
             check(postRes, { 'post detail 200': (r) => r.status === 200 });
-
             const commentsRes = http.get(`${BASE_URL}/api/post/${id}/comment`, { headers, tags: { name: 'post_comments' } });
             check(commentsRes, { 'comments 200': (r) => r.status === 200 });
           }
         }
       });
-
       group('profile', () => {
         const res = http.get(`${BASE_URL}/api/me`, { headers, tags: { name: 'me' } });
         check(res, { 'me 200': (r) => r.status === 200 });
       });
-
       group('search', () => {
         const res = http.get(`${BASE_URL}/api/search?q=dev`, { headers, tags: { name: 'search' } });
         check(res, { 'search 200': (r) => r.status === 200 });
       });
-
       sleep(Math.random() * 2 + 1);
     }
-
   load.js: |
     import http from 'k6/http';
     import { check, sleep, group } from 'k6';
-
     const BASE_URL = __ENV.BASE_URL || 'https://api-woc-dev.duckdns.org';
     const TOKEN    = __ENV.JWT_TOKEN;
-
     export const options = {
       stages: [
         { duration: '2m', target: 5 },
@@ -79,52 +66,41 @@ data:
         'http_req_duration{name:post_detail}': ['p(95)<1500'],
       },
     };
-
     export default function () {
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-
       group('feed', () => {
         const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
-
         if (postsOk) {
           let posts;
           try { posts = JSON.parse(postsRes.body); } catch { posts = []; }
           const list = Array.isArray(posts) ? posts : (posts.data || posts.items || []);
-
           if (list.length > 0) {
             const id = list[Math.floor(Math.random() * Math.min(list.length, 5))].id;
             const postRes = http.get(`${BASE_URL}/api/post/${id}`, { headers, tags: { name: 'post_detail' } });
             check(postRes, { 'post detail 200': (r) => r.status === 200 });
-
             const commentsRes = http.get(`${BASE_URL}/api/post/${id}/comment`, { headers, tags: { name: 'post_comments' } });
             check(commentsRes, { 'comments 200': (r) => r.status === 200 });
           }
         }
       });
-
       group('discover', () => {
         const terms = ['dev', 'tech', 'cloud', 'react', 'backend'];
         const q = terms[Math.floor(Math.random() * terms.length)];
         const res = http.get(`${BASE_URL}/api/search?q=${q}`, { headers, tags: { name: 'search' } });
         check(res, { 'search 200': (r) => r.status === 200 });
       });
-
       group('social', () => {
         const res = http.get(`${BASE_URL}/api/me`, { headers, tags: { name: 'me' } });
         check(res, { 'me 200': (r) => r.status === 200 });
       });
-
       sleep(Math.random() * 5 + 3);
     }
-
   stress.js: |
     import http from 'k6/http';
     import { check, sleep, group } from 'k6';
-
     const BASE_URL = __ENV.BASE_URL || 'https://api-woc-dev.duckdns.org';
     const TOKEN    = __ENV.JWT_TOKEN;
-
     export const options = {
       stages: [
         { duration: '2m', target: 10 },
@@ -136,21 +112,20 @@ data:
       thresholds: {
         http_req_failed:   ['rate<0.05'],
         http_req_duration: ['p(95)<5000'],
+        'http_req_duration{name:post_list}':   ['p(95)<5000'],
+        'http_req_duration{name:post_detail}': ['p(95)<5000'],
+        'http_req_duration{name:search}':      ['p(95)<5000'],
       },
     };
-
     export default function () {
       const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
-
       group('feed', () => {
         const postsRes = http.get(`${BASE_URL}/api/post?page=1&limit=20`, { headers, tags: { name: 'post_list' } });
         const postsOk = check(postsRes, { 'posts 200': (r) => r.status === 200 });
-
         if (postsOk) {
           let posts;
           try { posts = JSON.parse(postsRes.body); } catch { posts = []; }
           const list = Array.isArray(posts) ? posts : (posts.data || posts.items || []);
-
           if (list.length > 0) {
             const id = list[Math.floor(Math.random() * Math.min(list.length, 10))].id;
             const postRes = http.get(`${BASE_URL}/api/post/${id}`, { headers, tags: { name: 'post_detail' } });
@@ -158,13 +133,11 @@ data:
           }
         }
       });
-
       group('search', () => {
         const terms = ['dev', 'tech', 'cloud', 'react', 'node', 'python', 'docker'];
         const q = terms[Math.floor(Math.random() * terms.length)];
         const res = http.get(`${BASE_URL}/api/search?q=${q}`, { headers, tags: { name: 'search' } });
         check(res, { 'search 200': (r) => r.status === 200 });
       });
-
       sleep(Math.random() * 2 + 1);
     }

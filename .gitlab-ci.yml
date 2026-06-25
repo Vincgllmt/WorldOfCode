@@ -54,6 +54,7 @@ before_script:
 include:
   - local: cluster/jwt/.gitlab-ci.yml
   - local: cluster/mysql/.gitlab-ci.yml
+  - local: cluster/elasticsearch/.gitlab-ci.yml
   - local: cluster/registry/.gitlab-ci.yml
   - local: cluster/minio/.gitlab-ci.yml
   - local: cluster/vault/.gitlab-ci.yml
@@ -62,6 +63,8 @@ include:
   - local: cluster/frontend/.gitlab-ci.yml
   - local: cluster/messagerie/.gitlab-ci.yml
   - local: cluster/backoffice/.gitlab-ci.yml
+  - local: cluster/piston/.gitlab-ci.yml
+  - local: cluster/code-arena/.gitlab-ci.yml
   #- local: cluster/n8n/.gitlab-ci.yml
   - local: cluster/cert-manager/.gitlab-ci.yml
   - local: cluster/uptime-kuma/.gitlab-ci.yml
@@ -168,6 +171,7 @@ coverage:backend:
     # Installer Composer
     - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - cd backend
+    - cp .env.example .env
     - composer install --no-interaction --prefer-dist --optimize-autoloader
     # Générer les clés JWT pour les tests (via la commande Lexik JWT pour garantir le bon format)
     - mkdir -p config/jwt

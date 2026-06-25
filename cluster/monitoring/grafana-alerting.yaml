@@ -115,8 +115,8 @@ data:
                   hide: false
                   refId: B
                   type: threshold
-            noDataState: OK
-            execErrState: OK
+            noDataState: NoData
+            execErrState: Error
             for: 0s
             annotations:
               summary: "Erreur utilisateur détectée sur WOC"
@@ -171,8 +171,8 @@ data:
                   hide: false
                   refId: B
                   type: threshold
-            noDataState: OK
-            execErrState: OK
+            noDataState: NoData
+            execErrState: Error
             for: 0s
             annotations:
               summary: "🚨 Erreur serveur critique sur WOC"

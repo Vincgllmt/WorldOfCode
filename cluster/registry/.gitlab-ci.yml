@@ -1,5 +1,6 @@
 deploy:registry:
   stage: deploy-infra
+  needs: []
   when: manual
   variables:
     REGISTRY_NAMESPACE: "registry"

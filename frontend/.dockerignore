@@ -1,3 +1,8 @@
 node_modules
 npm-debug.log
 .next
+.git
+.gitignore
+# Secrets hors image (SEC-1)
+.env.local
+.env.*.local

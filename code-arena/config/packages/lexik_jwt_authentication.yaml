@@ -1,0 +1,5 @@
+lexik_jwt_authentication:
+    # Code Arena ne signe jamais de token : il se contente de VALIDER ceux
+    # émis par le backend. Seule la clé publique (partagée via le volume jwt_keys)
+    # est donc nécessaire.
+    public_key: '%env(resolve:JWT_PUBLIC_KEY)%'

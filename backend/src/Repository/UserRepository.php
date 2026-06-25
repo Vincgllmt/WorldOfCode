@@ -153,7 +153,8 @@ class UserRepository extends ServiceEntityRepository
         ?string $dateFrom = null,
         ?string $dateTo = null,
         string $sortField = 'creationDate',
-        string $sortDir = 'DESC'
+        string $sortDir = 'DESC',
+        ?bool $isBanned = null,
     ): array {
         $sortDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
 
@@ -181,6 +182,11 @@ class UserRepository extends ServiceEntityRepository
                  ->setParameter('dateTo', new \DateTime($dateTo . ' 23:59:59'));
         }
 
+        if ($isBanned !== null) {
+            $base->andWhere('u.isBanned = :isBanned')
+                 ->setParameter('isBanned', $isBanned);
+        }
+
         $total = (int) (clone $base)
             ->select('COUNT(DISTINCT u.id)')
             ->getQuery()
@@ -194,8 +200,10 @@ class UserRepository extends ServiceEntityRepository
                 'u.role',
                 'u.creationDate',
                 'u.avatarUrl',
+                'u.isBanned',
                 'COUNT(DISTINCT p.id) AS postCount',
-                'COUNT(DISTINCT f.id) AS followerCount'
+                'COUNT(DISTINCT f.id) AS followerCount',
+                '(SELECT COUNT(r.id) FROM App\Entity\Report r JOIN r.post rp WHERE rp.author = u) AS reportCount'
             )
             ->groupBy('u.id')
             ->setFirstResult(($page - 1) * $limit)
@@ -204,6 +212,7 @@ class UserRepository extends ServiceEntityRepository
         match ($sortField) {
             'postCount'     => $itemsQb->orderBy('postCount', $sortDir),
             'followerCount' => $itemsQb->orderBy('followerCount', $sortDir),
+            'reportCount'   => $itemsQb->orderBy('reportCount', $sortDir),
             'username'      => $itemsQb->orderBy('u.username', $sortDir),
             'email'         => $itemsQb->orderBy('u.email', $sortDir),
             'role'          => $itemsQb->orderBy('u.role', $sortDir),

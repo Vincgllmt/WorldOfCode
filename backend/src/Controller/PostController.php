@@ -25,6 +25,7 @@ use App\Enum\NotificationType;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Moderation\TextModerationService;
 use App\Service\Moderation\ContentRejectedException;
+use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
 
 #[Route('/api/post')]
 #[OA\Tag(name: 'Post')]
@@ -36,7 +37,8 @@ class PostController extends AbstractController
         private PostMapper $mapper,
         private NotificationService $notificationService,
         private EntityManagerInterface $em,
-        private TextModerationService $moderation
+        private TextModerationService $moderation,
+        private HtmlSanitizerInterface $appUserContent
     ) {}
 
     #[Route('', name: 'post_list', methods: ['GET'])]
@@ -169,6 +171,9 @@ class PostController extends AbstractController
             return $this->json(['error' => 'Missing content'], 400);
         }
 
+        // SEC-21 : sanitization HTML avant persistance (défense en profondeur)
+        $content = $this->appUserContent->sanitize($content);
+
         // Modération du contenu (rejet si severe / trop d'URLs suspectes)
         try {
             $this->moderation->checkOrThrow($content);
@@ -274,6 +279,8 @@ class PostController extends AbstractController
         if (array_key_exists('content', $data)) {
             // Modération avant écrasement du contenu existant
             if (is_string($content) && trim($content) !== '') {
+                // SEC-21 : sanitization HTML avant persistance
+                $content = $this->appUserContent->sanitize($content);
                 try {
                     $this->moderation->checkOrThrow($content);
                 } catch (ContentRejectedException $e) {
@@ -376,6 +383,11 @@ class PostController extends AbstractController
             }
         } else {
             $group = $original->getTechGroup();
+        }
+
+        // SEC-21 : sanitization HTML avant persistance
+        if (is_string($content)) {
+            $content = $this->appUserContent->sanitize($content);
         }
 
         $post = new Post();

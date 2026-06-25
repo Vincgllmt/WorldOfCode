@@ -36,13 +36,13 @@ database:
 
 env:
   PORT: "3001"
-  CORS_ORIGIN: "https://woc-prod.duckdns.org" 
+  CORS_ORIGIN: "https://worldofcode.duckdns.org" 
 
 ingress:
   enabled: true
   className: "traefik"
   hosts:
-    - host: api-woc-prod.duckdns.org
+    - host: api-worldofcode.duckdns.org
       paths:
         - path: /socket.io
           pathType: Prefix
