@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useRef, useState } from 'react'
+import { getCookie } from 'cookies-next'
 import { cn } from '@/lib/utils'
 import { Upload } from 'lucide-react'
 import { ALLOWED_AVATAR_TYPES, MAX_IMAGE_SIZE_MB } from '@/config/upload'
@@ -63,8 +64,12 @@ export default function AvatarPicker({ value, onChange, username = '' }: AvatarP
 
             const formData = new FormData()
             formData.append('file', file)
+            // /api/upload exige IS_AUTHENTICATED_FULLY : on joint le JWT s'il existe
+            // (absent pendant l'inscription, présent depuis le profil).
+            const token = getCookie('token')
             const res = await fetch(`${API_URL}/upload`, {
                 method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: formData,
             })
             if (!res.ok) {
