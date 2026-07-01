@@ -36,7 +36,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [mentorLoading, setMentorLoading] = useState(true)
 
   useEffect(() => {
-    fetchWithAuth(`/api/users/${userId}/mentor-profile`)
+    fetchWithAuth(`/users/${userId}/mentor-profile`)
       .then(r => r.ok ? r.json() : null)
       .then(data => setMentorProfile(data))
       .catch(() => setMentorProfile(null))
