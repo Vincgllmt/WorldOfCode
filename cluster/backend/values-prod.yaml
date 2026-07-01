@@ -1,7 +1,10 @@
 replicaCount: 3
 
 migrations:
+  # Migration inline dans le conteneur php-fpm désactivée : 3 replicas -> course.
   enabled: false
+  # Migration via Helm hook pre-install/pre-upgrade (Job unique). Voir templates/migration-job.yaml.
+  hook: true
 
 server:
   type: fpm
