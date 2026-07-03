@@ -25,3 +25,6 @@ cluster/iptv/
 !.env.exemple
 # Matériel de descellement Vault — conserver hors-bande, jamais dans git
 cluster/vault/vault-keys.*
+
+
+END-SESSION.md
