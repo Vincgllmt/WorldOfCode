@@ -9,7 +9,7 @@ use App\Entity\Challenge;
 use App\Entity\ChallengeTest as ChallengeTestEntity;
 use App\Security\ArenaUser;
 use App\Service\BadgeAwarderInterface;
-use App\Service\GameRunner;
+use App\Service\GameRunnerInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
@@ -113,7 +113,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testPlayAllCasesPassedReturnsPassed(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $runner->method('play')->willReturn($this->makePassedResult());
 
         $awarder = $this->createStub(BadgeAwarderInterface::class);
@@ -143,7 +143,7 @@ final class PlayControllerTest extends TestCase
     public function testPlayOneFailedCaseReturnsFailed(): void
     {
         $callCount = 0;
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $runner->method('play')->willReturnCallback(function () use (&$callCount): array {
             return [
                 'verdict'      => ++$callCount === 1 ? 'passed' : 'failed',
@@ -179,7 +179,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testPlayFailedStatusNeverCallsBadgeAwarder(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $runner->method('play')->willReturn([
             'verdict' => 'failed', 'score' => 0, 'replay' => null,
             'playerStdout' => '', 'playerStderr' => '', 'error' => null,
@@ -208,7 +208,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testRunTestsReturnsResultsWithoutPersisting(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $runner->method('play')->willReturn($this->makePassedResult());
 
         $repo = $this->createStub(EntityRepository::class);
@@ -235,7 +235,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testRunTestsSingleIndexRunsOnlyThatCase(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $runner->method('play')->willReturn($this->makePassedResult());
 
         $response = $this->makeController(new ArenaUser(self::NINES_ID, self::NINES_USERNAME))->runTests(
@@ -258,7 +258,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testPlayWithoutRefereeReturns422(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -278,7 +278,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testPlayMissingLanguageReturnsBadRequest(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -297,7 +297,7 @@ final class PlayControllerTest extends TestCase
      */
     public function testPlayUnsupportedLanguageReturnsBadRequest(): void
     {
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -318,7 +318,7 @@ final class PlayControllerTest extends TestCase
     {
         $this->expectException(NotFoundHttpException::class);
 
-        $runner = $this->createStub(GameRunner::class);
+        $runner = $this->createStub(GameRunnerInterface::class);
         $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
