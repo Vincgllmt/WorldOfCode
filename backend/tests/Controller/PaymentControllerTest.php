@@ -3,9 +3,12 @@
 namespace App\Tests\Controller;
 
 use App\Controller\PaymentController;
+use App\Entity\MentorProfile;
 use App\Entity\User;
 use App\Enum\UserRole;
+use App\Repository\MentorProfileRepository;
 use App\Repository\UserRepository;
+use App\Service\StripeConnectService;
 use App\Service\StripeService;
 use PHPUnit\Framework\TestCase;
 use Stripe\PaymentIntent;
@@ -20,7 +23,7 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
  * 🎮 Disco Elysium - Tests unitaires du PaymentController
  *
  * HarryDuBois  = utilisateur authentifié (le payeur)
- * KimKitsuragi = mentor (le destinataire du paiement)
+ * KimKitsuragi = mentor (le destinataire du paiement, rigoureusement onboardé)
  */
 class PaymentControllerTest extends TestCase
 {
@@ -43,6 +46,16 @@ class PaymentControllerTest extends TestCase
         $user->onCreate();
 
         return $user;
+    }
+
+    private function buildOnboardedMentorProfile(User $mentor, string $stripeAccountId = 'acct_kim123'): MentorProfile
+    {
+        $profile = new MentorProfile();
+        $profile->setUser($mentor)
+            ->setStripeAccountId($stripeAccountId)
+            ->setStripeTransfersEnabled(true);
+
+        return $profile;
     }
 
     private function makeContainer(User $currentUser, bool $isGranted = true): ContainerInterface
@@ -74,12 +87,16 @@ class PaymentControllerTest extends TestCase
     private function makeController(
         User $currentUser,
         ?StripeService $stripeService = null,
+        ?StripeConnectService $connectService = null,
         ?UserRepository $userRepository = null,
+        ?MentorProfileRepository $mentorProfileRepo = null,
         bool $isGranted = true,
     ): PaymentController {
         $controller = new PaymentController(
-            $stripeService   ?? $this->createMock(StripeService::class),
-            $userRepository  ?? $this->createMock(UserRepository::class),
+            $stripeService     ?? $this->createMock(StripeService::class),
+            $connectService    ?? $this->createMock(StripeConnectService::class),
+            $userRepository    ?? $this->createMock(UserRepository::class),
+            $mentorProfileRepo ?? $this->createMock(MentorProfileRepository::class),
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isGranted));
@@ -102,165 +119,233 @@ class PaymentControllerTest extends TestCase
     }
 
     // ======================================================================
-    //  createIntent()
+    //  createIntent() — cas nominal
     // ======================================================================
 
     public function testCreateIntentReturnsClientSecretAndIntentId(): void
     {
-        $harry = $this->buildUser(1);
-        $kim   = $this->buildUser(2, 'KimKitsuragi');
-
-        $intent = $this->makeFakeIntent('pi_abc123', 'secret_xyz');
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $intent  = $this->makeFakeIntent('pi_abc123', 'secret_xyz');
 
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->method('createPaymentIntent')->willReturn($intent);
 
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('calculateApplicationFee')->willReturn(725);
+
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->with(2)->willReturn($kim);
 
-        $request  = $this->makeRequest(['mentor_id' => 2, 'amount' => 5000]);
-        $response = $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $response = $this->makeController($harry, $stripeService, $connectService, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 5000]));
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('secret_xyz', $payload['client_secret']);
         $this->assertSame('pi_abc123', $payload['payment_intent_id']);
+        $this->assertSame(725, $payload['application_fee_cents']);
     }
 
-    public function testCreateIntentPassesCorrectCurrencyToStripe(): void
+    public function testCreateIntentPassesDestinationAccountAndFeeToStripeService(): void
     {
-        $harry = $this->buildUser(1);
-        $kim   = $this->buildUser(2, 'KimKitsuragi');
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim, 'acct_kim_connect');
 
-        $intent = $this->makeFakeIntent();
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('calculateApplicationFee')->willReturn(700);
 
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->expects($this->once())
             ->method('createPaymentIntent')
-            ->with($harry, $kim, 3000, 'usd')
-            ->willReturn($intent);
+            ->with($harry, $kim, 5000, 'eur', 'acct_kim_connect', 700)
+            ->willReturn($this->makeFakeIntent());
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->willReturn($kim);
 
-        $request  = $this->makeRequest(['mentor_id' => 2, 'amount' => 3000, 'currency' => 'usd']);
-        $response = $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
 
-        $this->assertSame(200, $response->getStatusCode());
+        $this->makeController($harry, $stripeService, $connectService, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 5000]));
     }
 
     public function testCreateIntentUsesEurAsDefaultCurrency(): void
     {
-        $harry = $this->buildUser(1);
-        $kim   = $this->buildUser(2, 'KimKitsuragi');
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
 
-        $intent = $this->makeFakeIntent();
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('calculateApplicationFee')->willReturn(700);
 
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->expects($this->once())
             ->method('createPaymentIntent')
-            ->with($harry, $kim, 1000, 'eur')
-            ->willReturn($intent);
+            ->with($harry, $kim, 5000, 'eur', $this->anything(), $this->anything())
+            ->willReturn($this->makeFakeIntent());
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->willReturn($kim);
 
-        $request  = $this->makeRequest(['mentor_id' => 2, 'amount' => 1000]);
-        $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $this->makeController($harry, $stripeService, $connectService, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 5000]));
     }
+
+    public function testCreateIntentAcceptsMinimumAmount(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('calculateApplicationFee')->willReturn(32);
+
+        $stripeService = $this->createMock(StripeService::class);
+        $stripeService->method('createPaymentIntent')->willReturn($this->makeFakeIntent());
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($kim);
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $response = $this->makeController($harry, $stripeService, $connectService, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 50]));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    // ======================================================================
+    //  createIntent() — validations d'entrée
+    // ======================================================================
 
     public function testCreateIntentReturns400WhenMentorIdIsMissing(): void
     {
-        $harry = $this->buildUser(1);
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
 
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->expects($this->never())->method('createPaymentIntent');
-
-        $request  = $this->makeRequest(['amount' => 5000]);
-        $response = $this->makeController($harry, $stripeService)->createIntent($request);
+        $response = $this->makeController($harry, $stripe)
+            ->createIntent($this->makeRequest(['amount' => 5000]));
 
         $this->assertSame(400, $response->getStatusCode());
-        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertArrayHasKey('error', $payload);
+        $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
     }
 
     public function testCreateIntentReturns400WhenAmountIsMissing(): void
     {
-        $harry = $this->buildUser(1);
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
 
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->expects($this->never())->method('createPaymentIntent');
-
-        $request  = $this->makeRequest(['mentor_id' => 2]);
-        $response = $this->makeController($harry, $stripeService)->createIntent($request);
+        $response = $this->makeController($harry, $stripe)
+            ->createIntent($this->makeRequest(['mentor_id' => 2]));
 
         $this->assertSame(400, $response->getStatusCode());
     }
 
     public function testCreateIntentReturns400WhenAmountIsBelowMinimum(): void
     {
-        $harry = $this->buildUser(1);
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
 
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->expects($this->never())->method('createPaymentIntent');
-
-        $request  = $this->makeRequest(['mentor_id' => 2, 'amount' => 49]);
-        $response = $this->makeController($harry, $stripeService)->createIntent($request);
+        $response = $this->makeController($harry, $stripe)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 49]));
 
         $this->assertSame(400, $response->getStatusCode());
     }
 
-    public function testCreateIntentAcceptsMinimumAmount(): void
-    {
-        $harry = $this->buildUser(1);
-        $kim   = $this->buildUser(2, 'KimKitsuragi');
-
-        $userRepo = $this->createMock(UserRepository::class);
-        $userRepo->method('find')->willReturn($kim);
-
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->method('createPaymentIntent')->willReturn($this->makeFakeIntent());
-
-        $request  = $this->makeRequest(['mentor_id' => 2, 'amount' => 50]);
-        $response = $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
-
-        $this->assertSame(200, $response->getStatusCode());
-    }
+    // ======================================================================
+    //  createIntent() — validations métier
+    // ======================================================================
 
     public function testCreateIntentReturns404WhenMentorNotFound(): void
     {
-        $harry = $this->buildUser(1);
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->willReturn(null);
 
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->expects($this->never())->method('createPaymentIntent');
-
-        $request  = $this->makeRequest(['mentor_id' => 999, 'amount' => 5000]);
-        $response = $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
+        $response = $this->makeController($harry, $stripe, null, $userRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 999, 'amount' => 5000]));
 
         $this->assertSame(404, $response->getStatusCode());
-        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertArrayHasKey('error', $payload);
+        $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
     }
 
-    public function testCreateIntentReturns400WhenPayerAndMentorAreSame(): void
+    public function testCreateIntentReturns400WhenPayerAndMentorAreSameUser(): void
     {
-        $harry = $this->buildUser(1);
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
 
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('find')->willReturn($harry);
 
-        $stripeService = $this->createMock(StripeService::class);
-        $stripeService->expects($this->never())->method('createPaymentIntent');
-
-        $request  = $this->makeRequest(['mentor_id' => 1, 'amount' => 5000]);
-        $response = $this->makeController($harry, $stripeService, $userRepo)->createIntent($request);
+        $response = $this->makeController($harry, $stripe, null, $userRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 1, 'amount' => 5000]));
 
         $this->assertSame(400, $response->getStatusCode());
-        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
-        $this->assertArrayHasKey('error', $payload);
+        $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    public function testCreateIntentReturns400WhenMentorHasNoMentorProfile(): void
+    {
+        $harry  = $this->buildUser(1);
+        $kim    = $this->buildUser(2, 'KimKitsuragi');
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($kim);
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn(null); // pas de profil mentor
+
+        $response = $this->makeController($harry, $stripe, null, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 5000]));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    public function testCreateIntentReturns400WhenMentorTransfersNotEnabled(): void
+    {
+        $harry  = $this->buildUser(1);
+        $kim    = $this->buildUser(2, 'KimKitsuragi');
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        // Profil mentor existe mais onboarding non terminé
+        $profile = new MentorProfile();
+        $profile->setUser($kim)
+            ->setStripeAccountId('acct_pending')
+            ->setStripeTransfersEnabled(false);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('find')->willReturn($kim);
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $response = $this->makeController($harry, $stripe, null, $userRepo, $mentorRepo)
+            ->createIntent($this->makeRequest(['mentor_id' => 2, 'amount' => 5000]));
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
     }
 
     // ======================================================================
@@ -297,7 +382,6 @@ class PaymentControllerTest extends TestCase
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->method('constructWebhookEvent')
             ->willThrowException(SignatureVerificationException::factory('bad sig', 'payload'));
-
         $stripeService->expects($this->never())->method('handleEvent');
 
         $request = new Request();
@@ -316,12 +400,9 @@ class PaymentControllerTest extends TestCase
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->method('constructWebhookEvent')
             ->willThrowException(new \UnexpectedValueException('bad payload'));
-
         $stripeService->expects($this->never())->method('handleEvent');
 
-        $request = new Request();
-
-        $response = $this->makeController($harry, $stripeService)->webhook($request);
+        $response = $this->makeController($harry, $stripeService)->webhook(new Request());
 
         $this->assertSame(400, $response->getStatusCode());
         $this->assertSame('Invalid payload', $response->getContent());

@@ -76,6 +76,8 @@ docker compose exec backend composer run tests
 | **S3StorageTest**                  | ⛏️ **Minecraft**            | SteveBuilder<br>HerobrineVoid                    | (mock - hashed)                       |
 | **GroupSuggestionControllerTest**  | 🎭 **The Witcher 3**        | GeraltRivia<br>YenneferVengerberg                | (mock - hashed)                       |
 | **PaymentControllerTest**          | 🕵️ **Disco Elysium**       | HarryDuBois<br>KimKitsuragi                      | (mock - hashed)                       |
+| **StripeConnectControllerTest**    | 🃏 **Persona 5**            | JokerRen<br>MorganaThief                         | (mock - hashed)                       |
+| **StripeConnectServiceTest**       | 🤠 **Red Dead Redemption 2**| ArthurMorgan<br>DutchVanDerLinde                 | (mock - hashed)                       |
 | **StripeServiceTest**              | ⚙️ **Factorio**             | EngineerBuilder<br>BitersHorde                   | (mock - hashed)                       |
 | **FeedControllerTest**             | 🔬 **Portal**               | Chell                                            | (mock - hashed)                       |
 | **FeedServiceTest**                | 🌾 **Stardew Valley**       | Farmer<br>Penny                                  | (mock - hashed)                       |
@@ -130,6 +132,6 @@ private $userData = [
 
 ---
 
-*Dernière mise à jour : 23 avril 2026*
+*Dernière mise à jour : 25 juin 2026*
 
 *"Un bon test est un test qui raconte une histoire" - The Tester's Creed*

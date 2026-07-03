@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Repository\MentorProfileRepository;
 use App\Repository\UserRepository;
+use App\Service\StripeConnectService;
 use App\Service\StripeService;
 use Stripe\Exception\SignatureVerificationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,11 +21,13 @@ class PaymentController extends AbstractController
 {
     public function __construct(
         private StripeService $stripeService,
+        private StripeConnectService $connectService,
         private UserRepository $userRepository,
+        private MentorProfileRepository $mentorProfileRepository,
     ) {}
 
     /**
-     * Crée un PaymentIntent pour payer un mentor.
+     * Crée un PaymentIntent (destination charge) pour payer un mentor.
      *
      * Body JSON : { "mentor_id": int, "amount": int (centimes), "currency": string }
      */
@@ -43,7 +47,7 @@ class PaymentController extends AbstractController
         ),
         responses: [
             new OA\Response(response: 200, description: 'client_secret du PaymentIntent'),
-            new OA\Response(response: 400, description: 'Paramètres invalides'),
+            new OA\Response(response: 400, description: 'Paramètres invalides ou mentor non onboardé'),
             new OA\Response(response: 404, description: 'Mentor introuvable'),
         ]
     )]
@@ -72,11 +76,25 @@ class PaymentController extends AbstractController
             return $this->json(['error' => 'Vous ne pouvez pas vous payer vous-même.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $intent = $this->stripeService->createPaymentIntent($payer, $mentor, (int) $amount, $currency);
+        $mentorProfile = $this->mentorProfileRepository->findOneBy(['user' => $mentor]);
+        if (!$mentorProfile || !$mentorProfile->isStripeTransfersEnabled()) {
+            return $this->json(['error' => 'Ce mentor n\'a pas encore configuré son compte de paiement.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $fee    = $this->connectService->calculateApplicationFee((int) $amount);
+        $intent = $this->stripeService->createPaymentIntent(
+            $payer,
+            $mentor,
+            (int) $amount,
+            $currency,
+            $mentorProfile->getStripeAccountId(),
+            $fee,
+        );
 
         return $this->json([
-            'client_secret'     => $intent->client_secret,
-            'payment_intent_id' => $intent->id,
+            'client_secret'          => $intent->client_secret,
+            'payment_intent_id'      => $intent->id,
+            'application_fee_cents'  => $fee,
         ]);
     }
 
