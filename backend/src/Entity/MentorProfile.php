@@ -47,6 +47,12 @@ class MentorProfile
     #[ORM\Column(type: 'float', nullable: true)]
     private ?float $reliabilityRate = null;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true, unique: true)]
+    private ?string $stripeAccountId = null;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $stripeTransfersEnabled = false;
+
     #[ORM\Column(name: 'created_at', type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -179,6 +185,28 @@ class MentorProfile
     public function setReliabilityRate(?float $reliabilityRate): self
     {
         $this->reliabilityRate = $reliabilityRate;
+        return $this;
+    }
+
+    public function getStripeAccountId(): ?string
+    {
+        return $this->stripeAccountId;
+    }
+
+    public function setStripeAccountId(?string $id): self
+    {
+        $this->stripeAccountId = $id;
+        return $this;
+    }
+
+    public function isStripeTransfersEnabled(): bool
+    {
+        return $this->stripeTransfersEnabled;
+    }
+
+    public function setStripeTransfersEnabled(bool $enabled): self
+    {
+        $this->stripeTransfersEnabled = $enabled;
         return $this;
     }
 

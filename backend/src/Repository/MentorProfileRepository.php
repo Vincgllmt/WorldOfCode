@@ -22,6 +22,11 @@ class MentorProfileRepository extends ServiceEntityRepository
         }
     }
 
+    public function findByStripeAccountId(string $stripeAccountId): ?MentorProfile
+    {
+        return $this->findOneBy(['stripeAccountId' => $stripeAccountId]);
+    }
+
     public function remove(MentorProfile $entity, bool $flush = true): void
     {
         $this->getEntityManager()->remove($entity);
