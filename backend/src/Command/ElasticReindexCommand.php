@@ -41,12 +41,14 @@ class ElasticReindexCommand extends Command
     protected function configure(): void
     {
         $this->addOption('entity', null, InputOption::VALUE_REQUIRED, 'Entité à réindexer (posts, users, groups, all)', 'all');
+        $this->addOption('purge', null, InputOption::VALUE_NONE, "Supprime et recrée l'index avant réindexation (purge les documents fantômes désynchronisés de la DB)");
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $entity = $input->getOption('entity');
+        $purge = (bool) $input->getOption('purge');
 
         if (!in_array($entity, self::SUPPORTED, true)) {
             $io->error(sprintf('Entité inconnue : "%s". Valeurs supportées : %s.', $entity, implode(', ', self::SUPPORTED)));
@@ -56,9 +58,9 @@ class ElasticReindexCommand extends Command
         $targets = $entity === 'all' ? ['posts', 'users', 'groups'] : [$entity];
         foreach ($targets as $target) {
             $result = match ($target) {
-                'posts'  => $this->reindex($io, 'posts',  $this->postRepository,  fn($b) => $this->postIndexer->bulkIndex($b),  fn() => $this->postIndexer->createIndexIfNotExists()),
-                'users'  => $this->reindex($io, 'users',  $this->userRepository,  fn($b) => $this->userIndexer->bulkIndex($b),  fn() => $this->userIndexer->createIndexIfNotExists()),
-                'groups' => $this->reindex($io, 'groups', $this->groupRepository, fn($b) => $this->groupIndexer->bulkIndex($b), fn() => $this->groupIndexer->createIndexIfNotExists()),
+                'posts'  => $this->reindex($io, 'posts',  $this->postRepository,  fn($b) => $this->postIndexer->bulkIndex($b),  fn() => $this->postIndexer->createIndexIfNotExists(),  fn() => $this->postIndexer->dropIndex(),  $purge),
+                'users'  => $this->reindex($io, 'users',  $this->userRepository,  fn($b) => $this->userIndexer->bulkIndex($b),  fn() => $this->userIndexer->createIndexIfNotExists(),  fn() => $this->userIndexer->dropIndex(),  $purge),
+                'groups' => $this->reindex($io, 'groups', $this->groupRepository, fn($b) => $this->groupIndexer->bulkIndex($b), fn() => $this->groupIndexer->createIndexIfNotExists(), fn() => $this->groupIndexer->dropIndex(), $purge),
             };
             if ($result !== Command::SUCCESS) {
                 return $result;
@@ -71,9 +73,13 @@ class ElasticReindexCommand extends Command
     /**
      * @param callable(iterable<object>): int $bulkIndexer
      * @param callable(): bool $ensureIndex
+     * @param callable(): bool $dropIndex
      */
-    private function reindex(SymfonyStyle $io, string $label, EntityRepository $repository, callable $bulkIndexer, callable $ensureIndex): int
+    private function reindex(SymfonyStyle $io, string $label, EntityRepository $repository, callable $bulkIndexer, callable $ensureIndex, callable $dropIndex, bool $purge): int
     {
+        if ($purge && $dropIndex()) {
+            $io->note(sprintf('Index "%s" supprimé (purge).', $label));
+        }
         $ensureIndex();
 
         $total = (int) $repository->createQueryBuilder('e')
