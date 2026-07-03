@@ -36,6 +36,7 @@ final class SyncGamesCommandTest extends TestCase
         file_put_contents($game . '/input.txt', 'LE_INPUT');
     }
 
+
     protected function tearDown(): void
     {
         $this->rrmdir($this->projectDir);
@@ -79,6 +80,83 @@ final class SyncGamesCommandTest extends TestCase
         $badges = array_values(array_filter($persisted, static fn ($e) => $e instanceof Badge));
         self::assertCount(1, $badges);
         self::assertSame('first_solve', $badges[0]->getCode());
+    }
+
+    public function testSyncLoadsMultipleTestFilesFromTestsDirectory(): void
+    {
+        // Crée un second jeu avec un dossier tests/ contenant plusieurs cas.
+        $game = $this->projectDir . '/games/multi';
+        mkdir($game . '/tests', 0o777, true);
+
+        file_put_contents($game . '/game.json', json_encode([
+            'title'           => 'Multi',
+            'difficulty'      => 'hard',
+            'languages'       => ['python'],
+            'maxScore'        => 100,
+            'refereeLanguage' => 'python',
+            'badges'          => [],
+        ]));
+        file_put_contents($game . '/statement.md', '');
+        file_put_contents($game . '/referee.py', 'pass');
+        file_put_contents($game . '/tests/01.txt', 'INPUT_1');
+        file_put_contents($game . '/tests/02.txt', 'INPUT_2');
+        file_put_contents($game . '/tests/03.txt', 'INPUT_3');
+
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $repo = $this->createStub(EntityRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repo);
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        // Filtre uniquement les ChallengeTest du jeu "multi" (ceux avec stdin non null)
+        $testCases = array_values(array_filter(
+            $persisted,
+            static fn ($e) => $e instanceof ChallengeTest && in_array($e->getStdin(), ['INPUT_1', 'INPUT_2', 'INPUT_3'], true),
+        ));
+
+        self::assertCount(3, $testCases);
+
+        $stdins = array_map(static fn ($t) => $t->getStdin(), $testCases);
+        sort($stdins);
+        self::assertSame(['INPUT_1', 'INPUT_2', 'INPUT_3'], $stdins);
+    }
+
+    public function testSyncSkipsDirectoryWithoutGameJson(): void
+    {
+        // Crée un dossier sans game.json
+        $empty = $this->projectDir . '/games/no-meta';
+        mkdir($empty, 0o777, true);
+
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $repo = $this->createStub(EntityRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repo);
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        // Seul le jeu "sample" (de setUp) doit avoir été persisté, pas "no-meta".
+        $challenges = array_values(array_filter($persisted, static fn ($e) => $e instanceof Challenge));
+        self::assertCount(1, $challenges);
+        self::assertSame('sample', $challenges[0]->getSlug());
     }
 
     private function rrmdir(string $dir): void

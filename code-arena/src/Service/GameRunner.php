@@ -13,7 +13,7 @@ namespace App\Service;
  *
  * Le backend ne connaît AUCUN jeu : toute la logique vit dans le referee (par défi).
  */
-final class GameRunner
+final class GameRunner implements GameRunnerInterface
 {
     public function __construct(private readonly PistonClientInterface $piston)
     {

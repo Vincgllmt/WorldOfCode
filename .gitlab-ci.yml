@@ -231,3 +231,66 @@ coverage:backend:
       changes:
         - backend/**/*
   allow_failure: false
+
+# ===================================
+# JOB 3: COVERAGE (Code Arena Symfony)
+# ===================================
+coverage:code-arena:
+  stage: test
+  image: php:8.4-cli
+  cache:
+    key:
+      files:
+        - code-arena/composer.lock
+    paths:
+      - code-arena/vendor/
+  before_script:
+    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev openssl bc
+    - docker-php-ext-install zip pdo pdo_sqlite
+    - pecl install xdebug
+    - docker-php-ext-enable xdebug
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - cd code-arena
+    - composer install --no-interaction --prefer-dist --optimize-autoloader
+    # Générer une paire de clés RSA de test pour lexik JWT (validation only en prod)
+    - mkdir -p config/jwt
+    - openssl genrsa -out config/jwt/private.pem 2048 2>/dev/null
+    - openssl rsa -in config/jwt/private.pem -pubout -out config/jwt/public.pem 2>/dev/null
+  script:
+    - echo "🧪 Running PHPUnit Code Arena with Coverage..."
+    - |
+      XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-text --colors=never 2>&1 | tee coverage-output.txt
+      EXIT_CODE=${PIPESTATUS[0]}
+    - cat coverage-output.txt
+    - |
+      if [ $EXIT_CODE -ne 0 ]; then
+        if grep -iE "(FAILURES|ERRORS|Exception|Fatal error)" coverage-output.txt; then
+          echo "❌ Tests PHPUnit Code Arena ont échoué"
+          exit 1
+        fi
+      fi
+    - |
+      COVERAGE=$(grep -oP '^\s*Lines:\s*\K[\d.]+' coverage-output.txt | head -1)
+      if [ -z "$COVERAGE" ]; then
+        echo "⚠️  Impossible d'extraire le pourcentage de coverage"
+        exit 1
+      fi
+      echo "📊 Coverage Lines: ${COVERAGE}%"
+      if [ "$(echo "$COVERAGE < 80" | bc -l)" -eq 1 ]; then
+        echo "❌ Coverage insuffisant: ${COVERAGE}% < 80% requis"
+        exit 1
+      fi
+      echo "✅ Coverage Code Arena OK: ${COVERAGE}%"
+  coverage: '/^\s*Lines:\s*\d+\.\d+\%/'
+  artifacts:
+    paths:
+      - code-arena/coverage-output.txt
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - code-arena/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - code-arena/**/*
+  allow_failure: false

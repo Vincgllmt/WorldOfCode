@@ -28,6 +28,18 @@ class PostIndexer
         return true;
     }
 
+    /**
+     * Supprime l'index s'il existe (purge des documents fantômes avant réindexation).
+     */
+    public function dropIndex(): bool
+    {
+        if (!$this->elasticClient->indexExists(self::INDEX)) {
+            return false;
+        }
+        $this->elasticClient->deleteIndex(self::INDEX);
+        return true;
+    }
+
     public function index(Post $post): void
     {
         if ($post->getId() === null) {

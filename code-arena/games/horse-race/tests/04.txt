@@ -1,0 +1,6 @@
+500 5
+Champion 30 10
+Endurance 15 50
+Sprint 50 5
+Regulier 20 30
+Tortue 10 200

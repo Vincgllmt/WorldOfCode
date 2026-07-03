@@ -62,6 +62,15 @@ services:
       $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
       $stripeWebhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'
 
+  App\Service\StripeConnectService:
+    arguments:
+      $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
+      $stripeReturnUrl: '%env(STRIPE_CONNECT_RETURN_URL)%'
+      $stripeRefreshUrl: '%env(STRIPE_CONNECT_REFRESH_URL)%'
+      $platformFeeRate: '%env(float:STRIPE_PLATFORM_FEE_RATE)%'
+      $stripeFeeRate: '%env(float:STRIPE_FEE_RATE)%'
+      $stripeFeeFixedCents: '%env(int:STRIPE_FEE_FIXED_CENTS)%'
+
   App\Service\Elasticsearch\ElasticClient:
     arguments:
       $host: '%env(ELASTICSEARCH_HOST)%'

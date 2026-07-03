@@ -52,6 +52,11 @@ const coverFor = (slug: string) => {
   return COVERS[h % COVERS.length]
 }
 
+// Covers locales (public/) utilisées en secours quand le back ne fournit pas d'image.
+const LOCAL_COVERS: Record<string, string> = {
+  'horse-race': '/games/horse/horse.png',
+}
+
 // Médailles de podium (or / argent / bronze) : chips sémantiques auto-portants.
 const RANK_BADGE = [
   'bg-[#F6C84C] text-[#5A3D00]',
@@ -353,6 +358,7 @@ export default function ArenaPage() {
         ) : (
           filtered.map((challenge) => {
             const cover = coverFor(challenge.slug)
+            const coverImage = challenge.image ?? LOCAL_COVERS[challenge.slug] ?? null
             return (
               <Link
                 key={challenge.id}
@@ -361,9 +367,9 @@ export default function ArenaPage() {
               >
                 {/* Cover plein-cadre (vignette du jeu) */}
                 <div className="relative h-[250px]">
-                  {challenge.image ? (
+                  {coverImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={challenge.image} alt={challenge.title} className="absolute inset-0 h-full w-full object-cover" />
+                    <img src={coverImage} alt={challenge.title} className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
                     <div className="absolute inset-0" style={{ background: cover.bg }} />
                   )}
@@ -376,7 +382,7 @@ export default function ArenaPage() {
                     }}
                   />
                   {/* Glyphe */}
-                  {!challenge.image && (
+                  {!coverImage && (
                     <div className="absolute inset-0 flex items-center justify-center font-mono text-[72px] font-bold text-white/25">
                       {cover.glyph}
                     </div>

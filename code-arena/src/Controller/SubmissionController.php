@@ -8,8 +8,8 @@ use App\Entity\Challenge;
 use App\Entity\ChallengeTest;
 use App\Entity\Submission;
 use App\Security\ArenaUser;
-use App\Service\BadgeAwarder;
-use App\Service\PistonService;
+use App\Service\BadgeAwarderInterface;
+use App\Service\PistonClientInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,8 +20,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SubmissionController extends AbstractController
 {
     public function __construct(
-        private readonly PistonService $piston,
-        private readonly BadgeAwarder $badgeAwarder,
+        private readonly PistonClientInterface $piston,
+        private readonly BadgeAwarderInterface $badgeAwarder,
     ) {}
 
     #[Route('/api/arena/challenges/{slug}/submit', name: 'arena_submit', methods: ['POST'])]

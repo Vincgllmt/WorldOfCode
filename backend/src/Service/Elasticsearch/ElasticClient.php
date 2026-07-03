@@ -51,6 +51,11 @@ class ElasticClient
         return $this->getClient()->indices()->exists(['index' => $index])->getStatusCode() === 200;
     }
 
+    public function deleteIndex(string $index): void
+    {
+        $this->getClient()->indices()->delete(['index' => $index]);
+    }
+
     /**
      * @param array<string, mixed> $body
      */
