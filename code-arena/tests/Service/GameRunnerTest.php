@@ -89,4 +89,31 @@ final class GameRunnerTest extends TestCase
         self::assertNull($result['replay']);
         self::assertNotNull($result['error']);
     }
+
+    public function testPlayerStdoutAndStderrAreForwardedInResult(): void
+    {
+        $referee = [
+            'stdout' => json_encode(['verdict' => 'failed', 'score' => 0, 'replay' => ['init' => [], 'frames' => []]]),
+            'stderr' => '',
+            'exitCode' => 0,
+            'timedOut' => false,
+        ];
+
+        $runner = new GameRunner($this->pistonReturning('PLAYER_OUT', $referee));
+        $result = $runner->play('python', 'print(1)', 'GAME_INPUT', 'python', 'REFEREE_CODE');
+
+        self::assertSame('PLAYER_OUT', $result['playerStdout']);
+        self::assertSame('', $result['playerStderr']);
+    }
+
+    public function testRefereeErrorMessageContainsRefereeStderr(): void
+    {
+        $referee = ['stdout' => '', 'stderr' => 'SyntaxError: unexpected token', 'exitCode' => 1, 'timedOut' => false];
+
+        $runner = new GameRunner($this->pistonReturning('', $referee));
+        $result = $runner->play('python', 'print(1)', 'GAME_INPUT', 'python', 'REFEREE_CODE');
+
+        self::assertSame('error', $result['verdict']);
+        self::assertStringContainsString('SyntaxError: unexpected token', (string) $result['error']);
+    }
 }

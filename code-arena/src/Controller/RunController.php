@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Service\PistonService;
+use App\Service\PistonClientInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,7 +18,7 @@ final class RunController extends AbstractController
 {
     private const SUPPORTED_LANGUAGES = ['javascript', 'php', 'python', 'java', 'cpp', 'typescript'];
 
-    public function __construct(private readonly PistonService $piston) {}
+    public function __construct(private readonly PistonClientInterface $piston) {}
 
     #[Route('/api/arena/run', name: 'arena_run', methods: ['POST'])]
     public function run(Request $request): JsonResponse

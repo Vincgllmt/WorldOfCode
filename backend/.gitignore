@@ -31,3 +31,5 @@ coverage-output.txt
 /config/jwt/private.pem
 /config/jwt/public.pem
 
+/config/reference.php
+
