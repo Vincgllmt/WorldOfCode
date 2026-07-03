@@ -1,0 +1,12 @@
+{
+  "title": "Course de Chevaux",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 100,
+  "image": null,
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Pari gagnant", "description": "Prédire correctement l'ordre d'arrivée pour la première fois." },
+    { "code": "perfect", "name": "Pronostic parfait", "description": "Réussir tous les cas de course." }
+  ]
+}

@@ -82,6 +82,20 @@ docker compose exec backend composer run tests
 | **LoginNotificationServiceTest**   | 🔍 **Watch Dogs**           | AidenPearce<br>ClaraLille                        | (mock - hashed)                       |
 | **TrustedDeviceServiceTest**       | 🕵️ **Hitman**              | Agent47<br>DianaWinterbottom                     | (mock - hashed)                       |
 
+#### Code Arena (`code-arena/tests/`)
+
+| Fichier de Test                    | 🎮 Jeu Vidéo                    | Utilisateur(s)                    | Mot(s) de Passe  |
+|------------------------------------|---------------------------------|-----------------------------------|------------------|
+| **ArenaUserTest**                  | 🦔 **Sonic the Hedgehog**       | SonicMobian<br>TailsMiles<br>KnucklesEchidna | (sans auth) |
+| **ArenaUserProviderTest**          | 🍄 **Super Mario Bros**         | MarioBros<br>BowserKoopa          | (sans auth)      |
+| **HealthControllerTest**           | 🏗️ **Terraria**                | (sans auth)                       | —                |
+| **RunControllerTest**              | 🏃 **Mirror's Edge**            | FaithConnors                      | (unit — ContainerInterface mock) |
+| **ChallengeControllerTest**        | 🔮 **Fez**                      | GomezFez                          | (unit — ContainerInterface mock) |
+| **BadgeControllerTest**            | 🌿 **Ori and the Blind Forest** | OriBeinLight                      | (unit — no container) |
+| **LeaderboardControllerTest**      | 🥊 **Street Fighter II**        | RyuHadouken<br>KenMasters         | (unit — ContainerInterface mock) |
+| **SubmissionControllerTest**       | 🌸 **Celeste**                  | MadelineVardas                    | (unit — ContainerInterface mock) |
+| **PlayControllerTest**             | 🤖 **NieR: Automata**           | TwoBWraith<br>NineSSentinel       | (unit — ContainerInterface mock) |
+
 ### Comment Choisir une Référence ?
 
 Lors de la création d'un nouveau test :

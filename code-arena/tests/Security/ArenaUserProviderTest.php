@@ -10,6 +10,12 @@ use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
+/**
+ * 🍄 Super Mario Bros — ArenaUserProvider
+ *
+ * MarioBros  = utilisateur admin existant en base.
+ * BowserKoopa = identifiant absent de la base (devrait lever UserNotFoundException).
+ */
 final class ArenaUserProviderTest extends TestCase
 {
     public function testLoadsUserFromDatabaseRow(): void
@@ -17,15 +23,15 @@ final class ArenaUserProviderTest extends TestCase
         $connection = $this->createStub(Connection::class);
         $connection->method('fetchAssociative')->willReturn([
             'id' => '7',
-            'username' => 'alice',
+            'username' => 'MarioBros',
             'role' => 'ROLE_ADMIN',
         ]);
 
-        $user = (new ArenaUserProvider($connection))->loadUserByIdentifier('alice');
+        $user = (new ArenaUserProvider($connection))->loadUserByIdentifier('MarioBros');
 
         self::assertInstanceOf(ArenaUser::class, $user);
         self::assertSame(7, $user->getId());
-        self::assertSame('alice', $user->getUserIdentifier());
+        self::assertSame('MarioBros', $user->getUserIdentifier());
         self::assertContains('ROLE_ADMIN', $user->getRoles());
         self::assertContains('ROLE_USER', $user->getRoles()); // toujours présent
     }
@@ -36,7 +42,7 @@ final class ArenaUserProviderTest extends TestCase
         $connection->method('fetchAssociative')->willReturn(false);
 
         $this->expectException(UserNotFoundException::class);
-        (new ArenaUserProvider($connection))->loadUserByIdentifier('inconnu');
+        (new ArenaUserProvider($connection))->loadUserByIdentifier('BowserKoopa');
     }
 
     public function testSupportsArenaUserClassOnly(): void

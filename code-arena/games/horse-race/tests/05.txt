@@ -1,0 +1,7 @@
+300 6
+Alizee 40 6
+Brume 25 15
+Comete 35 7
+Delta 20 30
+Echo 30 12
+Fanfare 15 100
