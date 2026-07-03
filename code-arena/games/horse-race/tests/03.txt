@@ -1,0 +1,5 @@
+200 4
+Eclair 25 4
+Soleil 18 12
+Vent 12 30
+Pierre 8 100

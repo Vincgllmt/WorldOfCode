@@ -17,7 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
  *  - "perfect"     : tous les tests passés (peut être attribué plusieurs fois si non déjà obtenu)
  *  - "first_solve" : premier utilisateur à passer tous les tests pour ce défi
  */
-final class BadgeAwarder
+final class BadgeAwarder implements BadgeAwarderInterface
 {
     /**
      * Persiste les UserBadge éligibles (sans flush) et retourne les codes octroyés.

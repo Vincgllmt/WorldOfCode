@@ -28,6 +28,18 @@ class UserIndexer
         return true;
     }
 
+    /**
+     * Supprime l'index s'il existe (purge des documents fantômes avant réindexation).
+     */
+    public function dropIndex(): bool
+    {
+        if (!$this->elasticClient->indexExists(self::INDEX)) {
+            return false;
+        }
+        $this->elasticClient->deleteIndex(self::INDEX);
+        return true;
+    }
+
     public function index(User $user): void
     {
         if ($user->getId() === null) {

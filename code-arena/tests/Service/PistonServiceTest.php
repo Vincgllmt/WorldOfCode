@@ -6,6 +6,7 @@ namespace App\Tests\Service;
 
 use App\Service\PistonService;
 use PHPUnit\Framework\TestCase;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -59,5 +60,20 @@ final class PistonServiceTest extends TestCase
         $result = (new PistonService($http, 'http://piston:2000'))->execute('python', 'while True: pass');
 
         self::assertTrue($result['timedOut']);
+    }
+
+    public function testTransportExceptionYieldsErrorResult(): void
+    {
+        $http = $this->createStub(HttpClientInterface::class);
+        $http->method('request')->willThrowException(
+            new class('connexion refusée') extends \RuntimeException implements TransportExceptionInterface {},
+        );
+
+        $result = (new PistonService($http, 'http://piston:2000'))->execute('python', 'print(1)');
+
+        self::assertSame('', $result['stdout']);
+        self::assertSame(-1, $result['exitCode']);
+        self::assertFalse($result['timedOut']);
+        self::assertStringContainsString('connexion refusée', $result['stderr']);
     }
 }

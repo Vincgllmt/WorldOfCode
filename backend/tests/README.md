@@ -76,11 +76,27 @@ docker compose exec backend composer run tests
 | **S3StorageTest**                  | ⛏️ **Minecraft**            | SteveBuilder<br>HerobrineVoid                    | (mock - hashed)                       |
 | **GroupSuggestionControllerTest**  | 🎭 **The Witcher 3**        | GeraltRivia<br>YenneferVengerberg                | (mock - hashed)                       |
 | **PaymentControllerTest**          | 🕵️ **Disco Elysium**       | HarryDuBois<br>KimKitsuragi                      | (mock - hashed)                       |
+| **StripeConnectControllerTest**    | 🃏 **Persona 5**            | JokerRen<br>MorganaThief                         | (mock - hashed)                       |
+| **StripeConnectServiceTest**       | 🤠 **Red Dead Redemption 2**| ArthurMorgan<br>DutchVanDerLinde                 | (mock - hashed)                       |
 | **StripeServiceTest**              | ⚙️ **Factorio**             | EngineerBuilder<br>BitersHorde                   | (mock - hashed)                       |
 | **FeedControllerTest**             | 🔬 **Portal**               | Chell                                            | (mock - hashed)                       |
 | **FeedServiceTest**                | 🌾 **Stardew Valley**       | Farmer<br>Penny                                  | (mock - hashed)                       |
 | **LoginNotificationServiceTest**   | 🔍 **Watch Dogs**           | AidenPearce<br>ClaraLille                        | (mock - hashed)                       |
 | **TrustedDeviceServiceTest**       | 🕵️ **Hitman**              | Agent47<br>DianaWinterbottom                     | (mock - hashed)                       |
+
+#### Code Arena (`code-arena/tests/`)
+
+| Fichier de Test                    | 🎮 Jeu Vidéo                    | Utilisateur(s)                    | Mot(s) de Passe  |
+|------------------------------------|---------------------------------|-----------------------------------|------------------|
+| **ArenaUserTest**                  | 🦔 **Sonic the Hedgehog**       | SonicMobian<br>TailsMiles<br>KnucklesEchidna | (sans auth) |
+| **ArenaUserProviderTest**          | 🍄 **Super Mario Bros**         | MarioBros<br>BowserKoopa          | (sans auth)      |
+| **HealthControllerTest**           | 🏗️ **Terraria**                | (sans auth)                       | —                |
+| **RunControllerTest**              | 🏃 **Mirror's Edge**            | FaithConnors                      | (unit — ContainerInterface mock) |
+| **ChallengeControllerTest**        | 🔮 **Fez**                      | GomezFez                          | (unit — ContainerInterface mock) |
+| **BadgeControllerTest**            | 🌿 **Ori and the Blind Forest** | OriBeinLight                      | (unit — no container) |
+| **LeaderboardControllerTest**      | 🥊 **Street Fighter II**        | RyuHadouken<br>KenMasters         | (unit — ContainerInterface mock) |
+| **SubmissionControllerTest**       | 🌸 **Celeste**                  | MadelineVardas                    | (unit — ContainerInterface mock) |
+| **PlayControllerTest**             | 🤖 **NieR: Automata**           | TwoBWraith<br>NineSSentinel       | (unit — ContainerInterface mock) |
 
 ### Comment Choisir une Référence ?
 
@@ -116,6 +132,6 @@ private $userData = [
 
 ---
 
-*Dernière mise à jour : 23 avril 2026*
+*Dernière mise à jour : 25 juin 2026*
 
 *"Un bon test est un test qui raconte une histoire" - The Tester's Creed*

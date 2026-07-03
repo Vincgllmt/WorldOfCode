@@ -8,8 +8,8 @@ use App\Entity\Challenge;
 use App\Entity\ChallengeTest;
 use App\Entity\Submission;
 use App\Security\ArenaUser;
-use App\Service\BadgeAwarder;
-use App\Service\GameRunner;
+use App\Service\BadgeAwarderInterface;
+use App\Service\GameRunnerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,7 +29,7 @@ final class PlayController extends AbstractController
      * Renvoie un replay par cas pour rejouer l'ensemble dans la visualisation.
      */
     #[Route('/api/arena/challenges/{slug}/play', name: 'arena_play', methods: ['POST'])]
-    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner, BadgeAwarder $badgeAwarder): JsonResponse
+    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunnerInterface $runner, BadgeAwarderInterface $badgeAwarder): JsonResponse
     {
         /** @var ArenaUser $user */
         $user = $this->getUser();
@@ -95,7 +95,7 @@ final class PlayController extends AbstractController
      * (`testIndex`) ou sur tous les cas. Ne persiste rien, n'attribue aucun badge.
      */
     #[Route('/api/arena/challenges/{slug}/run-tests', name: 'arena_run_tests', methods: ['POST'])]
-    public function runTests(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner): JsonResponse
+    public function runTests(string $slug, Request $request, EntityManagerInterface $em, GameRunnerInterface $runner): JsonResponse
     {
         $payload = json_decode($request->getContent(), true);
         $language = is_array($payload) ? ($payload['language'] ?? null) : null;
@@ -132,7 +132,7 @@ final class PlayController extends AbstractController
      *
      * @return list<array{index: int, verdict: string, score: int, replay: mixed, playerStderr: string, error: string|null}>
      */
-    private function runCases(array $tests, array $indices, string $language, string $code, string $refereeLanguage, string $refereeCode, GameRunner $runner): array
+    private function runCases(array $tests, array $indices, string $language, string $code, string $refereeLanguage, string $refereeCode, GameRunnerInterface $runner): array
     {
         $results = [];
         foreach ($indices as $i) {
