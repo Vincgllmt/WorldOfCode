@@ -8,7 +8,7 @@ use App\Entity\Challenge;
 use App\Entity\ChallengeTest;
 use App\Entity\Submission;
 use App\Security\ArenaUser;
-use App\Service\BadgeAwarder;
+use App\Service\BadgeAwarderInterface;
 use App\Service\GameRunner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,7 +29,7 @@ final class PlayController extends AbstractController
      * Renvoie un replay par cas pour rejouer l'ensemble dans la visualisation.
      */
     #[Route('/api/arena/challenges/{slug}/play', name: 'arena_play', methods: ['POST'])]
-    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner, BadgeAwarder $badgeAwarder): JsonResponse
+    public function play(string $slug, Request $request, EntityManagerInterface $em, GameRunner $runner, BadgeAwarderInterface $badgeAwarder): JsonResponse
     {
         /** @var ArenaUser $user */
         $user = $this->getUser();

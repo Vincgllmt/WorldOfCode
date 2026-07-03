@@ -9,7 +9,7 @@ use App\Entity\Challenge;
 use App\Entity\ChallengeTest as ChallengeTestEntity;
 use App\Entity\Submission;
 use App\Security\ArenaUser;
-use App\Service\BadgeAwarder;
+use App\Service\BadgeAwarderInterface;
 use App\Service\PistonClientInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,7 +45,7 @@ final class SubmissionControllerTest extends TestCase
         $container->method('get')->willReturnMap([['security.token_storage', $storage]]);
 
         $piston  = $this->createStub(PistonClientInterface::class);
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $controller = new SubmissionController($piston, $awarder);
         $controller->setContainer($container);
@@ -53,7 +53,7 @@ final class SubmissionControllerTest extends TestCase
         return $controller;
     }
 
-    private function makeControllerWith(ArenaUser $user, PistonClientInterface $piston, BadgeAwarder $awarder): SubmissionController
+    private function makeControllerWith(ArenaUser $user, PistonClientInterface $piston, BadgeAwarderInterface $awarder): SubmissionController
     {
         $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
@@ -128,7 +128,7 @@ final class SubmissionControllerTest extends TestCase
         $piston = $this->createStub(PistonClientInterface::class);
         $piston->method('execute')->willReturn(['stdout' => 'YES', 'stderr' => '', 'exitCode' => 0, 'timedOut' => false]);
 
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
         $awarder->method('award')->willReturn(['perfect']);
 
         $response = $this->makeControllerWith($user, $piston, $awarder)->submit(
@@ -158,7 +158,7 @@ final class SubmissionControllerTest extends TestCase
             return ['stdout' => ++$callCount === 1 ? 'YES' : 'WRONG', 'stderr' => '', 'exitCode' => 0, 'timedOut' => false];
         });
 
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
         $awarder->method('award')->willReturn([]);
 
         $response = $this->makeControllerWith($user, $piston, $awarder)->submit(
@@ -185,7 +185,7 @@ final class SubmissionControllerTest extends TestCase
         $piston = $this->createStub(PistonClientInterface::class);
         $piston->method('execute')->willReturn(['stdout' => 'WRONG', 'stderr' => '', 'exitCode' => 0, 'timedOut' => false]);
 
-        $awarder = $this->createMock(BadgeAwarder::class);
+        $awarder = $this->createMock(BadgeAwarderInterface::class);
         $awarder->expects($this->never())->method('award');
 
         $response = $this->makeControllerWith($user, $piston, $awarder)->submit(

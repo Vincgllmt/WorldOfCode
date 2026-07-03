@@ -8,7 +8,7 @@ use App\Controller\PlayController;
 use App\Entity\Challenge;
 use App\Entity\ChallengeTest as ChallengeTestEntity;
 use App\Security\ArenaUser;
-use App\Service\BadgeAwarder;
+use App\Service\BadgeAwarderInterface;
 use App\Service\GameRunner;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -116,7 +116,7 @@ final class PlayControllerTest extends TestCase
         $runner = $this->createStub(GameRunner::class);
         $runner->method('play')->willReturn($this->makePassedResult());
 
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
         $awarder->method('award')->willReturn(['first_solve', 'perfect']);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -155,7 +155,7 @@ final class PlayControllerTest extends TestCase
             ];
         });
 
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
         $awarder->method('award')->willReturn([]);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -185,7 +185,7 @@ final class PlayControllerTest extends TestCase
             'playerStdout' => '', 'playerStderr' => '', 'error' => null,
         ]);
 
-        $awarder = $this->createMock(BadgeAwarder::class);
+        $awarder = $this->createMock(BadgeAwarderInterface::class);
         $awarder->expects($this->never())->method('award');
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
@@ -259,7 +259,7 @@ final class PlayControllerTest extends TestCase
     public function testPlayWithoutRefereeReturns422(): void
     {
         $runner = $this->createStub(GameRunner::class);
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
             'nier-arena',
@@ -279,7 +279,7 @@ final class PlayControllerTest extends TestCase
     public function testPlayMissingLanguageReturnsBadRequest(): void
     {
         $runner = $this->createStub(GameRunner::class);
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
             'nier-arena',
@@ -298,7 +298,7 @@ final class PlayControllerTest extends TestCase
     public function testPlayUnsupportedLanguageReturnsBadRequest(): void
     {
         $runner = $this->createStub(GameRunner::class);
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $response = $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
             'nier-arena',
@@ -319,7 +319,7 @@ final class PlayControllerTest extends TestCase
         $this->expectException(NotFoundHttpException::class);
 
         $runner = $this->createStub(GameRunner::class);
-        $awarder = $this->createStub(BadgeAwarder::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
 
         $this->makeController(new ArenaUser(self::TWOB_ID, self::TWOB_USERNAME))->play(
             'machine-uprising',
