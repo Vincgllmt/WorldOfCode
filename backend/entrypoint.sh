@@ -34,39 +34,9 @@ else
   echo "Aucune migration disponible."
 fi
 
-# 5) Fixtures si la base est vide
-TABLE_EXISTS=$(php -r "
-try {
-    \$pdo = new PDO('mysql:host=' . getenv('DB_HOST') . ';dbname=' . getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
-    \$res = \$pdo->query(\"SHOW TABLES LIKE 'user'\");
-    echo \$res && \$res->rowCount() > 0 ? 1 : 0;
-} catch(Exception \$e) {
-    echo 0;
-}
-")
-
-echo "TABLE_EXISTS = $TABLE_EXISTS"
-
-if [ "$TABLE_EXISTS" -eq 1 ]; then
-  ROW_COUNT=$(php -r "
-    try {
-        \$pdo = new PDO('mysql:host=' . getenv('DB_HOST') . ';dbname=' . getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
-        \$res = \$pdo->query(\"SELECT COUNT(*) FROM user\")->fetchColumn();
-        echo \$res;
-    } catch(Exception \$e) {
-        echo 0;
-    }
-  ")
-
-  if [ "$ROW_COUNT" -eq 0 ]; then
-    echo "Base vide, chargement des fixtures..."
-    php -d memory_limit=512M bin/console doctrine:fixtures:load --no-interaction
-  else
-    echo "Base déjà initialisée, aucune fixture chargée."
-  fi
-else
-  echo "Table 'user' absente, fixtures ignorées."
-fi
+# 5) Seed des données de démo : désormais géré par les migrations Doctrine
+#    (Version20260616140000 = reset, Version20260616140001 = seed), plus de fixtures.
+#    Le seed s'applique donc de façon identique en local, devprod et prod.
 
 # 5b) Création idempotente des indices Elasticsearch
 echo "Création des indices Elasticsearch..."
