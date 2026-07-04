@@ -29,6 +29,20 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## CI / Build (pipeline)
+
+Le build de l'image frontend est **scindé en deux étapes** (`cluster/frontend/.gitlab-ci.yml`) :
+
+1. `build:frontend:compile` — image `node`, exécute `npm ci` + `next build`. Persiste
+   `.npm` et **`.next/cache`** via le cache distribué (MinIO) → build Next.js **incrémental**.
+   Les variables `NEXT_PUBLIC_*` sont bakées à cette étape.
+2. `build:frontend` — Kaniko, assemble l'image runtime à partir des artefacts standalone
+   (`Dockerfile.package`, `COPY` uniquement) → quelques secondes.
+
+Kaniko ne pouvant pas exploiter le cache GitLab, ce découpage permet un cache de
+compilation réutilisé d'un pipeline à l'autre. `Dockerfile.prod` reste disponible pour
+un build complet mono-étape hors CI.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
