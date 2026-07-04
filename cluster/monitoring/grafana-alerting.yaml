@@ -23,6 +23,7 @@ data:
 
           <b>📊 Contexte</b>
           Namespace : <b>{{ index .Labels "namespace" }}</b>
+          Route     : <b>{{ index .Labels "context_route" }}</b>
           Severite  : <b>{{ index .Labels "severity" }}</b>
           Code HTTP : <b>{{ index .Labels "context_status_code" }}</b>
 
@@ -62,6 +63,17 @@ data:
 
   # ──────────────────────────────────────────────────────────────────────────
   # Règles d'alerte
+  #
+  # ⚠️ INACTIF PAR DÉFAUT : ce ConfigMap n'est provisionné que si le sidecar
+  # d'alerting de Grafana est activé (grafana.sidecar.alerts.enabled: true dans
+  # vm-stack-values.yaml). Tant qu'il ne l'est pas, la source de vérité réelle
+  # est le Job grafana-alerting-job.yaml (provisioning via API). Garder les deux
+  # en cohérence.
+  #
+  # Chaîne d'évaluation : A (requête Loki range) → B (reduce "last") → C
+  # (threshold > 0). Le nœud reduce B est OBLIGATOIRE : sans lui, la condition
+  # reçoit une série temporelle au lieu d'un scalaire et l'évaluation tombe en
+  # "Error" → l'alerte ne fire jamais.
   # ──────────────────────────────────────────────────────────────────────────
   rules.yaml: |
     apiVersion: 1
@@ -75,7 +87,7 @@ data:
           # --- 4xx : erreurs utilisateurs (auth, validation, accès refusé) ---
           - uid: woc-user-errors-loki
             title: "Erreurs utilisateurs WOC (4xx)"
-            condition: B
+            condition: C
             data:
               - refId: A
                 queryType: range
@@ -88,39 +100,40 @@ data:
                     type: loki
                     uid: loki-datasource
                   editorMode: code
-                  expr: 'sum by (namespace, context_status_code)(count_over_time({app="backend", container="php-fpm"} | json | channel="user_error" [1m]))'
+                  expr: 'sum by (namespace, context_status_code, context_route)(count_over_time({app="backend", container="php-fpm"} | json | channel="user_error" [1m]))'
                   instant: false
                   queryType: range
                   range: true
                   refId: A
               - refId: B
-                datasourceUid: "-100"
+                datasourceUid: __expr__
                 model:
+                  type: reduce
+                  reducer: last
+                  expression: A
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  refId: B
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
                   conditions:
                     - evaluator:
                         params: [0]
                         type: gt
-                      operator:
-                        type: and
-                      query:
-                        params: [A]
-                      reducer:
-                        params: []
-                        type: last
-                      type: query
                   datasource:
                     type: __expr__
-                    uid: "-100"
-                  expression: A
-                  hide: false
-                  refId: B
-                  type: threshold
-            noDataState: NoData
+                    uid: __expr__
+                  refId: C
+            noDataState: OK
             execErrState: Error
             for: 0s
             annotations:
               summary: "Erreur utilisateur détectée sur WOC"
-              description: "Namespace : {{ index $labels \"namespace\" }} | Code HTTP {{ index $labels \"context_status_code\" }} reçu sur le backend. Consulter les logs Loki : {app=\"backend\"} | json | channel=`user_error` pour le détail (route, IP, user, message)."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Route : {{ index $labels \"context_route\" }} | HTTP {{ index $labels \"context_status_code\" }} reçu sur le backend. Détail (IP, user, message) dans Loki : {app=\"backend\"} | json | channel=`user_error`"
             labels:
               severity: warning
               team: woc
@@ -131,7 +144,7 @@ data:
           # --- 5xx : erreurs serveur (exceptions non gérées) ---
           - uid: woc-server-errors-loki
             title: "Erreurs serveur WOC (5xx)"
-            condition: B
+            condition: C
             data:
               - refId: A
                 queryType: range
@@ -144,39 +157,40 @@ data:
                     type: loki
                     uid: loki-datasource
                   editorMode: code
-                  expr: 'sum by (namespace, context_status_code)(count_over_time({app="backend", container="php-fpm"} | json | channel="server_error" [1m]))'
+                  expr: 'sum by (namespace, context_status_code, context_route, context_exception_class)(count_over_time({app="backend", container="php-fpm"} | json | channel="server_error" [1m]))'
                   instant: false
                   queryType: range
                   range: true
                   refId: A
               - refId: B
-                datasourceUid: "-100"
+                datasourceUid: __expr__
                 model:
+                  type: reduce
+                  reducer: last
+                  expression: A
+                  datasource:
+                    type: __expr__
+                    uid: __expr__
+                  refId: B
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
                   conditions:
                     - evaluator:
                         params: [0]
                         type: gt
-                      operator:
-                        type: and
-                      query:
-                        params: [A]
-                      reducer:
-                        params: []
-                        type: last
-                      type: query
                   datasource:
                     type: __expr__
-                    uid: "-100"
-                  expression: A
-                  hide: false
-                  refId: B
-                  type: threshold
-            noDataState: NoData
+                    uid: __expr__
+                  refId: C
+            noDataState: OK
             execErrState: Error
             for: 0s
             annotations:
               summary: "🚨 Erreur serveur critique sur WOC"
-              description: "Namespace : {{ index $labels \"namespace\" }} | Exception non gérée → HTTP {{ index $labels \"context_status_code\" }}. Consulter les logs Loki : {app=\"backend\"} | json | channel=`server_error` pour exception_class, file et line."
+              description: "Namespace : {{ index $labels \"namespace\" }} | Route : {{ index $labels \"context_route\" }} | Exception : {{ index $labels \"context_exception_class\" }} → HTTP {{ index $labels \"context_status_code\" }}. Détail complet (message, file, line) dans Loki : {app=\"backend\"} | json | channel=`server_error`"
             labels:
               severity: critical
               team: woc
