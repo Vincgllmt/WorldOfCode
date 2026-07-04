@@ -1,0 +1,121 @@
+# Nettoyage périodique du cache Kaniko dans le registry.
+#
+# Un registry Docker n'a pas d'expiration par date (contrairement au S3/MinIO). Ce
+# CronJob supprime les tags de cache (backend/cache, frontend/cache) plus vieux que
+# REGISTRY_CACHE_MAX_AGE_DAYS, puis lance un garbage-collect pour récupérer le disque.
+#
+# Les tags de cache ACTIFS sont réécrits à chaque build (leur date se rafraîchit) →
+# seules les clés de cache abandonnées vieillissent et sont purgées. Même logique
+# que l'expiration ILM du bucket MinIO.
+#
+# Planifié le dimanche à 03:00 : le garbage-collect d'un registry live peut, en cas
+# de push simultané, supprimer une couche en cours d'écriture. Ce créneau minimise
+# ce risque.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: registry-cache-cleanup
+  namespace: registry
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: registry-cache-cleanup
+  namespace: registry
+rules:
+  # Retrouver le pod du registry et y exécuter le garbage-collect
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: registry-cache-cleanup
+  namespace: registry
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: registry-cache-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: registry-cache-cleanup
+    namespace: registry
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: registry-cache-cleanup
+  namespace: registry
+spec:
+  schedule: "0 3 * * 0"            # dimanche 03:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: registry-cache-cleanup
+          restartPolicy: Never
+          containers:
+            - name: cleanup
+              image: alpine/k8s:1.31.13
+              env:
+                - name: REG
+                  value: "http://registry-docker-registry.registry.svc.cluster.local:5000"
+                - name: REGISTRY_CACHE_MAX_AGE_DAYS
+                  value: "30"
+                - name: CACHE_REPOS
+                  value: "backend/cache frontend/cache"
+                - name: REG_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: registry-client-credentials
+                      key: username
+                - name: REG_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: registry-client-credentials
+                      key: password
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  ACC='application/vnd.docker.distribution.manifest.v2+json'
+                  now=$(date -u +%s)
+                  cutoff=$((now - REGISTRY_CACHE_MAX_AGE_DAYS * 86400))
+                  deleted=0
+                  for repo in $CACHE_REPOS; do
+                    echo "### $repo"
+                    tags=$(curl -sS -u "$REG_USER:$REG_PASS" "$REG/v2/$repo/tags/list" | jq -r '.tags[]?')
+                    for tag in $tags; do
+                      cfg=$(curl -sS -u "$REG_USER:$REG_PASS" -H "Accept: $ACC" \
+                        "$REG/v2/$repo/manifests/$tag" | jq -r '.config.digest // empty')
+                      [ -n "$cfg" ] || continue
+                      created=$(curl -sS -u "$REG_USER:$REG_PASS" \
+                        "$REG/v2/$repo/blobs/$cfg" | jq -r '.created // empty')
+                      ts=$(printf '%s' "$created" | sed -E 's/\.[0-9]+//; s/Z$//; s/T/ /')
+                      epoch=$(date -u -d "$ts" -D '%Y-%m-%d %H:%M:%S' +%s 2>/dev/null || echo 0)
+                      [ "$epoch" -gt 0 ] || continue
+                      [ "$epoch" -lt "$cutoff" ] || continue
+                      dig=$(curl -sS -I -u "$REG_USER:$REG_PASS" -H "Accept: $ACC" \
+                        "$REG/v2/$repo/manifests/$tag" | tr -d '\r' \
+                        | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}')
+                      [ -n "$dig" ] || continue
+                      code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
+                        -u "$REG_USER:$REG_PASS" "$REG/v2/$repo/manifests/$dig")
+                      [ "$code" = "202" ] && { deleted=$((deleted + 1)); echo "  supprimé $tag ($created)"; }
+                    done
+                  done
+                  echo "Tags de cache supprimés : $deleted"
+                  echo "Garbage collection..."
+                  RPOD=$(kubectl get pod -n registry -l app=docker-registry \
+                    -o jsonpath='{.items[0].metadata.name}')
+                  kubectl exec -n registry "$RPOD" -- \
+                    /bin/registry garbage-collect /etc/docker/registry/config.yml
+                  echo "Terminé."
