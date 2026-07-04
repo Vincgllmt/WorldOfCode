@@ -27,6 +27,7 @@ ACCESS_KEY="${ACCESS_KEY:?ACCESS_KEY requis}"
 SECRET_KEY="${SECRET_KEY:?SECRET_KEY requis}"
 CACHE_BUCKET="${CACHE_BUCKET:-gitlab-runner-cache}"
 POLICY_NAME="${POLICY_NAME:-gitlab-runner-cache-rw}"
+CACHE_EXPIRE_DAYS="${CACHE_EXPIRE_DAYS:-30}"   # expiration ILM des clés de cache abandonnées
 
 POD="$(kubectl get pod -n "$MINIO_NAMESPACE" -l app.kubernetes.io/name=minio \
         -o jsonpath='{.items[0].metadata.name}')"
@@ -65,5 +66,16 @@ POLICY
 \$MC admin policy attach local ${POLICY_NAME} --user "${ACCESS_KEY}" 2>/dev/null || \
   \$MC admin policy set    local ${POLICY_NAME} user="${ACCESS_KEY}"
 
-echo "OK : bucket ${CACHE_BUCKET}, policy ${POLICY_NAME}, user ${ACCESS_KEY}"
+# Expiration ILM : borne la croissance du bucket. GitLab ré-écrit l'archive du
+# cache actif à chaque run (mtime rafraîchi) → seules les clés package-lock
+# abandonnées vieillissent et sont purgées après ${CACHE_EXPIRE_DAYS} jours.
+if \$MC ilm rule ls local/${CACHE_BUCKET} 2>/dev/null | grep -qi expir; then
+  echo "règle ILM d'expiration déjà présente"
+else
+  \$MC ilm rule add --expire-days "${CACHE_EXPIRE_DAYS}" local/${CACHE_BUCKET} 2>/dev/null || \
+    \$MC ilm add --expiry-days "${CACHE_EXPIRE_DAYS}" local/${CACHE_BUCKET}
+  echo "règle ILM d'expiration ajoutée (${CACHE_EXPIRE_DAYS}j)"
+fi
+
+echo "OK : bucket ${CACHE_BUCKET}, policy ${POLICY_NAME}, user ${ACCESS_KEY}, expiration ${CACHE_EXPIRE_DAYS}j"
 EOF
