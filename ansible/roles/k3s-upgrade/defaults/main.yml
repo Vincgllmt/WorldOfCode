@@ -1,0 +1,57 @@
+---
+# defaults file for roles/k3s-upgrade
+
+# Groupes d'inventaire (alignés sur roles/kubernetes/defaults/main.yml).
+# Le groupe des control-planes n'apparaît pas ici : il est écrit en dur dans le
+# `hosts:` du play orchestrateur, et un `hosts:` ne peut pas lire les defaults
+# d'un rôle. Le déclarer ici donnerait une variable qui n'a aucun effet.
+k3s_upgrade_cluster_group: kubernetes
+k3s_upgrade_worker_group: k8s_workers
+
+# --- Version cible ------------------------------------------------------------
+# On ne renseigne QUE la mineure visée, ex "1.36".
+# La dernière version stable de cette mineure est résolue automatiquement via le
+# serveur de channels k3s, et les paliers intermédiaires sont déduits de la
+# version en place sur le cluster.
+#
+#   -e k3s_upgrade_target_minor=1.36   ->  v1.36.2+k3s1 (au 2026-07-20)
+#
+# Les patches ne se précisent pas : le channel d'une mineure pointe toujours sur
+# sa dernière version stable, les pré-versions (rc/alpha/beta) étant exclues.
+k3s_upgrade_target_minor: ""
+k3s_upgrade_channel_url: "https://update.k3s.io/v1-release/channels"
+
+# Garde-fou : nombre maximum de paliers enchaînés en une seule exécution.
+# Évite qu'une cible lointaine ne parte pour des heures sans qu'on l'ait voulu.
+k3s_upgrade_max_steps: 3
+
+# --- Sauvegarde ---------------------------------------------------------------
+# Snapshot de la base d'état k3s avant le premier palier, via `sqlite3 .backup`
+# (cohérent à chaud, donc sans coupure d'API supplémentaire).
+# C'est le seul moyen de revenir en arrière : un downgrade k3s n'est pas
+# supporté. Ne désactiver qu'en connaissance de cause.
+k3s_upgrade_backup: true
+k3s_upgrade_db_path: /var/lib/rancher/k3s/server/db/state.db
+k3s_upgrade_backup_dir: /var/lib/rancher/k3s/server/db-backups
+
+# --- Comportement -------------------------------------------------------------
+# Drain / uncordon des workers à chaque palier.
+# NOTE : le cluster utilise local-path (et non plus Longhorn). Les pods portant
+# un PVC local-path ne peuvent PAS être replanifiés ailleurs : ils restent
+# Pending jusqu'au uncordon. C'est attendu, pas une panne.
+k3s_upgrade_drain: true
+k3s_upgrade_drain_timeout: 300s
+
+# Attente du retour de l'API server après redémarrage du serveur
+k3s_upgrade_api_retries: 30
+k3s_upgrade_api_delay: 10
+
+# Attente du retour d'un nœud en Ready.
+# k3s_upgrade_ready_timeout est passé à `kubectl wait` (qui bloque jusqu'à la
+# condition) ; les retries ne couvrent que les erreurs transitoires d'API.
+k3s_upgrade_ready_timeout: 300s
+k3s_upgrade_ready_retries: 3
+k3s_upgrade_ready_delay: 10
+
+# Kubeconfig utilisé pour les opérations kubectl (exécutées sur le control-plane)
+k3s_upgrade_kubeconfig: /etc/rancher/k3s/k3s.yaml
