@@ -2,6 +2,8 @@ deploy:registry:
   stage: deploy-infra
   needs: []
   when: manual
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   variables:
     REGISTRY_NAMESPACE: "registry"
     REGISTRY_RELEASE_NAME: "registry"

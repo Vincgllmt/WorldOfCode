@@ -18,6 +18,28 @@ spec:
         - name: piston
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Auto-guérison du cgroup "isolate" avant l'entrypoint d'origine.
+          # L'entrypoint upstream fait `cd /sys/fs/cgroup && mkdir isolate/ && ...` : comme le
+          # conteneur tourne en privileged/cgroupns=host et déplace ses process dans
+          # /sys/fs/cgroup/isolate/init (hors du cgroup du conteneur), ceux-ci survivent à l'arrêt
+          # du conteneur → au redémarrage `mkdir isolate/` échoue ("File exists") → CrashLoop.
+          # On purge donc l'arbo (kill des éventuels process fuités puis rmdir) à chaque démarrage,
+          # puis on ré-exécute la chaîne d'origine (ENTRYPOINT docker-entrypoint.sh + CMD).
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              CG=/sys/fs/cgroup/isolate
+              if [ -d "$CG" ]; then
+                # tue les process piston fuités d'un conteneur précédent (récursif sur le sous-arbre)
+                [ -w "$CG/cgroup.kill" ] && echo 1 > "$CG/cgroup.kill" 2>/dev/null || true
+                # supprime les cgroups (feuilles d'abord) ; retries le temps que le kernel reap les zombies
+                for i in 1 2 3 4 5; do
+                  find "$CG" -depth -type d -exec rmdir {} + 2>/dev/null
+                  [ -d "$CG" ] || break
+                  sleep 1
+                done
+              fi
+              exec /usr/local/bin/docker-entrypoint.sh /piston_api/src/docker-entrypoint.sh
           # Isolation des jobs d'exécution : Piston exige le mode privilégié.
           securityContext:
             privileged: true
