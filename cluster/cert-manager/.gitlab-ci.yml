@@ -2,6 +2,8 @@ deploy:cert-manager:
   stage: deploy-infra
   needs: []
   when: manual
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   variables:
     CERT_MANAGER_NAMESPACE: "cert-manager"
     CERT_MANAGER_RELEASE_NAME: "cert-manager"

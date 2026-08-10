@@ -5,6 +5,8 @@ deploy:uptime-kuma:
     UPTIME_KUMA_NAMESPACE: "monitoring"
     UPTIME_KUMA_RELEASE: "uptime-kuma"
   when: manual
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   script:
     - kubectl create namespace "$UPTIME_KUMA_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     - helm repo add uptime-kuma https://dirsigler.github.io/uptime-kuma-helm
