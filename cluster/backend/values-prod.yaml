@@ -33,7 +33,7 @@ database:
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|backoffice-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   MINIO_ENDPOINT: "http://minio.production.svc.cluster.local:9000"
   MINIO_ACCESS_KEY: "admin"
   MINIO_BUCKET: "uploads"
