@@ -5,7 +5,8 @@ import com.purple.iptvplayer.core.model.M3uItem
 
 object M3uParserService {
 
-    private val nameRegex  = Regex(""",([^,]*)$""")
+    private const val UNKNOWN_NAME = "Unknown"
+
     private val logoRegex  = Regex("""tvg-logo="([^"]*)"""")
     private val groupRegex = Regex("""group-title="([^"]*)"""")
 
@@ -19,15 +20,17 @@ object M3uParserService {
             val line = rawLine.trim()
             when {
                 line.startsWith("#EXTINF:") -> {
-                    currentName  = nameRegex.find(line)?.groupValues?.get(1)?.trim()?.decodeIfNeeded() ?: "Unknown"
+                    currentName  = extractDisplayName(line)
                     currentLogo  = logoRegex.find(line)?.groupValues?.get(1)
                     currentGroup = groupRegex.find(line)?.groupValues?.get(1)?.decodeIfNeeded()
                 }
                 line.isNotEmpty() && !line.startsWith("#") -> {
                     if (currentName != null) {
+                        // `/series/` est testé en premier : les épisodes sont presque
+                        // toujours servis en .mp4/.mkv et seraient sinon classés en film.
                         val type = when {
-                            line.contains("/movie/") || line.endsWith(".mp4") || line.endsWith(".mkv") -> ContentType.MOVIE
                             line.contains("/series/") -> ContentType.SERIES
+                            line.contains("/movie/") || line.endsWith(".mp4") || line.endsWith(".mkv") -> ContentType.MOVIE
                             else -> ContentType.LIVE
                         }
                         items += M3uItem(
@@ -43,6 +46,30 @@ object M3uParserService {
             }
         }
         return items
+    }
+
+    /**
+     * Nom affiché d'une ligne `#EXTINF`.
+     *
+     * Le nom est tout ce qui suit la première virgule placée **hors guillemets** :
+     * une recherche par la fin tronquerait « Canal+, Le Sport » en « Le Sport », et
+     * une recherche de la première virgule tout court se ferait piéger par un
+     * attribut du type `group-title="Sports, Live"`.
+     */
+    private fun extractDisplayName(line: String): String {
+        val raw = displayNamePart(line)?.trim()?.decodeIfNeeded()
+        return if (raw.isNullOrEmpty()) UNKNOWN_NAME else raw
+    }
+
+    private fun displayNamePart(line: String): String? {
+        var inQuotes = false
+        for (i in line.indices) {
+            when {
+                line[i] == '"' -> inQuotes = !inQuotes
+                line[i] == ',' && !inQuotes -> return line.substring(i + 1)
+            }
+        }
+        return null
     }
 
     private fun String.decodeIfNeeded(): String = runCatching {
