@@ -244,8 +244,9 @@ fun PlayerScreen(
             )
         }
 
-        // EPG floating card — always visible for live channels, bottom-left
-        if (isLive && epgPrograms.isNotEmpty() && !isInPip) {
+        // Carte EPG, en bas à gauche. Suit la visibilité de l'overlay comme les autres
+        // contrôles : elle restait auparavant affichée en permanence, masquant l'image.
+        if (isLive && epgPrograms.isNotEmpty() && !isInPip && overlayVisible) {
             EpgFloatingCard(
                 programs = epgPrograms,
                 modifier = Modifier
@@ -521,7 +522,17 @@ private fun NextEpisodeCard(
 
 @Composable
 private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Modifier) {
-    val now = System.currentTimeMillis()
+    // L'instant courant doit être un état qui progresse : lu une seule fois pendant la
+    // composition, la barre d'avancement restait figée et la carte continuait d'annoncer
+    // un programme terminé pendant toute la session.
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            now = System.currentTimeMillis()
+        }
+    }
+
     val current = programs.firstOrNull { it.startMs() <= now && it.endMs() > now }
         ?: programs.firstOrNull() ?: return
     val next = programs.firstOrNull { it.startMs() >= current.endMs() }
@@ -531,7 +542,10 @@ private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Mod
         if (e > s) ((now - s).toFloat() / (e - s)).coerceIn(0f, 1f) else 0f
     }
 
-    val timeLabel = "${current.start.take(16).takeLast(5)} – ${current.end.take(16).takeLast(5)}"
+    // Horaires formatés dans le fuseau de l'appareil. Afficher la chaîne brute du
+    // fournisseur donnait un horaire faux : mesuré à 20:28 heure locale, le JT de 20h
+    // s'affichait « 19:00 – 19:45 », le panneau émettant en UTC+1.
+    val timeLabel = "${formatLocal(current, fallback = current.start)} – ${formatLocal(current, end = true, fallback = current.end)}"
 
     Surface(
         modifier  = modifier.widthIn(max = 260.dp),
@@ -600,8 +614,16 @@ private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Mod
     }
 }
 
-private fun EpgProgram.startMs(): Long = parseEpgTime(start)
-private fun EpgProgram.endMs(): Long   = parseEpgTime(end)
+/** Préfère l'horodatage Unix, non ambigu ; retombe sur la chaîne d'horaire si absent. */
+private fun EpgProgram.startMs(): Long = startMs ?: parseEpgTime(start)
+private fun EpgProgram.endMs(): Long   = endMs ?: parseEpgTime(end)
+
+private fun formatLocal(p: EpgProgram, end: Boolean = false, fallback: String): String {
+    val ms = (if (end) p.endMs else p.startMs) ?: return fallback.take(16).takeLast(5)
+    val fmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    fmt.timeZone = java.util.TimeZone.getDefault()
+    return fmt.format(java.util.Date(ms))
+}
 
 private fun parseEpgTime(s: String): Long = runCatching {
     // Xtream format: "2024-01-15 20:00:00" (server local time assumed UTC-ish)
