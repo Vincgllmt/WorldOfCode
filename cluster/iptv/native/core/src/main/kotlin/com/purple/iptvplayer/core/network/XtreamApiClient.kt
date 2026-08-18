@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
@@ -54,16 +55,76 @@ class XtreamApiClient {
     // ─── URL Builder ─────────────────────────────────────────────────────────
 
     fun playerApiUrl(c: Credentials, action: String? = null, extra: String = ""): String {
-        var url = "${c.host}/player_api.php?username=${c.user}&password=${c.pass}"
+        var url = "${c.host}/player_api.php?username=${encodeQuery(c.user)}&password=${encodeQuery(c.pass)}"
         if (action != null) url += "&action=$action"
         if (extra.isNotEmpty()) url += extra
         return url
     }
 
+    /**
+     * URL de lecture d'un flux.
+     *
+     * `kind` vaut `live`, `movie` ou `series`.
+     */
+    fun streamUrl(c: Credentials, kind: String, id: Any, extension: String): String =
+        "${c.host}/$kind/${encodePathSegment(c.user)}/${encodePathSegment(c.pass)}/$id.$extension"
+
+    /**
+     * Encodage d'une valeur de query string.
+     *
+     * Indispensable : `Credentials.parseUrl()` extrait les identifiants via
+     * `Uri.getQueryParameter()`, qui **décode** les séquences pourcentage. Les
+     * réémettre bruts casse l'aller-retour, et un mot de passe contenant `+`, `&`
+     * ou `#` empêche purement et simplement l'authentification.
+     */
+    private fun encodeQuery(value: String?): String =
+        if (value.isNullOrEmpty()) "" else URLEncoder.encode(value, "UTF-8")
+
+    /**
+     * Encodage **minimal** d'un segment de chemin : uniquement les caractères qui
+     * cassent la structure de l'URL.
+     *
+     * Volontairement plus conservateur que [encodeQuery]. Un `URLEncoder.encode`
+     * complet transformerait aussi `%` en `%25`, alors que les panneaux Xtream
+     * comparent le chemin **brut** — cas rencontré en conditions réelles : un mot de
+     * passe contenant `%` voyait ses 11 889 URL de flux modifiées. Le `%` est donc
+     * laissé tel quel, ce qui préserve le comportement historique.
+     *
+     * Conséquence assumée : un `%` suivi de deux chiffres hexadécimaux reste ambigu.
+     * C'est ce que le serveur attend, et ce n'est pas à nous d'en décider autrement
+     * sans pouvoir le vérifier.
+     */
+    private fun encodePathSegment(value: String?): String {
+        if (value.isNullOrEmpty()) return ""
+        return buildString(value.length) {
+            for (ch in value) when (ch) {
+                '/'  -> append("%2F")
+                '?'  -> append("%3F")
+                '#'  -> append("%23")
+                ' '  -> append("%20")
+                else -> append(ch)
+            }
+        }
+    }
+
     // ─── Name / Category Cleaning ─────────────────────────────────────────────
 
     private val displayTagsRe = Regex("""\s*[(\[][^)\]]*[)\]]|\s*[-|│‖]{1,3}\s*\w*\s*[-|│‖]{1,3}""")
-    private val specialCharsRe = Regex("""[★☆✪✦◈❤♛♕❖◆▶►•·]+""")
+    /**
+     * Décorations à retirer des noms de chaînes.
+     *
+     * Critère par **catégorie Unicode** `So` (« Symbol, other ») plutôt qu'une liste
+     * de caractères : l'énumération précédente laissait passer tout ce qu'on n'avait
+     * pas anticipé — relevé sur un catalogue réel, `●` puis `♣♦` survivaient au
+     * nettoyage. `So` couvre d'un coup ★☆●○◉♣♦♥♠▶►■□❖◆✿⚡✔ et les drapeaux régionaux.
+     *
+     * `•` (U+2022) et `·` (U+00B7) sont ajoutés explicitement : ce sont des signes de
+     * ponctuation (`Po`), pas des symboles.
+     *
+     * Ce critère **exclut** volontairement `Sm` (symboles mathématiques) : le `+` de
+     * « Canal+ » fait partie du nom, pas de la décoration.
+     */
+    private val specialCharsRe = Regex("""[\p{So}•·]+""")
     private val multiSpacesRe  = Regex("""\s{2,}""")
     private val nonLatin1Re    = Regex("""[^\x20-\x7E\xA0-\xFF]""")
 
@@ -99,7 +160,7 @@ class XtreamApiClient {
                 val streamId = s.optInt("stream_id")
                 Channel(
                     name     = cleanName(s.optString("name")),
-                    url      = "${c.host}/live/${c.user}/${c.pass}/${streamId}.ts",
+                    url      = streamUrl(c, "live", streamId, "ts"),
                     logo     = s.optString("stream_icon").ifEmpty { null },
                     group    = catMap[catId] ?: "Others",
                     streamId = streamId,
@@ -120,7 +181,7 @@ class XtreamApiClient {
                 Movie(
                     id     = id,
                     name   = cleanName(s.optString("name")),
-                    url    = "${c.host}/movie/${c.user}/${c.pass}/${id}.${ext}",
+                    url    = streamUrl(c, "movie", id, ext),
                     cover  = s.optString("stream_icon").ifEmpty { null },
                     group  = catMap[catId] ?: "Others",
                     rating = s.optString("rating").ifEmpty { null },
@@ -155,7 +216,7 @@ class XtreamApiClient {
         return MovieDetail(
             id          = id,
             name        = cleanName(md.optString("name")),
-            url         = "${c.host}/movie/${c.user}/${c.pass}/${id}.${ext}",
+            url         = streamUrl(c, "movie", id, ext),
             cover       = info.optString("movie_image").ifEmpty { null },
             coverBig    = info.optString("movie_image").ifEmpty { null },
             description = info.optString("plot").ifEmpty { null },
@@ -184,7 +245,7 @@ class XtreamApiClient {
                     title      = cleanName(e.optString("title").ifEmpty { "Episode ${e.optInt("episode_num")}" }),
                     season     = seasonNum.toIntOrNull() ?: 0,
                     episodeNum = e.optInt("episode_num"),
-                    url        = "${c.host}/series/${c.user}/${c.pass}/${epId}.${ext}",
+                    url        = streamUrl(c, "series", epId, ext),
                     plot       = e.optJSONObject("info")?.optString("plot")?.ifEmpty { null },
                     cover      = e.optJSONObject("info")?.optString("movie_image")?.ifEmpty { null },
                     duration   = e.optJSONObject("info")?.optString("duration")?.ifEmpty { null },
@@ -210,13 +271,23 @@ class XtreamApiClient {
                 start       = e.optString("start"),
                 end         = e.optString("end"),
                 description = e.optString("description").decodeBase64OrSelf().ifEmpty { null },
+                startMs     = epochSeconds(e, "start_timestamp"),
+                endMs       = epochSeconds(e, "stop_timestamp"),
             )
         }
     }
 
-    private fun String.decodeBase64OrSelf(): String = runCatching {
-        android.util.Base64.decode(this, android.util.Base64.DEFAULT).toString(Charsets.UTF_8).trim()
-    }.getOrDefault(this)
+    private fun String.decodeBase64OrSelf(): String = EpgTextDecoder.decodeBase64OrSelf(this)
+
+    /**
+     * Horodatage Unix d'un champ EPG, en millisecondes.
+     *
+     * Xtream renvoie ces valeurs tantôt en nombre, tantôt en chaîne : `optString`
+     * couvre les deux. Renvoie `null` si le champ est absent, auquel cas l'appelant
+     * retombe sur la chaîne d'horaire.
+     */
+    private fun epochSeconds(o: JSONObject, key: String): Long? =
+        o.optString(key).takeIf { it.isNotEmpty() }?.toLongOrNull()?.times(1000L)
 
     private fun buildCatMap(arr: JSONArray): Map<String, String> {
         val map = mutableMapOf<String, String>()
