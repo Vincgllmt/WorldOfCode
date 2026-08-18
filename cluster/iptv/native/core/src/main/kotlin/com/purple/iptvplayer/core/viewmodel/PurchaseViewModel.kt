@@ -46,15 +46,22 @@ class PurchaseViewModel(
     }
 
     fun loadProducts() = viewModelScope.launch {
+        if (billingRepo.products.value.isNotEmpty()) {
+            _state.value = PurchaseScreenState.Idle
+            return@launch
+        }
         _state.value = PurchaseScreenState.Loading
-        runCatching {
-            if (!billingRepo.products.value.isEmpty()) {
-                _state.value = PurchaseScreenState.Idle; return@launch
-            }
+        // L'échec était auparavant avalé par un runCatching muet : l'écran retombait
+        // sur « aucun produit disponible » sans distinguer une Play Console mal
+        // configurée d'une panne de service.
+        val outcome = runCatching {
             billingRepo.connect()
             billingRepo.queryProducts()
         }
-        _state.value = PurchaseScreenState.Idle
+        _state.value = outcome.fold(
+            onSuccess = { PurchaseScreenState.Idle },
+            onFailure = { PurchaseScreenState.PurchaseError(it.message ?: "Chargement des offres impossible.") },
+        )
     }
 
     fun purchase(activity: Activity, product: ProductDetails) {
@@ -64,8 +71,16 @@ class PurchaseViewModel(
 
     fun restorePurchases() = viewModelScope.launch {
         _state.value = PurchaseScreenState.Purchasing
-        runCatching { billingRepo.restorePurchases() }
-        _state.value = PurchaseScreenState.Idle
+        val outcome = runCatching { billingRepo.restorePurchases() }
+        _isPro.value = trialRepo.isPro()
+        _remainingDays.value = trialRepo.getRemainingDays()
+        // Une restauration qui ne trouve rien doit le dire : rester silencieuse
+        // laissait croire à un échec de l'application.
+        _state.value = when {
+            outcome.isFailure     -> PurchaseScreenState.PurchaseError("Restauration impossible.")
+            outcome.getOrNull() == 0 -> PurchaseScreenState.PurchaseError("Aucun achat à restaurer sur ce compte Google.")
+            else                  -> PurchaseScreenState.Idle
+        }
     }
 
     fun resetState() { _state.value = PurchaseScreenState.Idle }
@@ -80,6 +95,10 @@ class PurchaseViewModel(
                 }
                 is PurchaseResult.Error -> {
                     _state.value = PurchaseScreenState.PurchaseError(result.message)
+                }
+                // Refermer la feuille de paiement ramène simplement à l'écran, sans message d'échec.
+                PurchaseResult.Cancelled -> {
+                    _state.value = PurchaseScreenState.Idle
                 }
             }
         }

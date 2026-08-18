@@ -246,7 +246,7 @@ n'y figurent pas du tout. Chacun a été traité en Test-First : test écrit d'a
 | P11 | horaires EPG décalés d'une heure, barre d'avancement figée | **observé sur appareil**, 20:28 local affiché « 19:00 – 19:45 » |
 | S1 | validation TLS entièrement désactivée | lecture de `buildTrustAllClient` — **non corrigé, décision produit** |
 | S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **à sortir du suivi** |
-| B1 | abonnements jamais restaurés | lecture de `BillingRepository` — **non corrigé, à confirmer en Play Console** |
+| B1 | facturation : six défauts, dont l'abonné bloqué au 30ᵉ jour | lecture de `BillingRepository`, paramétrage confirmé par l'utilisateur |
 
 ### P1 — Un abonné payant est éjecté de l'app le dernier jour de son abonnement
 `core/data/TrialRepository.kt` · `getRemainingDays()`
@@ -411,18 +411,57 @@ produit. Piste raisonnable : conserver le repli permissif mais uniquement en HTT
 explicite, ou n'accepter les certificats douteux qu'après consentement de
 l'utilisateur pour un hôte donné.
 
-### B1 — Les abonnements ne sont jamais restaurés *(non corrigé — à confirmer)*
-`core/data/BillingRepository.kt`
+### B1 — Facturation : six défauts — ✅ corrigés
+`core/data/BillingRepository.kt` · `core/viewmodel/PurchaseViewModel.kt` · `core/viewmodel/TrialViewModel.kt`
 
-`restorePurchases()` et `queryProducts()` n'interrogent que `ProductType.INAPP`.
-Si l'un des produits est configuré en abonnement dans la Play Console, il n'est ni
-proposé ni restauré : un abonné qui réinstalle perd l'accès, ce qui aggrave P1.
-`queryProducts()` avale de plus silencieusement l'échec — si `responseCode != OK`,
-`_products` reste vide sans aucun diagnostic, ce qui rend le symptôme
-« seul un abonnement est proposé » de `raf.md` impossible à expliquer côté app.
+**Paramétrage Play Console confirmé par l'utilisateur** : `purple_monthly_099` et
+`purple_yearly_499` sont des **abonnements**, `purple_lifetime_999` un **achat unique**.
 
-**Non corrigé** : trancher exige de savoir comment les trois produits sont déclarés
-en Play Console (INAPP one-time vs SUBS), information indisponible depuis le code.
+1. **`queryProducts()` n'interrogeait que `INAPP`.** Les deux abonnements n'étaient
+   donc jamais retournés et seul le produit « à vie » s'affichait — c'est exactement
+   le symptôme de `raf.md`, « quand je clique sur ACTIVER, seul un abonnement est
+   proposé ». Les deux catalogues sont désormais interrogés.
+2. **`launchBillingFlow()` ne gérait pas les abonnements** : `oneTimePurchaseOfferDetails ?: return`
+   sortait en silence, et le `setOfferToken` obligatoire manquait. Appuyer sur le
+   bouton n'aurait rien produit, sans message.
+3. **`restorePurchases()` n'interrogeait que `INAPP`** : un abonné réinstallant
+   l'application ne récupérait jamais son accès.
+4. **L'abonné était bloqué au 30ᵉ jour.** `deliverProduct()` pose une échéance locale
+   de 30 jours, mais Play renouvelle sans réveiller l'application, et
+   `restorePurchases()` n'était appelé **que** depuis le bouton « Restaurer » de
+   l'écran d'achat — jamais au démarrage. Un client à jour de paiement perdait donc
+   l'accès chaque mois, avec pour seul recours d'aller appuyer lui-même sur
+   « Restaurer ». Même famille que P1, qu'il aggravait.
+
+   `syncEntitlements()` réaligne l'accès sur ce que Play connaît, et `TrialViewModel`
+   l'appelle **avant** de décider de l'accès. Sous `withTimeoutOrNull(4 s)` : l'écran
+   de lancement attend cette résolution, un service de facturation lent ou injoignable
+   ne doit pas figer le démarrage. Mesuré sur appareil, facturation indisponible :
+   démarrage à ~900 ms, stable sur trois lancements.
+5. **Les échecs étaient avalés.** `queryProducts()` ignorait un `responseCode != OK` et
+   `loadProducts()` enveloppait tout dans un `runCatching` muet : l'écran affichait
+   « No products available » aussi bien pour une Play Console mal configurée que pour
+   une panne de service, sans moyen de distinguer les deux. Les codes de réponse sont
+   désormais traduits en messages exploitables, et une restauration qui ne trouve rien
+   le dit.
+6. **Une annulation était présentée comme une erreur**, avec `debugMessage` — un texte
+   technique jamais destiné à l'utilisateur. `PurchaseResult.Cancelled` ramène
+   simplement à l'écran.
+
+Défaut de tri corrigé au passage : le classement par prix lisait
+`oneTimePurchaseOfferDetails`, `null` pour un abonnement, ce qui les plaçait tous en
+tête à prix nul.
+
+⚠️ **Rien de tout ceci n'est vérifiable sur cette machine** : la variante `.debug` a un
+`applicationId` suffixé, donc étrangère à Play Billing, et un test réel exige un
+compte testeur et une build publiée. Seul le non-blocage du démarrage a pu être
+mesuré. À valider en piste fermée avant diffusion.
+
+**Reste à traiter** : `deliverProduct()` code encore 30 et 365 jours en dur. Tant que
+`syncEntitlements()` tourne à chaque démarrage, l'accès est continûment prolongé et le
+comportement est correct ; mais un abonnement résilié reste ouvert jusqu'à 30 jours
+après la fin réelle. Le corriger proprement demande l'échéance réelle, qui n'est pas
+exposée côté client — il faut la Play Developer API, donc un serveur.
 
 ### P6 — L'application mobile ne bloque jamais un utilisateur expiré
 `app-mobile/…/navigation/NavGraph.kt` · destination `SPLASH`

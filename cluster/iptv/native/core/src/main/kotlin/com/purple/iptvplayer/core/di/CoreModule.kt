@@ -32,6 +32,6 @@ val coreModule = module {
     viewModel { ContentViewModel(get(), get(), get()) }
     viewModel { PlayerViewModel(get(), get(), get()) }
     viewModel { PurchaseViewModel(get(), get()) }
-    viewModel { TrialViewModel(get()) }
+    viewModel { TrialViewModel(get(), get()) }
     viewModel { DownloadViewModel(get()) }
 }
