@@ -34,6 +34,14 @@ android {
     }
 
     buildTypes {
+        // La build de debug s'installe À CÔTÉ de la release au lieu d'exiger sa
+        // désinstallation (signatures différentes), ce qui préserve identifiants,
+        // état d'abonnement, favoris et téléchargements de l'app de production.
+        // Contrepartie : Play Billing ne fonctionne pas sur cette variante, les
+        // produits étant liés à l'applicationId publié.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
