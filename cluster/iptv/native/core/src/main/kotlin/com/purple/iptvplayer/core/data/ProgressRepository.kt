@@ -8,8 +8,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import org.json.JSONArray
-import org.json.JSONObject
 
 private val Context.progressDataStore by preferencesDataStore(name = "watch_progress")
 
@@ -80,39 +78,9 @@ class ProgressRepository(private val context: Context) {
         }
     }
 
-    private fun parseRecentJson(json: String): List<RecentItem> {
-        val arr = JSONArray(json)
-        return (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            RecentItem(
-                id        = o.getString("id"),
-                url       = o.optString("url").ifEmpty { "" },
-                title     = o.getString("title"),
-                cover     = o.optString("cover").ifEmpty { null },
-                type      = o.getString("type"),
-                progress  = o.getLong("progress"),
-                duration  = o.getLong("duration"),
-                timestamp = o.getLong("timestamp")
-            )
-        }
-    }
+    private fun parseRecentJson(json: String): List<RecentItem> = RecentItemsCodec.parse(json)
 
-    private fun encodeRecentJson(items: List<RecentItem>): String {
-        val arr = JSONArray()
-        items.forEach { itm ->
-            arr.put(JSONObject().apply {
-                put("id", itm.id)
-                put("url", itm.url)
-                put("title", itm.title)
-                put("cover", itm.cover ?: "")
-                put("type", itm.type)
-                put("progress", itm.progress)
-                put("duration", itm.duration)
-                put("timestamp", itm.timestamp)
-            })
-        }
-        return arr.toString()
-    }
+    private fun encodeRecentJson(items: List<RecentItem>): String = RecentItemsCodec.encode(items)
 }
 
 data class RecentItem(
