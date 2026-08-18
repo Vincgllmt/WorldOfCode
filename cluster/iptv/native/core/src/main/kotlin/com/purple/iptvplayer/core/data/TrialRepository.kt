@@ -12,7 +12,11 @@ import kotlinx.coroutines.withContext
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "trial_prefs")
 
-class TrialRepository(private val context: Context) {
+class TrialRepository(
+    private val context: Context,
+    /** Source de temps injectable : permet de tester les règles d'accès sans toucher à l'horloge système. */
+    private val now: () -> Long = System::currentTimeMillis,
+) {
 
     // DataStore keys
     private val KEY_TRIAL_START = longPreferencesKey("trial_start_date")
@@ -32,31 +36,31 @@ class TrialRepository(private val context: Context) {
     suspend fun initTrial() {
         val prefs = context.dataStore.data.first()
         if (!prefs.contains(KEY_TRIAL_START)) {
-            val now = System.currentTimeMillis()
-            context.dataStore.edit { it[KEY_TRIAL_START] = now }
-            withContext(Dispatchers.IO) { securePrefs.edit().putLong("trial_start_date", now).apply() }
+            val startedAt = now()
+            context.dataStore.edit { it[KEY_TRIAL_START] = startedAt }
+            withContext(Dispatchers.IO) { securePrefs.edit().putLong("trial_start_date", startedAt).apply() }
         }
     }
 
-    suspend fun getRemainingDays(): Int {
-        if (isPro()) return 999
-        val expiry = getExpiryMs()
-        if (expiry != null) {
-            val diff = ((expiry - System.currentTimeMillis()) / 86_400_000L).toInt()
-            if (diff > 0) return diff
-        }
-        val start = getTrialStartMs() ?: return 3
-        val daysPassed = ((System.currentTimeMillis() - start) / 86_400_000L).toInt()
-        return (3 - daysPassed).coerceAtLeast(0)
-    }
+    suspend fun getRemainingDays(): Int = TrialPolicy.remainingDays(
+        now = now(),
+        trialStartMs = getTrialStartMs(),
+        expiryMs = getExpiryMs(),
+        isPro = isPro(),
+    )
 
-    suspend fun hasAccess(): Boolean = getRemainingDays() > 0
+    suspend fun hasAccess(): Boolean = TrialPolicy.hasAccess(
+        now = now(),
+        trialStartMs = getTrialStartMs(),
+        expiryMs = getExpiryMs(),
+        isPro = isPro(),
+    )
 
-    suspend fun isPremium(): Boolean {
-        if (isPro()) return true
-        val expiry = getExpiryMs() ?: return false
-        return expiry > System.currentTimeMillis()
-    }
+    suspend fun isPremium(): Boolean = TrialPolicy.isPremium(
+        now = now(),
+        expiryMs = getExpiryMs(),
+        isPro = isPro(),
+    )
 
     suspend fun isPro(): Boolean {
         val ds = context.dataStore.data.first()
@@ -70,7 +74,7 @@ class TrialRepository(private val context: Context) {
     }
 
     suspend fun activateSubscription(durationMs: Long) {
-        val expiry = System.currentTimeMillis() + durationMs
+        val expiry = now() + durationMs
         context.dataStore.edit { it[KEY_EXPIRY] = expiry }
         withContext(Dispatchers.IO) { securePrefs.edit().putLong("subscription_expiry_date", expiry).apply() }
     }

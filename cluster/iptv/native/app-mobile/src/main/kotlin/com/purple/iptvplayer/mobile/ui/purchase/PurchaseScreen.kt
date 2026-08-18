@@ -32,7 +32,7 @@ import com.purple.iptvplayer.mobile.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun PurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
+fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
     val vm: PurchaseViewModel = koinViewModel()
     val state    by vm.state.collectAsState()
     val products by vm.products.collectAsState()
@@ -92,14 +92,17 @@ fun PurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
 
                     Spacer(Modifier.height(48.dp))
 
-                    TextButton(onClick = onBack) {
-                        Text(
-                            text  = "Maybe later",
-                            color = TextPrimary.copy(alpha = 0.3f),
-                            style = LocalTextStyle.current.copy(
-                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
-                            ),
-                        )
+                    // Absent quand l'écran sert de barrière : cf. onBack nullable.
+                    if (onBack != null) {
+                        TextButton(onClick = onBack) {
+                            Text(
+                                text  = "Maybe later",
+                                color = TextPrimary.copy(alpha = 0.3f),
+                                style = LocalTextStyle.current.copy(
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                ),
+                            )
+                        }
                     }
                 }
             }

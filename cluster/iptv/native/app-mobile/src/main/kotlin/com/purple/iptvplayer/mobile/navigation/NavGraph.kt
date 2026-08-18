@@ -2,14 +2,13 @@ package com.purple.iptvplayer.mobile.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
+import kotlinx.coroutines.flow.first
 import com.purple.iptvplayer.mobile.ui.main.MainScreen
 import com.purple.iptvplayer.mobile.ui.moviedetail.MovieDetailScreen
 import com.purple.iptvplayer.mobile.ui.player.PlayerScreen
@@ -24,7 +23,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.produceState
 import com.purple.iptvplayer.mobile.ui.theme.BgApp
 import org.koin.compose.koinInject
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
@@ -34,13 +32,19 @@ object Routes {
     const val SPLASH   = "splash"
     const val SETUP    = "setup"
     const val MAIN     = "main"
-    const val PURCHASE = "purchase"
+    const val PURCHASE = "purchase?blocking={blocking}"
     const val PLAYER   = "player?url={url}&title={title}&mediaId={mediaId}&type={type}&cover={cover}&streamId={streamId}"
     const val MOVIE_DETAIL  = "movie_detail/{id}"
     const val SERIES_DETAIL = "series_detail/{id}"
 
     fun player(url: String, title: String, mediaId: String = "", type: String = "", cover: String = "", streamId: Int = 0) =
         "player?url=${encode(url)}&title=${encode(title)}&mediaId=${encode(mediaId)}&type=${encode(type)}&cover=${encode(cover)}&streamId=$streamId"
+
+    /**
+     * @param blocking l'écran est atteint comme **barrière** (essai expiré) et non
+     *   depuis le menu : aucune échappatoire ne doit alors être proposée.
+     */
+    fun purchase(blocking: Boolean = false) = "purchase?blocking=$blocking"
 
     fun movieDetail(id: Int) = "movie_detail/$id"
     fun seriesDetail(id: Int) = "series_detail/$id"
@@ -59,28 +63,22 @@ fun IptvNavGraph() {
         NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
             composable(Routes.SPLASH) {
-                val hasAccess by trialVm.hasAccess.collectAsState()
-                val startState = produceState<Pair<Boolean?, Boolean>?>(null) {
+                // `hasAccess` vaut null jusqu'à ce que TrialViewModel.refresh() aboutisse.
+                // Il FAUT attendre cette résolution : lire la valeur immédiatement donne
+                // null, `access == false` est alors faux, et un utilisateur expiré part
+                // sur MAIN — le blocage ne s'applique jamais. Même approche que TvNavGraph.
+                LaunchedEffect(Unit) {
                     val creds = credRepo.load()
-                    value = (hasAccess to (creds != null))
+                    val access = trialVm.hasAccess.first { it != null }
+                    val route = when {
+                        access == false -> Routes.purchase(blocking = true)
+                        creds == null   -> Routes.SETUP
+                        else            -> Routes.MAIN
+                    }
+                    navController.navigate(route) { popUpTo(Routes.SPLASH) { inclusive = true } }
                 }
-                val resolved = startState.value
-                if (resolved == null) {
-                    Box(Modifier.fillMaxSize().background(BgApp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = com.purple.iptvplayer.mobile.ui.theme.Purple)
-                    }
-                } else {
-                    val (access, hasCreds) = resolved
-                    LaunchedEffect(resolved) {
-                        when {
-                            access == false -> navController.navigate(Routes.PURCHASE) { popUpTo(Routes.SPLASH) { inclusive = true } }
-                            !hasCreds       -> navController.navigate(Routes.SETUP)    { popUpTo(Routes.SPLASH) { inclusive = true } }
-                            else            -> navController.navigate(Routes.MAIN)     { popUpTo(Routes.SPLASH) { inclusive = true } }
-                        }
-                    }
-                    Box(Modifier.fillMaxSize().background(BgApp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = com.purple.iptvplayer.mobile.ui.theme.Purple)
-                    }
+                Box(Modifier.fillMaxSize().background(BgApp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = com.purple.iptvplayer.mobile.ui.theme.Purple)
                 }
             }
 
@@ -96,15 +94,22 @@ fun IptvNavGraph() {
                     onPlayMovie    = { url, title, id, cover -> navController.navigate(Routes.player(url, title, id.toString(), "movie", cover)) },
                     onMovieDetail  = { id -> navController.navigate(Routes.movieDetail(id)) },
                     onSeriesDetail = { id -> navController.navigate(Routes.seriesDetail(id)) },
-                    onPurchase     = { navController.navigate(Routes.PURCHASE) },
+                    onPurchase     = { navController.navigate(Routes.purchase()) },
                     onLogout       = { navController.navigate(Routes.SETUP) { popUpTo(0) { inclusive = true } } },
                 )
             }
 
-            composable(Routes.PURCHASE) {
-                PurchaseScreen(onBack = { navController.popBackStack() }, onSuccess = {
-                    navController.navigate(Routes.MAIN) { popUpTo(0) { inclusive = true } }
-                })
+            composable(
+                route = Routes.PURCHASE,
+                arguments = listOf(navArgument("blocking") { type = NavType.BoolType; defaultValue = false }),
+            ) { back ->
+                val blocking = back.arguments?.getBoolean("blocking") ?: false
+                PurchaseScreen(
+                    // Écran-barrière : pas de « Maybe later ». Le lien ne faisait rien
+                    // (pile de navigation vide) tout en paraissant actionnable.
+                    onBack    = if (blocking) null else ({ navController.popBackStack() }),
+                    onSuccess = { navController.navigate(Routes.MAIN) { popUpTo(0) { inclusive = true } } },
+                )
             }
 
             composable(
