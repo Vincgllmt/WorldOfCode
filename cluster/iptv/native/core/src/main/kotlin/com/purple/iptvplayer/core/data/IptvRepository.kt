@@ -58,23 +58,29 @@ class IptvRepository(
             cacheRepo.getChannels()?.let { channelsCache = it; return it }
         }
         val c = credRepo.load() ?: throw IllegalStateException("No credentials configured")
-        val result = if (!c.isXtream) {
-            fetchM3u(c).filter { it.type == ContentType.LIVE }.map { item ->
-                Channel(
-                    name  = apiClient.cleanName(item.name),
-                    url   = item.url,
-                    logo  = item.logo,
-                    group = item.group?.let { apiClient.cleanCat(it) } ?: "Others",
-                )
+        val result = try {
+            if (!c.isXtream) {
+                fetchM3u(c).filter { it.type == ContentType.LIVE }.map { item ->
+                    Channel(
+                        name  = apiClient.cleanName(item.name),
+                        url   = item.url,
+                        logo  = item.logo,
+                        group = item.group?.let { apiClient.cleanCat(it) } ?: "Others",
+                    )
+                }
+            } else {
+                withContext(Dispatchers.IO) {
+                    val (catsBody, streamsBody) = parallelFetch(
+                        apiClient.playerApiUrl(c, "get_live_categories"),
+                        apiClient.playerApiUrl(c, "get_live_streams"),
+                    )
+                    apiClient.parseChannels(catsBody, streamsBody, c)
+                }
             }
-        } else {
-            withContext(Dispatchers.IO) {
-                val (catsBody, streamsBody) = parallelFetch(
-                    apiClient.playerApiUrl(c, "get_live_categories"),
-                    apiClient.playerApiUrl(c, "get_live_streams"),
-                )
-                apiClient.parseChannels(catsBody, streamsBody, c)
-            }
+        } catch (e: Exception) {
+            // Réseau indisponible : servir le cache même périmé vaut mieux qu'un écran
+            // d'erreur. Sans ce repli, l'ajout du TTL casserait l'usage hors-ligne.
+            cacheRepo.getChannels(allowStale = true)?.let { channelsCache = it; return it } ?: throw e
         }
         channelsCache = result
         cacheRepo.saveChannels(result)
@@ -89,20 +95,24 @@ class IptvRepository(
             cacheRepo.getMovies()?.let { moviesCache = it; return it }
         }
         val c = credRepo.load() ?: throw IllegalStateException("No credentials configured")
-        val result = if (!c.isXtream) {
-            var idCounter = 1
-            fetchM3u(c).filter { it.type == ContentType.MOVIE }.map { item ->
-                Movie(id = idCounter++, name = apiClient.cleanName(item.name), url = item.url,
-                    cover = item.logo, group = item.group?.let { apiClient.cleanCat(it) } ?: "Others")
+        val result = try {
+            if (!c.isXtream) {
+                var idCounter = 1
+                fetchM3u(c).filter { it.type == ContentType.MOVIE }.map { item ->
+                    Movie(id = idCounter++, name = apiClient.cleanName(item.name), url = item.url,
+                        cover = item.logo, group = item.group?.let { apiClient.cleanCat(it) } ?: "Others")
+                }
+            } else {
+                withContext(Dispatchers.IO) {
+                    val (catsBody, streamsBody) = parallelFetch(
+                        apiClient.playerApiUrl(c, "get_vod_categories"),
+                        apiClient.playerApiUrl(c, "get_vod_streams"),
+                    )
+                    apiClient.parseMovies(catsBody, streamsBody, c)
+                }
             }
-        } else {
-            withContext(Dispatchers.IO) {
-                val (catsBody, streamsBody) = parallelFetch(
-                    apiClient.playerApiUrl(c, "get_vod_categories"),
-                    apiClient.playerApiUrl(c, "get_vod_streams"),
-                )
-                apiClient.parseMovies(catsBody, streamsBody, c)
-            }
+        } catch (e: Exception) {
+            cacheRepo.getMovies(allowStale = true)?.let { moviesCache = it; return it } ?: throw e
         }
         moviesCache = result
         cacheRepo.saveMovies(result)
@@ -130,20 +140,24 @@ class IptvRepository(
             cacheRepo.getSeries()?.let { seriesCache = it; return it }
         }
         val c = credRepo.load() ?: throw IllegalStateException("No credentials configured")
-        val result = if (!c.isXtream) {
-            var idCounter = 1
-            fetchM3u(c).filter { it.type == ContentType.SERIES }.map { item ->
-                SeriesItem(id = idCounter++, name = apiClient.cleanName(item.name),
-                    cover = item.logo, group = item.group?.let { apiClient.cleanCat(it) } ?: "Others")
+        val result = try {
+            if (!c.isXtream) {
+                var idCounter = 1
+                fetchM3u(c).filter { it.type == ContentType.SERIES }.map { item ->
+                    SeriesItem(id = idCounter++, name = apiClient.cleanName(item.name),
+                        cover = item.logo, group = item.group?.let { apiClient.cleanCat(it) } ?: "Others")
+                }
+            } else {
+                withContext(Dispatchers.IO) {
+                    val (catsBody, streamsBody) = parallelFetch(
+                        apiClient.playerApiUrl(c, "get_series_categories"),
+                        apiClient.playerApiUrl(c, "get_series"),
+                    )
+                    apiClient.parseSeries(catsBody, streamsBody)
+                }
             }
-        } else {
-            withContext(Dispatchers.IO) {
-                val (catsBody, streamsBody) = parallelFetch(
-                    apiClient.playerApiUrl(c, "get_series_categories"),
-                    apiClient.playerApiUrl(c, "get_series"),
-                )
-                apiClient.parseSeries(catsBody, streamsBody)
-            }
+        } catch (e: Exception) {
+            cacheRepo.getSeries(allowStale = true)?.let { seriesCache = it; return it } ?: throw e
         }
         seriesCache = result
         cacheRepo.saveSeries(result)
