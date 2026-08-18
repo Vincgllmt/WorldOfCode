@@ -1,5 +1,0 @@
-Modifier.pointerInput(Unit) {
-    detectHorizontalDragGestures { change, dragAmount ->
-        // logic
-    }
-}

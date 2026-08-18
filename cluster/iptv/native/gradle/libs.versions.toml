@@ -20,6 +20,8 @@ tvCompose            = "1.0.0"
 coroutines           = "1.8.1"
 castFramework        = "21.5.0"
 mediaRouter          = "1.7.0"
+junit                = "4.13.2"
+orgJson              = "20240303"
 
 [libraries]
 # AndroidX
@@ -72,6 +74,13 @@ kotlinx-coroutines-android           = { group = "org.jetbrains.kotlinx",     na
 # Cast
 cast-framework                       = { group = "com.google.android.gms",    name = "play-services-cast-framework",    version.ref = "castFramework" }
 media-router                         = { group = "androidx.mediarouter",       name = "mediarouter",                     version.ref = "mediaRouter" }
+
+# Test (JVM unit tests — voir CLAUDE.md §4)
+junit                                = { group = "junit",                      name = "junit",                           version.ref = "junit" }
+kotlinx-coroutines-test              = { group = "org.jetbrains.kotlinx",      name = "kotlinx-coroutines-test",         version.ref = "coroutines" }
+# Implémentation réelle d'org.json : sur le classpath de test, elle remplace le
+# stub d'android.jar qui lève « not mocked » sur JSONArray/JSONObject.
+org-json                             = { group = "org.json",                   name = "json",                            version.ref = "orgJson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
