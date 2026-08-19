@@ -2,6 +2,7 @@ package com.purple.iptvplayer.tv.ui.main
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -15,6 +16,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
@@ -218,14 +221,15 @@ private fun RailBrandLockup(expanded: Boolean) {
             )
             .padding(bottom = 24.dp),
     ) {
-        Box(
-            Modifier
-                .size(36.dp)
-                .background(PurplePalette.Purple700, PurpleShapes.Sm),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("✦", color = PurplePalette.Purple200, style = LocalPurpleType.current.h3)
-        }
+        // Le vrai logo, et non le caractère « ✦ » qui en tenait lieu. `ic_logo` est
+        // déjà celui des deux écrans de connexion et de la barre du mobile : le rail
+        // était le seul endroit à afficher un substitut.
+        Image(
+            painter            = painterResource(R.drawable.ic_logo),
+            contentDescription = null,
+            contentScale       = ContentScale.Fit,
+            modifier           = Modifier.size(36.dp),
+        )
         if (expanded) {
             Row {
                 Text(
