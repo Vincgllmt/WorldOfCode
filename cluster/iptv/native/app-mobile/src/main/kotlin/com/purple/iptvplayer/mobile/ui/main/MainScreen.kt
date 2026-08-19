@@ -191,6 +191,18 @@ fun MainScreen(
                     color = TextSub, fontSize = 12.sp,
                     modifier = Modifier.weight(1f),
                 )
+                // Un abonné doit pouvoir passer à l'annuel ou au définitif. Retirer
+                // « ACTIVER » corrigeait le mot mais supprimait le seul chemin vers
+                // l'écran d'achat : la montée en gamme devenait impossible.
+                TextButton(
+                    onClick = onPurchase,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.btn_change_plan),
+                        fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Purple,
+                    )
+                }
             }
 
             // Essai en cours ou expiré : c'est ici, et seulement ici, que l'appel

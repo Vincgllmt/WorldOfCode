@@ -1245,3 +1245,59 @@ français** (« jour(s) restant(s) », « Essai expiré ») — désormais dans 
 la version anglaise qui manquait.
 
 **État : 92 tests, 0 échec** (73 + 12 `AccessStateTest` + 7 `OfferPriceTest`).
+
+
+### Vérifié sur la build de Play (version 11, 2026-08-19)
+
+Installée par `com.android.vending`, signée par la clé de Google — conditions contrôlées
+avant toute observation.
+
+| Point | Version 10 | Version 11 |
+|---|---|---|
+| Prix `Monthly` | `N/A` | **0,99 €** |
+| Prix `Yearly` | `N/A` | **4,99 €** |
+| Prix `Lifetime` | 9,99 € | 9,99 € |
+
+➡️ **B3 est corrigé et prouvé.** « SAVE 58% » devient d'ailleurs vérifiable :
+0,99 × 12 = 11,88 € contre 4,99 €, l'économie annoncée est exacte.
+
+L'état `Subscribed` a été observé sur cette même build (bandeau doré, échéance, pas de
+bouton « ACTIVER ») : UX-1 est vérifié hors variante debug.
+
+Observation annexe : l'abonnement de test avait expiré depuis longtemps (période de
+5 minutes) et l'application affichait pourtant encore « 30 jours restants ». C'est le
+comportement attendu de l'échéance locale posée par `deliverProduct()`, et la
+démonstration sur appareil du reste-à-traiter de B1 — un abonnement résilié reste ouvert
+jusqu'à 30 jours. Même famille que B2.
+
+### ⚠️ Régression introduite par UX-1, puis corrigée
+
+Retirer « ACTIVER » à l'abonné corrigeait le libellé mais supprimait le **seul** point
+d'entrée vers l'écran d'achat (`MainScreen.kt:183`) : un abonné mensuel ne pouvait plus
+passer à l'annuel ni au définitif. Le mot était faux, le chemin était utile.
+
+**Correction** : l'état `Subscribed` porte un lien discret « Changer d'offre », vérifié
+sur appareil — il ouvre bien l'écran d'achat, en mode non bloquant (« Maybe later »
+présent, conformément à P9). L'état `Pro` n'en reçoit pas : il n'y a rien au-dessus.
+
+**Leçon** : supprimer un élément d'interface mal libellé supprime aussi la fonction qu'il
+portait. Vérifier ce qu'on retire, pas seulement ce qu'on ajoute.
+
+### UX-2 — Sur Android TV, on ne peut pas acheter *(trouvé le 2026-08-19, NON corrigé)*
+`app-tv/…/ui/main/TvMainScreen.kt`
+
+`TvMainScreen` déclare un paramètre `onPurchase: () -> Unit` … **et ne s'en sert jamais**.
+Aucun autre chemin n'existe : la page Réglages n'offre rien, et `TvNavGraph` ne route vers
+`TvScreen.Purchase` que par la barrière (`access == false`).
+
+Conséquence : un utilisateur Android TV **ne peut jamais acheter de son plein gré**. Il
+doit attendre l'expiration de son essai pour que la barrière l'y contraigne. Le badge du
+rail affiche son décompte sans qu'aucune action ne soit possible.
+
+**Sévérité : haute — chemin de conversion inexistant sur toute une plateforme.**
+
+**Non corrigé volontairement.** Rendre un élément du rail focalisable touche à la
+navigation D-pad — précisément ce pour quoi l'application a été migrée de Flutter vers le
+natif. Aucun appareil Android TV ni AVD n'est disponible ici : la corriger à l'aveugle
+reviendrait à refaire l'erreur documentée en §5 P4. À traiter quand un émulateur TV sera
+en place (image `android-tv` à installer via `sdkmanager`).
