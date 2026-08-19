@@ -775,6 +775,10 @@ impossible.
 - [x] **P8** — `CachePolicy` + TTL de 24 h branché, avec repli sur cache périmé quand
       le réseau échoue. 7 tests.
 - [x] Non-régression : `:app-mobile:assembleDebug` et `:app-tv:assembleDebug` ✅.
+- [x] **B3** — prix des abonnements (« N/A ») corrigé des deux côtés, prouvé sur build Play.
+- [x] **UX-1** — quatre états d'accès distingués, vérifiés sur mobile **et** TV.
+- [x] **UX-2** — chemin d'achat ouvert sur Android TV, vérifié au D-pad.
+- [x] **P9** — tranché : lien masqué sur l'écran-barrière, présent sinon.
 
 - [x] **S3** — `rootProject.file()` dans les deux `signingConfig` : le keystore était
       cherché un niveau trop bas et **aucune publication n'était possible**.
@@ -784,29 +788,54 @@ impossible.
 
 ### À faire
 
-- [ ] **B3 — prix « N/A » sur le paywall** (cf. §5 B3). Correction symétrique de celle déjà
-      faite pour le tri : lire le prix de la première phase tarifaire en repli.
-- [ ] **UX-1 — cohérence de l'état premium dans toute l'application** *(demandé le 2026-08-19)*.
-      Voir §10.
-- [ ] **B2 — un achat remboursé ne retire jamais l'accès** (cf. §5 B2). Exige de distinguer
-      « Play dit que tu n'as rien » de « Play n'a pas répondu » : ne pas écrire à l'aveugle.
+Classé par ce qui contraint le reste, pas par difficulté.
 
-- [ ] Exposer la simulation d'expiration dans l'UI derrière `BuildConfig.DEBUG`
-      (demande explicite de `raf.md`).
-- [ ] Trancher **P9** (« Maybe later » sur l'écran de blocage).
-- [ ] Vérifier sur appareil réel les symptômes de `raf.md` qui ne se reproduisent
-      pas hors appareil : Cast d'une chaîne TV (son sans image), EPG qui ne
-      disparaît jamais, retrait d'un favori impossible sur `app-tv`.
-- [ ] Auditer `FavoritesRepository.toggle()` côté `app-tv` : la logique `core`
-      semble correcte, le défaut est probablement dans la couche UI TV.
-- [ ] Trancher **S1** (TLS) et **B1** (restauration des abonnements) — les deux
-      exigent une décision qui n'est pas dans le code.
-- [ ] `DownloadRepository` (8,4 ko) et `PlayerService` : encore aucune couverture.
-      `XtreamApiClient` n'est couvert que sur ses URL et l'EPG ; ses parseurs JSON
-      (`parseChannels`, `parseMovies`, `parseSeriesDetail`) restent nus — et ils
-      appellent `JSONArray()` sans protection, exactement comme P2.
-- [ ] Ultérieur : tests instrumentés (Espresso / Compose UI) quand un appareil ou
-      un AVD sera disponible.
+#### Échéance dure — 31 août 2026
+
+- [ ] **Migrer Play Billing 7 → 8.** Après cette date la Play Console **n'accepte plus
+      aucune publication** en v7 : tous les correctifs déjà faits resteraient non
+      distribuables. Extension possible jusqu'au 1ᵉʳ novembre. Publier la v12 d'abord,
+      pour figer ce qui est acquis, puis migrer et republier.
+
+#### Demandes de `raf.md` encore ouvertes
+
+- [ ] **Retrait d'un favori impossible sur `app-tv`.** Bug clair, désormais **observable**
+      grâce à l'émulateur TV (§11). La logique `core` semble saine, le défaut est
+      probablement dans la couche UI.
+- [ ] **Carte EPG absente sur TV** — « il manque l'EPG comme sur mobile, c'est une carte
+      en dehors du lecteur ». Portage de `PlayerScreen` (P10/P11 déjà corrigés) vers TV.
+- [ ] **Bouton VF / VOSTFR** au lancement d'un contenu, en bas à droite au-dessus du
+      lecteur. ⚠️ Précision de `raf.md` à ne pas perdre : **la première piste de
+      sous-titres ne fonctionne quasi jamais**, prendre la deuxième si elle existe.
+- [ ] **Bouton de simulation de fin d'essai** derrière `BuildConfig.DEBUG`. Le mécanisme
+      existe déjà (`mkprefs.py` + `run-as`, §3) — reste à l'exposer dans l'UI.
+- [ ] **Cast d'une chaîne TV : son sans image.** Exige un Chromecast sur le même réseau,
+      impossible depuis ce poste.
+
+#### Facturation
+
+- [ ] **B2 — un achat remboursé ne retire jamais l'accès** (§5 B2). Exige de distinguer
+      « Play dit que tu n'as rien » d'une panne : ne pas écrire à l'aveugle.
+- [ ] **B1.5 non observé** : impossible de provoquer un échec de facturation, Play Billing
+      sert son cache local. À retenter autrement.
+- [ ] `deliverProduct()` code 30 et 365 jours en dur ; l'échéance réelle exige la Play
+      Developer API, donc un serveur.
+
+#### Dette et sécurité
+
+- [ ] **`keystore.properties` est suivi par git avec ses mots de passe en clair**, sur un
+      dépôt distant partagé (§5 S2). Le sortir du suivi **et faire tourner la clé**.
+- [ ] `local.properties` versionné (§3) — même geste.
+- [ ] **279 artefacts de build suivis par git** (§7) : `git rm -r --cached` + `.gitignore`.
+- [ ] Trancher **S1** (TLS désactivé) — décision produit.
+
+#### Couverture
+
+- [ ] `app-tv` reste en **versionCode 8** : aucun correctif TV n'est distribué.
+- [ ] `DownloadRepository` et `PlayerService` : aucune couverture. Les parseurs JSON de
+      `XtreamApiClient` (`parseChannels`, `parseMovies`, `parseSeriesDetail`) appellent
+      `JSONArray()` sans protection — **exactement le défaut P2**, non corrigé.
+- [ ] Tests instrumentés (Compose UI) : désormais possibles, un émulateur TV existe (§11).
 
 ---
 
