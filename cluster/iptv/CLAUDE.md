@@ -822,10 +822,12 @@ Classé par ce qui contraint le reste, pas par difficulté.
       reçu le même traitement.
 - [x] **6 bis. TV — fiche série retravaillée** — cf. §21.
 - [x] **10. TV — résultats de recherche inatteignables au D-pad** — corrigé, cf. §22.
-- [ ] **11. TV — le focus s'échappe des grilles vers la barre de recherche.** Depuis une
-      carte de résultat, Droite remonte au champ de recherche au lieu d'aller à la carte
-      suivante. Même famille que les défauts 9 et §16 : Compose TV cherche le focalisable
-      le plus proche et remonte. Empêche encore d'atteindre une série à 37 saisons (§21).
+- [x] ~~11. Le focus s'échappe des grilles vers la barre de recherche~~ — **mauvais
+      diagnostic de ma part**, cf. §24. Il n'y avait qu'un seul résultat : rien à droite.
+- [ ] **12. TV — le clavier virtuel piège les touches directionnelles.** Dès que le focus
+      revient sur la barre de recherche, l'IME s'affiche et avale haut/bas/droite/validation
+      (« Simpson » devient « Simpsonp »). Gênant à la télécommande, où l'on traverse
+      souvent la barre.
 - [x] **9. TV — le rail met en avant le mauvais onglet** — corrigé, cf. §23. Ancien texte : Signalé et capturé par
       l'utilisateur : après avoir choisi « Series », le contenu affiche bien les séries
       (8 464 titres) mais **la pastille pleine reste sur « Live TV »**. Deux causes qui
@@ -2251,3 +2253,47 @@ Mesuré après correction : fond du rail large de 144 px, centre à 72 px, centr
 Les deux restants demandent un `focusGroup`/`focusRestorer` par zone, à poser avec
 précaution : trop contraindre le focus le **piège**, et rendre le rail inatteignable
 serait un défaut pire que ceux-ci.
+
+---
+
+## 24. Défaut 11 — mauvais diagnostic, et les 37 saisons enfin vérifiées *(2026-08-19)*
+
+### Ce que j'avais annoncé était faux
+
+J'avais consigné : « depuis une carte de résultat, Droite remonte à la barre de recherche
+au lieu d'aller à la carte suivante ». Vérification faite en listant les nœuds
+focalisables, **il n'y avait qu'une seule carte** :
+
+```
+focalisables : [1388,39][1782,135]   (barre de recherche)
+               [1782,39][1878,135]   (bouton effacer)
+               [533,174][850,650]    (l'unique résultat)
+```
+
+La recherche « Simpson » ne rendait qu'un résultat au moment du test — les deux vus plus
+tôt venaient d'un état précédent. Droite ne « déviait » donc pas : il n'y avait rien à
+droite, et Compose TV a fait ce qu'il fait toujours dans ce cas. **Le défaut 11 n'existe
+pas** ; il se ramène au cas générique « rien dans cette direction », déjà consigné.
+
+Leçon : compter les nœuds focalisables avant de conclure à un défaut de navigation.
+
+### ✅ Séries à nombreuses saisons — vérifié
+
+En attente depuis §21. « Les Simpson » compte **37 saisons**. Trace relevée :
+
+```
+focus [981,24] -> ['Season 5']
+… 10 appuis vers la droite …
+focus [981,24] -> ['Season 15']     saisons visibles : 14, 15, 16, 17
+```
+
+➡️ **La rangée défile correctement au D-pad**, et le bouton « Télécharger la saison »
+reste épinglé à droite. La mise en page de §21 tient sur 37 saisons.
+
+### Défaut trouvé au passage : le clavier virtuel piège la télécommande
+
+Dès que le focus revient sur la barre de recherche, l'IME s'affiche et **avale les touches
+directionnelles** : « Simpson » devenait « Simpsonp », « Simpsonqs ». C'est le même piège
+que celui noté en §22 pour les tests, mais c'est aussi un défaut réel pour l'utilisateur —
+à la télécommande, on traverse souvent la barre de recherche sans vouloir y saisir quoi
+que ce soit. Consigné comme défaut 12.
