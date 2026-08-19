@@ -168,7 +168,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    selectedGenre ?: "Séries",
+                    selectedGenre ?: stringResource(R.string.nav_series),
                     style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                 )
                 if (allSeries.isNotEmpty()) {
@@ -590,7 +590,7 @@ internal fun TvSeriesDetailPage(
                         }
                         Spacer(Modifier.weight(1f))
                         TvSeriesActionButton(
-                            label    = if (isInWatchlist) "Ma liste" else "+ Ma liste",
+                            label    = if (isInWatchlist) "Ma liste" else stringResource(R.string.btn_watchlist_add),
                             icon     = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             onClick  = onToggleWatchlist,
                             modifier = Modifier.focusRequester(firstDetailFocus),

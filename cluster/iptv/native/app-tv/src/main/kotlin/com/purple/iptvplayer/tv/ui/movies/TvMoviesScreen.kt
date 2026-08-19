@@ -179,7 +179,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    selectedGenre ?: "Films",
+                    selectedGenre ?: stringResource(R.string.nav_movies),
                     style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                 )
                 if (allMovies.isNotEmpty()) {
@@ -543,7 +543,7 @@ internal fun TvMovieDetailPage(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         detail.year?.let     { TvMetaChip(it) }
                         detail.duration?.let { TvMetaChip(it) }
-                        detail.rating?.let   { TvMetaChip("Note: $it") }
+                        detail.rating?.let   { TvMetaChip(stringResource(R.string.label_rating, it)) }
                     }
                     detail.description?.let {
                         Spacer(Modifier.height(20.dp))
@@ -560,7 +560,7 @@ internal fun TvMovieDetailPage(
                     }
                     detail.cast?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.height(6.dp))
-                        TvMovieMetaRow("Acteurs", it)
+                        TvMovieMetaRow(stringResource(R.string.label_cast), it)
                     }
                     Spacer(Modifier.height(36.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -582,7 +582,7 @@ internal fun TvMovieDetailPage(
                             onPlay     = onPlayLocal,
                         )
                         TvDetailButton(
-                            label   = if (isInWatchlist) "Ma liste" else "+ Ma liste",
+                            label   = if (isInWatchlist) "Ma liste" else stringResource(R.string.btn_watchlist_add),
                             icon    = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             primary = false,
                             onClick = onToggleWatchlist,
