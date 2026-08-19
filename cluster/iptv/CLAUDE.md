@@ -805,6 +805,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
       à l'émulateur (§11).
 - [ ] **TV — afficher les chaînes favorites dans « Ma liste »** : `TvMyListScreen` a le
       **même trou** que le mobile. Piste sérieuse pour le défaut `raf.md` ci-dessous.
+- [ ] **Ordre des favoris, réglable par l'utilisateur** (§13). ⚠️ Ce n'est **pas** un
+      chantier d'UI : la persistance actuelle est un `Set`, qui ne peut pas porter d'ordre.
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1612,3 +1614,40 @@ grille à trois colonnes plutôt que d'être forcée dans une case de poster.
 
 ➡️ Ce défaut existe **à l'identique côté TV** : `TvMyListScreen` ne lit lui non plus que
 les films et les séries.
+
+
+### Ordre des favoris — mesuré, et ce n'est pas celui qu'on croit
+
+Question de l'utilisateur : « s'ils sont juste ajoutés et apparaissent dans leur ordre
+d'ajout, il serait intéressant de permettre de modifier l'ordre ». Vérifié sur appareil,
+en mettant trois chaînes en favori dans l'ordre **inverse** du catalogue :
+
+| | |
+|---|---|
+| Ordre d'ajout | Pluto TV Retro Toons → Gong → **ADN TV+** |
+| Ordre affiché | **ADN TV+** → Gong → Pluto TV Retro Toons |
+
+Exactement l'inverse. Ce n'est donc **ni l'ordre d'ajout, ni un ordre choisi** : c'est
+l'ordre du **catalogue du fournisseur**, parce que `MyListScreen` parcourt `allChannels` et
+retient les favoris (`allChannels.filter { channelFavs.contains(it.name) }`).
+
+**Pourquoi l'ordre d'ajout est structurellement impossible aujourd'hui.**
+`FavoritesRepository` persiste les favoris en `stringSetPreferencesKey` — un **`Set`**, qui
+par définition ne porte aucun ordre. Même en itérant le `Set` plutôt que le catalogue, on
+n'obtiendrait qu'un ordre de hachage, arbitraire et instable.
+
+➡️ Permettre à l'utilisateur de réordonner exige donc de **changer la persistance**, pas
+seulement l'écran :
+
+1. passer d'un `Set<String>` à une **liste ordonnée** — DataStore Preferences n'a pas de
+   type liste, il faudra encoder (JSON via Moshi, comme `RecentItemsCodec` le fait déjà
+   pour la reprise de lecture, cf. P2) ;
+2. prévoir une **migration** des favoris existants, dont l'ordre initial devra être choisi
+   (catalogue, ou alphabétique) ;
+3. décoder de façon **défensive** — règle du §2 : une entrée corrompue ne doit pas vider
+   la liste ni faire crasher l'écran ;
+4. l'ordre concerne aussi les films et séries, stockés de la même façon : traiter les trois
+   d'un coup plutôt que d'introduire deux mécanismes.
+
+Le glisser-déposer en UI (`LazyColumn` réordonnable) n'est que la dernière étape, et la
+moins risquée.
