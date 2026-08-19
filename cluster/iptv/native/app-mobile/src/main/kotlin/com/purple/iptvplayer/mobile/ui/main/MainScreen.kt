@@ -285,6 +285,7 @@ fun MainScreen(
                         3 -> MyListScreen(
                             onMovieDetail  = onMovieDetail,
                             onSeriesDetail = onSeriesDetail,
+                            onPlayChannel  = onPlayChannel,
                         )
                         4 -> DownloadsScreen(onPlay = { url, title -> onPlayChannel(url, title, "", 0) })
                     }

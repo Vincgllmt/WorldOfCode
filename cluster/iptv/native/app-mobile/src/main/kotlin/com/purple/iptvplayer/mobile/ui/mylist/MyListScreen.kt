@@ -21,22 +21,31 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.model.SeriesItem
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
+import com.purple.iptvplayer.mobile.ui.common.ChannelRow
 import com.purple.iptvplayer.mobile.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
-private enum class ListFilter { ALL, MOVIES, SERIES }
+private enum class ListFilter { ALL, CHANNELS, MOVIES, SERIES }
 
 @Composable
 fun MyListScreen(
     onMovieDetail:  (id: Int) -> Unit,
     onSeriesDetail: (id: Int) -> Unit,
+    onPlayChannel:  (url: String, title: String, cover: String, streamId: Int) -> Unit,
 ) {
     val vm: ContentViewModel = koinViewModel()
 
+    // Les favoris de chaînes étaient écrits par FavoritesRepository et lus par personne :
+    // cet écran ne consommait que movieFavorites et seriesFavorites. L'étoile de la liste
+    // des chaînes n'avait donc aucun effet visible.
+    val channelsState   by vm.channels.collectAsState()
+    val channelFavs     by vm.channelFavorites.collectAsState()
     val moviesState     by vm.movies.collectAsState()
     val seriesState     by vm.series.collectAsState()
     val movieWatchlist  by vm.movieFavorites.collectAsState()
@@ -45,10 +54,13 @@ fun MyListScreen(
     var filter by remember { mutableStateOf(ListFilter.ALL) }
 
     LaunchedEffect(Unit) {
+        vm.loadChannels()
         vm.loadMovies()
         vm.loadSeries()
     }
 
+    val allChannels = (channelsState as? ContentState.Success)?.data ?: emptyList()
+    val favChannels = remember(allChannels, channelFavs) { allChannels.filter { channelFavs.contains(it.name) } }
     val allMovies  = (moviesState as? ContentState.Success)?.data ?: emptyList()
     val allSeries  = (seriesState as? ContentState.Success)?.data ?: emptyList()
 
@@ -66,9 +78,10 @@ fun MyListScreen(
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
         ) {
             val total = when (filter) {
-                ListFilter.ALL    -> watchlistMovies.size + watchlistSeries.size
-                ListFilter.MOVIES -> watchlistMovies.size
-                ListFilter.SERIES -> watchlistSeries.size
+                ListFilter.ALL      -> favChannels.size + watchlistMovies.size + watchlistSeries.size
+                ListFilter.CHANNELS -> favChannels.size
+                ListFilter.MOVIES   -> watchlistMovies.size
+                ListFilter.SERIES   -> watchlistSeries.size
             }
             Text("Ma liste", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
             if (total > 0) {
@@ -80,7 +93,12 @@ fun MyListScreen(
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(ListFilter.ALL to "Tout", ListFilter.MOVIES to "Films", ListFilter.SERIES to "Séries").forEach { (f, label) ->
+                listOf(
+                    ListFilter.ALL to "Tout",
+                    ListFilter.CHANNELS to "Chaînes",
+                    ListFilter.MOVIES to "Films",
+                    ListFilter.SERIES to "Séries",
+                ).forEach { (f, label) ->
                     val active = filter == f
                     Box(
                         modifier = Modifier
@@ -102,9 +120,10 @@ fun MyListScreen(
 
         // ── Content ──────────────────────────────────────────────────────────
         val isEmpty = when (filter) {
-            ListFilter.ALL    -> watchlistMovies.isEmpty() && watchlistSeries.isEmpty()
-            ListFilter.MOVIES -> watchlistMovies.isEmpty()
-            ListFilter.SERIES -> watchlistSeries.isEmpty()
+            ListFilter.ALL      -> favChannels.isEmpty() && watchlistMovies.isEmpty() && watchlistSeries.isEmpty()
+            ListFilter.CHANNELS -> favChannels.isEmpty()
+            ListFilter.MOVIES   -> watchlistMovies.isEmpty()
+            ListFilter.SERIES   -> watchlistSeries.isEmpty()
         }
 
         if (isEmpty) {
@@ -115,7 +134,7 @@ fun MyListScreen(
                     Text("Votre liste est vide", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Ajoutez des films ou des séries depuis leurs fiches en appuyant sur + Ma liste",
+                        "Ajoutez des chaînes avec l'étoile de la liste, ou des films et séries depuis leurs fiches.",
                         color = TextSub, fontSize = 14.sp, lineHeight = 20.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
@@ -129,6 +148,17 @@ fun MyListScreen(
                 verticalArrangement   = Arrangement.spacedBy(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
+                if (filter == ListFilter.ALL || filter == ListFilter.CHANNELS) {
+                    items(favChannels, span = { GridItemSpan(maxLineSpan) }, key = { "c_" + it.url }) { channel ->
+                        ChannelRow(
+                            channel = channel,
+                            isFav   = true,
+                            onPlay  = { onPlayChannel(channel.url, channel.name, channel.logo ?: "", channel.streamId ?: 0) },
+                            onFav   = { vm.toggleChannelFavorite(channel.name) },
+                        )
+                    }
+                }
                 if (filter == ListFilter.ALL || filter == ListFilter.MOVIES) {
                     items(watchlistMovies, key = { "m_${it.id}" }) { movie ->
                         MyListMovieCard(movie = movie, onClick = { onMovieDetail(movie.id) })

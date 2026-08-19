@@ -800,14 +800,21 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 - [x] **Mobile — liste des chaînes live** (§13). `LayoutMode.LIST`, défaut du live,
       vérifié sur appareil.
+- [x] **Mobile — les favoris de chaînes sont enfin visibles** dans « Ma liste » (§13).
 - [ ] **TV — deux panneaux** (§13). Reprendre `ChannelRow` et vérifier le focus D-pad
       à l'émulateur (§11).
+- [ ] **TV — afficher les chaînes favorites dans « Ma liste »** : `TvMyListScreen` a le
+      **même trou** que le mobile. Piste sérieuse pour le défaut `raf.md` ci-dessous.
 
 #### Demandes de `raf.md` encore ouvertes
 
-- [ ] **Retrait d'un favori impossible sur `app-tv`.** Bug clair, désormais **observable**
-      grâce à l'émulateur TV (§11). La logique `core` semble saine, le défaut est
-      probablement dans la couche UI.
+- [ ] **Retrait d'un favori impossible sur `app-tv`.** Désormais **observable** grâce à
+      l'émulateur TV (§11). ⚠️ **Hypothèse révisée** (2026-08-19) : `FavoritesRepository.toggle()`
+      ajoute *et* retire, et `toggleChannelFavorite` est bien câblé côté TV
+      (`TvHomeScreen.kt:183,203,243`). Mais `TvMyListScreen` **n'affiche pas les chaînes
+      favorites** — comme le mobile avant correction. L'utilisateur ne voit donc sa chaîne
+      nulle part et n'a aucun endroit évident où la retirer. À confirmer à l'émulateur
+      avant de corriger.
 - [ ] **Carte EPG absente sur TV** — « il manque l'EPG comme sur mobile, c'est une carte
       en dehors du lecteur ». Portage de `PlayerScreen` (P10/P11 déjà corrigés) vers TV.
 - [ ] **Bouton VF / VOSTFR** au lancement d'un contenu, en bas à droite au-dessus du
@@ -1574,3 +1581,34 @@ de l'utilisateur, des genres à 336 et 317 chaînes (relevés en §8) demandaien
 déplacements horizontaux pour atteindre la dernière.
 
 ⚠️ Le portage TV reste à faire, et son focus D-pad devra être vérifié à l'émulateur.
+
+
+### Les favoris de chaînes n'étaient lus par personne
+
+Défaut trouvé en répondant à une remarque de l'utilisateur — « l'étoile sur une chaîne
+n'est pas très utile, non ? ». Elle ne l'était pas : `MyListScreen` ne consommait que
+`movieFavorites` et `seriesFavorites`. `FavoritesRepository.channelFavorites` était
+**écrit et lu par personne**.
+
+La bonne réponse n'était donc pas de retirer l'étoile mais de lui donner un effet :
+
+| Changement | Détail |
+|---|---|
+| `ui/common/ChannelRow.kt` | `ChannelRow` extrait de `HomeScreen` en composant partagé — il sert désormais aux deux écrans, et prépare le portage TV |
+| `MyListScreen` | filtre **« Chaînes »**, chaînes favorites en pleine largeur (`GridItemSpan(maxLineSpan)`) au-dessus des affiches |
+| `MainScreen` | `onPlayChannel` transmis à « Ma liste » |
+
+Une chaîne est une ligne, pas une affiche 2:3 : elle occupe toute la largeur dans la
+grille à trois colonnes plutôt que d'être forcée dans une case de poster.
+
+**Vérifié sur appareil, aller-retour complet** :
+
+| Étape | Résultat |
+|---|---|
+| Étoile depuis la liste des chaînes | ✅ 0 → 578 pixels dorés |
+| Persistance après `force-stop` | ✅ |
+| « Ma liste » | ✅ **« ADN TV+ » affiché**, compteur « 1 titre », filtre « Chaînes » présent |
+| Retrait depuis « Ma liste » | ✅ la chaîne disparaît, « Votre liste est vide » |
+
+➡️ Ce défaut existe **à l'identique côté TV** : `TvMyListScreen` ne lit lui non plus que
+les films et les séries.
