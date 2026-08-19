@@ -739,3 +739,67 @@ développement, lui, est sur le Wi-Fi bloqué et ne joindra jamais ce fournisseu
 
 En données mobiles, tout a été vérifié : lecture live (TF1 FHD), P5, P10 et P11.
 Reste le Cast d'une chaîne TV, qui exige un Chromecast sur le même réseau.
+
+---
+
+## 9. Vérifier la facturation (B1) — procédure
+
+Les six correctifs de facturation sont **écrits, compilés, mais non vérifiés**. Ils ne
+peuvent pas l'être sur la machine de développement : la variante `.debug` a un
+`applicationId` suffixé, donc étrangère à Play Billing.
+
+### Prérequis, à réunir sur la machine qui détient la clé
+
+1. **`upload-keystore.jks`** — absent de la machine « hjouini ». `keystore.properties`
+   le référence en `../client/android/upload-keystore.jks` (alias `upload`). Sans lui,
+   `bundleRelease` est impossible, et avec lui toute publication future sur le Play
+   Store. **C'est le point bloquant.**
+2. Piste de **test interne** active dans la Play Console.
+3. Compte Google déclaré **testeur sous licence**.
+
+### ⚠️ Un APK signé localement ne suffit pas
+
+Avec Play App Signing (par défaut), l'application livrée aux utilisateurs est signée par
+la **clé de Google**, pas par la clé d'upload. Un APK construit ici et installé à la main
+porte donc une signature différente de celle que Play a enregistrée : la facturation
+échoue, généralement en `BILLING_UNAVAILABLE` ou par un catalogue vide — soit exactement
+le symptôme qu'on cherche à corriger, ce qui rendrait le test ininterprétable.
+
+➡️ **La build de test doit être installée depuis Play** : piste de test interne, ou
+partage interne d'applications (*internal app sharing*), qui accepte un AAB et fournit un
+lien d'installation.
+
+### Étapes
+
+```bash
+export JAVA_HOME=<jbr d'Android Studio>
+cd cluster/iptv/native
+# 1. versionCode doit dépasser celui déjà publié (actuellement 8 dans le dépôt)
+#    → app-mobile/build.gradle.kts
+# 2. produire le bundle
+./gradlew :app-mobile:bundleRelease
+#    → app-mobile/build/outputs/bundle/release/app-mobile-release.aab
+# 3. téléverser sur la piste de test interne, installer depuis Play avec le compte testeur
+```
+
+### Ce qu'il faut observer
+
+| Correctif | Observation attendue |
+|---|---|
+| B1.1 requête des deux catalogues | **les trois offres** s'affichent, pas seulement « à vie » |
+| B1.2 `setOfferToken` | appuyer sur un abonnement **ouvre** la feuille de paiement |
+| B1.5 remontée des échecs | un échec affiche un message explicite, plus « No products available » |
+| B1.6 annulation | refermer la feuille ramène à l'écran **sans message d'erreur** |
+| B1.3 restauration | après réinstallation, « Restaurer » rend l'accès |
+| B1.4 synchro au démarrage | achat, puis `adb shell pm clear` des données, puis relance : l'accès revient **sans** appuyer sur « Restaurer » |
+
+Le dernier point est le plus important : c'est lui qui empêchait un abonné à jour de
+paiement d'être bloqué au 30ᵉ jour.
+
+### Sur la nouvelle machine
+
+- `native/local.properties` est **versionné** et pointe vers `/home/rigolo/Android/Sdk`.
+  À réajuster localement, sans committer la correction (cf. §3).
+- `native/keystore.properties` est **versionné avec les mots de passe en clair**, et il
+  se trouve désormais sur le dépôt distant partagé. À sortir du suivi et faire tourner
+  la clé (cf. §5 S2).
