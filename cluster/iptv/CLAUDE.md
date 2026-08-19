@@ -801,8 +801,7 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **Mobile — liste des chaînes live** (§13). `LayoutMode.LIST`, défaut du live,
       vérifié sur appareil.
 - [x] **Mobile — les favoris de chaînes sont enfin visibles** dans « Ma liste » (§13).
-- [ ] **TV — deux panneaux** (§13). Reprendre `ChannelRow` et vérifier le focus D-pad
-      à l'émulateur (§11).
+- [x] **TV — deux panneaux** (§13) — fait et vérifié au D-pad le 2026-08-19.
 - [x] **TV — chaînes favorites dans « Ma liste »** — fait, cf. §14.
 - [ ] **Ordre des favoris, réglable par l'utilisateur** (§13). ⚠️ Ce n'est **pas** un
       chantier d'UI : la persistance actuelle est un `Set`, qui ne peut pas porter d'ordre.
@@ -1694,3 +1693,38 @@ portant son étoile comme sur mobile.
 
 Outil ajouté au scratchpad : `mkfav.py "Chaîne A" "Chaîne B"` encode le protobuf DataStore
 d'un `stringSetPreferencesKey`, pour poser un état de favoris connu sans passer par l'UI.
+
+### Mise en œuvre TV — deux panneaux, fait et vérifié au D-pad
+
+`TvHomeScreen` abandonne les rangées horizontales imbriquées pour un `Row` de deux
+`LazyColumn` :
+
+```
+[ rail ]  [ genres 360 dp ]  [ chaînes (poids 1) ]
+```
+
+- panneau gauche : `TvGenreItem` — nom, effectif, et son étoile de favori ;
+- panneau droit : `TvChannelRow`, la même ligne que « Ma liste », avec l'étoile de la
+  chaîne. Les favoris remontent en tête ;
+- la recherche passe elle aussi en liste, pour une seule et même forme.
+
+**Le mode « genre sélectionné » disparaît** : il ouvrait un écran séparé, alors que les
+deux panneaux rendent la sélection immédiate. `TvChannelCard` et `TvGenreHeader`
+deviennent morts et sont supprimés — `TvHomeScreen` passe de 605 à 397 lignes.
+
+#### Trace D-pad relevée sur l'émulateur
+
+```
+rail → [ANIMATION 4] → [☆ du genre] → [ADN TV+] → Daria → Gong → One Piece
+```
+
+**Un appui = une chaîne.** L'ancienne disposition demandait autant d'appuis *à droite* que
+de rang dans le genre. Sélectionner « BUSINESS NEWS » à gauche met immédiatement à jour le
+panneau droit (« BFM Business »).
+
+⚠️ Rugosité constatée, non corrigée : arrivé à la **dernière** chaîne d'un genre, un appui
+supplémentaire vers le bas fait sortir le focus vers le rail de navigation. Compose TV
+cherche le focalisable le plus proche quand la liste est épuisée. Sans gravité — on revient
+d'un appui — mais à surveiller si l'on ajoute un panneau EPG à droite.
+
+⚠️ `app-tv` reste en **versionCode 8** : rien de tout ceci n'est distribué.

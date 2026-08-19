@@ -35,6 +35,8 @@ fun TvChannelRow(
     onPlay:  () -> Unit,
     onFav:   () -> Unit,
     modifier: Modifier = Modifier,
+    /** `true` dans « Ma liste », où tout est favori ; variable en navigation. */
+    isFav: Boolean = true,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -100,7 +102,11 @@ fun TvChannelRow(
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
         ) {
             Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                Text("★", color = Color(0xFFFFD700), fontSize = 22.sp)
+                Text(
+                    if (isFav) "★" else "☆",
+                    color    = if (isFav) Color(0xFFFFD700) else PurplePalette.Fg3,
+                    fontSize = 22.sp,
+                )
             }
         }
     }
