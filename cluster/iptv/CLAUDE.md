@@ -820,7 +820,17 @@ Classé par ce qui contraint le reste, pas par difficulté.
       deux écrans de connexion et la barre du mobile. Le rail était le seul substitut.
 - [x] **6. TV — fiche film retravaillée** — fait, cf. §19. ⚠️ La **fiche série** n'a pas
       reçu le même traitement.
-- [ ] ~~6 bis~~ **TV — appliquer à la fiche série** ce qui a été fait pour le film.
+- [ ] **6 bis. TV — appliquer à la fiche série** ce qui a été fait pour le film.
+- [ ] **9. TV — le rail met en avant le mauvais onglet.** Signalé et capturé par
+      l'utilisateur : après avoir choisi « Series », le contenu affiche bien les séries
+      (8 464 titres) mais **la pastille pleine reste sur « Live TV »**. Deux causes qui
+      se cumulent :
+      1. **le focus revient au premier élément du rail** après le changement d'onglet —
+         même racine que §16, l'élément focalisé disparaît lors de la recomposition ;
+      2. dans `RailItem`, l'état **focalisé écrase visuellement l'état actif**
+         (`isFocused` est testé avant `isActive`, et remplit la pastille) : on ne peut
+         donc plus voir quel onglet est réellement sélectionné.
+      La seconde est peu coûteuse à corriger et suffirait à lever la confusion.
       Le lien M3U de l'utilisateur a été fourni — **il n'est pas consigné ici**, il contient
       ses identifiants et ce fichier est versionné sur un dépôt partagé (même faute que
       `keystore.properties`, cf. §5 S2). Il vit dans le scratchpad de session.
@@ -2040,3 +2050,35 @@ Vérifier la rangée de boutons après toute modification de la largeur de l'aff
 
 ⚠️ **La fiche série n'a pas reçu ce traitement** : `TvSeriesScreen` a sa propre mise en
 page, non auditée ici.
+
+---
+
+## 20. Régression introduite par la localisation : la fiche série plantait *(2026-08-19)*
+
+Trouvée en ouvrant une série sur le vrai catalogue. L'application **quittait brutalement**
+— ce que j'ai d'abord pris pour une erreur de navigation de mes scripts.
+
+```
+java.util.IllegalFormatConversionException: d != java.lang.String
+    at TvSeriesScreenKt$TvSeriesDetailPage$…
+```
+
+Cause : lors de l'extraction des libellés en ressources (§17), `"Saison $season"` est
+devenu `stringResource(R.string.label_season, season)` avec un format `%1$d`. Or `season`
+vient de `d.seasons.keys` — ce sont des **chaînes** (`sortedBy { it.toIntOrNull() }` le
+montre). Passer une `String` à `%d` lève à l'exécution.
+
+➡️ **Un format de ressource mal typé ne se voit pas à la compilation.** Le compilateur
+accepte `stringResource(id, n'importe quoi)` ; l'erreur n'apparaît qu'au rendu, et fait
+tomber l'écran entier. Une extraction de libellés doit donc s'accompagner d'un contrôle
+type-par-type de chaque argument.
+
+Audit des sept formats introduits : seul `label_season` était faux, les six autres
+reçoivent bien des entiers (`.size`, `daysLeft`, `trialDays`).
+
+| Format | Argument | Verdict |
+|---|---|---|
+| `count_results`, `count_channels`, `count_titles` | `.size` | ✅ `%d` |
+| `premium_days`, `trial_banner` | `daysLeft`, `days` | ✅ `%d` |
+| `label_rating` | `rating` (String) | ✅ `%s` |
+| `label_season` | `season` (**String**) | ❌ `%d` → corrigé en `%s` |

@@ -104,7 +104,7 @@
     <string name="count_results">%1$d RESULTS</string>
     <string name="count_channels">%1$d CHANNELS - %2$d GENRES</string>
     <string name="count_titles">%1$d TITLES - %2$d GENRES</string>
-    <string name="label_season">Season %1$d</string>
+    <string name="label_season">Season %1$s</string>
     <string name="label_cast">Cast</string>
     <string name="label_rating">Rating: %1$s</string>
     <string name="btn_watchlist_add">+ My list</string>
