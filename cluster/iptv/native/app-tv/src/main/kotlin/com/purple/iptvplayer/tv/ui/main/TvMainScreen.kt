@@ -442,7 +442,7 @@ private fun TvSettingsPage(
                     modifier = Modifier.weight(1f),
                 )
                 androidx.compose.material3.Text(
-                    "Retour",
+                    stringResource(R.string.action_back),
                     color    = PurplePalette.Fg4,
                     fontSize = 13.sp,
                 )
@@ -502,6 +502,18 @@ private fun TvSettingsPage(
                         onClick  = { playerVm.updateSubtitleColor("yellow") },
                     )
                 }
+            }
+
+            // ── Arrière-plan ──────────────────────────────────────────────────
+            // Manquait côté TV : l'aperçu ci-dessous *reflétait* déjà ce réglage
+            // (`subBg`), mais aucun contrôle ne permettait de le changer. Le
+            // composable TvToggleOption existait, sans être utilisé nulle part.
+            SettingsSection(stringResource(R.string.subtitle_background_label)) {
+                TvToggleOption(
+                    label           = stringResource(R.string.subtitle_background_dark),
+                    checked         = subBg,
+                    onCheckedChange = { playerVm.updateSubtitleBackground(it) },
+                )
             }
 
             // ── Preview ───────────────────────────────────────────────────────
@@ -620,13 +632,23 @@ private fun TvSettingsButton(
         Text(
             label,
             style    = LocalPurpleType.current.button.copy(
-                color      = if (selected || isFocused) accentColor else PurplePalette.Fg2,
+                // Le focus teinte le fond avec `accentColor` : y écrire aussi en
+                // `accentColor` rendait le libellé illisible — la pastille de langue
+                // sélectionnée *et* focalisée apparaissait vide.
+                color      = when {
+                    isFocused -> PurplePalette.Fg1
+                    selected  -> accentColor
+                    else      -> PurplePalette.Fg2
+                },
                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.ExtraBold
                              else androidx.compose.ui.text.font.FontWeight.SemiBold,
             ),
-            modifier  = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .then(if (modifier == Modifier) Modifier else Modifier.fillMaxWidth()),
+            // Le bouton se dimensionne à son contenu. Il y avait ici un
+            // `.then(if (modifier == Modifier) … else fillMaxWidth())` : comparer un
+            // Modifier par égalité est fragile, et le seul appelant à en passer un est
+            // le premier bouton de langue (pour son focusRequester). Résultat, « FR »
+            // s'étirait sur toute la largeur et « EN » sortait de l'écran.
+            modifier  = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             textAlign = TextAlign.Center,
         )
     }

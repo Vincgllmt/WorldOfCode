@@ -1,6 +1,9 @@
 package com.purple.iptvplayer.tv.ui.movies
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -487,20 +490,36 @@ internal fun TvMovieDetailPage(
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
-                // Cover poster — natural 2:3 ratio, full height
-                Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.24f)) {
-                    if (!detail.coverBig.isNullOrEmpty()) {
-                        AsyncImage(
-                            model              = detail.coverBig,
-                            contentDescription = detail.name,
-                            contentScale       = ContentScale.Crop,
-                            modifier           = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        Box(
-                            modifier         = Modifier.fillMaxSize().background(PurplePalette.Bg2),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                // Affiche — en 2:3, son ratio réel.
+                //
+                // Elle occupait auparavant 24 % de largeur sur toute la hauteur, soit un
+                // cadre de ratio 0,43 pour une image de 0,667 : avec ContentScale.Crop,
+                // les côtés étaient rognés — d'où l'impression d'affiche étroite et
+                // écrasée. Un dégradé la recouvrait en outre par-dessus.
+                Box(
+                    modifier = Modifier.fillMaxHeight().padding(start = 32.dp, end = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            // 0,62 et non 0,72 : au-delà, l'affiche mangeait assez de
+                            // largeur pour que le dernier bouton d'action ne tienne plus
+                            // et que son libellé s'écrive verticalement.
+                            .fillMaxHeight(0.62f)
+                            .aspectRatio(2f / 3f)
+                            .shadow(28.dp, PurpleShapes.Lg, clip = false)
+                            .clip(PurpleShapes.Lg)
+                            .background(PurplePalette.Bg2),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!detail.coverBig.isNullOrEmpty()) {
+                            AsyncImage(
+                                model              = detail.coverBig,
+                                contentDescription = detail.name,
+                                contentScale       = ContentScale.Crop,
+                                modifier           = Modifier.fillMaxSize(),
+                            )
+                        } else {
                             Icon(
                                 Icons.Rounded.Movie, null,
                                 tint     = PurplePalette.Fg4,
@@ -508,14 +527,6 @@ internal fun TvMovieDetailPage(
                             )
                         }
                     }
-                    // Fade poster edge into background
-                    Box(
-                        Modifier.fillMaxSize().background(
-                            Brush.horizontalGradient(
-                                listOf(Color.Transparent, PurplePalette.Bg1),
-                            )
-                        )
-                    )
                 }
 
                 // Info + action buttons
@@ -534,9 +545,13 @@ internal fun TvMovieDetailPage(
                         Spacer(Modifier.height(10.dp))
                     }
                     Text(
-                        detail.name,
+                        // Le fournisseur suffixe souvent « - 2024 » au titre, alors qu'une
+                        // puce affiche déjà la date : on retire le doublon. Comparer à
+                        // `detail.year` ne suffisait pas — ce champ porte la date
+                        // complète (« 2024-01-15 »), jamais la seule année.
+                        detail.name.trim().replace(YEAR_SUFFIX, ""),
                         style    = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
-                        maxLines = 3,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(16.dp))
@@ -547,11 +562,14 @@ internal fun TvMovieDetailPage(
                     }
                     detail.description?.let {
                         Spacer(Modifier.height(20.dp))
+                        // Défilable plutôt que tronqué : un synopsis long était coupé
+                        // sans aucun moyen d'en lire la fin.
                         Text(
                             it,
                             style    = LocalPurpleType.current.body.copy(color = PurplePalette.Fg2),
-                            maxLines = 8,
-                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .heightIn(max = 210.dp)
+                                .verticalScroll(rememberScrollState()),
                         )
                     }
                     detail.director?.takeIf { it.isNotBlank() }?.let {
@@ -1073,3 +1091,6 @@ fun TvMetaChip(text: String) {
         Text(text, style = LocalPurpleType.current.meta.copy(color = PurplePalette.Fg2))
     }
 }
+
+/** « … - 2024 » en fin de titre : doublon de la puce de date. */
+private val YEAR_SUFFIX = Regex("""\s*[-–]\s*(19|20)\d{2}$""")

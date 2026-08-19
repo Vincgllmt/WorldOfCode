@@ -812,16 +812,15 @@ Classé par ce qui contraint le reste, pas par difficulté.
       pour les mutations de liste. ⚠️ Le cas « fin de liste » reste ouvert.
 - [x] **2. Localisation** — fait, cf. §17. Le défaut allait **dans les deux sens** :
       français en dur côté TV, **anglais** en dur sur le paywall et la fiche film du mobile.
-- [ ] **3. TV — aligner l'application sur le mobile.** Précision de l'utilisateur :
-      « il faudrait que l'app TV soit quasi identique à l'app mobile ». Ce n'est pas un
-      simple écran Paramètres à refaire : c'est un **écart d'ensemble** à mesurer écran
-      par écran avant de décider quoi aligner.
+- [x] **3. TV — écran Paramètres aligné sur le mobile** — fait, cf. §19.
 - [x] **4. Bandeau premium** — fait et vérifié : « 30 jours restants. » sous le
       « PREMIUM » doré, sur mobile et sur TV.
 - [x] **5. TV — logo du rail** — corrigé : `RailBrandLockup` dessinait le caractère
       **`"✦"`** dans un carré violet au lieu de `drawable/ic_logo`, déjà utilisé par les
       deux écrans de connexion et la barre du mobile. Le rail était le seul substitut.
-- [ ] **6. TV — refonte de la fiche film / série** (au clic sur un titre).
+- [x] **6. TV — fiche film retravaillée** — fait, cf. §19. ⚠️ La **fiche série** n'a pas
+      reçu le même traitement.
+- [ ] ~~6 bis~~ **TV — appliquer à la fiche série** ce qui a été fait pour le film.
       Le lien M3U de l'utilisateur a été fourni — **il n'est pas consigné ici**, il contient
       ses identifiants et ce fichier est versionné sur un dépôt partagé (même faute que
       `keystore.properties`, cf. §5 S2). Il vit dans le scratchpad de session.
@@ -1990,3 +1989,54 @@ fenêtre incrustée.
 
 La seconde colonne est la moitié qui compte : elle prouve qu'on n'a pas troqué un défaut
 contre son symétrique.
+
+---
+
+## 19. Paramètres TV et fiche film *(2026-08-19)*
+
+Vérifiés avec **le vrai catalogue de l'utilisateur** sur l'émulateur — le VPN rend le
+fournisseur joignable depuis le poste, ce que §8 croyait impossible. 11 889 chaînes,
+26 284 films : les écarts trouvés ici étaient invisibles sur le catalogue public, qui n'a
+ni films ni séries.
+
+⚠️ **Accélération** : lancer l'émulateur avec `-gpu host` au lieu de `swiftshader_indirect`
+fait tomber le démarrage de ~85 s à **20 s**. À utiliser systématiquement.
+
+### Point 3 — l'écran Paramètres
+
+Trois défauts, dont deux invisibles dans un relevé textuel et trouvés **sur capture** :
+
+1. **Le réglage d'arrière-plan des sous-titres manquait.** Pire : l'aperçu TV *reflétait*
+   déjà ce réglage (`subBg`), sans qu'aucun contrôle ne permette de le changer. Le
+   composable `TvToggleOption` existait **sans être utilisé nulle part** — troisième
+   occurrence du motif après `onPurchase` (§UX-2) et `onFav` de la carte mobile.
+2. **Le sélecteur de langue s'affichait comme une barre violette vide**, « EN » chassé hors
+   de l'écran. Cause :
+   ```kotlin
+   .then(if (modifier == Modifier) Modifier else Modifier.fillMaxWidth())
+   ```
+   Comparer un `Modifier` par égalité : le seul appelant à en passer un est le premier
+   bouton de langue, pour son `focusRequester` — il héritait donc de `fillMaxWidth()`.
+3. **Le libellé du bouton focalisé était illisible** : le focus teinte le fond avec
+   `accentColor` et le texte prenait la même couleur.
+
+L'écran présente désormais les mêmes sections que le mobile : Langue, TAILLE, COULEUR,
+ARRIÈRE-PLAN, APERÇU, déconnexion.
+
+### Point 6 — la fiche film
+
+**L'affiche était rognée.** Son cadre faisait 24 % de largeur sur toute la hauteur, soit un
+ratio de 0,43 pour une image en 2:3 (0,667) : avec `ContentScale.Crop`, les côtés étaient
+coupés — d'où l'impression d'affiche étroite. Un dégradé horizontal la recouvrait en outre.
+
+Elle est maintenant en **2:3 réel**, centrée, coins arrondis et ombre portée. Deux autres
+corrections : le titre ne répète plus l'année déjà portée par une puce, et le synopsis est
+**défilable** au lieu d'être tronqué à 8 lignes.
+
+⚠️ **Régression introduite puis corrigée** : à `fillMaxHeight(0.72f)`, l'affiche mangeait
+assez de largeur pour que le dernier bouton d'action ne tienne plus — son libellé
+« Close » s'écrivait **verticalement**, une lettre par ligne. Ramenée à `0.62f`.
+Vérifier la rangée de boutons après toute modification de la largeur de l'affiche.
+
+⚠️ **La fiche série n'a pas reçu ce traitement** : `TvSeriesScreen` a sa propre mise en
+page, non auditée ici.
