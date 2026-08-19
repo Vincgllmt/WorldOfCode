@@ -792,10 +792,9 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Échéance dure — 31 août 2026
 
-- [ ] **Migrer Play Billing 7 → 8.** Après cette date la Play Console **n'accepte plus
-      aucune publication** en v7 : tous les correctifs déjà faits resteraient non
-      distribuables. Extension possible jusqu'au 1ᵉʳ novembre. Publier la v12 d'abord,
-      pour figer ce qui est acquis, puis migrer et republier.
+- [x] **Migrer Play Billing 7 → 8** — fait le 2026-08-19, cf. §12. `billing:8.0.0`,
+      artefact Java, minSdk inchangé. **Reste à vérifier sur une build de Play.**
+- [ ] Décider si l'on monte en `billing:9.x` — exige `minSdk 23` côté mobile (cf. §12).
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1379,3 +1378,71 @@ Démarrage complet en ~85 s (`getprop sys.boot_completed` == 1).
 
 ➡️ **Ce qui devient possible** : vérifier `app-tv` au D-pad, et donc traiter l'audit en
 attente de `FavoritesRepository.toggle()` côté TV (§6), jusqu'ici hors d'atteinte.
+
+
+---
+
+## 12. Migration Play Billing 7 → 8 *(2026-08-19)*
+
+Imposée par l'échéance du 31 août 2026 : passé cette date la Play Console n'accepte plus
+aucune publication en v7. Faite **après** la vérification de B1 en v7, pour ne pas
+mélanger deux causes de panne possibles (leçon de §5 P4).
+
+### Le vrai obstacle n'était pas l'API Billing
+
+Monter la version fait d'abord échouer la compilation sur des centaines d'erreurs sans
+rapport — jusqu'à `listOf` et `emptyList` « non résolus » :
+
+```
+billing-ktx-9.1.0 … Module was compiled with an incompatible version of Kotlin.
+The binary version of its metadata is 2.3.0, expected version is 2.0.0.
+kotlin-stdlib-2.2.10 … metadata is 2.2.0, expected 2.0.0
+```
+
+C'est **`billing-ktx`** qui dépend de `kotlin-stdlib` 2.2.10, illisible par le compilateur
+Kotlin 2.0 du projet. L'API Billing elle-même n'y est pour rien.
+
+**Solution retenue : abandonner `billing-ktx` pour `billing`**, l'artefact Java, qui n'a
+aucune dépendance Kotlin. Le projet n'utilisait que **trois** extensions ktx —
+`queryProductDetails`, `queryPurchasesAsync`, `acknowledgePurchase` — réécrites à la main
+en `suspendCancellableCoroutine`, exactement comme `connect()` le faisait déjà.
+
+➡️ **Aucune montée du toolchain Kotlin n'a été nécessaire.** L'autre voie (Kotlin 2.0 → 2.2)
+aurait entraîné le compilateur Compose et AGP dans un chantier bien plus large.
+
+### Le seul changement d'API réel
+
+`onProductDetailsResponse` renvoie désormais un `QueryProductDetailsResult` au lieu d'une
+`List<ProductDetails>` — d'où `queryResult.productDetailsList` dans l'enveloppe.
+
+### Pourquoi 8.0.0 et pas 9.1.0 — contrainte de `minSdk`
+
+Mesuré en lisant le manifeste de chaque AAR, pas supposé :
+
+| Version | `minSdk` exigé |
+|---|---|
+| `billing:8.0.0` | **21** |
+| `billing:8.1.0` → `9.1.0` | **23** |
+
+`app-mobile` est en `minSdk 21`. Monter au-delà de 8.0.0 imposerait donc `minSdk 23` et
+**la perte des appareils Android 5.0 / 5.1**. La 8.0.0 satisfait l'exigence de Play sans
+coûter un seul appareil, et son API est **identique** à celle de la 9.x
+(`QueryProductDetailsResult` y est déjà) : la montée ultérieure sera un changement de
+numéro, plus une migration.
+
+⚠️ Contrepartie à connaître : chaque version de Billing est dépréciée au bout de deux ans.
+La 8.0.0 datant de juin 2025, une nouvelle migration sera exigée vers **mi-2027**. Passer
+en 9.x repousserait l'échéance à 2028, au prix du `minSdk`. `app-tv` est déjà en
+`minSdk 23` : la question ne se pose que pour le mobile.
+
+### État de la vérification
+
+| Point | Statut |
+|---|---|
+| 92 tests | ✅ 0 échec |
+| `:app-mobile:assembleDebug` · `:app-tv:assembleDebug` | ✅ |
+| Chemin facturation exercé sur appareil (variante `.debug`) | ✅ aucun `NoSuchMethodError`, écran d'achat affiché |
+| **Produits réellement chargés depuis Play** | ⚠️ **non vérifié** — exige une build installée depuis Play |
+
+Le test de fumée local prouve seulement que les enveloppes ne cassent pas à l'exécution.
+Que Play réponde bien reste à mesurer sur la piste interne, avec le protocole de §9.

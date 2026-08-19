@@ -14,7 +14,7 @@ moshi                = "1.15.1"
 coil                 = "2.7.0"
 datastorePrefs       = "1.1.1"
 securityCrypto       = "1.1.0-alpha06"
-billing              = "7.0.0"
+billing              = "8.0.0"
 playReview           = "2.0.1"
 tvCompose            = "1.0.0"
 coroutines           = "1.8.1"
@@ -65,7 +65,10 @@ moshi-kotlin                         = { group = "com.squareup.moshi",         n
 coil-compose                         = { group = "io.coil-kt",                 name = "coil-compose",                    version.ref = "coil" }
 
 # Billing
-billing-ktx                          = { group = "com.android.billingclient", name = "billing-ktx",                     version.ref = "billing" }
+# Artefact Java, PAS billing-ktx : celui-ci dépend de kotlin-stdlib 2.2.10, dont les
+# métadonnées sont illisibles par le compilateur Kotlin 2.0 du projet. Les trois seules
+# extensions utilisées sont réécrites à la main dans BillingRepository.
+billing                              = { group = "com.android.billingclient", name = "billing",                         version.ref = "billing" }
 play-review-ktx                      = { group = "com.google.android.play",   name = "review-ktx",                      version.ref = "playReview" }
 
 # Coroutines

@@ -1,3 +1,8 @@
+// `CancellableContinuation.resume(value) { onCancellation }` est encore marquée
+// expérimentale. Elle est utilisée par les quatre enveloppes suspend de ce fichier ;
+// l'opt-in est déclaré une fois ici plutôt que répété sur chacune.
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.purple.iptvplayer.core.data
 
 import android.app.Activity
@@ -89,9 +94,9 @@ class BillingRepository(
                     }
                 ).build()
 
-            val (billingResult, productDetailsList) = billingClient.queryProductDetails(params)
+            val (billingResult, productDetailsList) = billingClient.queryProductDetailsSuspend(params)
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                found += productDetailsList ?: emptyList()
+                found += productDetailsList
             } else {
                 failures += "$type: ${describe(billingResult)}"
             }
@@ -185,8 +190,8 @@ class BillingRepository(
         var restored = 0
         for (type in listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)) {
             val params = QueryPurchasesParams.newBuilder().setProductType(type).build()
-            val (_, purchases) = billingClient.queryPurchasesAsync(params)
-            purchases?.forEach { if (handlePurchase(it)) restored++ }
+            val (_, purchases) = billingClient.queryPurchasesSuspend(params)
+            purchases.forEach { if (handlePurchase(it)) restored++ }
         }
         return restored
     }
@@ -197,7 +202,7 @@ class BillingRepository(
         if (!purchase.isAcknowledged) {
             val ackParams = AcknowledgePurchaseParams.newBuilder()
                 .setPurchaseToken(purchase.purchaseToken).build()
-            billingClient.acknowledgePurchase(ackParams)
+            billingClient.acknowledgePurchaseSuspend(ackParams)
         }
         _purchaseResult.emit(PurchaseResult.Success(purchase.products.firstOrNull() ?: ""))
         return true
@@ -227,6 +232,43 @@ class BillingRepository(
     }
 
     fun release() { scope.cancel(); billingClient.endConnection() }
+}
+
+/**
+ * Enveloppes `suspend` des trois appels asynchrones de Play Billing.
+ *
+ * Elles remplacent l'artefact **`billing-ktx`**, abandonné lors du passage en v9 :
+ * celui-ci dépend de `kotlin-stdlib` 2.2.10, dont les métadonnées sont illisibles par
+ * le compilateur Kotlin 2.0 du projet — au point que `listOf` lui-même devenait non
+ * résolu. L'artefact `billing` est du Java pur, sans dépendance Kotlin, et migre donc
+ * sans toucher au toolchain.
+ *
+ * Même forme que [BillingRepository.connect], qui enveloppait déjà `startConnection`
+ * à la main : ces trois fonctions ne font que prolonger une pratique existante.
+ */
+private suspend fun BillingClient.queryProductDetailsSuspend(
+    params: QueryProductDetailsParams,
+): Pair<BillingResult, List<ProductDetails>> = suspendCancellableCoroutine { cont ->
+    queryProductDetailsAsync(params) { result, queryResult ->
+        // v8+ : la réponse est un QueryProductDetailsResult, non plus une List directe.
+        if (cont.isActive) cont.resume(result to queryResult.productDetailsList) {}
+    }
+}
+
+private suspend fun BillingClient.queryPurchasesSuspend(
+    params: QueryPurchasesParams,
+): Pair<BillingResult, List<Purchase>> = suspendCancellableCoroutine { cont ->
+    queryPurchasesAsync(params) { result, purchases ->
+        if (cont.isActive) cont.resume(result to purchases) {}
+    }
+}
+
+private suspend fun BillingClient.acknowledgePurchaseSuspend(
+    params: AcknowledgePurchaseParams,
+): BillingResult = suspendCancellableCoroutine { cont ->
+    acknowledgePurchase(params) { result ->
+        if (cont.isActive) cont.resume(result) {}
+    }
 }
 
 sealed class PurchaseResult {

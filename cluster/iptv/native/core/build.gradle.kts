@@ -33,7 +33,7 @@ dependencies {
     implementation(libs.moshi.kotlin)
     api(libs.androidx.datastore.preferences)
     api(libs.androidx.security.crypto)
-    api(libs.billing.ktx)
+    api(libs.billing)
     api(libs.androidx.media3.exoplayer)
     api(libs.androidx.media3.hls)
     api(libs.androidx.media3.dash)
