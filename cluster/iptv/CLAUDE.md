@@ -824,7 +824,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **10. TV — résultats de recherche inatteignables au D-pad** — corrigé, cf. §22.
 - [x] ~~11. Le focus s'échappe des grilles vers la barre de recherche~~ — **mauvais
       diagnostic de ma part**, cf. §24. Il n'y avait qu'un seul résultat : rien à droite.
-- [ ] **12. TV — le clavier virtuel piège les touches directionnelles.** Dès que le focus
+- [x] **12. TV — le clavier virtuel piégeait les touches directionnelles** — corrigé,
+      cf. §26. Ancien texte : Dès que le focus
       revient sur la barre de recherche, l'IME s'affiche et avale haut/bas/droite/validation
       (« Simpson » devient « Simpsonp »). Gênant à la télécommande, où l'on traverse
       souvent la barre.
@@ -2335,3 +2336,49 @@ ne vaut pas une ligne de liste.
 **Leçon** : une optimisation de densité qui allonge un chemin de navigation au D-pad est
 un mauvais échange. Sur télécommande, le nombre d'appuis compte plus que le nombre de
 lignes visibles.
+
+---
+
+## 26. Le clavier virtuel piégeait la télécommande *(2026-08-19)*
+
+Dès que le focus arrivait sur la barre de recherche, le `BasicTextField` le prenait, le
+clavier virtuel s'affichait, et **il avalait les touches directionnelles** : traverser la
+barre à la télécommande écrivait dedans — « Simpson » devenait « Simpsonp », « Simpsonqs ».
+
+C'est le prolongement du défaut 10 : celui-ci portait sur la sortie du champ, celui-ci sur
+l'entrée.
+
+### Motif retenu — le clavier à la demande
+
+Le champ n'entre dans le parcours du focus **qu'une fois activé** :
+
+```kotlin
+var editing by remember { mutableStateOf(false) }
+…
+.onFocusChanged { isFocused = it.hasFocus; if (!it.hasFocus) editing = false }
+.clickable { editing = true }
+…
+BasicTextField(modifier = Modifier
+    .focusRequester(fieldFocus)
+    .focusProperties { canFocus = editing })
+```
+
+La barre reste focalisable — c'est la **validation** qui donne le curseur, motif habituel
+des interfaces TV.
+
+### Deux pièges rencontrés
+
+1. **`focusable()` en plus de `clickable{}`** créait deux nœuds concurrents et la
+   validation n'atteignait jamais l'`onClick`. `clickable` rend déjà l'élément focalisable.
+2. **`requestFocus()` immédiat échouait** : la recomposition n'avait pas encore appliqué
+   `canFocus = true`, la demande portait donc sur un nœud non focalisable. Résolu par un
+   `withFrameNanos { }` avant la demande.
+
+### Vérifié à l'émulateur
+
+| Étape | Mesure |
+|---|---|
+| Focus arrive sur la barre | `mInputShown=false` — clavier fermé |
+| Validation | `mInputShown=true` — clavier ouvert |
+| Saisie « Simpson » | « 2 RESULTS », résultats affichés |
+| Traversée bas/bas/haut, clavier fermé | champ inchangé — **plus aucune touche parasite** |

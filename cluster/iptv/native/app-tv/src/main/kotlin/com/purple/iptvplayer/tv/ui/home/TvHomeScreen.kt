@@ -1,6 +1,10 @@
 package com.purple.iptvplayer.tv.ui.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.*
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.Key
@@ -242,6 +247,23 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
 fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+
+    // Le champ de texte n'entre dans le parcours du focus **qu'une fois activé**.
+    //
+    // Sans cela, il prenait le focus au simple passage, ouvrait le clavier virtuel, et
+    // celui-ci avalait les touches directionnelles : traverser la barre à la télécommande
+    // écrivait dedans (« Simpson » devenait « Simpsonp »). La barre reste focalisable —
+    // c'est la validation qui donne le curseur, motif habituel des interfaces TV.
+    var editing by remember { mutableStateOf(false) }
+    val fieldFocus = remember { FocusRequester() }
+    LaunchedEffect(editing) {
+        if (editing) {
+            // Laisser la recomposition appliquer `canFocus = true` avant de réclamer le
+            // focus, sinon la demande porte sur un nœud encore non focalisable.
+            withFrameNanos { }
+            runCatching { fieldFocus.requestFocus() }
+        }
+    }
     Row(
         modifier              = modifier
             // Un champ de texte **consomme** les touches directionnelles : une fois le
@@ -266,6 +288,11 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
                 color = if (isFocused) PurplePalette.Purple400 else PurplePalette.Line1,
                 shape = PurpleShapes.Md,
             )
+            // `clickable` rend déjà l'élément focalisable : ajouter `focusable()` en
+            // plus faisait deux nœuds concurrents et la validation n'atteignait pas
+            // l'`onClick`.
+            .onFocusChanged { isFocused = it.hasFocus; if (!it.hasFocus) editing = false }
+            .clickable { editing = true }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -290,7 +317,10 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
                 cursorBrush     = SolidColor(PurplePalette.Purple400),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {}),
-                modifier        = Modifier.fillMaxWidth().onFocusChanged { isFocused = it.isFocused },
+                modifier        = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(fieldFocus)
+                    .focusProperties { canFocus = editing },
             )
         }
         if (query.isNotEmpty()) {
