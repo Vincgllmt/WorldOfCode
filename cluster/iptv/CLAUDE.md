@@ -792,8 +792,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Échéance dure — 31 août 2026
 
-- [x] **Migrer Play Billing 7 → 8** — fait le 2026-08-19, cf. §12. `billing:8.0.0`,
-      artefact Java, minSdk inchangé. **Reste à vérifier sur une build de Play.**
+- [x] **Migrer Play Billing 7 → 8** — fait **et vérifié sur build Play** le 2026-08-19
+      (version 13), cf. §12. `billing:8.0.0`, artefact Java, minSdk inchangé.
 - [ ] Décider si l'on monte en `billing:9.x` — exige `minSdk 23` côté mobile (cf. §12).
 
 #### Demandes de `raf.md` encore ouvertes
@@ -1437,12 +1437,22 @@ en 9.x repousserait l'échéance à 2028, au prix du `minSdk`. `app-tv` est déj
 
 ### État de la vérification
 
-| Point | Statut |
-|---|---|
-| 92 tests | ✅ 0 échec |
-| `:app-mobile:assembleDebug` · `:app-tv:assembleDebug` | ✅ |
-| Chemin facturation exercé sur appareil (variante `.debug`) | ✅ aucun `NoSuchMethodError`, écran d'achat affiché |
-| **Produits réellement chargés depuis Play** | ⚠️ **non vérifié** — exige une build installée depuis Play |
+### ✅ Vérifié sur la build de Play (version 13, 2026-08-19)
 
-Le test de fumée local prouve seulement que les enveloppes ne cassent pas à l'exécution.
-Que Play réponde bien reste à mesurer sur la piste interne, avec le protocole de §9.
+Installée par `com.android.vending`, signée `O=Google Inc.` — conditions contrôlées avant
+toute observation.
+
+| Chemin de code | Enveloppe concernée | Observation | Verdict |
+|---|---|---|---|
+| Synchro au démarrage | `queryPurchasesSuspend` | bandeau **« Premium : 365 jours restants. »** — l'abonnement annuel a été retrouvé chez Play et l'échéance reposée | ✅ |
+| Chargement du catalogue | `queryProductDetailsSuspend` | **les trois offres avec leurs prix** : 0,99 € / 4,99 € / 9,99 €, aucun « N/A » | ✅ |
+| Ouverture du paiement | `launchBillingFlow` + `setOfferToken` | feuille Google « Premium Mensuel, 0,99 €/5 min, carte test » | ✅ |
+| Annulation | `PurchaseResult.Cancelled` | retour à l'écran, **aucun message d'erreur** | ✅ |
+| Journal | — | aucun `NoSuchMethodError`, `AbstractMethodError` ni erreur `BillingClient` | ✅ |
+
+➡️ **La migration v8 ne régresse sur aucun des correctifs déjà prouvés en v7.** B1.1, B1.2,
+B1.4, B1.6 et B3 sont revérifiés sous Billing 8.0.0. `acknowledgePurchaseSuspend` est le
+seul des quatre chemins non exercé, faute d'achat neuf à acquitter.
+
+⚠️ `app-tv` embarque la même version de Billing mais n'a **pas** été republié
+(versionCode 8) : la migration n'y est donc pas distribuée.
