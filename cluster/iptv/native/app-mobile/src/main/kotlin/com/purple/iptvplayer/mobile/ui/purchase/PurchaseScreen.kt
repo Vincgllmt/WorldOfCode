@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.ProductDetails
+import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.data.BillingRepository
 import com.purple.iptvplayer.core.data.OfferPrice
 import com.purple.iptvplayer.core.viewmodel.PurchaseScreenState
@@ -60,7 +62,7 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Purple IPTV Premium",
+                        text = stringResource(R.string.purchase_title),
                         color = TextPrimary,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
@@ -69,7 +71,7 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Unlock unlimited access",
+                        text = stringResource(R.string.purchase_pitch),
                         color = TextSub,
                         fontSize = 16.sp,
                         textAlign = TextAlign.Center,
@@ -77,7 +79,7 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     Spacer(Modifier.height(48.dp))
 
                     if (products.isEmpty()) {
-                        Text("No products available at the moment.", color = TextSub, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.purchase_none), color = TextSub, textAlign = TextAlign.Center)
                     } else {
                         ConstrainedBox(maxWidth = 460.dp) {
                             products.forEach { product ->
@@ -97,7 +99,7 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     if (onBack != null) {
                         TextButton(onClick = onBack) {
                             Text(
-                                text  = "Maybe later",
+                                text  = stringResource(R.string.purchase_later),
                                 color = TextPrimary.copy(alpha = 0.3f),
                                 style = LocalTextStyle.current.copy(
                                     textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
@@ -118,7 +120,7 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = PurpleGlow)
                     Spacer(Modifier.height(24.dp))
-                    Text("Processing payment…", color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.purchase_processing), color = TextPrimary, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -148,14 +150,14 @@ private fun PriceCard(product: ProductDetails, isLoading: Boolean, onTap: () -> 
         else -> product.name
     }
     val period = when (product.productId) {
-        BillingRepository.MONTHLY_ID  -> "/ month"
-        BillingRepository.YEARLY_ID   -> "/ year"
-        BillingRepository.LIFETIME_ID -> "one-time"
+        BillingRepository.MONTHLY_ID  -> stringResource(R.string.period_month)
+        BillingRepository.YEARLY_ID   -> stringResource(R.string.period_year)
+        BillingRepository.LIFETIME_ID -> stringResource(R.string.period_onetime)
         else -> ""
     }
     val badge = when (product.productId) {
         BillingRepository.YEARLY_ID   -> "SAVE 58%"
-        BillingRepository.LIFETIME_ID -> "BEST DEAL"
+        BillingRepository.LIFETIME_ID -> stringResource(R.string.badge_best_deal)
         else -> null
     }
 

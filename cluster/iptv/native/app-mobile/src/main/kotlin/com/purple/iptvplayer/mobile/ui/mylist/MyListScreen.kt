@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.model.SeriesItem
@@ -95,7 +97,7 @@ fun MyListScreen(
                 ListFilter.MOVIES   -> watchlistMovies.size
                 ListFilter.SERIES   -> watchlistSeries.size
             }
-            Text("Ma liste", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+            Text(stringResource(R.string.mylist_title), color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
             if (total > 0) {
                 Text(
                     "$total titre${if (total > 1) "s" else ""}",
@@ -106,10 +108,10 @@ fun MyListScreen(
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ListFilter.ALL to "Tout",
-                    ListFilter.CHANNELS to "Chaînes",
-                    ListFilter.MOVIES to "Films",
-                    ListFilter.SERIES to "Séries",
+                    ListFilter.ALL to stringResource(R.string.filter_all),
+                    ListFilter.CHANNELS to stringResource(R.string.filter_channels),
+                    ListFilter.MOVIES to stringResource(R.string.filter_movies),
+                    ListFilter.SERIES to stringResource(R.string.filter_series),
                 ).forEach { (f, label) ->
                     val active = filter == f
                     Box(
@@ -143,7 +145,7 @@ fun MyListScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Icon(Icons.Rounded.BookmarkBorder, null, tint = TextSub.copy(0.4f), modifier = Modifier.size(56.dp))
                     Spacer(Modifier.height(16.dp))
-                    Text("Votre liste est vide", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.mylist_empty), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Ajoutez des chaînes avec l'étoile de la liste, ou des films et séries depuis leurs fiches.",
@@ -214,7 +216,7 @@ private fun MyListMovieCard(movie: Movie, onClick: () -> Unit) {
                     .clip(RoundedCornerShape(4.dp)).background(Purple.copy(0.88f))
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
-                Text("FILM", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.badge_movie), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
         Text(
@@ -252,7 +254,7 @@ private fun MyListSeriesCard(series: SeriesItem, onClick: () -> Unit) {
                     .clip(RoundedCornerShape(4.dp)).background(PurpleDark.copy(0.88f))
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
-                Text("SÉRIE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.badge_series), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
         Text(

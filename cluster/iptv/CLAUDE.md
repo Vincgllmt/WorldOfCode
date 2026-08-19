@@ -810,9 +810,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 - [x] **1. TV — le panneau latéral qui s'ouvre tout seul** (§16) — corrigé et vérifié
       pour les mutations de liste. ⚠️ Le cas « fin de liste » reste ouvert.
-- [ ] **2. Il reste du français en mode anglais.** Un cas déjà corrigé (`RailTrialBadge`,
-      §10) — il en reste. Auditer les deux modules : chaînes codées en dur dans le Kotlin,
-      et clés présentes dans `values-fr/` mais absentes de `values/`.
+- [x] **2. Localisation** — fait, cf. §17. Le défaut allait **dans les deux sens** :
+      français en dur côté TV, **anglais** en dur sur le paywall et la fiche film du mobile.
 - [ ] **3. TV — refonte de l'écran Paramètres.**
 - [x] **4. Bandeau premium** — fait et vérifié : « 30 jours restants. » sous le
       « PREMIUM » doré, sur mobile et sur TV.
@@ -1882,3 +1881,58 @@ liste, redemandé sur le voisin quand l'élément focalisé disparaît, le tout 
 a quitté Flutter : toute modification doit être vérifiée à l'émulateur (§11), et une
 correction trop large risque de piéger le focus et de rendre le rail inatteignable — le
 défaut inverse, et pire.
+
+---
+
+## 17. Localisation — le défaut allait dans les deux sens *(2026-08-19)*
+
+Signalé comme « en mode anglais il reste du français ». L'audit a montré plus large : la
+localisation n'avait **jamais été faite** sur la plupart des écrans, et les libellés en dur
+étaient tantôt français, tantôt anglais.
+
+| Sens | Exemples |
+|---|---|
+| Français visible en mode **anglais** | rail TV (`Films`, `Séries`, `Paramètres`), en-têtes (`215 CHAÎNES - 28 GENRES`), lecteur (`Pistes & Sous-titres`, `VITESSE DE LECTURE`), `Ma liste` |
+| **Anglais** visible en mode français | **le paywall mobile entier** (`Unlock unlimited access`, `Maybe later`, `No products available at the moment.`), fiche film (`Plot`, `Director`, `Cast`, `Download`) |
+
+Le second sens était le plus coûteux : **l'écran qui vend** s'affichait en anglais à un
+utilisateur francophone.
+
+### Deux défauts distincts, traités séparément
+
+1. **Libellés en dur dans le Kotlin** — 35 sur `app-tv`, 33 sur `app-mobile`, extraits en
+   ressources et remplacés par `stringResource`. Les compteurs deviennent des formats
+   (`%1$d CHAÎNES - %2$d GENRES`) plutôt que des concaténations.
+2. **Clés sans traduction** — 22 clés existaient dans `values/` sans équivalent
+   `values-fr/` (écran Paramètres et style des sous-titres) : elles retombaient en anglais
+   en mode français, silencieusement.
+
+### Contrôle de parité, à rejouer après toute modification
+
+```bash
+python3 - <<'EOF'
+import re
+def keys(p): return set(re.findall(r'<string name="([^"]+)"', open(p,encoding='utf-8').read()))
+for m in ('app-tv','app-mobile'):
+    en=keys(f'{m}/src/main/res/values/strings.xml'); fr=keys(f'{m}/src/main/res/values-fr/strings.xml')
+    print(m, len(en), len(fr), sorted(en-fr) or 'OK')
+EOF
+```
+
+| Module | avant | après |
+|---|---|---|
+| `app-tv` | 91 en / 69 fr | **95 / 95** |
+| `app-mobile` | — | **110 / 110** |
+
+Plus aucun `Text("…")` accentué en dur dans les deux modules.
+
+### Vérifié à l'écran
+
+| Écran | Locale | Résultat |
+|---|---|---|
+| Accueil TV | anglais | `Live TV`, `Movies`, `Series`, `My list`, `Settings`, `215 CHANNELS - 28 GENRES` — **aucun français** |
+| « Ma liste » mobile | français | `Ma liste`, `Tout`, `Chaînes`, `Films`, `Séries` |
+| **Paywall mobile** | français | `Accès illimité à tous les contenus`, `Aucune offre disponible pour le moment.`, `Plus tard` — auparavant tout en anglais |
+
+⚠️ Restent en dur, volontairement : les invariants (`LIVE`, `AUDIO`, `OK`, `%`) et les
+libellés techniques d'animation (`rail-width`, `dl_shimmer`) qui ne sont pas de l'UI.

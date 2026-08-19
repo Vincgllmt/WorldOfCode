@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,6 +28,7 @@ import com.purple.iptvplayer.core.data.OfferPrice
 import com.purple.iptvplayer.core.data.BillingRepository
 import com.purple.iptvplayer.core.viewmodel.PurchaseScreenState
 import com.purple.iptvplayer.core.viewmodel.PurchaseViewModel
+import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
@@ -53,13 +55,13 @@ fun TvPurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 Text("PURPLE IPTV", color = TvPurpleGlow, fontSize = 28.sp,
                     fontWeight = FontWeight.Black, letterSpacing = 5.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("Premium", color = TvTextPrimary, fontSize = 40.sp, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.purchase_premium), color = TvTextPrimary, fontSize = 40.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(16.dp))
-                Text("Unlock unlimited access to all channels, movies & series.",
+                Text(stringResource(R.string.purchase_pitch),
                     color = TvTextSub, fontSize = 16.sp, lineHeight = 24.sp)
                 Spacer(Modifier.height(32.dp))
                 TextButton(onClick = onBack) {
-                    Text("Maybe later", color = TvTextPrimary.copy(0.4f), fontSize = 14.sp,
+                    Text(stringResource(R.string.purchase_later), color = TvTextPrimary.copy(0.4f), fontSize = 14.sp,
                         style = LocalTextStyle.current.copy(
                             textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline))
                 }
@@ -70,7 +72,7 @@ fun TvPurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 if (state is PurchaseScreenState.Loading) {
                     CircularProgressIndicator(color = TvPurpleGlow)
                 } else if (products.isEmpty()) {
-                    Text("No products available", color = TvTextSub, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.purchase_none), color = TvTextSub, textAlign = TextAlign.Center)
                 } else {
                     products.forEach { product ->
                         TvPriceCard(
@@ -88,7 +90,7 @@ fun TvPurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = TvPurpleGlow)
                     Spacer(Modifier.height(16.dp))
-                    Text("Processing payment...", color = TvTextPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.purchase_processing), color = TvTextPrimary, fontWeight = FontWeight.Bold)
                 }
             }
         }

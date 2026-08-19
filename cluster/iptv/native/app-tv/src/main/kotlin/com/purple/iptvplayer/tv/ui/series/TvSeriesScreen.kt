@@ -162,7 +162,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = PurplePalette.Fg2, modifier = Modifier.size(18.dp))
-                        Text("Retour", style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
+                        Text(stringResource(R.string.action_back), style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
                     }
                 }
             }
@@ -175,8 +175,8 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                     Text(
                         when {
                             selectedGenre != null    -> "${filtered.size} TITRES"
-                            searchQuery.isNotBlank() -> "${filtered.size} RÉSULTATS"
-                            else                     -> "${allSeries.size} TITRES  ${allGroups.size} GENRES"
+                            searchQuery.isNotBlank() -> stringResource(R.string.count_results, filtered.size)
+                            else                     -> stringResource(R.string.count_titles, allSeries.size, allGroups.size)
                         },
                         style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
                         modifier = Modifier.padding(top = 4.dp),
@@ -186,7 +186,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             TvSearchBar(
                 query    = searchQuery,
                 onQuery  = { q -> searchQuery = q; if (q.isNotEmpty()) selectedGenre = null },
-                hint     = "Rechercher une serie...",
+                hint     = stringResource(R.string.search_series),
                 modifier = Modifier.widthIn(max = 280.dp),
             )
         }
@@ -617,7 +617,7 @@ internal fun TvSeriesDetailPage(
                             ) {
                                 lazyItems(sortedSeasons) { season ->
                                     TvSeasonTab(
-                                        label    = "Saison $season",
+                                        label    = stringResource(R.string.label_season, season),
                                         selected = season == selectedSeason,
                                         onClick  = { selectedSeason = season },
                                     )

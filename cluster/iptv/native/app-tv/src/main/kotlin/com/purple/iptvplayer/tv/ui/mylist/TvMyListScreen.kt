@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -38,6 +39,7 @@ import com.purple.iptvplayer.core.model.SeriesItem
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
+import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.movies.TvMovieDetailPage
 import com.purple.iptvplayer.tv.ui.series.TvSeriesDetailPage
 import com.purple.iptvplayer.tv.ui.common.TvChannelRow
@@ -198,7 +200,7 @@ fun TvMyListScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Ma liste", style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1))
+                Text(stringResource(R.string.mylist_title), style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1))
                 val total = when (filter) {
                     ListFilter.ALL      -> favChannels.size + watchlistMovies.size + watchlistSeries.size
                     ListFilter.CHANNELS -> favChannels.size
@@ -213,10 +215,10 @@ fun TvMyListScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ListFilter.ALL      to "Tout",
-                    ListFilter.CHANNELS to "Chaînes",
-                    ListFilter.MOVIES   to "Films",
-                    ListFilter.SERIES   to "Séries",
+                    ListFilter.ALL      to stringResource(R.string.filter_all),
+                    ListFilter.CHANNELS to stringResource(R.string.filter_channels),
+                    ListFilter.MOVIES   to stringResource(R.string.filter_movies),
+                    ListFilter.SERIES   to stringResource(R.string.filter_series),
                 ).forEach { (f, label) ->
                     val active = filter == f
                     Surface(
@@ -267,10 +269,10 @@ fun TvMyListScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.BookmarkBorder, null, tint = PurplePalette.Fg4, modifier = Modifier.size(48.dp))
                     Spacer(Modifier.height(16.dp))
-                    Text("Votre liste est vide", style = LocalPurpleType.current.h3.copy(color = PurplePalette.Fg2))
+                    Text(stringResource(R.string.mylist_empty), style = LocalPurpleType.current.h3.copy(color = PurplePalette.Fg2))
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Ajoutez des films ou des séries depuis leurs fiches",
+                        stringResource(R.string.mylist_empty_hint),
                         style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg4),
                     )
                 }
@@ -345,7 +347,7 @@ private fun MyListMovieCard(movie: Movie, onClick: () -> Unit) {
                         .clip(PurpleShapes.Xs).background(PurplePalette.Purple500.copy(0.92f))
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
-                    androidx.compose.material3.Text("FILM", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                    androidx.compose.material3.Text(stringResource(R.string.badge_movie), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -392,7 +394,7 @@ private fun MyListSeriesCard(series: SeriesItem, onClick: () -> Unit) {
                         .clip(PurpleShapes.Xs).background(PurplePalette.Purple700.copy(0.92f))
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
-                    androidx.compose.material3.Text("SÉRIE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                    androidx.compose.material3.Text(stringResource(R.string.badge_series), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }

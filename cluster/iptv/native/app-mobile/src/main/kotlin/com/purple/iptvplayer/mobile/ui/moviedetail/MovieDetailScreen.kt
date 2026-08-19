@@ -217,20 +217,20 @@ fun MovieDetailScreen(
                         Spacer(Modifier.height(24.dp))
 
                         // Plot
-                        Text("Plot", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.detail_plot), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         Text(d.description ?: "No plot available", color = TextSub, fontSize = 14.sp, lineHeight = 20.sp)
 
                         d.director?.takeIf { it.isNotBlank() }?.let {
                             Spacer(Modifier.height(16.dp))
-                            Text("Director", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.detail_director), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
                             Text(it, color = TextSub, fontSize = 13.sp)
                         }
 
                         d.cast?.takeIf { it.isNotBlank() }?.let {
                             Spacer(Modifier.height(16.dp))
-                            Text("Cast", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.detail_cast), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
                             Text(it, color = TextSub, fontSize = 13.sp, lineHeight = 18.sp)
                         }
@@ -264,14 +264,14 @@ private fun DownloadButton(
     onPlay:     (String?) -> Unit,
 ) {
     var icon = Icons.Rounded.Download
-    var label = "Download"
+    var label = stringResource(R.string.dl_download)
     var color: Color = PurpleGlow
     var action: () -> Unit = onDownload
     when (item?.status) {
-        DownloadStatus.QUEUED -> { icon = Icons.Rounded.Schedule; label = "Queued…"; color = TextSub; action = onCancel }
+        DownloadStatus.QUEUED -> { icon = Icons.Rounded.Schedule; label = stringResource(R.string.dl_queued); color = TextSub; action = onCancel }
         DownloadStatus.DOWNLOADING -> { icon = Icons.Rounded.Sync; label = "Downloading ${item.progress}%"; color = PurpleGlow; action = onCancel }
-        DownloadStatus.COMPLETED -> { icon = Icons.Rounded.CheckCircle; label = "Downloaded"; color = Color(0xFF4CAF50); action = { onPlay(item.localPath) } }
-        DownloadStatus.FAILED -> { icon = Icons.Rounded.ErrorOutline; label = "Failed (Retry)"; color = ColorError; action = onRetry }
+        DownloadStatus.COMPLETED -> { icon = Icons.Rounded.CheckCircle; label = stringResource(R.string.dl_done); color = Color(0xFF4CAF50); action = { onPlay(item.localPath) } }
+        DownloadStatus.FAILED -> { icon = Icons.Rounded.ErrorOutline; label = stringResource(R.string.dl_failed); color = ColorError; action = onRetry }
         else -> {}
     }
 

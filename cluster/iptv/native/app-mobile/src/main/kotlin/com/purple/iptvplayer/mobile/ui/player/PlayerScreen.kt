@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import androidx.media3.common.C
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -204,7 +206,7 @@ fun PlayerScreen(
                 Button(
                     onClick = { vm.playMedia(url, title, mediaId.ifEmpty { null }, cover = cover, type = type) },
                     colors  = ButtonDefaults.buttonColors(containerColor = Purple),
-                ) { Text("Retry") }
+                ) { Text(stringResource(R.string.action_retry)) }
             }
         }
 
@@ -566,7 +568,7 @@ private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Mod
                         .background(Purple.copy(alpha = 0.85f))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
-                    Text("EN DIRECT", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
+                    Text(stringResource(R.string.player_live), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
                 }
                 Text(timeLabel, color = Color.White.copy(0.5f), fontSize = 10.sp)
             }
@@ -697,11 +699,11 @@ private fun TrackSelectionSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { currentTab = 0 }) {
-                    Text("Pistes & Sous-titres", color = if (currentTab == 0) PurpleGlow else TextSub, fontWeight = if (currentTab == 0) FontWeight.Bold else FontWeight.Normal)
+                    Text(stringResource(R.string.player_tracks), color = if (currentTab == 0) PurpleGlow else TextSub, fontWeight = if (currentTab == 0) FontWeight.Bold else FontWeight.Normal)
                 }
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = { currentTab = 1 }) {
-                    Text("Style Sous-titres", color = if (currentTab == 1) PurpleGlow else TextSub, fontWeight = if (currentTab == 1) FontWeight.Bold else FontWeight.Normal)
+                    Text(stringResource(R.string.player_sub_style), color = if (currentTab == 1) PurpleGlow else TextSub, fontWeight = if (currentTab == 1) FontWeight.Bold else FontWeight.Normal)
                 }
             }
             
@@ -757,7 +759,7 @@ private fun TrackSelectionSheet(
                 }
 
                 if (audioGroups.isEmpty() && textGroups.isEmpty()) {
-                    Text("Aucune piste disponible pour ce flux.", color = TextSub, fontSize = 14.sp)
+                    Text(stringResource(R.string.player_no_tracks), color = TextSub, fontSize = 14.sp)
                     Spacer(Modifier.height(16.dp))
                 }
             } else {
@@ -827,7 +829,7 @@ private fun SubtitleStyleContent(subSize: Float, subColor: String, subBg: Boolea
 
     TrackSectionHeader("ARRIÈRE-PLAN")
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { viewModel.updateSubtitleBackground(!subBg) }.padding(vertical = 8.dp)) {
-        Text("Fond noir semi-transparent", color = TextPrimary, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.player_sub_bg), color = TextPrimary, modifier = Modifier.weight(1f))
         Switch(checked = subBg, onCheckedChange = { viewModel.updateSubtitleBackground(it) }, colors = SwitchDefaults.colors(checkedThumbColor = PurpleGlow, checkedTrackColor = Purple))
     }
 }

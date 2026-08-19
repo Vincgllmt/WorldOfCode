@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +46,7 @@ import coil.compose.AsyncImage
 import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
+import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.common.TvChannelRow
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
@@ -134,18 +136,18 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = PurplePalette.Fg2, modifier = Modifier.size(18.dp))
-                                Text("Retour", style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
+                                Text(stringResource(R.string.action_back), style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
                             }
                         }
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Direct TV",
+                            stringResource(R.string.nav_live),
                             style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                         )
                         Text(
-                            if (searchQuery.isNotEmpty()) "${searchResults.size} RÉSULTATS"
-                            else "${allChannels.size} CHAÎNES - ${grouped.size} GENRES",
+                            if (searchQuery.isNotEmpty()) stringResource(R.string.count_results, searchResults.size)
+                            else stringResource(R.string.count_channels, allChannels.size, grouped.size),
                             style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
                             modifier = Modifier.padding(top = 4.dp),
                         )
@@ -153,7 +155,7 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                     TvSearchBar(
                         query    = searchQuery,
                         onQuery  = { q -> searchQuery = q; if (q.isNotEmpty()) selectedGroup = null },
-                        hint     = "Rechercher une chaîne...",
+                        hint     = stringResource(R.string.search_channels),
                         modifier = Modifier.widthIn(max = 280.dp),
                     )
                 }

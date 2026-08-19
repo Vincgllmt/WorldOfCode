@@ -173,7 +173,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = PurplePalette.Fg2, modifier = Modifier.size(18.dp))
-                        Text("Retour", style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
+                        Text(stringResource(R.string.action_back), style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2))
                     }
                 }
             }
@@ -186,8 +186,8 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                     Text(
                         when {
                             selectedGenre != null    -> "${filtered.size} TITRES"
-                            searchQuery.isNotBlank() -> "${filtered.size} RÉSULTATS"
-                            else                     -> "${allMovies.size} TITRES  ${allGroups.size} GENRES"
+                            searchQuery.isNotBlank() -> stringResource(R.string.count_results, filtered.size)
+                            else                     -> stringResource(R.string.count_titles, allMovies.size, allGroups.size)
                         },
                         style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
                         modifier = Modifier.padding(top = 4.dp),
@@ -197,7 +197,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             TvSearchBar(
                 query    = searchQuery,
                 onQuery  = { q -> searchQuery = q; if (q.isNotEmpty()) selectedGenre = null },
-                hint     = "Rechercher un film...",
+                hint     = stringResource(R.string.search_movies),
                 modifier = Modifier.widthIn(max = 280.dp),
             )
         }
@@ -556,7 +556,7 @@ internal fun TvMovieDetailPage(
                     }
                     detail.director?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.height(12.dp))
-                        TvMovieMetaRow("Réalisateur", it)
+                        TvMovieMetaRow(stringResource(R.string.label_director), it)
                     }
                     detail.cast?.takeIf { it.isNotBlank() }?.let {
                         Spacer(Modifier.height(6.dp))

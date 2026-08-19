@@ -125,7 +125,7 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f),
                         decorationBox = { inner ->
                             if (query.isEmpty()) {
-                                Text("Search channels…", color = TextSub.copy(0.4f), fontSize = 14.sp)
+                                Text(stringResource(R.string.search_channels), color = TextSub.copy(0.4f), fontSize = 14.sp)
                             }
                             inner()
                         },
@@ -412,7 +412,7 @@ fun RecentItemCard(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Icon(Icons.Rounded.DeleteOutline, null, tint = ColorError, modifier = Modifier.size(22.dp))
-                    Text("Supprimer de la liste", color = ColorError, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.action_remove_from_list), color = ColorError, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 }
 
                 // Annuler
@@ -426,7 +426,7 @@ fun RecentItemCard(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Icon(Icons.Rounded.Close, null, tint = TextSub, modifier = Modifier.size(22.dp))
-                    Text("Annuler", color = TextSub, fontSize = 15.sp)
+                    Text(stringResource(R.string.btn_cancel), color = TextSub, fontSize = 15.sp)
                 }
             }
         }

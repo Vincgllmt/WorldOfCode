@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +42,7 @@ import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
+import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
@@ -582,8 +584,8 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    TvTabButton(label = "Pistes & Sous-titres", selected = currentTab == 0) { currentTab = 0 }
-                    TvTabButton(label = "Style Sous-titres", selected = currentTab == 1) { currentTab = 1 }
+                    TvTabButton(label = stringResource(R.string.player_tracks), selected = currentTab == 0) { currentTab = 0 }
+                    TvTabButton(label = stringResource(R.string.player_sub_style), selected = currentTab == 1) { currentTab = 1 }
                 }
                 
                 Spacer(Modifier.height(24.dp))
@@ -592,7 +594,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                     Box(modifier = Modifier.weight(1f)) {
                         androidx.compose.foundation.lazy.LazyColumn {
                             if (audioGroups.isNotEmpty()) {
-                                item { Text("AUDIO", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                                item { Text(stringResource(R.string.player_audio), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                                 items(audioGroups.size) { gIdx ->
                                     val group = audioGroups[gIdx]
                                     (0 until group.length).forEach { tIdx ->
@@ -609,9 +611,9 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                                 item { Spacer(Modifier.height(16.dp)) }
                             }
                             if (textGroups.isNotEmpty()) {
-                                item { Text("SOUS-TITRES", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                                item { Text(stringResource(R.string.player_subs), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                                 item {
-                                    TvTrackRow(name = "Désactivé", selected = !anySubtitlePlaying) {
+                                    TvTrackRow(name = stringResource(R.string.player_off), selected = !anySubtitlePlaying) {
                                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
                                         onDismiss()
@@ -637,19 +639,19 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                 } else {
                     // Subtitle style settings
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("TAILLE", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.player_size), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Petit" to 0.75f, "Moyen" to 1.0f, "Grand" to 1.5f).forEach { (label, value) ->
                                 TvTabButton(label = label, selected = subSize == value) { viewModel.updateSubtitleSize(value) }
                             }
                         }
-                        Text("COULEUR", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.player_color), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             TvColorOption(name = "Blanc", color = Color.White, selected = subColor == "white") { viewModel.updateSubtitleColor("white") }
                             TvColorOption(name = "Jaune", color = Color.Yellow, selected = subColor == "yellow") { viewModel.updateSubtitleColor("yellow") }
                         }
-                        TvToggleOption(label = "Fond semi-transparent", checked = subBg) { viewModel.updateSubtitleBackground(it) }
-                        Text("APERÇU", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        TvToggleOption(label = stringResource(R.string.player_sub_bg), checked = subBg) { viewModel.updateSubtitleBackground(it) }
+                        Text(stringResource(R.string.player_preview), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -659,7 +661,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Ceci est un aperçu des sous-titres",
+                                text = stringResource(R.string.player_preview_text),
                                 color = if (subColor == "yellow") Color.Yellow else Color.White,
                                 fontSize = (16f * subSize).sp,
                                 fontWeight = FontWeight.Bold,
@@ -673,7 +675,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                 }
                 
                 Spacer(Modifier.height(16.dp))
-                TvTextButton(label = "Fermer", onClick = onDismiss)
+                TvTextButton(label = stringResource(R.string.action_close), onClick = onDismiss)
             }
         }
     }
@@ -753,7 +755,7 @@ private fun TvSpeedDialog(currentSpeed: Float, onSpeedSelect: (Float) -> Unit, o
     Dialog(onDismissRequest = onDismiss) {
         Surface(color = TvBgCard, shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("VITESSE DE LECTURE", color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.player_speed), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
                 speeds.forEach { sp ->
                     TvTrackRow(name = if (sp == 1.0f) "Normale" else "${sp}x", selected = currentSpeed == sp) {
@@ -761,7 +763,7 @@ private fun TvSpeedDialog(currentSpeed: Float, onSpeedSelect: (Float) -> Unit, o
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                TvTextButton(label = "Fermer", onClick = onDismiss)
+                TvTextButton(label = stringResource(R.string.action_close), onClick = onDismiss)
             }
         }
     }

@@ -101,12 +101,12 @@ fun TvMainScreen(
     }
 
     val navItems = listOf(
-        NavItem("Direct TV",       Icons.Rounded.LiveTv),
-        NavItem("Films",           Icons.Rounded.Movie),
-        NavItem("Séries",          Icons.Rounded.Tv),
-        NavItem("Ma liste",        Icons.Rounded.Bookmarks),
-        NavItem("Téléchargements", Icons.Rounded.Download),
-        NavItem("Paramètres",      Icons.Rounded.Settings),
+        NavItem(stringResource(R.string.nav_live),       Icons.Rounded.LiveTv),
+        NavItem(stringResource(R.string.nav_movies),           Icons.Rounded.Movie),
+        NavItem(stringResource(R.string.nav_series),          Icons.Rounded.Tv),
+        NavItem(stringResource(R.string.nav_mylist),        Icons.Rounded.Bookmarks),
+        NavItem(stringResource(R.string.nav_downloads), Icons.Rounded.Download),
+        NavItem(stringResource(R.string.nav_settings),      Icons.Rounded.Settings),
     )
     val settingsIndex = navItems.size - 1
 

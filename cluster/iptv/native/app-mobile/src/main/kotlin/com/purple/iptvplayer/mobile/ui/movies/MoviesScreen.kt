@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -250,7 +252,7 @@ fun ContentHeader(title: String, query: String, onQuery: (String) -> Unit) {
             modifier = Modifier.weight(1f),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Rechercher…", color = TextSub.copy(0.4f), fontSize = 14.sp)
+                    Text(stringResource(R.string.search_generic), color = TextSub.copy(0.4f), fontSize = 14.sp)
                 }
                 inner()
             },
