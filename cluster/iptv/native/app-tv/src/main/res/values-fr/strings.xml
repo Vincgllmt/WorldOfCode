@@ -104,4 +104,5 @@
     <string name="label_cast">Acteurs</string>
     <string name="label_rating">Note : %1$s</string>
     <string name="btn_watchlist_add">+ Ma liste</string>
+    <string name="btn_watchlist_in">Ma liste</string>
 </resources>

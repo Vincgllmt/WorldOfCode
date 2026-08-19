@@ -1,6 +1,8 @@
 package com.purple.iptvplayer.tv.ui.series
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -556,7 +558,11 @@ internal fun TvSeriesDetailPage(
                     // ── Left: cover + info ──────────────────────────────────
                     Column(
                         modifier = Modifier
-                            .width(220.dp)
+                            // 280 et non 220 : à 220, « + My list » et « Fermer » côte à
+                            // côte ne tenaient pas et le second se repliait une lettre par
+                            // ligne. Les lignes d'épisodes ont de la marge de reste, cet
+                            // élargissement ne leur coûte rien.
+                            .width(280.dp)
                             .fillMaxHeight()
                             .background(PurplePalette.Bg0)
                             .padding(18.dp),
@@ -581,20 +587,39 @@ internal fun TvSeriesDetailPage(
                         )
                         d.plot?.let {
                             Spacer(Modifier.height(10.dp))
+                            // Défilable plutôt que tronqué à 5 lignes : le synopsis était
+                            // coupé sans aucun moyen d'en lire la fin.
                             Text(
                                 it,
                                 style    = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg3),
-                                maxLines = 5,
-                                overflow = TextOverflow.Ellipsis,
+                                // `weight` et non une hauteur fixe : le synopsis prend
+                                // la place *restante*, donc les boutons d'action tiennent
+                                // toujours dans l'écran. Avec une hauteur en dur, un long
+                                // synopsis les repoussait hors du cadre.
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(rememberScrollState()),
                             )
                         }
-                        Spacer(Modifier.weight(1f))
-                        TvSeriesActionButton(
-                            label    = if (isInWatchlist) "Ma liste" else stringResource(R.string.btn_watchlist_add),
-                            icon     = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            onClick  = onToggleWatchlist,
-                            modifier = Modifier.focusRequester(firstDetailFocus),
-                        )
+                        Spacer(Modifier.height(14.dp))
+                        // Les deux actions sur une seule ligne : empilées, elles
+                        // mangeaient une hauteur que le synopsis utilise mieux.
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            TvSeriesActionButton(
+                                label    = if (isInWatchlist) stringResource(R.string.btn_watchlist_in)
+                                           else stringResource(R.string.btn_watchlist_add),
+                                icon     = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                                onClick  = onToggleWatchlist,
+                                modifier = Modifier.focusRequester(firstDetailFocus),
+                            )
+                            // La touche Retour ferme déjà la fiche ; ce bouton n'est là
+                            // que pour qui ne le sait pas, d'où sa forme réduite.
+                            TvSeriesActionButton(
+                                label   = stringResource(R.string.btn_close),
+                                icon    = Icons.Rounded.Close,
+                                onClick = onClose,
+                            )
+                        }
                     }
 
                     // ── Right: seasons + episodes ───────────────────────────
@@ -604,16 +629,23 @@ internal fun TvSeriesDetailPage(
                             .fillMaxHeight()
                             .padding(18.dp),
                     ) {
+                        // Saisons et téléchargement de la saison sur UNE ligne : le
+                        // bouton porte sur la saison sélectionnée, sa place est donc à
+                        // côté d'elle — et cela rend une ligne entière aux épisodes.
+                        Row(
+                            modifier              = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
                         // Season tabs
                         if (sortedSeasons.size > 1) {
                             LazyRow(
-                                modifier = Modifier.onPreviewKeyEvent { event ->
+                                modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
                                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
                                         focusManager.moveFocus(FocusDirection.Down); true
                                     } else false
                                 },
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding        = PaddingValues(bottom = 12.dp),
                             ) {
                                 lazyItems(sortedSeasons) { season ->
                                     TvSeasonTab(
@@ -664,10 +696,11 @@ internal fun TvSeriesDetailPage(
                                             )
                                         })
                                     },
-                                    modifier = Modifier.padding(bottom = 10.dp),
                                 )
                             }
                         }
+                        }
+
 
                         // Episode list
                         val episodes = d.seasons[selectedSeason] ?: emptyList()
@@ -677,6 +710,7 @@ internal fun TvSeriesDetailPage(
                                 val dlItem = downloads.find { it.id == dlId }
                                 TvEpisodeRow(
                                     seriesId         = seriesId,
+                                    seriesName       = d.name,
                                     seriesCover      = d.cover,
                                     episode          = ep,
                                     dlItem           = dlItem,
@@ -822,6 +856,7 @@ private fun TvSeriesActionButton(
 @Composable
 private fun TvEpisodeRow(
     seriesId:         Int,
+    seriesName:       String,
     seriesCover:      String?,
     episode:          Episode,
     dlItem:           DownloadItem?,
@@ -861,16 +896,18 @@ private fun TvEpisodeRow(
             onClick  = onPlay,
             modifier = Modifier.weight(1f),
             shape    = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
+            // Rendu adouci : plus de contour 1 dp autour de chaque ligne — c'est ce
+            // liseré, répété sur toute la liste, qui donnait un aspect de tableau. La
+            // surface se distingue par un fond translucide, et le focus par un
+            // remplissage franc plus une lueur, sans bordure.
             colors   = ClickableSurfaceDefaults.colors(
-                containerColor        = PurplePalette.Bg3,
-                focusedContainerColor = PurplePalette.Purple400.copy(0.18f),
+                containerColor        = PurplePalette.Fg1.copy(alpha = 0.04f),
+                focusedContainerColor = PurplePalette.Purple400.copy(alpha = 0.28f),
+                pressedContainerColor = PurplePalette.Purple400.copy(alpha = 0.36f),
             ),
-            border   = ClickableSurfaceDefaults.border(
-                border        = Border(border = androidx.compose.foundation.BorderStroke(1.dp, PurplePalette.Line1.copy(0.5f)), shape = PurpleShapes.Md),
-                focusedBorder = Border(border = androidx.compose.foundation.BorderStroke(2.dp, PurplePalette.Purple400), shape = PurpleShapes.Md),
-            ),
+            scale    = ClickableSurfaceDefaults.scale(focusedScale = 1.015f),
             glow     = ClickableSurfaceDefaults.glow(
-                focusedGlow = Glow(elevationColor = PurplePalette.Purple400, elevation = 14.dp),
+                focusedGlow = Glow(elevationColor = PurplePalette.Purple400, elevation = 18.dp),
             ),
         ) {
             Row(
@@ -884,11 +921,11 @@ private fun TvEpisodeRow(
                         model              = coverUrl,
                         contentDescription = null,
                         contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.width(72.dp).height(42.dp).clip(PurpleShapes.Sm),
+                        modifier           = Modifier.width(104.dp).height(58.dp).clip(PurpleShapes.Md),
                     )
                 } else {
                     Box(
-                        modifier         = Modifier.width(72.dp).height(42.dp).clip(PurpleShapes.Sm).background(PurplePalette.Bg2),
+                        modifier         = Modifier.width(104.dp).height(58.dp).clip(PurpleShapes.Md).background(PurplePalette.Bg2),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Rounded.PlayCircle, null, tint = PurplePalette.Fg4, modifier = Modifier.size(20.dp))
@@ -896,7 +933,11 @@ private fun TvEpisodeRow(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "E${episode.episodeNum} - ${episode.title}",
+                        // Le fournisseur prefixe le titre d'episode par le nom de la
+                        // serie : « E1 - The Walking Dead : Dead City De vieilles
+                        // connaissances ». Repete a chaque ligne, il noyait le vrai
+                        // titre en fin de texte. On ne garde que l'episode.
+                        "E${episode.episodeNum}  ·  ${episode.title.stripSeriesName(seriesName)}",
                         style    = LocalPurpleType.current.bodySmall.copy(
                             color          = if (isWatched) PurplePalette.Fg4 else PurplePalette.Fg2,
                             textDecoration = if (isWatched) androidx.compose.ui.text.style.TextDecoration.LineThrough
@@ -929,13 +970,10 @@ private fun TvEpisodeRow(
             modifier          = Modifier.size(46.dp),
             shape             = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
             colors            = ClickableSurfaceDefaults.colors(
-                containerColor        = PurplePalette.Bg3,
-                focusedContainerColor = PurplePalette.Bg3,
+                containerColor        = PurplePalette.Fg1.copy(alpha = 0.04f),
+                focusedContainerColor = dlTint.copy(alpha = 0.22f),
             ),
-            border            = ClickableSurfaceDefaults.border(
-                border        = Border(border = androidx.compose.foundation.BorderStroke(1.dp, PurplePalette.Line1.copy(0.5f)), shape = PurpleShapes.Md),
-                focusedBorder = Border(border = androidx.compose.foundation.BorderStroke(2.dp, dlTint), shape = PurpleShapes.Md),
-            ),
+            scale             = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
             glow              = ClickableSurfaceDefaults.glow(
                 focusedGlow = Glow(elevationColor = dlTint, elevation = 10.dp),
             ),
@@ -971,4 +1009,21 @@ private fun String?.toMillis(): Long {
         1    -> parts[0] * 1000
         else -> 0L
     }
+}
+
+/**
+ * Retire le nom de la série que le fournisseur préfixe au titre d'épisode.
+ *
+ * Comparaison insensible à la casse et tolérante aux séparateurs (« : », « - », « – »),
+ * les panneaux Xtream n'étant pas réguliers. Si le retrait laisse une chaîne vide — un
+ * épisode dont le titre *est* le nom de la série — on rend le titre d'origine plutôt
+ * qu'une ligne muette.
+ */
+private fun String.stripSeriesName(seriesName: String): String {
+    val cleaned = trim()
+    if (seriesName.isBlank()) return cleaned
+    if (!cleaned.startsWith(seriesName, ignoreCase = true)) return cleaned
+    return cleaned.drop(seriesName.length)
+        .trimStart(' ', ':', '-', '\u2013', '\u00A0')
+        .ifBlank { cleaned }
 }

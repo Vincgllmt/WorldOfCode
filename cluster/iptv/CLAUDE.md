@@ -820,7 +820,11 @@ Classé par ce qui contraint le reste, pas par difficulté.
       deux écrans de connexion et la barre du mobile. Le rail était le seul substitut.
 - [x] **6. TV — fiche film retravaillée** — fait, cf. §19. ⚠️ La **fiche série** n'a pas
       reçu le même traitement.
-- [ ] **6 bis. TV — appliquer à la fiche série** ce qui a été fait pour le film.
+- [x] **6 bis. TV — fiche série retravaillée** — cf. §21.
+- [ ] **10. TV — les résultats de recherche sont inatteignables au D-pad** sur l'écran
+      Séries : depuis le champ de recherche, Bas ne quitte pas le champ, et repasser par
+      le rail y ramène. Les 8 résultats sont pourtant `focusable="true"`. Bloque aussi la
+      vérification du cas « série à 37 saisons » (§21).
 - [ ] **9. TV — le rail met en avant le mauvais onglet.** Signalé et capturé par
       l'utilisateur : après avoir choisi « Series », le contenu affiche bien les séries
       (8 464 titres) mais **la pastille pleine reste sur « Live TV »**. Deux causes qui
@@ -2082,3 +2086,50 @@ reçoivent bien des entiers (`.size`, `daysLeft`, `trialDays`).
 | `premium_days`, `trial_banner` | `daysLeft`, `days` | ✅ `%d` |
 | `label_rating` | `rating` (String) | ✅ `%s` |
 | `label_season` | `season` (**String**) | ❌ `%d` → corrigé en `%s` |
+
+
+---
+
+## 21. Fiche série — lisibilité et rendu *(2026-08-19)*
+
+### Le défaut le plus coûteux : le titre de série répété à chaque ligne
+
+Le fournisseur préfixe le nom de la série au titre de chaque épisode :
+
+```
+E1 - The Walking Dead : Dead City De vieilles connaissances
+```
+
+Répété sur toute la liste, il noyait le vrai titre en fin de texte. `stripSeriesName()`
+le retire — comparaison insensible à la casse, tolérante aux séparateurs (`:`, `-`, `–`),
+et **repli sur le titre d'origine** si le retrait laisse une chaîne vide, un épisode
+pouvant légitimement porter le nom de la série.
+
+```
+E1  ·  De vieilles connaissances
+```
+
+### Rendu adouci
+
+Chaque ligne portait un liseré de 1 dp ; répété sur toute la liste, c'est lui qui donnait
+l'aspect de tableau. Remplacé par un fond translucide (`Fg1` à 4 %), le focus étant marqué
+par un remplissage franc et une lueur, sans bordure. Vignettes portées de 72×42 à 104×58,
+coins plus doux.
+
+### Deux décisions de mise en page, prises après mesure
+
+| Question | Décision | Pourquoi |
+|---|---|---|
+| Bouton « Fermer » : le supprimer, ou l'élargir ? | **Colonne gauche portée de 220 à 280 dp**, les deux boutons côte à côte | À 220 dp, « Fermer » se repliait une lettre par ligne. Les lignes d'épisodes ont de la marge de reste — l'élargissement ne leur coûte rien. Mieux que dégrader le bouton en icône |
+| Où placer « Télécharger la saison » ? | **Au bout de la rangée des saisons** | Il porte sur la saison sélectionnée, sa place est à côté d'elle. Récupère une ligne entière : **6 épisodes visibles au lieu de 5** |
+
+Le synopsis passe en `weight(1f)` défilable et non en hauteur fixe : avec une hauteur en
+dur, un synopsis long repoussait les boutons **hors de l'écran**.
+
+### ⚠️ Non vérifié : les séries à très nombreuses saisons
+
+« Les Simpson » en compte **37** dans le catalogue de l'utilisateur, « Grey's Anatomy » 22.
+La rangée est une `LazyRow`, donc défilante par construction, et le bouton de
+téléchargement reste épinglé à droite grâce au `weight(1f)`. **Mais je n'ai pas pu
+l'observer** : ces séries ne sont atteignables que par la recherche, et les résultats de
+recherche sont inatteignables au D-pad (défaut 10). À reprendre une fois celui-ci corrigé.
