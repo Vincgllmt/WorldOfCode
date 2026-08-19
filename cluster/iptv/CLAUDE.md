@@ -2297,3 +2297,41 @@ directionnelles** : « Simpson » devenait « Simpsonp », « Simpsonqs ». C'es
 que celui noté en §22 pour les tests, mais c'est aussi un défaut réel pour l'utilisateur —
 à la télécommande, on traverse souvent la barre de recherche sans vouloir y saisir quoi
 que ce soit. Consigné comme défaut 12.
+
+---
+
+## 25. Fiche série — navigation d'arrivée et accès au téléchargement *(2026-08-19)*
+
+Deux remarques de l'utilisateur, toutes deux justes, et toutes deux conséquences de mes
+choix de §21.
+
+### Le focus d'arrivée était sur « Ma liste »
+
+`firstDetailFocus` était posé sur le bouton « + Ma liste ». Or **l'action première d'une
+série est de regarder un épisode**, pas de la mettre en favori. Pire, depuis ce bouton
+aucune direction ne menait aux épisodes : à droite on trouvait « Fermer », puis les
+boutons de téléchargement de la colonne de droite — jamais les lignes d'épisode.
+
+Le focus d'arrivée va désormais au **premier épisode**. Trace :
+
+```
+arrivée   -> ['E1  ·  De vieilles connaissances']
+haut      -> ['Download Season']
+haut      -> ['Season 1']
+```
+
+Une hiérarchie naturelle : épisodes ← téléchargement de la saison ← saisons.
+
+### « Télécharger la saison » est revenu sous la rangée des saisons
+
+Je l'avais mis **au bout** de la rangée pour économiser une ligne (§21). Sur une série à
+37 saisons, l'atteindre imposait de traverser les 37 onglets — l'économie d'une ligne
+coûtait l'accessibilité du bouton.
+
+Il repasse donc **en dessous**, où un simple « haut » depuis le premier épisode y mène.
+Le gain de §21 (6 épisodes visibles au lieu de 5) est perdu, mais un bouton inatteignable
+ne vaut pas une ligne de liste.
+
+**Leçon** : une optimisation de densité qui allonge un chemin de navigation au D-pad est
+un mauvais échange. Sur télécommande, le nombre d'appuis compte plus que le nombre de
+lignes visibles.

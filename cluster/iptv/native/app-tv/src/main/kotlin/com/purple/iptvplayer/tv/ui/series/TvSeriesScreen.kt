@@ -619,7 +619,6 @@ internal fun TvSeriesDetailPage(
                                            else stringResource(R.string.btn_watchlist_add),
                                 icon     = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                                 onClick  = onToggleWatchlist,
-                                modifier = Modifier.focusRequester(firstDetailFocus),
                             )
                             // La touche Retour ferme déjà la fiche ; ce bouton n'est là
                             // que pour qui ne le sait pas, d'où sa forme réduite.
@@ -638,23 +637,20 @@ internal fun TvSeriesDetailPage(
                             .fillMaxHeight()
                             .padding(18.dp),
                     ) {
-                        // Saisons et téléchargement de la saison sur UNE ligne : le
-                        // bouton porte sur la saison sélectionnée, sa place est donc à
-                        // côté d'elle — et cela rend une ligne entière aux épisodes.
-                        Row(
-                            modifier              = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            verticalAlignment     = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
+                        // Le bouton de téléchargement était au bout de cette rangée pour
+                        // économiser une ligne. Sur une série à 37 saisons, l'atteindre
+                        // imposait de traverser toutes les saisons : il repasse donc en
+                        // dessous, où un simple « bas » y mène.
                         // Season tabs
                         if (sortedSeasons.size > 1) {
                             LazyRow(
-                                modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
+                                modifier = Modifier.onPreviewKeyEvent { event ->
                                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
                                         focusManager.moveFocus(FocusDirection.Down); true
                                     } else false
                                 },
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding        = PaddingValues(bottom = 12.dp),
                             ) {
                                 lazyItems(sortedSeasons) { season ->
                                     TvSeasonTab(
@@ -705,9 +701,9 @@ internal fun TvSeriesDetailPage(
                                             )
                                         })
                                     },
+                                    modifier = Modifier.padding(bottom = 10.dp),
                                 )
                             }
-                        }
                         }
 
 
@@ -718,6 +714,14 @@ internal fun TvSeriesDetailPage(
                                 val dlId   = "ep_${seriesId}_${ep.id}"
                                 val dlItem = downloads.find { it.id == dlId }
                                 TvEpisodeRow(
+                                    // L'action premiere d'une serie est de regarder un
+                                    // episode : le focus d'arrivee va donc au premier,
+                                    // et non au bouton « Ma liste » comme auparavant —
+                                    // depuis lequel aucune direction ne menait aux
+                                    // episodes.
+                                    modifier         = if (ep == episodes.firstOrNull())
+                                                           Modifier.focusRequester(firstDetailFocus)
+                                                       else Modifier,
                                     seriesId         = seriesId,
                                     seriesName       = d.name,
                                     seriesCover      = d.cover,
@@ -864,6 +868,7 @@ private fun TvSeriesActionButton(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun TvEpisodeRow(
+    modifier:         Modifier = Modifier,
     seriesId:         Int,
     seriesName:       String,
     seriesCover:      String?,
@@ -896,7 +901,7 @@ private fun TvEpisodeRow(
     val dlFocused by dlInteraction.collectIsFocusedAsState()
 
     Row(
-        modifier              = Modifier.fillMaxWidth(),
+        modifier              = modifier.fillMaxWidth(),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
