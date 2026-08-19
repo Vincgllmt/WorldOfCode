@@ -796,6 +796,12 @@ Classé par ce qui contraint le reste, pas par difficulté.
       (version 13), cf. §12. `billing:8.0.0`, artefact Java, minSdk inchangé.
 - [ ] Décider si l'on monte en `billing:9.x` — exige `minSdk 23` côté mobile (cf. §12).
 
+#### Navigation des chaînes live — refonte demandée le 2026-08-19
+
+- [ ] **Remplacer les rangées d'images par des listes sur les chaînes live**, mobile **et**
+      TV. Demande explicite de l'utilisateur : « la navigation sur les chaînes lives est
+      mauvaise […] plutôt que des images il faudrait des listes ». Conception en §13.
+
 #### Demandes de `raf.md` encore ouvertes
 
 - [ ] **Retrait d'un favori impossible sur `app-tv`.** Bug clair, désormais **observable**
@@ -1456,3 +1462,71 @@ seul des quatre chemins non exercé, faute d'achat neuf à acquitter.
 
 ⚠️ `app-tv` embarque la même version de Billing mais n'a **pas** été republié
 (versionCode 8) : la migration n'y est donc pas distribuée.
+
+
+---
+
+## 13. Navigation des chaînes live — conception *(2026-08-19, à implémenter)*
+
+### Ce qui existe, et pourquoi c'est lent
+
+Les deux plateformes appliquent le **même motif** : une `LazyColumn` de genres, chaque
+genre contenant une `LazyRow` horizontale de cartes 16:9 avec image distante.
+
+- mobile : `ui/home/HomeScreen.kt` — `LazyColumn` → `GroupHeader` + `LazyRow` de `ChannelCard`
+- TV : `ui/home/TvHomeScreen.kt` — `LazyColumn` → `LazyRow` de `TvChannelCard`
+
+Ce motif est **hérité du jumeau Flutter** (`client/lib/screens/home_screen.dart:494`,
+`ListView.builder(scrollDirection: Axis.horizontal)` de `_ChannelCard` en 16:9) : ce n'est
+pas un choix délibéré du portage, c'est une reprise. Le Flutter n'est donc **pas** une
+référence utile ici, contrairement à l'habitude du projet.
+
+Trois défauts, dans l'ordre d'importance :
+
+1. **L'imbrication horizontale est le vrai problème de navigation.** Atteindre la 40ᵉ
+   chaîne d'un genre demande 40 déplacements horizontaux — soit 40 appuis sur le D-pad
+   d'une télécommande. Un axe de défilement imbriqué dans l'autre est coûteux au doigt et
+   pire encore au D-pad.
+2. **La carte 16:9 est la mauvaise forme pour une chaîne.** L'identité d'une chaîne, c'est
+   son **logo** — souvent un petit PNG transparent — et son nom. L'étirer en 16:9 remplit
+   l'essentiel de la carte de fond vide. Un film, lui, a une vraie affiche : la refonte ne
+   doit donc **pas** toucher aux écrans Films et Séries.
+3. **Densité et coût.** Une carte de 170 dp laisse voir 2 à 3 chaînes par largeur d'écran ;
+   une ligne de liste en laisse voir 10 à 12 par hauteur. Et chaque carte déclenche le
+   chargement d'une image distante, sur un catalogue de ~11 900 chaînes.
+
+### Contrainte mesurée : l'EPG n'est pas disponible en masse
+
+`IptvRepository.fetchShortEpg(streamId)` interroge **une chaîne à la fois** ; l'API Xtream
+n'expose pas d'EPG groupé. Afficher « en ce moment » sur chaque ligne d'une liste
+demanderait un appel réseau par ligne — à exclure.
+
+➡️ Conséquence de conception : l'EPG n'a sa place que pour **la chaîne focalisée ou
+sélectionnée**, où un seul appel suffit.
+
+### Proposition
+
+**Mobile — liste verticale dense.** Une ligne par chaîne, ~64 dp :
+logo 44 dp en `Fit` (jamais recadré, les logos sont transparents et de ratios variés),
+nom sur une ligne, étoile de favori en fin de ligne. Le genre cesse d'être un **niveau
+d'imbrication** pour devenir un **filtre** : à l'intérieur d'un genre, une seule liste
+plate, un seul axe de défilement.
+
+**TV — deux panneaux.** Genres à gauche, liste verticale de chaînes à droite. Haut/bas
+avance d'une chaîne, ce qui rend la navigation prévisible ; la sélection d'un genre reste
+à gauche. C'est le motif classique des applications TV, et il s'accorde au rail déjà en
+place. L'EPG de la chaîne **focalisée** peut alors être chargé — un appel à la fois,
+temporisé.
+
+**Portée.** `LayoutMode` (`THEMES`, `GRID_SMALL`, `GRID_MEDIUM`) est partagé par Home,
+Movies et Series. Ajouter `LIST` et n'en faire le **défaut que pour les chaînes live**
+préserve les affiches là où elles ont du sens.
+
+### Points à vérifier pendant l'implémentation
+
+- **Logos hétérogènes** : certains absents, d'autres énormes, souvent transparents sur
+  fond clair. Prévoir un fond neutre constant et un repli en pastille d'initiales.
+- **Focus D-pad sur TV** : toute nouvelle liste focalisable doit être vérifiée à
+  l'émulateur (§11) — c'est le sujet qui a motivé la migration depuis Flutter.
+- **Liste plate de ~11 900 éléments** : clés stables obligatoires, et un défilement rapide
+  (index alphabétique) à envisager si la mesure le justifie.
