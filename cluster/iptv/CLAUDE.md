@@ -806,8 +806,20 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **Ordre des favoris, réglable par l'utilisateur** — fait et vérifié le 2026-08-19,
       cf. §15.
 
-- [ ] **TV — le panneau latéral s'ouvre tout seul après certains clics** (§16).
-      Signalé par l'utilisateur, **reproduit et diagnostiqué** ; correction non faite.
+#### Lot demandé le 2026-08-19 — six correctifs
+
+- [x] **1. TV — le panneau latéral qui s'ouvre tout seul** (§16) — corrigé et vérifié
+      pour les mutations de liste. ⚠️ Le cas « fin de liste » reste ouvert.
+- [ ] **2. Il reste du français en mode anglais.** Un cas déjà corrigé (`RailTrialBadge`,
+      §10) — il en reste. Auditer les deux modules : chaînes codées en dur dans le Kotlin,
+      et clés présentes dans `values-fr/` mais absentes de `values/`.
+- [ ] **3. TV — refonte de l'écran Paramètres.**
+- [ ] **4. Bandeau premium : « Premium : 30 jours restants » → « 30 jours restants »**,
+      placé **sous** le « PREMIUM » doré. Mobile **et** TV.
+- [ ] **5. TV — le logo en haut à droite n'est pas le bon.**
+- [ ] **6. TV — refonte de la fiche film / série** (au clic sur un titre).
+      ⚠️ Exige le **lien M3U de l'utilisateur** : le catalogue public `iptv-org` n'a ni
+      films ni séries, ces écrans sont donc invérifiables sans lui.
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1840,7 +1852,27 @@ rail: DÉPLIÉ   focus [28,184][452,280]   -> ['Direct TV']     (largeur 424 px 
 Les deux premiers sont apparus avec les écrans récents : le défaut est **plus visible
 qu'avant**, même si le mécanisme lui préexistait.
 
-### Piste de correction — à ne pas écrire à l'aveugle
+### Correction appliquée aux mutations de liste — ✅ vérifiée
+
+`TvMyListScreen` retient le focus dans le panneau de contenu **quand la mutation vient
+d'ici** : un `FocusRequester` sur la première ligne, redemandé par un `LaunchedEffect`
+après un retrait ou un déplacement. Le drapeau `refocusAfterEdit` est essentiel — sans
+lui, on volerait le focus à qui se dirige délibérément vers le rail.
+
+| Geste | Focus avant | Focus après correction |
+|---|---|---|
+| Retirer un favori | `['Direct TV']` — **rail**, panneau déplié | `['ADN TV+']` — contenu, rail replié |
+| Déplacer un favori | idem | `['Daria']` — contenu, rail replié |
+
+Rail mesuré replié après coup : aucun libellé large à gauche, seul le sigle `✦` à
+x=57-87.
+
+⚠️ **Le troisième déclencheur reste ouvert** : atteindre la fin d'une liste fait toujours
+sortir le focus vers le rail. C'est le comportement par défaut de Compose TV quand il n'y
+a plus de focalisable dans la direction demandée ; le corriger revient à piéger le focus,
+ce qui demande plus de précautions.
+
+### Piste initiale — conservée pour mémoire
 
 Retenir le focus dans le panneau de contenu après une mutation : un `FocusRequester` par
 liste, redemandé sur le voisin quand l'élément focalisé disparaît, le tout dans un

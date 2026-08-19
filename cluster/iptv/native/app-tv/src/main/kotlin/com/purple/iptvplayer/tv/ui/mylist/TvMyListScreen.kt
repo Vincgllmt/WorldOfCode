@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -70,6 +72,14 @@ fun TvMyListScreen(
     val downloads       by dlVm.downloads.collectAsState()
 
     var filter           by remember { mutableStateOf(ListFilter.ALL) }
+
+    // §16 — le rail se déplie dès que le focus y entre, et Compose TV l'y renvoie quand
+    // l'élément focalisé disparaît : retirer ou déplacer un favori ouvrait donc le
+    // panneau latéral « sans raison ». On ne rend le focus au contenu que si la mutation
+    // vient d'ici — sans ce garde-fou, on le volerait à qui va délibérément au rail.
+    val contentFocus = remember { FocusRequester() }
+    var refocusAfterEdit by remember { mutableStateOf(false) }
+
     var selectedMovieId  by remember { mutableStateOf<Int?>(null) }
     var selectedSeriesId by remember { mutableStateOf<Int?>(null) }
 
@@ -157,6 +167,12 @@ fun TvMyListScreen(
     val favChannels = remember(allChannels, channelFavs) {
         val byName = allChannels.associateBy { it.name }
         channelFavs.mapNotNull { byName[it] }
+    }
+    LaunchedEffect(favChannels.size, refocusAfterEdit) {
+        if (refocusAfterEdit) {
+            refocusAfterEdit = false
+            runCatching { contentFocus.requestFocus() }
+        }
     }
 
     val allMovies  = (moviesState as? ContentState.Success)?.data ?: emptyList()
@@ -261,6 +277,7 @@ fun TvMyListScreen(
             }
         } else {
             LazyVerticalGrid(
+                // Le focus revient ici après une modification de la liste.
                 columns               = GridCells.Adaptive(minSize = 140.dp),
                 modifier              = Modifier.fillMaxSize(),
                 contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
@@ -271,11 +288,12 @@ fun TvMyListScreen(
                 if (filter == ListFilter.ALL || filter == ListFilter.CHANNELS) {
                     itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { _, c -> "c_" + c.url }) { index, channel ->
                         TvChannelRow(
-                            channel = channel,
-                            onPlay  = { onPlayChannel(channel.url, channel.name, channel.streamId ?: 0) },
-                            onFav   = { vm.toggleChannelFavorite(channel.name) },
-                            onMoveUp   = if (index > 0) ({ vm.moveChannelFavorite(index, index - 1) }) else null,
-                            onMoveDown = if (index < favChannels.lastIndex) ({ vm.moveChannelFavorite(index, index + 1) }) else null,
+                            channel  = channel,
+                            modifier = if (index == 0) Modifier.focusRequester(contentFocus) else Modifier,
+                            onPlay   = { onPlayChannel(channel.url, channel.name, channel.streamId ?: 0) },
+                            onFav    = { refocusAfterEdit = true; vm.toggleChannelFavorite(channel.name) },
+                            onMoveUp   = if (index > 0) ({ refocusAfterEdit = true; vm.moveChannelFavorite(index, index - 1) }) else null,
+                            onMoveDown = if (index < favChannels.lastIndex) ({ refocusAfterEdit = true; vm.moveChannelFavorite(index, index + 1) }) else null,
                         )
                     }
                 }
