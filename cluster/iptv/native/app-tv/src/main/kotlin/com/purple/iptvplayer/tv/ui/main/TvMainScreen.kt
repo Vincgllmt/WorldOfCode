@@ -100,6 +100,23 @@ fun TvMainScreen(
         try { firstNavFocus.requestFocus() } catch (_: Exception) { }
     }
 
+    // Un FocusRequester par onglet, pour garantir que **l'onglet focalisé est celui
+    // qui est affiché**. Valider « Séries » renvoyait le focus sur « Direct TV » : le
+    // panneau de contenu est remplacé, le focus se perd et Compose TV retombe sur le
+    // premier focalisable de l'arbre — le premier élément du rail. On le réclame donc
+    // explicitement sur l'onglet choisi.
+    val railFocus = remember { List(6) { FocusRequester() } }
+    LaunchedEffect(selectedIndex) {
+        // Après le remplacement du contenu, sinon la demande est écrasée.
+        //
+        // ⚠️ Une première version pilotait cet effet par un `pendingRailFocus` remis à
+        // -1 **à l'intérieur** du bloc : modifier l'état qui sert de clé annule et
+        // relance l'effet, si bien que la demande différée n'était jamais exécutée.
+        // La clé est donc `selectedIndex`, que l'effet ne modifie pas.
+        delay(250)
+        runCatching { railFocus[selectedIndex].requestFocus() }
+    }
+
     val navItems = listOf(
         NavItem(stringResource(R.string.nav_live),       Icons.Rounded.LiveTv),
         NavItem(stringResource(R.string.nav_movies),           Icons.Rounded.Movie),
@@ -135,7 +152,7 @@ fun TvMainScreen(
                         label          = item.label,
                         isActive       = selectedIndex == index,
                         expanded       = expanded,
-                        focusRequester = if (index == 0) firstNavFocus else null,
+                        focusRequester = railFocus[index],
                         onClick        = { selectedIndex = index },
                     )
                 }
@@ -145,9 +162,10 @@ fun TvMainScreen(
             RailItem(
                 icon     = navItems.last().icon,
                 label    = navItems.last().label,
-                isActive = selectedIndex == settingsIndex,
-                expanded = expanded,
-                onClick  = { selectedIndex = settingsIndex },
+                isActive       = selectedIndex == settingsIndex,
+                expanded       = expanded,
+                focusRequester = railFocus[settingsIndex.coerceAtMost(railFocus.lastIndex)],
+                onClick        = { selectedIndex = settingsIndex },
             )
 
             // Badge d'état (UX-1) — même règle que sur mobile : un achat définitif
@@ -303,8 +321,23 @@ private fun RailItem(
                     vertical   = 10.dp,
                 ),
             verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = if (expanded) Arrangement.spacedBy(18.dp) else Arrangement.Center,
+            horizontalArrangement = if (expanded) Arrangement.spacedBy(12.dp) else Arrangement.spacedBy(0.dp),
         ) {
+            // Repère de l'onglet **actif**, indépendant du focus.
+            //
+            // `isFocused` était testé avant `isActive` et remplissait la pastille : un
+            // onglet simplement survolé paraissait donc plus sélectionné que celui
+            // réellement affiché. Après un changement d'onglet, le focus revenant au
+            // premier élément du rail (défaut 9), on lisait « Live TV » alors que le
+            // contenu montrait les séries. Ce liseré ne dépend que de `isActive`, il
+            // survit donc au focus.
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .height(if (isActive) 20.dp else 0.dp)
+                    .clip(PurpleShapes.Xs)
+                    .background(if (isActive) PurplePalette.Purple200 else Color.Transparent),
+            )
             Icon(
                 imageVector        = icon,
                 contentDescription = label,

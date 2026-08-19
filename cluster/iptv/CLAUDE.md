@@ -826,7 +826,7 @@ Classé par ce qui contraint le reste, pas par difficulté.
       carte de résultat, Droite remonte au champ de recherche au lieu d'aller à la carte
       suivante. Même famille que les défauts 9 et §16 : Compose TV cherche le focalisable
       le plus proche et remonte. Empêche encore d'atteindre une série à 37 saisons (§21).
-- [ ] **9. TV — le rail met en avant le mauvais onglet.** Signalé et capturé par
+- [x] **9. TV — le rail met en avant le mauvais onglet** — corrigé, cf. §23. Ancien texte : Signalé et capturé par
       l'utilisateur : après avoir choisi « Series », le contenu affiche bien les séries
       (8 464 titres) mais **la pastille pleine reste sur « Live TV »**. Deux causes qui
       se cumulent :
@@ -2177,3 +2177,67 @@ n'atteint l'application.
 
 Depuis une carte de résultat, **Droite remonte à la barre de recherche** au lieu d'aller à
 la carte suivante (défaut 11). C'est la même famille que les défauts 9 et §16.
+
+---
+
+## 23. Gestion du focus sur TV — traiter la cause, pas les symptômes *(2026-08-19)*
+
+Trois défauts signalés séparément — le rail qui s'ouvre seul (§16), le rail qui met en
+avant le mauvais onglet (9), le focus qui remonte à la barre de recherche (11) — ont
+**la même racine** : quand l'élément focalisé disparaît ou qu'il n'y a rien dans la
+direction demandée, Compose TV redonne le focus au focalisable le plus proche, souvent le
+premier de l'arbre.
+
+### Défaut 9 — mesuré, puis corrigé
+
+Trace relevée avant correction :
+
+```
+gauche (rail)   -> ['Live TV']
+bas             -> ['Movies']
+bas             -> ['Series']
+valide (Series) -> ['Live TV']      ← le focus retombe sur le premier élément
+```
+
+Deux corrections indépendantes, l'une visuelle et l'autre de focus :
+
+1. **Un liseré d'onglet actif, indépendant du focus.** `isFocused` était testé avant
+   `isActive` et remplissait la pastille : un onglet simplement survolé paraissait plus
+   sélectionné que celui réellement affiché. Le liseré ne dépend que d'`isActive`.
+2. **Un `FocusRequester` par onglet**, redemandé après le changement de contenu, pour
+   poser l'invariant « l'onglet focalisé est celui qui est affiché ».
+
+Trace après correction : `valide (Series) -> ['Series']`, puis `valide (Movies) -> ['Movies']`.
+
+### ⚠️ Le premier correctif avait son propre défaut
+
+La première version pilotait l'effet par un état `pendingRailFocus` remis à `-1`
+**à l'intérieur** du bloc :
+
+```kotlin
+LaunchedEffect(pendingRailFocus) {
+    if (pendingRailFocus >= 0) {
+        pendingRailFocus = -1   // ← modifie la clé : l'effet est annulé et relancé
+        delay(60)
+        requestFocus()          // ← jamais atteint
+    }
+}
+```
+
+**Modifier l'état qui sert de clé à un `LaunchedEffect` l'annule.** Le symptôme était
+identique à l'absence de correctif, et j'ai d'abord cru à un délai trop court — j'ai
+augmenté le délai à 350 ms sans effet, avant de voir la vraie cause. La clé est désormais
+`selectedIndex`, que l'effet ne modifie pas.
+
+### État des trois défauts
+
+| Défaut | État |
+|---|---|
+| §16 — le rail s'ouvre après un retrait ou un déplacement dans « Ma liste » | ✅ corrigé (garde-fou `refocusAfterEdit`) |
+| 9 — le rail met en avant le mauvais onglet | ✅ corrigé (liseré + `FocusRequester` par onglet) |
+| 11 — depuis une carte de résultat, Droite remonte à la barre de recherche | ⏳ ouvert |
+| §16 bis — atteindre la fin d'une liste fait sortir le focus vers le rail | ⏳ ouvert |
+
+Les deux restants demandent un `focusGroup`/`focusRestorer` par zone, à poser avec
+précaution : trop contraindre le focus le **piège**, et rendre le rail inatteignable
+serait un défaut pire que ceux-ci.
