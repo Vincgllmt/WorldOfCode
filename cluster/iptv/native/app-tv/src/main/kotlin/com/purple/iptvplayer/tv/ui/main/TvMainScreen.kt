@@ -188,6 +188,7 @@ fun TvMainScreen(
                 3 -> TvMyListScreen(
                     onPlayMovie  = { url, title, id, cover -> onPlay(url, title, id.toString(), "movie", cover, 0) },
                     onPlaySeries = { url, title, mediaId, cover -> onPlay(url, title, mediaId, "series", cover, 0) },
+                    onPlayChannel = { url, title, streamId -> onPlay(url, title, "", "live", "", streamId) },
                 )
                 4 -> TvDownloadsScreen(onPlay = { url, title ->
                     onPlay(url, title, "", "", "", 0)

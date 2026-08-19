@@ -3,6 +3,7 @@ package com.purple.iptvplayer.tv.ui.mylist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -36,22 +37,29 @@ import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.tv.ui.movies.TvMovieDetailPage
 import com.purple.iptvplayer.tv.ui.series.TvSeriesDetailPage
+import com.purple.iptvplayer.tv.ui.common.TvChannelRow
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
-private enum class ListFilter { ALL, MOVIES, SERIES }
+private enum class ListFilter { ALL, CHANNELS, MOVIES, SERIES }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun TvMyListScreen(
-    onPlayMovie:  (url: String, title: String, id: Int, cover: String) -> Unit,
-    onPlaySeries: (url: String, title: String, mediaId: String, cover: String) -> Unit,
+    onPlayMovie:   (url: String, title: String, id: Int, cover: String) -> Unit,
+    onPlaySeries:  (url: String, title: String, mediaId: String, cover: String) -> Unit,
+    onPlayChannel: (url: String, title: String, streamId: Int) -> Unit,
 ) {
     val vm:   ContentViewModel  = koinViewModel()
     val dlVm: DownloadViewModel = koinViewModel()
     val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel()
 
+    // Les chaînes favorites n'étaient affichées nulle part : cet écran ne lisait que
+    // movieFavorites et seriesFavorites. Combiné à showFavBtn = false dans la vue de
+    // navigation par défaut, une chaîne mise en favori n'était retirable d'aucun écran.
+    val channelsState   by vm.channels.collectAsState()
+    val channelFavs     by vm.channelFavorites.collectAsState()
     val moviesState     by vm.movies.collectAsState()
     val seriesState     by vm.series.collectAsState()
     val movieDetail     by vm.movieDetail.collectAsState()
@@ -65,6 +73,7 @@ fun TvMyListScreen(
     var selectedSeriesId by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(Unit) {
+        vm.loadChannels()
         vm.loadMovies()
         vm.loadSeries()
     }
@@ -141,6 +150,10 @@ fun TvMyListScreen(
         return
     }
 
+    val allChannels = (channelsState as? ContentState.Success)?.data ?: emptyList()
+
+    val favChannels = remember(allChannels, channelFavs) { allChannels.filter { channelFavs.contains(it.name) } }
+
     val allMovies  = (moviesState as? ContentState.Success)?.data ?: emptyList()
     val allSeries  = (seriesState as? ContentState.Success)?.data ?: emptyList()
 
@@ -160,9 +173,10 @@ fun TvMyListScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text("Ma liste", style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1))
                 val total = when (filter) {
-                    ListFilter.ALL    -> watchlistMovies.size + watchlistSeries.size
-                    ListFilter.MOVIES -> watchlistMovies.size
-                    ListFilter.SERIES -> watchlistSeries.size
+                    ListFilter.ALL      -> favChannels.size + watchlistMovies.size + watchlistSeries.size
+                    ListFilter.CHANNELS -> favChannels.size
+                    ListFilter.MOVIES   -> watchlistMovies.size
+                    ListFilter.SERIES   -> watchlistSeries.size
                 }
                 Text(
                     "$total TITRE${if (total > 1) "S" else ""}",
@@ -172,9 +186,10 @@ fun TvMyListScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ListFilter.ALL    to "Tout",
-                    ListFilter.MOVIES to "Films",
-                    ListFilter.SERIES to "Séries",
+                    ListFilter.ALL      to "Tout",
+                    ListFilter.CHANNELS to "Chaînes",
+                    ListFilter.MOVIES   to "Films",
+                    ListFilter.SERIES   to "Séries",
                 ).forEach { (f, label) ->
                     val active = filter == f
                     Surface(
@@ -214,9 +229,10 @@ fun TvMyListScreen(
 
         // ── Content ────────────────────────────────────────────────────────
         val isEmpty = when (filter) {
-            ListFilter.ALL    -> watchlistMovies.isEmpty() && watchlistSeries.isEmpty()
-            ListFilter.MOVIES -> watchlistMovies.isEmpty()
-            ListFilter.SERIES -> watchlistSeries.isEmpty()
+            ListFilter.ALL      -> favChannels.isEmpty() && watchlistMovies.isEmpty() && watchlistSeries.isEmpty()
+            ListFilter.CHANNELS -> favChannels.isEmpty()
+            ListFilter.MOVIES   -> watchlistMovies.isEmpty()
+            ListFilter.SERIES   -> watchlistSeries.isEmpty()
         }
 
         if (isEmpty) {
@@ -240,6 +256,16 @@ fun TvMyListScreen(
                 verticalArrangement   = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
+                if (filter == ListFilter.ALL || filter == ListFilter.CHANNELS) {
+                    items(favChannels, span = { GridItemSpan(maxLineSpan) }, key = { "c_" + it.url }) { channel ->
+                        TvChannelRow(
+                            channel = channel,
+                            onPlay  = { onPlayChannel(channel.url, channel.name, channel.streamId ?: 0) },
+                            onFav   = { vm.toggleChannelFavorite(channel.name) },
+                        )
+                    }
+                }
                 if (filter == ListFilter.ALL || filter == ListFilter.MOVIES) {
                     items(watchlistMovies, key = { "m_${it.id}" }) { movie ->
                         MyListMovieCard(movie = movie, onClick = { selectedMovieId = movie.id })

@@ -803,20 +803,14 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **Mobile — les favoris de chaînes sont enfin visibles** dans « Ma liste » (§13).
 - [ ] **TV — deux panneaux** (§13). Reprendre `ChannelRow` et vérifier le focus D-pad
       à l'émulateur (§11).
-- [ ] **TV — afficher les chaînes favorites dans « Ma liste »** : `TvMyListScreen` a le
-      **même trou** que le mobile. Piste sérieuse pour le défaut `raf.md` ci-dessous.
+- [x] **TV — chaînes favorites dans « Ma liste »** — fait, cf. §14.
 - [ ] **Ordre des favoris, réglable par l'utilisateur** (§13). ⚠️ Ce n'est **pas** un
       chantier d'UI : la persistance actuelle est un `Set`, qui ne peut pas porter d'ordre.
 
 #### Demandes de `raf.md` encore ouvertes
 
-- [ ] **Retrait d'un favori impossible sur `app-tv`.** Désormais **observable** grâce à
-      l'émulateur TV (§11). ⚠️ **Hypothèse révisée** (2026-08-19) : `FavoritesRepository.toggle()`
-      ajoute *et* retire, et `toggleChannelFavorite` est bien câblé côté TV
-      (`TvHomeScreen.kt:183,203,243`). Mais `TvMyListScreen` **n'affiche pas les chaînes
-      favorites** — comme le mobile avant correction. L'utilisateur ne voit donc sa chaîne
-      nulle part et n'a aucun endroit évident où la retirer. À confirmer à l'émulateur
-      avant de corriger.
+- [x] **Retrait d'un favori impossible sur `app-tv`** — ✅ **corrigé et vérifié au D-pad**
+      le 2026-08-19. Diagnostic initial faux, cf. §14.
 - [ ] **Carte EPG absente sur TV** — « il manque l'EPG comme sur mobile, c'est une carte
       en dehors du lecteur ». Portage de `PlayerScreen` (P10/P11 déjà corrigés) vers TV.
 - [ ] **Bouton VF / VOSTFR** au lancement d'un contenu, en bas à droite au-dessus du
@@ -1651,3 +1645,52 @@ seulement l'écran :
 
 Le glisser-déposer en UI (`LazyColumn` réordonnable) n'est que la dernière étape, et la
 moins risquée.
+
+---
+
+## 14. Favoris de chaînes sur TV — le retrait n'a jamais été cassé *(2026-08-19)*
+
+`raf.md` : « Sur l'app tv, je peux mettre en favoris une chaîne mais je ne peux pas la
+retirer. » Le diagnostic évident — un `toggle()` qui n'ajoute que — est **faux** :
+`FavoritesRepository.toggle()` retire aussi bien qu'il ajoute, et c'est couvert par la
+suite de tests.
+
+### Ce que la mesure a montré
+
+Deux défauts distincts se combinaient pour rendre le retrait **introuvable** :
+
+1. **La vue de navigation par défaut n'offre aucun bouton favori.**
+   `TvHomeScreen` passe `showFavBtn = true` sur les résultats de recherche (l. 180) et sur
+   un genre sélectionné (l. 200), mais **`showFavBtn = false`** sur la vue par défaut
+   (l. 240) — celle où l'on atterrit. Vérifié à l'émulateur : en parcourant la rangée au
+   D-pad, le focus ne passe que de chaîne en chaîne, jamais sur une étoile.
+2. **« Ma liste » n'affichait pas les chaînes.** `TvMyListScreen` ne lisait que
+   `movieFavorites` et `seriesFavorites` — exactement le trou trouvé côté mobile.
+
+Résultat : une chaîne mise en favori depuis la recherche n'apparaissait **nulle part** et
+n'était retirable **d'aucun écran**. D'où l'impression, parfaitement fondée, que le retrait
+ne marche pas.
+
+### Correction
+
+`ui/common/TvChannelRow.kt` — équivalent TV de `mobile/ui/common/ChannelRow`, avec **deux
+surfaces focalisables distinctes** : la ligne (lecture) et l'étoile (retrait). Branché dans
+`TvMyListScreen`, qui gagne un filtre « Chaînes » et affiche les chaînes en pleine largeur
+(`GridItemSpan(maxLineSpan)`).
+
+**`showFavBtn = false` est laissé tel quel dans la vue par défaut** : l'activer doublerait
+le nombre d'appuis pour traverser une rangée horizontale, ce qui est probablement la raison
+du choix initial. Le portage de la vue en liste (§13) réglera le sujet proprement, la ligne
+portant son étoile comme sur mobile.
+
+### Vérifié au D-pad sur émulateur
+
+| Étape | Résultat |
+|---|---|
+| Deux favoris injectés en base (`fav_channels`) | — |
+| « Ma liste » | ✅ **« 2 TITRES »**, filtre « Chaînes », `ADN TV+ ★` et `Gong ★` |
+| D-pad : ligne → étoile | ✅ deux éléments focalisables, trace `['Gong'] → ['★']` |
+| DPAD_CENTER sur l'étoile | ✅ **« Gong » disparaît**, compteur à « 1 TITRE » |
+
+Outil ajouté au scratchpad : `mkfav.py "Chaîne A" "Chaîne B"` encode le protobuf DataStore
+d'un `stringSetPreferencesKey`, pour poser un état de favoris connu sans passer par l'UI.
