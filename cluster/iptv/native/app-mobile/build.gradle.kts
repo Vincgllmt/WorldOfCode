@@ -20,15 +20,19 @@ android {
         applicationId = "com.purple.iptvplayer"
         minSdk        = 21
         targetSdk     = 36
-        versionCode   = 8
-        versionName   = "1.1.0"
+        versionCode   = 9
+        versionName   = "1.1.1"
     }
 
     signingConfigs {
         create("release") {
             keyAlias      = keystoreProperties["keyAlias"]    as String?
             keyPassword   = keystoreProperties["keyPassword"] as String?
-            storeFile     = keystoreProperties["storeFile"]?.let { file(it) }
+            // rootProject.file() et non file() : le chemin de keystore.properties
+            // (`../client/android/…`) est relatif à `native/`, pas au module. Avec
+            // file(), il était résolu en `native/app-mobile/../client/…`, soit un
+            // niveau trop bas, et la signature échouait « Keystore file not found ».
+            storeFile     = keystoreProperties["storeFile"]?.let { rootProject.file(it) }
             storePassword = keystoreProperties["storePassword"] as String?
         }
     }

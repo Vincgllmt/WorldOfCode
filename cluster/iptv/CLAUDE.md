@@ -81,8 +81,28 @@ native/
 
 ## 3. Toolchain — commandes vérifiées
 
-⚠️ **Aucun JDK n'est sur le `PATH` et `JAVA_HOME` est vide.** Gradle ne démarre
-pas sans ceci. Le JDK utilisable est celui embarqué dans Android Studio :
+Le projet a été travaillé sur **deux machines**. Ne pas confondre leurs chemins.
+
+### Machine « rigolo » — celle qui détient la clé de signature (2026-08-19)
+
+C'est la seule des deux qui peut produire un AAB signé (`upload-keystore.jks` présent).
+
+```bash
+export JAVA_HOME=<scratchpad>/jdk-17.0.20+8      # cf. ci-dessous, aucun JDK système
+export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
+cd /home/rigolo/Documents/woc/cluster/iptv/native
+```
+
+| Point | État sur cette machine |
+|---|---|
+| `native/local.properties` | ✅ **déjà correct** (`sdk.dir=/home/rigolo/Android/Sdk`) — rien à ajuster ; c'est la version du dépôt, la machine « hjouini » n'avait pas committé sa correction |
+| JDK | ⚠️ **absent** — seul `openjdk-17-jre-headless` est installé, **pas de `javac`**, et pas d'Android Studio. Gradle ne démarre pas. Résolu **sans sudo** en dépliant un Temurin 17 dans le scratchpad (`api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`) |
+| Android SDK | ✅ complet — build-tools 34/35/36.1/37, platforms 34→36.1, emulator, image `google_apis_playstore` android-37 |
+| `adb` | ✅ sur le `PATH`, aucune règle udev à corriger |
+| Appareil | ✅ **Pixel 7 (`panther`, Android 17) connecté et autorisé** |
+| `upload-keystore.jks` | ✅ présent en `client/android/`, **vérifié** : alias `upload`, le mot de passe de `keystore.properties` l'ouvre, `PrivateKeyEntry` valide jusqu'en 2053, SHA1 `F6:0C:72:9C:…` |
+
+### Machine « hjouini » — sans clé de signature
 
 ```bash
 export JAVA_HOME=/home/hjouini/Downloads/android-studio-panda4-patch1-linux/android-studio/jbr
@@ -93,7 +113,8 @@ cd /home/hjouini/Documents/ETNA/woc/cluster/iptv/native
 | Besoin | Commande | Vérifié |
 |---|---|---|
 | Compiler la logique métier | `./gradlew :core:compileDebugKotlin` | ✅ BUILD SUCCESSFUL (2 m 21 s) |
-| **Tests unitaires JVM (boucle de travail)** | `./gradlew :core:testDebugUnitTest` | ✅ 35 tests, 0 échec (~3 s) |
+| **Tests unitaires JVM (boucle de travail)** | `./gradlew :core:testDebugUnitTest` | ✅ **73 tests, 0 échec** (rejoué le 2026-08-19 sur « rigolo ») |
+| Bundle de release signé | `./gradlew :app-mobile:bundleRelease` | ✅ (machine « rigolo » uniquement, 4 m 25 s) |
 | Un seul test | `./gradlew :core:testDebugUnitTest --tests "*TrialPolicyTest*"` | ✅ |
 | Build APK mobile | `./gradlew :app-mobile:assembleDebug` | ✅ |
 | Build APK TV | `./gradlew :app-tv:assembleDebug` | ✅ |
@@ -246,6 +267,7 @@ n'y figurent pas du tout. Chacun a été traité en Test-First : test écrit d'a
 | P11 | horaires EPG décalés d'une heure, barre d'avancement figée | **observé sur appareil**, 20:28 local affiché « 19:00 – 19:45 » |
 | S1 | validation TLS entièrement désactivée | lecture de `buildTrustAllClient` — **non corrigé, décision produit** |
 | S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **à sortir du suivi** |
+| S3 | **le `signingConfig` ne trouvait jamais le keystore** | `bundleRelease` en échec sur la machine qui détient la clé — **corrigé** |
 | B1 | facturation : six défauts, dont l'abonné bloqué au 30ᵉ jour | lecture de `BillingRepository`, paramétrage confirmé par l'utilisateur |
 
 ### P1 — Un abonné payant est éjecté de l'app le dernier jour de son abonnement
@@ -570,9 +592,31 @@ git rm --cached cluster/iptv/native/keystore.properties
 echo 'cluster/iptv/native/keystore.properties' >> .gitignore
 ```
 
-Le fichier référence `../client/android/upload-keystore.jks`, **absent de cette
-machine** : `assembleRelease` est donc impossible ici, et avec lui toute installation
-par-dessus l'app signée en release.
+Le fichier référence `../client/android/upload-keystore.jks`, **absent de la machine
+« hjouini »** : `assembleRelease` y est donc impossible. Le fichier **est présent sur
+la machine « rigolo »** (cf. §3).
+
+### S3 — Le `signingConfig` ne trouvait jamais le keystore — ✅ corrigé
+`app-mobile/build.gradle.kts` · `app-tv/build.gradle.kts`
+
+Découvert en lançant `bundleRelease` sur la machine qui détient la clé :
+
+```
+> Keystore file '…/native/client/android/upload-keystore.jks' not found
+```
+
+Le chemin de `keystore.properties` (`../client/android/upload-keystore.jks`) est
+relatif à **`native/`**, mais était résolu par `file(it)`, c'est-à-dire relativement au
+**module** : `native/app-mobile/../client/…` → `native/client/…`, un niveau trop bas.
+Le fichier réel est en `cluster/iptv/client/…`.
+
+**Correction** : `rootProject.file(it)` dans les deux modules — le chemin committé
+devient correct et reste indépendant de la machine.
+
+Ce défaut n'avait jamais pu être observé : la seule machine qui lançait des builds
+n'avait pas le keystore, et échouait donc plus tôt, pour une autre raison.
+
+**Sévérité : haute — aucune publication n'était possible, sur aucune machine.**
 
 ### P10 — La carte EPG ne disparaît jamais, et son horloge est figée
 `app-mobile/…/ui/player/PlayerScreen.kt`
@@ -665,7 +709,11 @@ impossible.
       le réseau échoue. 7 tests.
 - [x] Non-régression : `:app-mobile:assembleDebug` et `:app-tv:assembleDebug` ✅.
 
-**État : 70 tests, 0 échec, ~7 s.**
+- [x] **S3** — `rootProject.file()` dans les deux `signingConfig` : le keystore était
+      cherché un niveau trop bas et **aucune publication n'était possible**.
+- [x] `:app-mobile:bundleRelease` produit et signé par la clé d'upload (versionCode 9).
+
+**État : 73 tests, 0 échec.**
 
 ### À faire
 
@@ -690,6 +738,12 @@ impossible.
 
 ## 7. Dette connue, non bloquante
 
+- ⚠️ **Les artefacts de build sont suivis par git** : `native/.gradle/`,
+  `native/*/build/`, `native/.kotlin/`. Une simple exécution de `./gradlew` salit **279
+  fichiers** (verrous, caches binaires, `classes.jar`), qui noient les vraies
+  modifications dans `git status` et provoquent des conflits à chaque `pull`. Toute
+  commande de commit doit viser les fichiers explicitement — **jamais `git add -A`**.
+  À sortir du suivi (`git rm -r --cached`) et à ajouter au `.gitignore`.
 - `client/current_build.dart` (Flutter, legacy) : fragment de code orphelin de
   733 lignes, non rattaché à `lib/`, qui produit à lui seul **611 des 717 erreurs**
   de `flutter analyze`. Rend toute barrière qualité impossible côté Flutter.
@@ -702,6 +756,12 @@ impossible.
   ce constat à tout le natif : `XtreamApiClient.decodeBase64OrSelf` portait exactement
   le même défaut sur les libellés EPG (cf. §5 P5, corrigé).
 - `BillingRepository.kt:50,53` : warnings d'opt-in `@ExperimentalCoroutinesApi`.
+- `MainScreen.kt:163-181` : le bandeau n'est masqué que si `isPro`, c'est-à-dire pour le
+  seul achat « à vie ». Un abonné **mensuel ou annuel** — donc payant — se voit annoncer
+  « **Essai gratuit** : 30 jours restants. » avec un bouton « ACTIVER ». Formulation
+  fausse pour un client à jour de paiement. Le correctif naturel est de tester
+  `isPremium()` plutôt que `isPro`, mais **ne pas y toucher avant la vérification B1** :
+  c'est précisément ce bandeau qui sert d'instrument de mesure pour B1.4 (cf. §9).
 
 ---
 
@@ -791,15 +851,109 @@ cd cluster/iptv/native
 | B1.5 remontée des échecs | un échec affiche un message explicite, plus « No products available » |
 | B1.6 annulation | refermer la feuille ramène à l'écran **sans message d'erreur** |
 | B1.3 restauration | après réinstallation, « Restaurer » rend l'accès |
-| B1.4 synchro au démarrage | achat, puis `adb shell pm clear` des données, puis relance : l'accès revient **sans** appuyer sur « Restaurer » |
+| B1.4 synchro au démarrage | achat, `adb shell pm clear`, relance : **le bandeau annonce 30 jours (ou disparaît)** — cf. ci-dessous |
 
 Le dernier point est le plus important : c'est lui qui empêchait un abonné à jour de
 paiement d'être bloqué au 30ᵉ jour.
 
+#### ⚠️ B1.4 : « l'accès revient » n'est PAS une observation valide
+
+Formulé ainsi, ce test **ne peut pas échouer**, et ne prouve donc rien. Démonstration,
+par lecture de `TrialRepository.initTrial()` et `TrialPolicy.remainingDays()` :
+
+`pm clear` efface DataStore **et** les `EncryptedSharedPreferences` (toutes deux dans
+les données de l'app). Au redémarrage, `initTrial()` ne trouve plus `trial_start_date`
+et **réattribue un essai gratuit de 3 jours**. Or
+`remainingDays = max(abonnement, essai)` : l'accès est donc rendu par l'essai neuf,
+que `syncEntitlements()` ait fonctionné ou non.
+
+Le signal discriminant est le **nombre de jours affiché** dans le bandeau de
+`MainScreen`, et non la présence de l'accès :
+
+| Produit acheté | `syncEntitlements()` a fonctionné | il n'a rien fait |
+|---|---|---|
+| `purple_monthly_099` | bandeau **« 30 jours restants »** | bandeau « 3 jours restants » |
+| `purple_yearly_499` | bandeau **« 365 jours restants »** | bandeau « 3 jours restants » |
+| `purple_lifetime_999` | `isPro` ⇒ **bandeau absent** | bandeau « 3 jours restants » |
+
+L'achat **à vie** donne le signal le plus net (bandeau présent / absent) ; l'abonnement
+mensuel donne le plus proche du bug réel. Les deux sont concluants.
+
+Pourquoi cela suffit à couvrir le bug du 30ᵉ jour : lire 30 jours prouve que
+`syncEntitlements()` a bien posé `subscription_expiry_date` depuis ce que Play sait.
+Que cette échéance ouvre l'accès **alors que l'essai est expiré** est déjà prouvé par
+`TrialPolicyTest` (logique pure). Il n'est donc pas nécessaire — ni possible — de
+fabriquer un essai expiré sur la build de Play : elle n'est pas `debuggable`, donc
+`run-as` n'y fonctionne pas et l'astuce de §3 ne s'applique plus.
+
+Harnais de mesure prêt et **validé sur l'appareil** (il lit bien le texte Compose) :
+`b1verify.sh {screen|launch|state|b14|log}` dans le scratchpad de la session.
+
 ### Sur la nouvelle machine
 
-- `native/local.properties` est **versionné** et pointe vers `/home/rigolo/Android/Sdk`.
-  À réajuster localement, sans committer la correction (cf. §3).
+- `native/local.properties` : **rien à faire**, il pointe déjà vers `/home/rigolo/Android/Sdk`
+  qui est le bon chemin ici (cf. §3). C'est la machine « hjouini » qui devait l'ajuster.
 - `native/keystore.properties` est **versionné avec les mots de passe en clair**, et il
   se trouve désormais sur le dépôt distant partagé. À sortir du suivi et faire tourner
   la clé (cf. §5 S2).
+
+### État de la vérification au 2026-08-19
+
+Ce qui est **prouvé** sur la machine « rigolo » :
+
+| Étape | Résultat |
+|---|---|
+| Suite de tests rejouée | ✅ 73 tests, 0 échec |
+| Keystore `upload` ouvert par le mot de passe committé | ✅ SHA1 `F6:0C:72:9C:…`, valide jusqu'en 2053 |
+| `signingConfig` réparé (S3) | ✅ sans quoi rien n'était publiable |
+| `:app-mobile:bundleRelease` | ✅ `app-mobile-release.aab`, 11,98 Mo |
+| AAB : identité et signature | ✅ `com.purple.iptvplayer`, versionCode **9**, versionName 1.1.1, signé par la clé d'upload |
+| Pixel 7 connecté et autorisé | ✅ |
+
+Ce qui **n'est pas** prouvé : **les six correctifs B1 eux-mêmes.** Ils restent au même
+statut qu'avant — écrits, compilés, jamais exercés contre Play.
+
+#### Découverte : la facturation n'a jamais pu fonctionner sur cet appareil
+
+L'APK `com.purple.iptvplayer` installé sur le Pixel 7 (versionCode 8, « build de
+production » des sessions précédentes) a été extrait et son certificat lu :
+
+```
+Owner: C=US, O=Android, CN=Android Debug
+installerPackageName = com.google.android.packageinstaller
+```
+
+Ce n'est **pas** la build de production : c'est une build **signée par la clé de debug**
+et **installée à la main**, jamais par Play. Play Billing ne pouvait donc rien retourner
+d'autre qu'un catalogue vide — le symptôme même que B1 corrige. Toute observation de
+facturation faite jusqu'ici sur cet appareil est **ininterprétable**, y compris le
+« No products available » noté en P9.
+
+Conséquence pratique : cet APK devra être **désinstallé** avant d'installer depuis Play
+(signatures différentes, l'installation par-dessus sera refusée).
+
+⚠️ **La désinstallation perd définitivement les identifiants Xtream enregistrés.**
+Une sauvegarde de `files/` + `shared_prefs/` a été prise par `run-as` (l'app est
+`debuggable`), mais elle est **inexploitable après réinstallation** : identifiants et
+état d'abonnement sont dans des `EncryptedSharedPreferences`
+(`purple_iptv_credentials.xml`, `purple_trial_secure.xml`) dont la clé maîtresse vit
+dans l'AndroidKeyStore de l'appareil et **est détruite avec l'app**. Se munir des
+identifiants du fournisseur avant de désinstaller.
+
+#### Point bloquant restant : le téléversement sur la Play Console
+
+L'AAB est prêt et signé, mais le faire parvenir à l'appareil **passe obligatoirement par
+l'interface web de la Play Console** (piste de test interne ou *internal app sharing*) :
+cette étape ne peut pas être automatisée depuis ce poste. C'est le seul geste manquant.
+
+#### ⏳ Échéance à surveiller : Play Billing 7.0.0
+
+Le projet utilise `com.android.billingclient:billing-ktx:7.0.0`
+(`gradle/libs.versions.toml`). **À partir du 31 août 2026, la Play Console n'accepte plus
+que la version 8 ou ultérieure** pour toute nouvelle publication (extension possible
+jusqu'au 1ᵉʳ novembre 2026 ; les apps déjà en ligne continuent de transiger).
+
+Il reste donc une fenêtre courte pour téléverser cet AAB tel quel. La migration en v8
+est un changement d'API à part entière : **ne pas l'entreprendre avant d'avoir vérifié
+B1 en v7**, sous peine de mélanger deux causes de panne et de rendre le résultat
+illisible (cf. la leçon de §5 P4).
