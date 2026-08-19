@@ -568,15 +568,24 @@ internal fun TvSeriesDetailPage(
                             .padding(18.dp),
                     ) {
                         if (!d.cover.isNullOrEmpty()) {
-                            AsyncImage(
-                                model              = d.cover,
-                                contentDescription = d.name,
-                                contentScale       = ContentScale.Crop,
-                                modifier           = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(2f / 3f)
-                                    .clip(PurpleShapes.Md),
-                            )
+                            // Hauteur plafonnée, affiche centrée. En `fillMaxWidth`, le
+                            // ratio 2:3 lui donnait 366 dp de haut dans une colonne de
+                            // 280 — près de 70 % de la hauteur d'écran — et ne laissait
+                            // au synopsis que deux ou trois lignes.
+                            Box(
+                                modifier         = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                AsyncImage(
+                                    model              = d.cover,
+                                    contentDescription = d.name,
+                                    contentScale       = ContentScale.Crop,
+                                    modifier           = Modifier
+                                        .height(228.dp)
+                                        .aspectRatio(2f / 3f)
+                                        .clip(PurpleShapes.Md),
+                                )
+                            }
                         }
                         Spacer(Modifier.height(16.dp))
                         Text(

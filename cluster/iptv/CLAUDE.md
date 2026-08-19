@@ -821,10 +821,11 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **6. TV — fiche film retravaillée** — fait, cf. §19. ⚠️ La **fiche série** n'a pas
       reçu le même traitement.
 - [x] **6 bis. TV — fiche série retravaillée** — cf. §21.
-- [ ] **10. TV — les résultats de recherche sont inatteignables au D-pad** sur l'écran
-      Séries : depuis le champ de recherche, Bas ne quitte pas le champ, et repasser par
-      le rail y ramène. Les 8 résultats sont pourtant `focusable="true"`. Bloque aussi la
-      vérification du cas « série à 37 saisons » (§21).
+- [x] **10. TV — résultats de recherche inatteignables au D-pad** — corrigé, cf. §22.
+- [ ] **11. TV — le focus s'échappe des grilles vers la barre de recherche.** Depuis une
+      carte de résultat, Droite remonte au champ de recherche au lieu d'aller à la carte
+      suivante. Même famille que les défauts 9 et §16 : Compose TV cherche le focalisable
+      le plus proche et remonte. Empêche encore d'atteindre une série à 37 saisons (§21).
 - [ ] **9. TV — le rail met en avant le mauvais onglet.** Signalé et capturé par
       l'utilisateur : après avoir choisi « Series », le contenu affiche bien les séries
       (8 464 titres) mais **la pastille pleine reste sur « Live TV »**. Deux causes qui
@@ -2133,3 +2134,46 @@ La rangée est une `LazyRow`, donc défilante par construction, et le bouton de
 téléchargement reste épinglé à droite grâce au `weight(1f)`. **Mais je n'ai pas pu
 l'observer** : ces séries ne sont atteignables que par la recherche, et les résultats de
 recherche sont inatteignables au D-pad (défaut 10). À reprendre une fois celui-ci corrigé.
+
+---
+
+## 22. Recherche TV — les résultats étaient inatteignables à la télécommande *(2026-08-19)*
+
+Trouvé en cherchant à ouvrir « Les Simpson » (37 saisons) pour vérifier §21. Sur l'écran
+Séries, une fois le curseur dans la barre de recherche, **la touche Bas ne la quittait
+jamais** — et repasser par le rail y ramenait. Les 8 résultats étaient pourtant tous
+`focusable="true"` : ce n'est donc pas qu'ils manquaient, c'est que la navigation n'y
+descendait pas.
+
+### Cause
+
+`TvSearchBar` contient un `BasicTextField`. **Un champ de texte consomme les touches
+directionnelles** — il les interprète comme un déplacement du curseur — et elles ne
+remontent jamais au gestionnaire de focus.
+
+**Correction** dans le composant partagé, donc valable pour Direct TV, Films et Séries :
+haut et bas sont interceptés en `onPreviewKeyEvent`, *avant* le champ, et délégués à
+`focusManager.moveFocus`. `moveFocus` renvoyant `false` quand il n'y a rien dans cette
+direction, on laisse alors passer la touche plutôt que de l'avaler.
+
+Vérifié : la touche Bas déplace désormais le focus de la barre vers une carte de résultat
+(`focus [533,174][850,650]`).
+
+### ⚠️ Piège de méthode — le clavier virtuel avale les touches
+
+Pendant le test, `adb shell input keyevent 20/22/23` s'écrivait **dans le champ** :
+« Simpson » devenait « Simpsonq », « Simpsonqs ». L'IME était encore affiché et captait
+les touches directionnelles. `keyevent 111` (ÉCHAP) ne suffit pas ; il faut
+`keyevent 4` (RETOUR), puis contrôler :
+
+```bash
+adb shell dumpsys input_method | grep -o 'mInputShown=(true|false)'
+```
+
+Sans ce contrôle, on croit à un défaut de focus alors qu'aucun événement directionnel
+n'atteint l'application.
+
+### Reste ouvert
+
+Depuis une carte de résultat, **Droite remonte à la barre de recherche** au lieu d'aller à
+la carte suivante (défaut 11). C'est la même famille que les défauts 9 et §16.

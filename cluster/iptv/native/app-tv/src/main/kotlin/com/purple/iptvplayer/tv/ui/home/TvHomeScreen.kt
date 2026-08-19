@@ -21,6 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -234,8 +241,24 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
 @Composable
 fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     Row(
         modifier              = modifier
+            // Un champ de texte **consomme** les touches directionnelles : une fois le
+            // curseur dans la barre de recherche, Bas ne ressortait jamais et les
+            // résultats — pourtant focalisables — étaient inatteignables à la
+            // télécommande. On intercepte donc haut/bas avant le champ.
+            //
+            // `moveFocus` renvoie `false` s'il n'y a rien dans cette direction : on
+            // laisse alors passer la touche plutôt que de l'avaler.
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+                    Key.DirectionUp   -> focusManager.moveFocus(FocusDirection.Up)
+                    else              -> false
+                }
+            }
             .clip(PurpleShapes.Md)
             .background(PurplePalette.Bg2)
             .border(
