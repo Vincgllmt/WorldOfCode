@@ -36,6 +36,8 @@ import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
+import com.purple.iptvplayer.mobile.ui.common.ImmersiveFullScreen
+import com.purple.iptvplayer.mobile.ui.common.KeepScreenOn
 import com.purple.iptvplayer.mobile.MainActivity
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
@@ -99,6 +101,11 @@ fun PlayerScreen(
     LaunchedEffect(streamId) {
         if (streamId > 0) contentVm.loadEpg(streamId)
     }
+    // L'appareil s'endormait en pleine lecture, et les barres système restaient
+    // affichées par-dessus l'image. Les deux sont liés à la fenêtre, pas au lecteur.
+    KeepScreenOn()
+    ImmersiveFullScreen(enabled = !isInPip)
+
     DisposableEffect(Unit) { onDispose { contentVm.clearEpg() } }
 
     // Pause local player and close screen when casting starts

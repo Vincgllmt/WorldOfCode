@@ -42,6 +42,7 @@ import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
+import com.purple.iptvplayer.tv.ui.common.KeepScreenOn
 import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
@@ -101,6 +102,8 @@ fun TvPlayerScreen(
     LaunchedEffect(streamId) {
         if (streamId > 0) contentVm.loadEpg(streamId)
     }
+
+    KeepScreenOn()
 
     DisposableEffect(Unit) { onDispose { vm.stop(); contentVm.clearEpg() } }
 

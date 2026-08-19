@@ -812,15 +812,24 @@ Classé par ce qui contraint le reste, pas par difficulté.
       pour les mutations de liste. ⚠️ Le cas « fin de liste » reste ouvert.
 - [x] **2. Localisation** — fait, cf. §17. Le défaut allait **dans les deux sens** :
       français en dur côté TV, **anglais** en dur sur le paywall et la fiche film du mobile.
-- [ ] **3. TV — refonte de l'écran Paramètres.**
+- [ ] **3. TV — aligner l'application sur le mobile.** Précision de l'utilisateur :
+      « il faudrait que l'app TV soit quasi identique à l'app mobile ». Ce n'est pas un
+      simple écran Paramètres à refaire : c'est un **écart d'ensemble** à mesurer écran
+      par écran avant de décider quoi aligner.
 - [x] **4. Bandeau premium** — fait et vérifié : « 30 jours restants. » sous le
       « PREMIUM » doré, sur mobile et sur TV.
 - [x] **5. TV — logo du rail** — corrigé : `RailBrandLockup` dessinait le caractère
       **`"✦"`** dans un carré violet au lieu de `drawable/ic_logo`, déjà utilisé par les
       deux écrans de connexion et la barre du mobile. Le rail était le seul substitut.
 - [ ] **6. TV — refonte de la fiche film / série** (au clic sur un titre).
-      ⚠️ Exige le **lien M3U de l'utilisateur** : le catalogue public `iptv-org` n'a ni
-      films ni séries, ces écrans sont donc invérifiables sans lui.
+      Le lien M3U de l'utilisateur a été fourni — **il n'est pas consigné ici**, il contient
+      ses identifiants et ce fichier est versionné sur un dépôt partagé (même faute que
+      `keystore.properties`, cf. §5 S2). Il vit dans le scratchpad de session.
+      ⚠️ Rappel §8 : ce fournisseur n'est joignable **qu'en données mobiles** — le poste de
+      développement et donc l'émulateur TV ne l'atteignent pas.
+- [x] **7. Mobile — vrai plein écran** — fait, cf. §18.
+- [x] **8. Veille pendant la lecture** — fait, cf. §18. ⚠️ Le défaut touchait **aussi le
+      mobile**, l'utilisateur ne l'avait remarqué que sur TV.
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1936,3 +1945,48 @@ Plus aucun `Text("…")` accentué en dur dans les deux modules.
 
 ⚠️ Restent en dur, volontairement : les invariants (`LIVE`, `AUDIO`, `OK`, `%`) et les
 libellés techniques d'animation (`rail-width`, `dl_shimmer`) qui ne sont pas de l'UI.
+
+---
+
+## 18. Plein écran et mise en veille pendant la lecture *(2026-08-19)*
+
+Points 7 et 8 du lot. Tous deux **confirmés par absence** : aucune occurrence de
+`WindowInsetsController` côté mobile, et aucune de `FLAG_KEEP_SCREEN_ON`, `keepScreenOn`
+ou `WakeLock` dans **aucun** des trois modules.
+
+➡️ Conséquence : **le point 8 touchait aussi le mobile.** L'utilisateur ne l'avait remarqué
+que sur TV — c'est là que le symptôme est le plus net, une télécommande restant posée
+pendant tout un film.
+
+### Pourquoi un lecteur vidéo est le pire cas
+
+Le système mesure l'inactivité aux interactions. Un lecteur n'en reçoit aucune : l'écran
+s'éteint donc en pleine lecture, alors que l'application est manifestement utilisée. C'est
+`FLAG_KEEP_SCREEN_ON` qui le signale, et rien ne le posait.
+
+### Ce qui a été écrit
+
+| Élément | Rôle |
+|---|---|
+| `mobile/ui/common/ScreenMode.kt` | `KeepScreenOn()` et `ImmersiveFullScreen()` |
+| `tv/ui/common/KeepScreenOn.kt` | équivalent TV (pas de barres système à masquer) |
+
+Deux précautions qui évitent le **défaut inverse** :
+
+1. **Tout est retiré à la sortie** (`onDispose`) — un drapeau laissé en place donnerait un
+   écran qui ne s'éteint jamais et des barres système définitivement masquées.
+2. `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` — les barres restent accessibles d'un
+   glissement. Les masquer sans échappatoire enfermerait l'utilisateur.
+
+`ImmersiveFullScreen` est désactivé en PiP : masquer des barres n'a pas de sens dans une
+fenêtre incrustée.
+
+### Vérifié sur appareil, pendant **et** après la lecture
+
+| Mesure | Pendant | Après sortie |
+|---|---|---|
+| `dumpsys window` — barre d'état | `type=statusBars … visible=false` | `visible=true` |
+| `dumpsys power` — verrou | `SCREEN_BRIGHT_WAKE_LOCK … ws=WorkSource{com.purple.iptvplayer.debug}` | 0 occurrence |
+
+La seconde colonne est la moitié qui compte : elle prouve qu'on n'a pas troqué un défaut
+contre son symétrique.
