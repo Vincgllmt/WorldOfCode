@@ -806,6 +806,9 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **Ordre des favoris, réglable par l'utilisateur** — fait et vérifié le 2026-08-19,
       cf. §15.
 
+- [ ] **TV — le panneau latéral s'ouvre tout seul après certains clics** (§16).
+      Signalé par l'utilisateur, **reproduit et diagnostiqué** ; correction non faite.
+
 #### Demandes de `raf.md` encore ouvertes
 
 - [x] **Retrait d'un favori impossible sur `app-tv`** — ✅ **corrigé et vérifié au D-pad**
@@ -1795,3 +1798,53 @@ un périmé pendant une modification.
 ⚠️ Seules les **chaînes** exposent les commandes dans l'UI. `moveMovie` et `moveSeries`
 existent au niveau du repository mais ne sont pas branchés : à faire si le besoin se
 confirme sur les affiches.
+
+---
+
+## 16. TV — le rail s'ouvre « sans raison » après certains clics *(2026-08-19, diagnostiqué, non corrigé)*
+
+Signalé par l'utilisateur : « lors de certains clics, ça ouvre le panneau latéral sans
+raison ». Constaté aussi pendant les tests de §13 et §15, sans que j'y voie d'abord un
+défaut à part entière.
+
+### Mécanisme, établi par lecture et par mesure
+
+`TvMainScreen` déplie le rail **dès que le focus y entre** :
+
+```kotlin
+.onFocusEvent { state -> railHasFocus = state.hasFocus }   // l. 118
+LaunchedEffect(railHasFocus) { expanded = railHasFocus }   // l. 79-85  (72 dp → 240 dp)
+```
+
+Ce n'est donc pas le clic qui ouvre le panneau : c'est **le focus qui s'y réfugie**. Compose
+TV, lorsque l'élément focalisé disparaît ou qu'une liste est épuisée, redonne le focus au
+focalisable le plus proche — et le rail, toujours présent à gauche, est le candidat naturel.
+
+### Reproduit sur émulateur
+
+Dans « Ma liste », focus sur l'étoile de `Gong`, rail **replié** (aucun libellé visible,
+largeur 72 dp) :
+
+```
+rail: replié   focus [1760,522][1872,634] -> ['★']
+→ DPAD_CENTER (retire le favori, donc la ligne focalisée disparaît)
+rail: DÉPLIÉ   focus [28,184][452,280]   -> ['Direct TV']     (largeur 424 px ≈ 240 dp)
+```
+
+### Les trois gestes qui le déclenchent
+
+1. **retirer un favori** — la ligne focalisée disparaît ;
+2. **déplacer un favori** (▲ ▼, §15) — l'élément change de place sous le focus ;
+3. **atteindre la fin d'une liste** — déjà noté en §13 comme « rugosité ».
+
+Les deux premiers sont apparus avec les écrans récents : le défaut est **plus visible
+qu'avant**, même si le mécanisme lui préexistait.
+
+### Piste de correction — à ne pas écrire à l'aveugle
+
+Retenir le focus dans le panneau de contenu après une mutation : un `FocusRequester` par
+liste, redemandé sur le voisin quand l'élément focalisé disparaît, le tout dans un
+`focusGroup()`. ⚠️ La gestion du focus D-pad est **précisément** ce pour quoi l'application
+a quitté Flutter : toute modification doit être vérifiée à l'émulateur (§11), et une
+correction trop large risque de piéger le focus et de rendre le rail inatteignable — le
+défaut inverse, et pire.
