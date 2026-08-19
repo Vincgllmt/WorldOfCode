@@ -34,11 +34,11 @@ class ContentViewModel(
     private val _channels = MutableStateFlow<ContentState<List<Channel>>>(ContentState.Loading)
     val channels: StateFlow<ContentState<List<Channel>>> = _channels.asStateFlow()
 
-    val channelFavorites: StateFlow<Set<String>> = favsRepo.channelFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val channelFavorites: StateFlow<List<String>> = favsRepo.channelFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val liveGenreFavorites: StateFlow<Set<String>> = favsRepo.liveGenreFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val liveGenreFavorites: StateFlow<List<String>> = favsRepo.liveGenreFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun loadChannels() {
         viewModelScope.launch {
@@ -50,6 +50,11 @@ class ContentViewModel(
                 _channels.value = ContentState.Error(e.message ?: "Error")
             }
         }
+    }
+
+    /** Déplace un favori de chaîne dans l'ordre choisi par l'utilisateur. */
+    fun moveChannelFavorite(from: Int, to: Int) {
+        viewModelScope.launch { favsRepo.moveChannel(from, to) }
     }
 
     fun toggleChannelFavorite(name: String) {
@@ -65,11 +70,11 @@ class ContentViewModel(
     private val _movies = MutableStateFlow<ContentState<List<Movie>>>(ContentState.Loading)
     val movies: StateFlow<ContentState<List<Movie>>> = _movies.asStateFlow()
 
-    val movieFavorites: StateFlow<Set<String>> = favsRepo.movieFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val movieFavorites: StateFlow<List<String>> = favsRepo.movieFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val movieGenreFavorites: StateFlow<Set<String>> = favsRepo.movieGenreFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val movieGenreFavorites: StateFlow<List<String>> = favsRepo.movieGenreFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun loadMovies() {
         viewModelScope.launch {
@@ -113,11 +118,11 @@ class ContentViewModel(
     private val _series = MutableStateFlow<ContentState<List<SeriesItem>>>(ContentState.Loading)
     val series: StateFlow<ContentState<List<SeriesItem>>> = _series.asStateFlow()
 
-    val seriesFavorites: StateFlow<Set<String>> = favsRepo.seriesFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val seriesFavorites: StateFlow<List<String>> = favsRepo.seriesFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val seriesGenreFavorites: StateFlow<Set<String>> = favsRepo.seriesGenreFavorites
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val seriesGenreFavorites: StateFlow<List<String>> = favsRepo.seriesGenreFavorites
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun loadSeries() {
         viewModelScope.launch {

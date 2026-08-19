@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Icon
@@ -42,6 +44,15 @@ fun ChannelRow(
     isFav:   Boolean,
     onPlay:  () -> Unit,
     onFav:   () -> Unit,
+    /**
+     * Réordonnancement. `null` masque les commandes — elles n'ont de sens que là où
+     * l'ordre est celui de l'utilisateur, c'est-à-dire « Ma liste », pas la navigation.
+     *
+     * Des boutons plutôt qu'un glisser-déposer : c'est la seule forme utilisable **à la
+     * télécommande**, et elle donne la même interaction sur mobile et sur TV.
+     */
+    onMoveUp:   (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -88,6 +99,31 @@ fun ChannelRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+
+        if (onMoveUp != null || onMoveDown != null) {
+            IconButton(
+                onClick  = { onMoveUp?.invoke() },
+                enabled  = onMoveUp != null,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowUp, "Monter",
+                    tint     = if (onMoveUp != null) TextSub else TextSub.copy(0.2f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            IconButton(
+                onClick  = { onMoveDown?.invoke() },
+                enabled  = onMoveDown != null,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowDown, "Descendre",
+                    tint     = if (onMoveDown != null) TextSub else TextSub.copy(0.2f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
 
         IconButton(onClick = onFav, modifier = Modifier.size(36.dp)) {
             Icon(

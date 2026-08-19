@@ -37,6 +37,9 @@ fun TvChannelRow(
     modifier: Modifier = Modifier,
     /** `true` dans « Ma liste », où tout est favori ; variable en navigation. */
     isFav: Boolean = true,
+    /** Réordonnancement — `null` masque la commande (cf. `ChannelRow` mobile). */
+    onMoveUp:   (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -92,6 +95,13 @@ fun TvChannelRow(
             }
         }
 
+        if (onMoveUp != null) {
+            ArrowButton("▲", onMoveUp)
+        }
+        if (onMoveDown != null) {
+            ArrowButton("▼", onMoveDown)
+        }
+
         Surface(
             onClick = onFav,
             shape   = ClickableSurfaceDefaults.shape(PurpleShapes.Xs),
@@ -120,3 +130,23 @@ private fun Channel.initials(): String =
         .map { it.first().uppercaseChar() }
         .joinToString("")
         .ifEmpty { "?" }
+
+
+/** Flèche de réordonnancement — une surface focalisable, opérable à la télécommande. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ArrowButton(glyph: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape   = ClickableSurfaceDefaults.shape(PurpleShapes.Xs),
+        colors  = ClickableSurfaceDefaults.colors(
+            containerColor        = PurplePalette.Bg2,
+            focusedContainerColor = PurplePalette.Purple400,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+    ) {
+        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+            Text(glyph, color = PurplePalette.Fg2, fontSize = 16.sp)
+        }
+    }
+}

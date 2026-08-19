@@ -1,6 +1,7 @@
 package com.purple.iptvplayer.core.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -10,36 +11,98 @@ import kotlinx.coroutines.flow.map
 
 private val Context.favDataStore by preferencesDataStore(name = "favorites")
 
+/**
+ * Favoris, **dans l'ordre choisi par l'utilisateur**.
+ *
+ * L'ordre était auparavant inexistant : tout était persisté en `Set`, et les écrans
+ * affichaient donc les favoris dans l'ordre du catalogue du fournisseur. Chaque
+ * catégorie est désormais une **liste ordonnée** encodée en JSON ([FavoritesCodec]).
+ *
+ * ⚠️ Les anciennes clés `Set` sont **conservées et migrées à la lecture** : un
+ * utilisateur qui met à jour ne doit pas perdre ses favoris. La migration est
+ * paresseuse — la liste est écrite à la première modification, jamais au simple
+ * affichage, pour qu'une lecture ne provoque pas d'écriture.
+ */
 class FavoritesRepository(private val context: Context) {
 
-    private val KEY_CHANNELS = stringSetPreferencesKey("fav_channels")
-    private val KEY_MOVIES   = stringSetPreferencesKey("fav_movies")
-    private val KEY_SERIES   = stringSetPreferencesKey("fav_series")
-    private val KEY_LIVE_GENRES   = stringSetPreferencesKey("fav_genres_live")
-    private val KEY_MOVIE_GENRES  = stringSetPreferencesKey("fav_genres_movies")
-    private val KEY_SERIES_GENRES = stringSetPreferencesKey("fav_genres_series")
+    private companion object {
+        // Nouvelles clés : liste ordonnée, encodée en JSON.
+        val CHANNELS      = stringPreferencesKey("fav_channels_ordered")
+        val MOVIES        = stringPreferencesKey("fav_movies_ordered")
+        val SERIES        = stringPreferencesKey("fav_series_ordered")
+        val LIVE_GENRES   = stringPreferencesKey("fav_genres_live_ordered")
+        val MOVIE_GENRES  = stringPreferencesKey("fav_genres_movies_ordered")
+        val SERIES_GENRES = stringPreferencesKey("fav_genres_series_ordered")
 
-    val channelFavorites: Flow<Set<String>> = context.favDataStore.data.map { it[KEY_CHANNELS] ?: emptySet() }
-    val movieFavorites:   Flow<Set<String>> = context.favDataStore.data.map { it[KEY_MOVIES]   ?: emptySet() }
-    val seriesFavorites:  Flow<Set<String>> = context.favDataStore.data.map { it[KEY_SERIES]   ?: emptySet() }
+        // Anciennes clés, lues uniquement pour la migration.
+        val LEGACY_CHANNELS      = stringSetPreferencesKey("fav_channels")
+        val LEGACY_MOVIES        = stringSetPreferencesKey("fav_movies")
+        val LEGACY_SERIES        = stringSetPreferencesKey("fav_series")
+        val LEGACY_LIVE_GENRES   = stringSetPreferencesKey("fav_genres_live")
+        val LEGACY_MOVIE_GENRES  = stringSetPreferencesKey("fav_genres_movies")
+        val LEGACY_SERIES_GENRES = stringSetPreferencesKey("fav_genres_series")
+    }
 
-    val liveGenreFavorites:   Flow<Set<String>> = context.favDataStore.data.map { it[KEY_LIVE_GENRES]   ?: emptySet() }
-    val movieGenreFavorites:  Flow<Set<String>> = context.favDataStore.data.map { it[KEY_MOVIE_GENRES]  ?: emptySet() }
-    val seriesGenreFavorites: Flow<Set<String>> = context.favDataStore.data.map { it[KEY_SERIES_GENRES] ?: emptySet() }
+    /**
+     * Liste ordonnée d'une catégorie, en reprenant l'ancien `Set` tant que la
+     * nouvelle clé n'a pas été écrite.
+     */
+    private fun Preferences.ordered(
+        key: Preferences.Key<String>,
+        legacy: Preferences.Key<Set<String>>,
+    ): List<String> =
+        this[key]?.let { FavoritesCodec.decode(it) }
+            ?: FavoritesCodec.fromLegacySet(this[legacy] ?: emptySet())
 
-    suspend fun toggleChannel(name: String) = toggle(KEY_CHANNELS, name)
-    suspend fun toggleMovie(id: String)     = toggle(KEY_MOVIES, id)
-    suspend fun toggleSeries(id: String)    = toggle(KEY_SERIES, id)
+    private fun flowOf(
+        key: Preferences.Key<String>,
+        legacy: Preferences.Key<Set<String>>,
+    ): Flow<List<String>> = context.favDataStore.data.map { it.ordered(key, legacy) }
 
-    suspend fun toggleLiveGenre(genre: String)   = toggle(KEY_LIVE_GENRES, genre)
-    suspend fun toggleMovieGenre(genre: String)  = toggle(KEY_MOVIE_GENRES, genre)
-    suspend fun toggleSeriesGenre(genre: String) = toggle(KEY_SERIES_GENRES, genre)
+    val channelFavorites: Flow<List<String>> = flowOf(CHANNELS, LEGACY_CHANNELS)
+    val movieFavorites:   Flow<List<String>> = flowOf(MOVIES, LEGACY_MOVIES)
+    val seriesFavorites:  Flow<List<String>> = flowOf(SERIES, LEGACY_SERIES)
 
-    private suspend fun toggle(key: androidx.datastore.preferences.core.Preferences.Key<Set<String>>, value: String) {
+    val liveGenreFavorites:   Flow<List<String>> = flowOf(LIVE_GENRES, LEGACY_LIVE_GENRES)
+    val movieGenreFavorites:  Flow<List<String>> = flowOf(MOVIE_GENRES, LEGACY_MOVIE_GENRES)
+    val seriesGenreFavorites: Flow<List<String>> = flowOf(SERIES_GENRES, LEGACY_SERIES_GENRES)
+
+    suspend fun toggleChannel(name: String) = toggle(CHANNELS, LEGACY_CHANNELS, name)
+    suspend fun toggleMovie(id: String)     = toggle(MOVIES, LEGACY_MOVIES, id)
+    suspend fun toggleSeries(id: String)    = toggle(SERIES, LEGACY_SERIES, id)
+
+    suspend fun toggleLiveGenre(genre: String)   = toggle(LIVE_GENRES, LEGACY_LIVE_GENRES, genre)
+    suspend fun toggleMovieGenre(genre: String)  = toggle(MOVIE_GENRES, LEGACY_MOVIE_GENRES, genre)
+    suspend fun toggleSeriesGenre(genre: String) = toggle(SERIES_GENRES, LEGACY_SERIES_GENRES, genre)
+
+    /** Déplace un favori de chaîne. Les autres catégories suivront si le besoin s'en fait sentir. */
+    suspend fun moveChannel(from: Int, to: Int) = move(CHANNELS, LEGACY_CHANNELS, from, to)
+    suspend fun moveMovie(from: Int, to: Int)   = move(MOVIES, LEGACY_MOVIES, from, to)
+    suspend fun moveSeries(from: Int, to: Int)  = move(SERIES, LEGACY_SERIES, from, to)
+
+    /** Un ajout se fait **en fin de liste** : la place d'un nouveau favori est la dernière. */
+    private suspend fun toggle(
+        key: Preferences.Key<String>,
+        legacy: Preferences.Key<Set<String>>,
+        value: String,
+    ) {
         context.favDataStore.edit { prefs ->
-            val current = prefs[key]?.toMutableSet() ?: mutableSetOf()
-            if (current.contains(value)) current.remove(value) else current.add(value)
-            prefs[key] = current
+            val current = prefs.ordered(key, legacy)
+            val next = if (current.contains(value)) current - value else current + value
+            prefs[key] = FavoritesCodec.encode(next)
+            prefs.remove(legacy) // la migration est actée, l'ancienne clé n'a plus cours
+        }
+    }
+
+    private suspend fun move(
+        key: Preferences.Key<String>,
+        legacy: Preferences.Key<Set<String>>,
+        from: Int,
+        to: Int,
+    ) {
+        context.favDataStore.edit { prefs ->
+            prefs[key] = FavoritesCodec.encode(FavoritesCodec.move(prefs.ordered(key, legacy), from, to))
+            prefs.remove(legacy)
         }
     }
 }

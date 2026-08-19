@@ -803,8 +803,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [x] **Mobile — les favoris de chaînes sont enfin visibles** dans « Ma liste » (§13).
 - [x] **TV — deux panneaux** (§13) — fait et vérifié au D-pad le 2026-08-19.
 - [x] **TV — chaînes favorites dans « Ma liste »** — fait, cf. §14.
-- [ ] **Ordre des favoris, réglable par l'utilisateur** (§13). ⚠️ Ce n'est **pas** un
-      chantier d'UI : la persistance actuelle est un `Set`, qui ne peut pas porter d'ordre.
+- [x] **Ordre des favoris, réglable par l'utilisateur** — fait et vérifié le 2026-08-19,
+      cf. §15.
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1728,3 +1728,70 @@ cherche le focalisable le plus proche quand la liste est épuisée. Sans gravit�
 d'un appui — mais à surveiller si l'on ajoute un panneau EPG à droite.
 
 ⚠️ `app-tv` reste en **versionCode 8** : rien de tout ceci n'est distribué.
+
+---
+
+## 15. Ordre des favoris — réglable par l'utilisateur *(2026-08-19)*
+
+Suite du constat de §13 : l'ordre affiché était celui du **catalogue du fournisseur**, ni
+l'ordre d'ajout ni un ordre choisi. Le rendre réglable imposait de changer la persistance,
+pas seulement l'écran.
+
+### Ce qui a été écrit
+
+| Élément | Rôle |
+|---|---|
+| `core/data/FavoritesCodec.kt` | encode/décode une **liste ordonnée** en JSON, migre l'ancien `Set`, et déplace un élément. Logique pure, **14 tests** |
+| `FavoritesRepository` | six listes ordonnées (`*_ordered`), `moveChannel/Movie/Series` |
+| `ContentViewModel` | les six flux passent de `Set<String>` à `List<String>` ; `moveChannelFavorite` exposé |
+| `ChannelRow` · `TvChannelRow` | commandes ▲ ▼ optionnelles |
+| `MyListScreen` · `TvMyListScreen` | les commandes, et **l'ordre lu depuis les favoris** |
+
+### Deux pièges, dont un trouvé par la mesure
+
+**1. Changer le stockage ne suffit pas.** Après avoir tout basculé en liste ordonnée, le
+réordonnancement restait **sans effet à l'écran**. Cause : `MyListScreen` construisait sa
+liste par `allChannels.filter { favoris.contains(it.name) }` — il parcourait le
+*catalogue* et retenait les favoris, reprenant donc l'ordre du fournisseur. Corrigé en
+inversant le sens du parcours :
+
+```kotlin
+val byName = allChannels.associateBy { it.name }
+channelFavs.mapNotNull { byName[it] }   // l'ordre vient des favoris
+```
+
+Le même défaut existait pour les films et les séries : corrigé des deux côtés.
+
+**2. La migration ne doit rien perdre.** Les anciennes clés `Set` sont **lues en repli**
+tant que la nouvelle clé n'existe pas, et supprimées à la première écriture. La migration
+est donc **paresseuse** : afficher ses favoris ne déclenche aucune écriture.
+
+L'ordre initial de migration est **alphabétique** — seul ordre reproductible. Reprendre
+l'itération du `Set` donnerait un ordre de hachage, différent d'un appareil à l'autre.
+
+### Pourquoi des boutons ▲ ▼ et pas un glisser-déposer
+
+Le glisser-déposer n'existe pas sur une télécommande. Des boutons donnent **la même
+interaction sur mobile et sur TV**, restent opérables au D-pad, et se vérifient. Un
+glisser-déposer mobile pourra s'ajouter par-dessus, il ne remplacera pas les boutons.
+
+Aux extrémités, la commande correspondante est **absente** plutôt qu'inopérante — et
+`FavoritesCodec.move` ignore de toute façon un index hors bornes, l'UI pouvant en émettre
+un périmé pendant une modification.
+
+### Vérifié sur appareil et sur émulateur
+
+| Observation | Résultat |
+|---|---|
+| Migration mobile (3 favoris en ancien `Set`) | ✅ tous conservés, ordre alphabétique |
+| Migration paresseuse | ✅ l'ancienne clé subsiste après simple affichage |
+| Déplacement mobile | ✅ `[Gong, ADN TV+, Pluto]` → `[ADN TV+, Gong, Pluto]` |
+| Persistance | ✅ `fav_channels_ordered = ["ADN TV+","Gong","Pluto TV Retro Toons"]`, ancienne clé **supprimée**, ordre conservé après relance |
+| Migration TV | ✅ ordre alphabétique |
+| Déplacement TV au D-pad | ✅ ▲ sur `Daria` → `[Daria, ADN TV+]` |
+
+**État : 106 tests, 0 échec** (92 + 14 `FavoritesCodecTest`).
+
+⚠️ Seules les **chaînes** exposent les commandes dans l'UI. `moveMovie` et `moveSeries`
+existent au niveau du repository mais ne sont pas branchés : à faire si le besoin se
+confirme sur les affiches.

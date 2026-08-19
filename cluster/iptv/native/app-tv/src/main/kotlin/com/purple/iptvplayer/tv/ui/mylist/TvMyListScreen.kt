@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -152,13 +153,23 @@ fun TvMyListScreen(
 
     val allChannels = (channelsState as? ContentState.Success)?.data ?: emptyList()
 
-    val favChannels = remember(allChannels, channelFavs) { allChannels.filter { channelFavs.contains(it.name) } }
+    // L'ordre vient des FAVORIS, pas du catalogue (cf. MyListScreen mobile).
+    val favChannels = remember(allChannels, channelFavs) {
+        val byName = allChannels.associateBy { it.name }
+        channelFavs.mapNotNull { byName[it] }
+    }
 
     val allMovies  = (moviesState as? ContentState.Success)?.data ?: emptyList()
     val allSeries  = (seriesState as? ContentState.Success)?.data ?: emptyList()
 
-    val watchlistMovies = remember(allMovies, movieWatchlist)  { allMovies.filter  { movieWatchlist.contains(it.id.toString())  } }
-    val watchlistSeries = remember(allSeries, seriesWatchlist) { allSeries.filter  { seriesWatchlist.contains(it.id.toString()) } }
+    val watchlistMovies = remember(allMovies, movieWatchlist) {
+        val byId = allMovies.associateBy { it.id.toString() }
+        movieWatchlist.mapNotNull { byId[it] }
+    }
+    val watchlistSeries = remember(allSeries, seriesWatchlist) {
+        val byId = allSeries.associateBy { it.id.toString() }
+        seriesWatchlist.mapNotNull { byId[it] }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(PurplePalette.Bg1)) {
 
@@ -258,11 +269,13 @@ fun TvMyListScreen(
             ) {
                 // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
                 if (filter == ListFilter.ALL || filter == ListFilter.CHANNELS) {
-                    items(favChannels, span = { GridItemSpan(maxLineSpan) }, key = { "c_" + it.url }) { channel ->
+                    itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { _, c -> "c_" + c.url }) { index, channel ->
                         TvChannelRow(
                             channel = channel,
                             onPlay  = { onPlayChannel(channel.url, channel.name, channel.streamId ?: 0) },
                             onFav   = { vm.toggleChannelFavorite(channel.name) },
+                            onMoveUp   = if (index > 0) ({ vm.moveChannelFavorite(index, index - 1) }) else null,
+                            onMoveDown = if (index < favChannels.lastIndex) ({ vm.moveChannelFavorite(index, index + 1) }) else null,
                         )
                     }
                 }
