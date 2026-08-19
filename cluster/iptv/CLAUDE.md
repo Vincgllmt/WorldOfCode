@@ -2229,6 +2229,16 @@ identique à l'absence de correctif, et j'ai d'abord cru à un délai trop court
 augmenté le délai à 350 ms sans effet, avant de voir la vraie cause. La clé est désormais
 `selectedIndex`, que l'effet ne modifie pas.
 
+### ⚠️ Régression du liseré, corrigée dans la foulée
+
+Ajouter le liseré m'a fait remplacer `Arrangement.Center` par `spacedBy(0.dp)` : en mode
+**replié**, le rail n'a la place que de son icône, et les 3 dp du liseré la décentraient —
+signalé par l'utilisateur comme « une marge à droite ». Le liseré n'est donc rendu qu'en
+mode déplié ; replié, la teinte de la pastille suffit à marquer l'onglet actif.
+
+Mesuré après correction : fond du rail large de 144 px, centre à 72 px, centre des
+éléments à 72 px.
+
 ### État des trois défauts
 
 | Défaut | État |

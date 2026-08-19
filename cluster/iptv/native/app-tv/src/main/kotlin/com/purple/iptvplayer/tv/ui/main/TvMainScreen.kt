@@ -321,7 +321,7 @@ private fun RailItem(
                     vertical   = 10.dp,
                 ),
             verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = if (expanded) Arrangement.spacedBy(12.dp) else Arrangement.spacedBy(0.dp),
+            horizontalArrangement = if (expanded) Arrangement.spacedBy(12.dp) else Arrangement.Center,
         ) {
             // Repère de l'onglet **actif**, indépendant du focus.
             //
@@ -331,13 +331,19 @@ private fun RailItem(
             // premier élément du rail (défaut 9), on lisait « Live TV » alors que le
             // contenu montrait les séries. Ce liseré ne dépend que de `isActive`, il
             // survit donc au focus.
-            Box(
-                Modifier
-                    .width(3.dp)
-                    .height(if (isActive) 20.dp else 0.dp)
-                    .clip(PurpleShapes.Xs)
-                    .background(if (isActive) PurplePalette.Purple200 else Color.Transparent),
-            )
+            // Uniquement en mode déplié : replié, le rail n'a la place que de son
+            // icône, et un liseré de 3 dp la décentrait — l'arrangement `Center` ne
+            // centre que l'ensemble de la ligne, pas l'icône seule. L'onglet actif y
+            // reste identifiable par la teinte de sa pastille.
+            if (expanded) {
+                Box(
+                    Modifier
+                        .width(3.dp)
+                        .height(if (isActive) 20.dp else 0.dp)
+                        .clip(PurpleShapes.Xs)
+                        .background(if (isActive) PurplePalette.Purple200 else Color.Transparent),
+                )
+            }
             Icon(
                 imageVector        = icon,
                 contentDescription = label,
