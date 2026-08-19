@@ -38,6 +38,7 @@
     <string name="btn_cancel">Cancel</string>
     <string name="btn_logout">Sign out</string>
     <string name="layout_themes">Themes</string>
+    <string name="layout_list">List</string>
     <string name="layout_small">Small Grid</string>
     <string name="layout_medium">Medium Grid</string>
     <string name="layout_large">Large Grid</string>

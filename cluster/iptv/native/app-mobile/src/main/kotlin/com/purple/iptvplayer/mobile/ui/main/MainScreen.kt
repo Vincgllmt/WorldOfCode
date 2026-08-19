@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -100,8 +101,13 @@ fun MainScreen(
     var settingsOpen     by remember { mutableStateOf(false) }
     var layoutPickerOpen by remember { mutableStateOf(false) }
     // Store as Int to avoid enum serialization issues with rememberSaveable + NavHost
-    var layoutModeIndex by rememberSaveable { mutableIntStateOf(2) } // 0=THEMES 1=GRID_SMALL 2=GRID_MEDIUM
-    val layoutMode = LayoutMode.entries[layoutModeIndex]
+    // La disposition était partagée par les trois onglets, alors que le live et la VOD
+    // n'appellent pas la même forme : une chaîne se reconnaît à son logo et à son nom,
+    // un film à son affiche. Deux états distincts, chacun avec son défaut.
+    var liveLayoutIndex by rememberSaveable { mutableIntStateOf(LayoutMode.LIST.ordinal) }
+    var vodLayoutIndex  by rememberSaveable { mutableIntStateOf(LayoutMode.GRID_MEDIUM.ordinal) }
+    val isLiveTab   = currentTab == 0
+    val layoutMode  = LayoutMode.entries[if (isLiveTab) liveLayoutIndex else vodLayoutIndex]
     var selectedGenre    by remember { mutableStateOf<String?>(null) }
     var currentLang      by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
 
@@ -248,8 +254,9 @@ fun MainScreen(
                     onHamburger         = { drawerOpen = true },
                     layoutPickerOpen    = layoutPickerOpen,
                     layoutMode          = layoutMode,
+                    showListOption      = isLiveTab,
                     setLayoutPickerOpen = { layoutPickerOpen = it },
-                    onLayoutSelect      = { layoutModeIndex = it.ordinal; layoutPickerOpen = false },
+                    onLayoutSelect      = { m -> if (isLiveTab) liveLayoutIndex = m.ordinal else vodLayoutIndex = m.ordinal; layoutPickerOpen = false },
                     onSettings          = { settingsOpen = true },
                     castSlot            = { CastButton(modifier = Modifier.size(40.dp), tint = Color.White) },
                 )
@@ -346,6 +353,7 @@ private fun TopBar(
     onHamburger:         () -> Unit,
     layoutPickerOpen:    Boolean,
     layoutMode:          LayoutMode,
+    showListOption:      Boolean,
     setLayoutPickerOpen: (Boolean) -> Unit,
     onLayoutSelect:      (LayoutMode) -> Unit,
     onSettings:          () -> Unit,
@@ -353,7 +361,12 @@ private fun TopBar(
 ) {
     data class LayoutOption(val mode: LayoutMode, val icon: ImageVector, val label: String)
 
-    val layoutOptions = listOf(
+    val layoutOptions = listOfNotNull(
+        // La liste n'est proposée que sur le live : elle n'aurait pas de sens sur des
+        // affiches de films.
+        if (showListOption)
+            LayoutOption(LayoutMode.LIST, Icons.AutoMirrored.Rounded.FormatListBulleted, stringResource(R.string.layout_list))
+        else null,
         LayoutOption(LayoutMode.THEMES,     Icons.Rounded.ViewList, stringResource(R.string.layout_themes)),
         LayoutOption(LayoutMode.GRID_SMALL, Icons.Rounded.Apps,     stringResource(R.string.layout_small)),
         LayoutOption(LayoutMode.GRID_MEDIUM,Icons.Rounded.GridView, stringResource(R.string.layout_medium)),

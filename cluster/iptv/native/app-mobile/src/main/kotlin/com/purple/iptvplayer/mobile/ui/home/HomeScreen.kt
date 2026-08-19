@@ -37,7 +37,15 @@ import com.purple.iptvplayer.mobile.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import com.purple.iptvplayer.R
 
-enum class LayoutMode { THEMES, GRID_SMALL, GRID_MEDIUM }
+/**
+ * Disposition d'un catalogue.
+ *
+ * [LIST] a été ajouté pour les **chaînes live** et en est le défaut : l'identité d'une
+ * chaîne tient dans un logo et un nom, pas dans une vignette 16:9 qu'il faut remplir de
+ * fond vide. Les grilles restent pertinentes pour Films et Séries, dont les affiches
+ * portent une vraie information.
+ */
+enum class LayoutMode { LIST, THEMES, GRID_SMALL, GRID_MEDIUM }
 
 @Composable
 fun HomeScreen(
@@ -90,7 +98,7 @@ fun HomeScreen(
             val cardWidth: Dp = when (layoutMode) {
                 LayoutMode.GRID_SMALL  -> 120.dp
                 LayoutMode.GRID_MEDIUM -> 170.dp
-                LayoutMode.THEMES      -> 0.dp
+                LayoutMode.THEMES, LayoutMode.LIST -> 0.dp
             }
 
             Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
@@ -156,10 +164,40 @@ fun HomeScreen(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = 16.dp, bottom = 16.dp,
+                    ),
+                    // Une liste dense n'a pas besoin du même air qu'une grille de cartes.
+                    verticalArrangement = Arrangement.spacedBy(
+                        if (layoutMode == LayoutMode.LIST) 2.dp else 12.dp
+                    ),
                 ) {
-                    if (layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()) {
+                    if (layoutMode == LayoutMode.LIST) {
+                        // Liste plate : un seul axe de défilement. L'imbrication d'une
+                        // LazyRow dans une LazyColumn obligeait à faire défiler
+                        // horizontalement pour atteindre la 40ᵉ chaîne d'un genre.
+                        grouped.forEach { (genre, channels) ->
+                            item(key = "lheader_$genre") {
+                                GroupHeader(
+                                    genre      = genre,
+                                    count      = channels.size,
+                                    isFavorite = genreFavs.contains(genre),
+                                    isSelected = selectedGenre == genre,
+                                    onFavorite = { vm.toggleLiveGenreFavorite(genre) },
+                                    onClick    = { onSelectGenre(if (selectedGenre == genre) null else genre) },
+                                )
+                            }
+                            items(channels, key = { "lrow_" + it.url }) { channel ->
+                                ChannelRow(
+                                    channel = channel,
+                                    isFav   = favorites.contains(channel.name),
+                                    onPlay  = { onPlayChannel(channel.url, channel.name, channel.logo ?: "", channel.streamId ?: 0) },
+                                    onFav   = { vm.toggleChannelFavorite(channel.name) },
+                                )
+                            }
+                        }
+                    } else if (layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()) {
                         allGrouped.forEach { (genre, list) ->
                             item(key = "theme_$genre") {
                                 ThemeCard(
@@ -469,3 +507,90 @@ private fun ChannelCard(
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp))
     }
 }
+
+
+/**
+ * Une chaîne, sur une ligne.
+ *
+ * Trois écarts délibérés avec [ChannelCard], qu'elle remplace pour le live :
+ *
+ * 1. **Logo en [ContentScale.Fit], jamais `Crop`.** Les logos de chaînes sont de ratios
+ *    très variés et souvent transparents ; les recadrer en 16:9 en amputait une partie.
+ * 2. **Repli en initiales** quand le logo est absent ou ne charge pas — un catalogue réel
+ *    en compte beaucoup, et une icône générique répétée sur 200 lignes n'aide personne à
+ *    distinguer les chaînes.
+ * 3. **L'étoile de favori fonctionne.** [ChannelCard] déclarait `onFav` sans jamais
+ *    l'appeler : mettre une chaîne en favori était impossible depuis la grille.
+ */
+@Composable
+private fun ChannelRow(
+    channel: Channel,
+    isFav:   Boolean,
+    onPlay:  () -> Unit,
+    onFav:   () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(BgCard)
+            .clickable { onPlay() }
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(BgSurface),
+            contentAlignment = Alignment.Center,
+        ) {
+            var failed by remember(channel.url) { mutableStateOf(false) }
+            if (!channel.logo.isNullOrEmpty() && !failed) {
+                AsyncImage(
+                    model              = channel.logo,
+                    contentDescription = null,
+                    contentScale       = ContentScale.Fit,
+                    onError            = { failed = true },
+                    modifier           = Modifier.fillMaxSize().padding(4.dp),
+                )
+            } else {
+                Text(
+                    text       = channel.initials(),
+                    color      = PurpleGlow,
+                    fontSize   = 13.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Text(
+            text     = channel.name,
+            color    = TextPrimary,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+
+        IconButton(onClick = onFav, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector        = if (isFav) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                contentDescription = null,
+                tint               = if (isFav) ColorGold else TextSub.copy(0.6f),
+                modifier           = Modifier.size(19.dp),
+            )
+        }
+    }
+}
+
+/** Deux lettres tirées du nom, en repli du logo. Les décorations ont déjà été nettoyées en amont (cf. P7). */
+private fun Channel.initials(): String =
+    name.split(' ', '|', '-')
+        .filter { it.isNotBlank() }
+        .take(2)
+        .map { it.first().uppercaseChar() }
+        .joinToString("")
+        .ifEmpty { "?" }

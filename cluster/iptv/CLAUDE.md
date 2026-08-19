@@ -798,9 +798,10 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Navigation des chaînes live — refonte demandée le 2026-08-19
 
-- [ ] **Remplacer les rangées d'images par des listes sur les chaînes live**, mobile **et**
-      TV. Demande explicite de l'utilisateur : « la navigation sur les chaînes lives est
-      mauvaise […] plutôt que des images il faudrait des listes ». Conception en §13.
+- [x] **Mobile — liste des chaînes live** (§13). `LayoutMode.LIST`, défaut du live,
+      vérifié sur appareil.
+- [ ] **TV — deux panneaux** (§13). Reprendre `ChannelRow` et vérifier le focus D-pad
+      à l'émulateur (§11).
 
 #### Demandes de `raf.md` encore ouvertes
 
@@ -1466,7 +1467,7 @@ seul des quatre chemins non exercé, faute d'achat neuf à acquitter.
 
 ---
 
-## 13. Navigation des chaînes live — conception *(2026-08-19, à implémenter)*
+## 13. Navigation des chaînes live — conception et mise en œuvre mobile *(2026-08-19)*
 
 ### Ce qui existe, et pourquoi c'est lent
 
@@ -1530,3 +1531,46 @@ préserve les affiches là où elles ont du sens.
   l'émulateur (§11) — c'est le sujet qui a motivé la migration depuis Flutter.
 - **Liste plate de ~11 900 éléments** : clés stables obligatoires, et un défilement rapide
   (index alphabétique) à envisager si la mesure le justifie.
+
+
+### Mise en œuvre mobile — fait et vérifié
+
+| Élément | Rôle |
+|---|---|
+| `LayoutMode.LIST` | nouvelle disposition, **défaut du live** |
+| `HomeScreen.ChannelRow` | une chaîne par ligne : logo 44 dp, nom, étoile de favori |
+| `MainScreen` | état de disposition **séparé** live / VOD |
+
+**La disposition était partagée par les trois onglets.** Un seul `layoutModeIndex` servait
+Home, Movies et Series : faire de la liste le défaut du live l'aurait imposée aux affiches
+de films. Deux états distincts désormais, chacun avec son défaut, et l'option « Liste »
+n'est proposée que sur l'onglet live.
+
+**Trois écarts délibérés avec l'ancienne `ChannelCard`** :
+
+1. **`ContentScale.Fit`, jamais `Crop`.** L'ancienne carte recadrait le logo en 16:9 ; les
+   logos de chaînes sont de ratios très variés et souvent transparents, le recadrage en
+   amputait une partie.
+2. **Repli en initiales** quand le logo manque ou échoue, au lieu d'une icône générique
+   répétée à l'identique sur des centaines de lignes.
+3. **L'étoile de favori fonctionne.** `ChannelCard` déclarait `onFav` **sans jamais
+   l'appeler** — même classe de défaut que UX-2 sur TV : mettre une chaîne live en favori
+   était impossible depuis la grille mobile.
+
+### Mesuré sur appareil
+
+| Observation | Résultat |
+|---|---|
+| Genre « Animation » (4 chaînes) en grille | 3 visibles — **« One Piece » caché** derrière le défilement horizontal |
+| Le même en liste | **4 visibles**, un seul axe de défilement |
+| Densité en liste | **7 chaînes par écran**, pas de rangée imbriquée |
+| Logo réel rendu | ✅ 10 teintes distinctes dans la vignette |
+| Étoile de favori | ✅ 0 → 578 pixels dorés à l'appui |
+| Persistance du favori | ✅ toujours 578 après `force-stop` + relance |
+
+L'écart mesuré paraît modeste sur cette playlist publique, dont les genres comptent 3 à
+27 chaînes. Il est **structurel et croît avec la taille du genre** : sur le catalogue réel
+de l'utilisateur, des genres à 336 et 317 chaînes (relevés en §8) demandaient autant de
+déplacements horizontaux pour atteindre la dernière.
+
+⚠️ Le portage TV reste à faire, et son focus D-pad devra être vérifié à l'émulateur.

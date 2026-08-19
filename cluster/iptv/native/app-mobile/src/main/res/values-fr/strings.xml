@@ -38,6 +38,7 @@
     <string name="btn_cancel">Annuler</string>
     <string name="btn_logout">Déconnexion</string>
     <string name="layout_themes">Thèmes</string>
+    <string name="layout_list">Liste</string>
     <string name="layout_small">Grille (Petit)</string>
     <string name="layout_medium">Grille (Moyen)</string>
     <string name="layout_large">Grille (Grand)</string>
