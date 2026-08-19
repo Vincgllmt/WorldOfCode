@@ -814,8 +814,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
       §10) — il en reste. Auditer les deux modules : chaînes codées en dur dans le Kotlin,
       et clés présentes dans `values-fr/` mais absentes de `values/`.
 - [ ] **3. TV — refonte de l'écran Paramètres.**
-- [ ] **4. Bandeau premium : « Premium : 30 jours restants » → « 30 jours restants »**,
-      placé **sous** le « PREMIUM » doré. Mobile **et** TV.
+- [x] **4. Bandeau premium** — fait et vérifié : « 30 jours restants. » sous le
+      « PREMIUM » doré, sur mobile et sur TV.
 - [ ] **5. TV — le logo en haut à droite n'est pas le bon.**
 - [ ] **6. TV — refonte de la fiche film / série** (au clic sur un titre).
       ⚠️ Exige le **lien M3U de l'utilisateur** : le catalogue public `iptv-org` n'a ni

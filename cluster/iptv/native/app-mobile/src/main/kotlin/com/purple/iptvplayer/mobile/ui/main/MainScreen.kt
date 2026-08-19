@@ -187,16 +187,20 @@ fun MainScreen(
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                PremiumBadge(
-                    label = stringResource(R.string.premium_badge),
-                    fontSize = 12.sp,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.premium_days, a.daysLeft),
-                    color = TextSub, fontSize = 12.sp,
-                    modifier = Modifier.weight(1f),
-                )
+                // Le décompte va SOUS le « PREMIUM » doré, et sans le répéter en
+                // préfixe : le badge dit déjà de quoi il s'agit.
+                Column(modifier = Modifier.weight(1f)) {
+                    PremiumBadge(
+                        label = stringResource(R.string.premium_badge),
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Start),
+                    )
+                    Text(
+                        text = stringResource(R.string.premium_days, a.daysLeft),
+                        color = TextSub, fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 1.dp),
+                    )
+                }
                 // Un abonné doit pouvoir passer à l'annuel ou au définitif. Retirer
                 // « ACTIVER » corrigeait le mot mais supprimait le seul chemin vers
                 // l'écran d'achat : la montée en gamme devenait impossible.

@@ -23,7 +23,7 @@
     <string name="nav_downloads">Downloads</string>
     <string name="trial_banner">Free trial: %d day(s) remaining.</string>
     <string name="premium_lifetime">Lifetime access.</string>
-    <string name="premium_days">Premium: %d day(s) remaining.</string>
+    <string name="premium_days">%d day(s) remaining.</string>
     <string name="premium_badge">PREMIUM</string>
     <string name="btn_change_plan">Change plan</string>
     <string name="trial_expired">Trial expired.</string>

@@ -382,10 +382,10 @@ private fun RailPremiumBadge(days: Int, onClick: () -> Unit, modifier: Modifier 
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
-        Row(
+        // Le décompte va SOUS le « PREMIUM » doré, sans le répéter en préfixe.
+        Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             TvPremiumBadge(label = stringResource(R.string.premium_badge))
             Text(
