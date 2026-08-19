@@ -48,7 +48,9 @@ import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.data.CredentialsRepository
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
+import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
+import com.purple.iptvplayer.mobile.ui.common.PremiumBadge
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
 import com.purple.iptvplayer.mobile.ui.downloads.DownloadsScreen
@@ -85,6 +87,7 @@ fun MainScreen(
 
     val remainingDays by trialVm.remainingDays.collectAsState()
     val isPro         by trialVm.isPro.collectAsState()
+    val access        by trialVm.accessState.collectAsState()
     val channelsState by contentVm.channels.collectAsState()
     val moviesState   by contentVm.movies.collectAsState()
     val seriesState   by contentVm.series.collectAsState()
@@ -159,34 +162,68 @@ fun MainScreen(
 
     Column(modifier = Modifier.fillMaxSize().background(BgApp)) {
 
-        // ── Trial banner ──────────────────────────────────────────────────────
-        if (!isPro) {
-            Row(
+        // ── Bandeau d'état (UX-1) ─────────────────────────────────────────────
+        // Le bandeau violet pleine largeur est un **appel à l'action** : il n'a lieu
+        // d'être que là où il y a quelque chose à convertir, c'est-à-dire pendant
+        // l'essai. L'imposer à un abonné revenait à lui annoncer « Essai gratuit :
+        // 30 jours restants » avec un bouton « ACTIVER » — sur un client qui paie.
+        when (val a = access) {
+            // Achat définitif : rien à décompter, rien à vendre. Aucun bandeau.
+            is AccessState.Pro -> Unit
+
+            // Abonnement : l'échéance concerne l'utilisateur, mais discrètement,
+            // et sans bouton d'achat puisqu'il a déjà payé.
+            is AccessState.Subscribed -> Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Purple)
+                    .background(BgCard)
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Rounded.Timer, null, tint = TextPrimary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
+                PremiumBadge(
+                    label = stringResource(R.string.premium_badge),
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
-                    text = if (remainingDays > 0)
-                        stringResource(R.string.trial_banner, remainingDays)
-                    else
-                        stringResource(R.string.trial_expired),
-                    color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    text = stringResource(R.string.premium_days, a.daysLeft),
+                    color = TextSub, fontSize = 12.sp,
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(
-                    onClick = onPurchase,
-                    border = BorderStroke(1.dp, TextPrimary),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                    modifier = Modifier.height(30.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+            }
+
+            // Essai en cours ou expiré : c'est ici, et seulement ici, que l'appel
+            // à l'action est légitime.
+            else -> {
+                val trialDays = (a as? AccessState.Trial)?.daysLeft ?: 0
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Purple)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.btn_activate), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    Icon(Icons.Rounded.Timer, null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (trialDays > 0)
+                            stringResource(R.string.trial_banner, trialDays)
+                        else
+                            stringResource(R.string.trial_expired),
+                        color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedButton(
+                        onClick = onPurchase,
+                        border = BorderStroke(1.dp, TextPrimary),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                        modifier = Modifier.height(30.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    ) {
+                        Text(stringResource(R.string.btn_activate), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
         }

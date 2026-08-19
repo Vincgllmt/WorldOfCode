@@ -22,6 +22,9 @@
     <string name="nav_series">Séries</string>
     <string name="nav_downloads">Téléchargements</string>
     <string name="trial_banner">Essai gratuit : %d jours restants.</string>
+    <string name="premium_lifetime">Accès à vie.</string>
+    <string name="premium_days">Premium : %d jours restants.</string>
+    <string name="premium_badge">PREMIUM</string>
     <string name="trial_expired">Essai expiré.</string>
     <string name="btn_activate">ACTIVER</string>
     <string name="drawer_search_hint">Rechercher un genre…</string>

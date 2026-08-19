@@ -63,6 +63,34 @@ object TrialPolicy {
     private fun ceilDiv(value: Long, divisor: Long): Int =
         ((value + divisor - 1) / divisor).toInt()
 
+    /**
+     * État d'accès tel qu'il doit être **présenté** à l'utilisateur.
+     *
+     * [remainingDays] répond « combien de jours » ; celle-ci répond « à quel titre »,
+     * ce que l'interface a besoin de savoir pour ne pas qualifier d'essai gratuit
+     * l'abonnement d'un client qui paie.
+     *
+     * Ordre de priorité identique à [remainingDays] — l'achat définitif prime sur
+     * l'abonnement, qui prime sur l'essai — pour que les deux ne puissent pas se
+     * contredire.
+     */
+    fun accessState(
+        now: Long,
+        trialStartMs: Long?,
+        expiryMs: Long?,
+        isPro: Boolean,
+    ): AccessState {
+        if (isPro) return AccessState.Pro
+
+        val subscriptionDays = subscriptionDaysLeft(now, expiryMs)
+        if (subscriptionDays > 0) return AccessState.Subscribed(subscriptionDays)
+
+        val trialDays = trialDaysLeft(now, trialStartMs, expiryMs)
+        if (trialDays > 0) return AccessState.Trial(trialDays)
+
+        return AccessState.Expired
+    }
+
     fun hasAccess(
         now: Long,
         trialStartMs: Long?,

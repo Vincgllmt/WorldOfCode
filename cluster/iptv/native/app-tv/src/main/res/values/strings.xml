@@ -11,6 +11,10 @@
     <string name="field_username">Username</string>
     <string name="field_password">Password</string>
     <string name="trial_info">3-day free trial included. Premium activation available after.</string>
+    <string name="premium_days">Premium: %d day(s) remaining.</string>
+    <string name="premium_badge">PREMIUM</string>
+    <string name="trial_banner">Free trial: %d day(s) remaining.</string>
+    <string name="trial_expired">Trial expired.</string>
     <string name="btn_connect">CONNECT</string>
 
     <!-- Navigation -->

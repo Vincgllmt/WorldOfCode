@@ -45,7 +45,9 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
+import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
+import com.purple.iptvplayer.tv.ui.common.TvPremiumBadge
 import com.purple.iptvplayer.tv.ui.downloads.TvDownloadsScreen
 import com.purple.iptvplayer.tv.ui.home.TvHomeScreen
 import com.purple.iptvplayer.tv.ui.movies.TvMoviesScreen
@@ -68,6 +70,7 @@ fun TvMainScreen(
     val playerVm: PlayerViewModel = koinViewModel()
     val remainingDays by trialVm.remainingDays.collectAsState()
     val isPro         by trialVm.isPro.collectAsState()
+    val access        by trialVm.accessState.collectAsState()
 
     var selectedIndex by remember { mutableIntStateOf(0) }
     var expanded      by remember { mutableStateOf(false) }
@@ -144,14 +147,27 @@ fun TvMainScreen(
                 onClick  = { selectedIndex = settingsIndex },
             )
 
-            // Trial badge when expanded
-            if (expanded && !isPro) {
-                Spacer(Modifier.height(12.dp))
-                RailTrialBadge(
-                    days     = remainingDays,
-                    expanded = expanded,
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                )
+            // Badge d'état (UX-1) — même règle que sur mobile : un achat définitif
+            // n'a rien à décompter, un abonné n'est pas un utilisateur d'essai.
+            if (expanded) {
+                when (val a = access) {
+                    is AccessState.Pro -> Unit
+                    is AccessState.Subscribed -> {
+                        Spacer(Modifier.height(12.dp))
+                        RailPremiumBadge(
+                            days     = a.daysLeft,
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                        )
+                    }
+                    else -> {
+                        Spacer(Modifier.height(12.dp))
+                        RailTrialBadge(
+                            days     = (a as? AccessState.Trial)?.daysLeft ?: 0,
+                            expanded = true,
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -322,12 +338,32 @@ private fun RailTrialBadge(days: Int, expanded: Boolean, modifier: Modifier = Mo
             modifier           = Modifier.size(18.dp),
         )
         if (expanded) {
-            val label = if (days > 0) "$days jour(s) restant(s)" else "Essai expiré"
+            val label = if (days > 0)
+                stringResource(R.string.trial_banner, days)
+            else
+                stringResource(R.string.trial_expired)
             Text(
                 label,
                 style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
             )
         }
+    }
+}
+
+/** Abonné : statut doré et échéance, sans appel à l'action — il a déjà payé. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun RailPremiumBadge(days: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+    ) {
+        TvPremiumBadge(label = stringResource(R.string.premium_badge))
+        Text(
+            stringResource(R.string.premium_days, days),
+            style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
+        )
     }
 }
 

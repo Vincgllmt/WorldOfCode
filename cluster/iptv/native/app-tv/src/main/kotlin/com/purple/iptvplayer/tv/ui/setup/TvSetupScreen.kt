@@ -30,6 +30,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.purple.iptvplayer.core.data.AccessState
+import com.purple.iptvplayer.core.viewmodel.TrialViewModel
+import com.purple.iptvplayer.tv.ui.common.TvPremiumBadge
 import com.purple.iptvplayer.core.viewmodel.SetupState
 import com.purple.iptvplayer.core.viewmodel.SetupViewModel
 import com.purple.iptvplayer.tv.R
@@ -39,6 +42,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun TvSetupScreen(onSuccess: () -> Unit) {
     val vm: SetupViewModel = koinViewModel()
+    val trialVm: TrialViewModel = koinViewModel()
+    val access by trialVm.accessState.collectAsState()
     val state by vm.state.collectAsState()
 
     var modeIndex  by remember { mutableIntStateOf(0) }
@@ -207,7 +212,17 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
             ) {
                 Icon(Icons.Rounded.Info, null, tint = TvPurple,
                     modifier = Modifier.size(17.dp).padding(top = 1.dp))
-                Text(stringResource(R.string.trial_info), color = TvTextSub, fontSize = 13.sp, lineHeight = 20.sp)
+                // UX-1 : cf. SetupScreen mobile — pas d'argumentaire d'essai pour qui a payé.
+                when (val a = access) {
+                    is AccessState.Pro -> TvPremiumBadge(
+                        label = stringResource(R.string.premium_badge), fontSize = 20.sp)
+                    is AccessState.Subscribed -> Column {
+                        TvPremiumBadge(label = stringResource(R.string.premium_badge), fontSize = 20.sp)
+                        Text(stringResource(R.string.premium_days, a.daysLeft),
+                            color = TvTextSub, fontSize = 12.sp)
+                    }
+                    else -> Text(stringResource(R.string.trial_info), color = TvTextSub, fontSize = 13.sp, lineHeight = 20.sp)
+                }
             }
 
             Spacer(Modifier.height(28.dp))

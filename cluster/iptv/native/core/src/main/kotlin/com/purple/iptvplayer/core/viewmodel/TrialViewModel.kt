@@ -2,6 +2,7 @@ package com.purple.iptvplayer.core.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.data.BillingRepository
 import com.purple.iptvplayer.core.data.TrialRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,15 @@ class TrialViewModel(
     private val _isPro = MutableStateFlow(false)
     val isPro: StateFlow<Boolean> = _isPro.asStateFlow()
 
+    /**
+     * À quel titre l'utilisateur a accès — essai, abonnement ou achat définitif.
+     *
+     * `null` tant que la résolution n'a pas abouti, comme [hasAccess] : une UI qui
+     * lirait la valeur trop tôt afficherait l'état d'un utilisateur expiré (cf. P6).
+     */
+    private val _accessState = MutableStateFlow<AccessState?>(null)
+    val accessState: StateFlow<AccessState?> = _accessState.asStateFlow()
+
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
@@ -37,10 +47,12 @@ class TrialViewModel(
             runCatching { billingRepo.syncEntitlements() }
         }
 
+        val state = trialRepo.getAccessState()
         val days = trialRepo.getRemainingDays()
+        _accessState.value = state
         _remainingDays.value = days
-        _isPro.value = trialRepo.isPro()
-        _hasAccess.value = days > 0
+        _isPro.value = state is AccessState.Pro
+        _hasAccess.value = state.hasAccess
     }
 
     private companion object {

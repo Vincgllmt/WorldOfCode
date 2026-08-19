@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.ProductDetails
 import com.purple.iptvplayer.core.data.BillingRepository
+import com.purple.iptvplayer.core.data.OfferPrice
 import com.purple.iptvplayer.core.viewmodel.PurchaseScreenState
 import com.purple.iptvplayer.core.viewmodel.PurchaseViewModel
 import com.purple.iptvplayer.mobile.ui.theme.*
@@ -128,7 +129,17 @@ fun PurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
 private fun PriceCard(product: ProductDetails, isLoading: Boolean, onTap: () -> Unit) {
     val isLifetime = product.productId == BillingRepository.LIFETIME_ID
     val isYearly   = product.productId == BillingRepository.YEARLY_ID
-    val price      = product.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"
+    // B3 : un abonnement n'a pas d'oneTimePurchaseOfferDetails — lire ce seul champ
+    // affichait « N/A » sur les deux abonnements, dont Play connaissait pourtant le prix.
+    val price      = OfferPrice.formatted(
+        oneTime = product.oneTimePurchaseOfferDetails?.formattedPrice,
+        subscriptionPhases = product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.map { it.formattedPrice }
+            .orEmpty(),
+    )
 
     val title  = when (product.productId) {
         BillingRepository.MONTHLY_ID  -> "Monthly"

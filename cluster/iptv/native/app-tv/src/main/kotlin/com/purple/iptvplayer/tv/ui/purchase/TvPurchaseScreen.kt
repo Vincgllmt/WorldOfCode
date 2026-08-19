@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.ProductDetails
+import com.purple.iptvplayer.core.data.OfferPrice
 import com.purple.iptvplayer.core.data.BillingRepository
 import com.purple.iptvplayer.core.viewmodel.PurchaseScreenState
 import com.purple.iptvplayer.core.viewmodel.PurchaseViewModel
@@ -98,7 +99,16 @@ fun TvPurchaseScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
 private fun TvPriceCard(product: ProductDetails, isLoading: Boolean, onSelect: () -> Unit) {
     val isLifetime = product.productId == BillingRepository.LIFETIME_ID
     val isYearly   = product.productId == BillingRepository.YEARLY_ID
-    val price = product.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"
+    // B3 : cf. PurchaseScreen — un abonnement n'a pas d'oneTimePurchaseOfferDetails.
+    val price = OfferPrice.formatted(
+        oneTime = product.oneTimePurchaseOfferDetails?.formattedPrice,
+        subscriptionPhases = product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.map { it.formattedPrice }
+            .orEmpty(),
+    )
     val title = when (product.productId) {
         BillingRepository.MONTHLY_ID  -> "Monthly"
         BillingRepository.YEARLY_ID   -> "Yearly"

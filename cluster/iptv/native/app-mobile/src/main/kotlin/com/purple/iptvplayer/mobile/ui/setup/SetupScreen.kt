@@ -40,7 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.purple.iptvplayer.core.viewmodel.SetupState
+import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.viewmodel.SetupViewModel
+import com.purple.iptvplayer.core.viewmodel.TrialViewModel
+import com.purple.iptvplayer.mobile.ui.common.PremiumBadge
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.mobile.ui.theme.*
 import com.purple.iptvplayer.mobile.util.LocaleHelper
@@ -49,6 +52,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SetupScreen(onSuccess: () -> Unit) {
     val vm: SetupViewModel = koinViewModel()
+    val trialVm: TrialViewModel = koinViewModel()
+    val access by trialVm.accessState.collectAsState()
     val state by vm.state.collectAsState()
     val context = LocalContext.current
     val activity = context as? Activity
@@ -220,18 +225,35 @@ fun SetupScreen(onSuccess: () -> Unit) {
             Spacer(Modifier.height(12.dp))
 
             // Trial info
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(BgCard)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(Icons.Rounded.Info, null, tint = Purple,
-                    modifier = Modifier.size(18.dp).padding(top = 1.dp))
-                Text(stringResource(R.string.trial_info), color = TextSub, fontSize = 13.sp, lineHeight = 20.sp)
+            // UX-1 : ne pas vendre un essai gratuit à quelqu'un qui a déjà payé.
+            // Le texte d'essai n'a de sens que pendant l'essai ; un abonné voit son
+            // statut, avec son échéance, et un achat définitif n'a rien à décompter.
+            when (val a = access) {
+                is AccessState.Pro -> PremiumBadge(
+                    label = stringResource(R.string.premium_badge),
+                    subtitle = stringResource(R.string.premium_lifetime),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                is AccessState.Subscribed -> PremiumBadge(
+                    label = stringResource(R.string.premium_badge),
+                    subtitle = stringResource(R.string.premium_days, a.daysLeft),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // Essai en cours, expiré, ou état pas encore résolu : l'argument
+                // commercial reste pertinent, c'est le cas d'un nouvel utilisateur.
+                else -> Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BgCard)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(Icons.Rounded.Info, null, tint = Purple,
+                        modifier = Modifier.size(18.dp).padding(top = 1.dp))
+                    Text(stringResource(R.string.trial_info), color = TextSub, fontSize = 13.sp, lineHeight = 20.sp)
+                }
             }
 
             Spacer(Modifier.height(24.dp))

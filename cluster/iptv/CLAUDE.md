@@ -269,6 +269,8 @@ n'y figurent pas du tout. Chacun a été traité en Test-First : test écrit d'a
 | S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **à sortir du suivi** |
 | S3 | **le `signingConfig` ne trouvait jamais le keystore** | `bundleRelease` en échec sur la machine qui détient la clé — **corrigé** |
 | B1 | facturation : six défauts, dont l'abonné bloqué au 30ᵉ jour | lecture de `BillingRepository`, paramétrage confirmé par l'utilisateur |
+| B2 | un achat remboursé/révoqué ne retire jamais l'accès | lecture de `syncEntitlements` — **non corrigé** |
+| B3 | prix des abonnements affiché « N/A » sur le paywall | **observé sur appareil** — **non corrigé** |
 
 ### P1 — Un abonné payant est éjecté de l'app le dernier jour de son abonnement
 `core/data/TrialRepository.kt` · `getRemainingDays()`
@@ -474,7 +476,11 @@ Défaut de tri corrigé au passage : le classement par prix lisait
 `oneTimePurchaseOfferDetails`, `null` pour un abonnement, ce qui les plaçait tous en
 tête à prix nul.
 
-⚠️ **Rien de tout ceci n'est vérifiable sur cette machine** : la variante `.debug` a un
+✅ **B1.4 est désormais prouvé sur appareil** (2026-08-19, build installée depuis Play — cf. §9).
+Les quatre correctifs qui exigent l'écran d'achat restent non vérifiés, le compte de test
+possédant déjà l'achat « à vie » qui masque le seul point d'entrée vers cet écran.
+
+⚠️ **Historique — rien de tout ceci n'était vérifiable sur la machine « hjouini »** : la variante `.debug` a un
 `applicationId` suffixé, donc étrangère à Play Billing, et un test réel exige un
 compte testeur et une build publiée. Seul le non-blocage du démarrage a pu être
 mesuré. À valider en piste fermée avant diffusion.
@@ -484,6 +490,67 @@ mesuré. À valider en piste fermée avant diffusion.
 comportement est correct ; mais un abonnement résilié reste ouvert jusqu'à 30 jours
 après la fin réelle. Le corriger proprement demande l'échéance réelle, qui n'est pas
 exposée côté client — il faut la Play Developer API, donc un serveur.
+
+### B3 — Le prix des abonnements s'affiche « N/A » sur l'écran d'achat *(observé sur appareil, non corrigé)*
+`app-mobile/…/ui/purchase/PurchaseScreen.kt:131`
+
+```kotlin
+val price = product.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"
+```
+
+Un abonnement n'a pas d'`oneTimePurchaseOfferDetails` : les deux abonnements affichent
+donc **« N/A »** là où « à vie » affiche « 9,99 € ». Mesuré sur l'écran réel :
+
+```
+Monthly   N/A  / month     SAVE 58%
+Yearly    N/A  / year      BEST DEAL
+Lifetime  9,99 €  one-time
+```
+
+Le prix **existe** pourtant : la feuille de paiement Google, ouverte depuis ce même bouton,
+annonce « 0,99 €/5 min ». Seul le champ lu est le mauvais.
+
+C'est **exactement le défaut déjà corrigé pour le tri** dans `BillingRepository.priceMicros()`
+(cf. B1, « défaut de tri corrigé au passage ») : la correction a traité le classement et
+**oublié l'affichage**. Le correctif symétrique est de lire
+`subscriptionOfferDetails.first().pricingPhases.pricingPhaseList.first().formattedPrice`
+en repli.
+
+Défaut de paywall à fort impact : l'utilisateur ne peut pas connaître le prix de deux des
+trois offres sans ouvrir la feuille de paiement, et « SAVE 58% » / « BEST DEAL » se
+rapportent à des montants invisibles.
+
+**Sévérité : haute — conversion. C'est l'écran qui vend.**
+
+### B2 — Un achat remboursé ou révoqué ne retire jamais l'accès *(trouvé le 2026-08-19, non corrigé)*
+`core/data/BillingRepository.kt` · `syncEntitlements()` / `deliverProduct()`
+
+`syncEntitlements()` **n'ajoute** que des droits :
+
+```kotlin
+purchases?.forEach { if (handlePurchase(it)) restored++ }   // rien si la liste est vide
+```
+
+Si Play ne renvoie plus l'achat — remboursement, révocation, rétrofacturation — la boucle
+ne fait rien et `setPro()` n'est **jamais** annulé. `is_pro_user` reste `true`
+indéfiniment, dans DataStore **et** dans les `EncryptedSharedPreferences` (couche
+anti-fraude, qui joue ici contre l'éditeur). L'utilisateur conserve l'accès à vie.
+
+Même famille, moins grave, pour les abonnements : `activateSubscription()` pose une
+échéance locale de 30 ou 365 jours qui survit à une résiliation, jusqu'à son terme.
+
+**Correctif naturel** : faire de `syncEntitlements()` un *réconciliateur* — construire
+l'état à partir de ce que Play renvoie, et **retirer** les droits absents — plutôt qu'un
+applicateur additif. À ne pas écrire à l'aveugle : une panne de facturation renverrait une
+liste vide et déconnecterait alors tous les abonnés légitimes. Il faut distinguer
+« Play dit que tu n'as rien » de « Play n'a pas répondu », ce que le code ne fait pas
+aujourd'hui (`queryPurchasesAsync` voit son `BillingResult` ignoré, cf. le `val (_, …)`).
+
+**Conséquence pratique immédiate** : après une révocation en Play Console, l'application
+garde `isPro` jusqu'à un `pm clear`. Ne pas conclure d'un accès persistant que la
+révocation a échoué.
+
+**Sévérité : moyenne-haute — perte de revenu, et contournement possible par remboursement.**
 
 ### P6 — L'application mobile ne bloque jamais un utilisateur expiré
 `app-mobile/…/navigation/NavGraph.kt` · destination `SPLASH`
@@ -717,6 +784,13 @@ impossible.
 
 ### À faire
 
+- [ ] **B3 — prix « N/A » sur le paywall** (cf. §5 B3). Correction symétrique de celle déjà
+      faite pour le tri : lire le prix de la première phase tarifaire en repli.
+- [ ] **UX-1 — cohérence de l'état premium dans toute l'application** *(demandé le 2026-08-19)*.
+      Voir §10.
+- [ ] **B2 — un achat remboursé ne retire jamais l'accès** (cf. §5 B2). Exige de distinguer
+      « Play dit que tu n'as rien » de « Play n'a pas répondu » : ne pas écrire à l'aveugle.
+
 - [ ] Exposer la simulation d'expiration dans l'UI derrière `BuildConfig.DEBUG`
       (demande explicite de `raf.md`).
 - [ ] Trancher **P9** (« Maybe later » sur l'écran de blocage).
@@ -851,7 +925,7 @@ cd cluster/iptv/native
 | B1.5 remontée des échecs | un échec affiche un message explicite, plus « No products available » |
 | B1.6 annulation | refermer la feuille ramène à l'écran **sans message d'erreur** |
 | B1.3 restauration | après réinstallation, « Restaurer » rend l'accès |
-| B1.4 synchro au démarrage | achat, `adb shell pm clear`, relance : **le bandeau annonce 30 jours (ou disparaît)** — cf. ci-dessous |
+| B1.4 synchro au démarrage | achat, `adb shell pm clear`, relance : **le bandeau annonce 30 jours (ou disparaît)** — ✅ **PROUVÉ le 2026-08-19**, cf. ci-dessous |
 
 Le dernier point est le plus important : c'est lui qui empêchait un abonné à jour de
 paiement d'être bloqué au 30ᵉ jour.
@@ -946,6 +1020,118 @@ L'AAB est prêt et signé, mais le faire parvenir à l'appareil **passe obligato
 l'interface web de la Play Console** (piste de test interne ou *internal app sharing*) :
 cette étape ne peut pas être automatisée depuis ce poste. C'est le seul geste manquant.
 
+#### ✅ B1.4 — PROUVÉ sur appareil le 2026-08-19
+
+Première vérification de facturation jamais réalisée dans des conditions valides.
+
+**Conditions établies par la mesure, pas supposées** :
+
+| Contrôle | Valeur lue |
+|---|---|
+| `installerPackageName` | `com.android.vending` — **installée par Play** |
+| Signataire de l'APK livré | `O=Google Inc.` — clé de Play App Signing, **pas** la clé d'upload |
+| Version | versionCode 10, versionName 1.1.2 |
+
+La tentative de mise à jour par-dessus l'ancienne build a échoué en
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match` — ce qui confirme au passage
+que l'APK précédent était bien étranger à Play, et que toute observation antérieure de
+facturation était ininterprétable.
+
+**Protocole exécuté** : `pm clear` (efface DataStore *et* les `EncryptedSharedPreferences`),
+puis relance, **sans jamais toucher à « Restaurer »**, puis reconnexion à une playlist M3U
+publique pour atteindre `MainScreen`.
+
+**Résultat** : bandeau **absent**, bouton « ACTIVER » **absent** ⇒ `isPro == true`.
+
+L'état local ayant été effacé, le seul chemin par lequel `isPro` a pu redevenir vrai est
+`syncEntitlements()` au démarrage → `handlePurchase` → `deliverProduct` → `setPro()`.
+Sans ce correctif, `initTrial()` aurait attribué un essai neuf et le bandeau afficherait
+« Essai gratuit : 3 jours restants. » — c'est exactement la ligne « achat à vie » du tableau
+discriminant ci-dessous.
+
+**Contrôle positif de l'instrument** : sur la variante `.debug`, ce même bandeau est lu en
+première position par `uiautomator` (« Essai gratuit : 3 jours restants. »). Son absence
+ici est donc un fait, pas un défaut de lecture.
+
+➡️ **Le bug du 30ᵉ jour est corrigé** : un droit d'accès détenu par Play est réappliqué au
+démarrage sans action de l'utilisateur.
+
+#### ✅ Vérification complète du 2026-08-19 — 5 correctifs sur 6 prouvés
+
+Le compte possédait `purple_lifetime_999`, ce qui masquait le bandeau (`if (!isPro)`) et
+donc l'unique accès à l'écran d'achat (`MainScreen.kt:183`). La commande a été
+**remboursée avec « supprimer le droit »** depuis la Play Console : `isPro` est repassé à
+faux et l'écran d'achat est redevenu atteignable. La propagation prend quelques minutes —
+un `pm clear` immédiatement après le remboursement voyait encore l'achat.
+
+| # | Observation mesurée | Verdict |
+|---|---|---|
+| **B1.1** | l'écran affiche **Monthly + Yearly + Lifetime** | ✅ prouvé — le symptôme de `raf.md` (« seul un abonnement est proposé ») est levé |
+| **B1.2** | appui sur Monthly ⇒ feuille Google « Premium Mensuel, 0,99 €/5 min, carte test » | ✅ prouvé — avant, `oneTimePurchaseOfferDetails ?: return` sortait en silence |
+| **B1.3** | les deux catalogues `INAPP` et `SUBS` sont interrogés et rendent leurs achats | ✅ prouvé (via B1.4) |
+| **B1.4** | `pm clear` puis relance **sans « Restaurer »** ⇒ bandeau **« 30 jours restants »** | ✅ **prouvé, achat unique *et* abonnement** |
+| **B1.5** | remontée d'un échec de facturation | ⚠️ **non observé** — impossible de provoquer la panne (cf. ci-dessous) |
+| **B1.6** | fermeture de la feuille de paiement ⇒ retour à l'écran, **aucun message d'erreur** | ✅ prouvé |
+
+**B1.4 en détail — le test décisif.** Souscription de l'abonnement mensuel de test à
+11:20:57, puis `pm clear` (efface DataStore *et* `EncryptedSharedPreferences`), relance,
+reconnexion, lecture à 11:23:13 : **« Essai gratuit : 30 jours restants. »**. Sans la
+synchro au démarrage, `initTrial()` aurait rendu un essai neuf et le bandeau afficherait
+**3**. Mesuré deux fois, sur les deux familles de produit :
+
+| Produit | Après `pm clear` + relance | Ce que ça prouve |
+|---|---|---|
+| `purple_lifetime_999` (INAPP) | bandeau **absent** (`isPro`) | `queryPurchasesAsync(INAPP)` ✅ |
+| `purple_monthly_099` (SUBS) | bandeau **« 30 jours »** | `queryPurchasesAsync(SUBS)` ✅ |
+
+➡️ **Le blocage de l'abonné au 30ᵉ jour est corrigé, et c'est mesuré.**
+
+**Pourquoi B1.5 n'a pas pu être observé.** Deux tentatives pour provoquer un échec de
+facturation : mode avion, puis `am force-stop com.android.vending`. Dans les deux cas
+l'écran a affiché les trois offres normalement — Play Billing sert les détails produits
+depuis le cache local du Play Store et rebinde son service à la demande. Le chemin de code
+existe (lu dans `queryProducts`/`loadProducts`) mais **n'est pas exercé** : ne pas le
+compter comme vérifié.
+
+Observation utile au passage : le catalogue IPTV s'est affiché en mode avion, ce qui
+confirme sur appareil le repli hors-ligne de P8.
+
+#### Note de méthode — les abonnements de test durent 5 minutes
+
+Un abonnement souscrit par un testeur sous licence a une période **compressée** : le
+mensuel facture « 0,99 €/5 min ». C'est ce qui explique que l'abonnement annuel acheté le
+20 mai 2026 n'était plus actif. Conséquence pratique : entre l'achat et la lecture du
+bandeau après `pm clear`, il faut aller vite — la séquence complète tient en ~90 s.
+
+#### Les téléviseurs perdus au téléversement de la version 10 — expliqué, non corrigé
+
+La Play Console avertit que la version 10 « ne prend plus en charge 3 022 appareils » :
+téléphones 13 981 → 13 981, mais **téléviseurs 3 026 → 7**. Cause trouvée par lecture
+des manifestes, pas par supposition :
+
+| Build | `uses-feature` déclarés | Téléviseurs |
+|---|---|---|
+| `client/` (Flutter, versions ≤ 9) | `leanback` *required=false* + **`touchscreen` required=false** | compatibles |
+| `app-mobile/` (Kotlin, version 10) | **aucun** ⇒ `touchscreen` requis par défaut | exclus |
+
+Le Flutter portait `applicationId = "com.purple.iptvplayer"` — **le même paquet** — et un
+`LEANBACK_LAUNCHER` : c'était une build unique qui servait le téléphone *et* la
+télévision. La migration Kotlin a scindé en deux modules aux identifiants distincts,
+`com.purple.iptvplayer` (mobile) et `com.purple.iptvplayer.tv` (TV). La fiche mobile perd
+donc logiquement la TV.
+
+⚠️ **Conséquence produit à trancher** : les utilisateurs TV installés depuis la fiche
+`com.purple.iptvplayer` restent sur l'ancienne build Flutter et **ne recevront plus aucune
+mise à jour** — Play le dit explicitement. Ils ne migreront pas tout seuls vers
+`com.purple.iptvplayer.tv`, qui est une fiche séparée à installer à la main. Sans geste
+délibéré (communication, ou déclaration `touchscreen required=false` sur `app-mobile`),
+ce parc est abandonné en l'état.
+
+Sans effet sur la vérification B1, qui se fait sur un téléphone.
+
+Avertissement mineur du même téléversement : `WRITE_EXTERNAL_STORAGE`
+(`maxSdkVersion=29`) est demandé par `app-mobile` et ne l'était pas par le Flutter.
+
 #### ⏳ Échéance à surveiller : Play Billing 7.0.0
 
 Le projet utilise `com.android.billingclient:billing-ktx:7.0.0`
@@ -957,3 +1143,105 @@ Il reste donc une fenêtre courte pour téléverser cet AAB tel quel. La migrati
 est un changement d'API à part entière : **ne pas l'entreprendre avant d'avoir vérifié
 B1 en v7**, sous peine de mélanger deux causes de panne et de rendre le résultat
 illisible (cf. la leçon de §5 P4).
+
+
+---
+
+## 10. UX-1 — Cohérence de l'état premium *(fait, 2026-08-19)*
+
+### Le défaut de fond
+
+`TrialRepository` distingue trois droits — `isPro()` (achat à vie, **permanent**),
+`isPremium()` (tout droit payant en cours) et l'essai — mais **les deux UI ne consomment
+que `isPro`** :
+
+```kotlin
+// MainScreen.kt:163 et TvMainScreen.kt:148 — même défaut des deux côtés
+if (!isPro) { /* bandeau « Essai gratuit : %d jours restants » */ }
+```
+
+Conséquence mesurée sur appareil : un abonné mensuel — donc un client qui paie — se voit
+annoncer « **Essai gratuit** : 30 jours restants. » avec un bouton « ACTIVER ». Et
+l'écran de connexion affiche « Essai gratuit de 3 jours inclus » à tout le monde,
+abonnés compris (`SetupScreen.kt:234`, `app-tv` ligne 210).
+
+### Les quatre états à distinguer
+
+L'erreur est de raisonner en binaire. Il y en a quatre, et ils n'appellent pas le même
+traitement :
+
+| État | Nature | Ce que l'utilisateur doit voir |
+|---|---|---|
+| **Pro** (à vie) | permanent | qu'il est premium. **Rien à décompter** — un bandeau permanent est du bruit |
+| **Subscribed** (mensuel/annuel) | temporaire, reconductible | qu'il est premium **et** son temps restant : l'échéance le concerne |
+| **Trial** | temporaire, expirant | son temps restant **et** un appel à l'action : c'est le seul état où « ACTIVER » a un sens |
+| **Expired** | aucun accès | l'écran-barrière (déjà traité, cf. P6/P9) |
+
+C'est la distinction **permanent / temporaire** qui manque au code : elle décide seule si
+un décompte a du sens.
+
+### Décision d'architecture
+
+Conformément à la règle du §4 (« on extrait la décision en objet pur et on teste
+celui-ci »), l'état est calculé dans `core` et non dans chaque UI :
+
+- `AccessState` — type scellé `Pro` / `Subscribed(daysLeft)` / `Trial(daysLeft)` / `Expired`
+- `TrialPolicy.accessState(now, trialStartMs, expiryMs, isPro)` — logique pure, testée
+- `TrialViewModel` l'expose ; `MainScreen` et `TvMainScreen` ne font que le rendre
+
+Aucune donnée persistée nouvelle : `expiryMs != null && > now` suffit à identifier un
+abonnement, `setPro()` restant réservé à l'achat à vie.
+
+### Traitement visuel retenu
+
+- **Écran de connexion** : badge « PREMIUM » doré pour `Pro` et `Subscribed`, le texte
+  d'essai n'apparaissant que pour `Trial`. Reprise du dégradé du jumeau Flutter
+  (`client/lib/screens/setup_screen.dart:316`) : Goldenrod `#B8860B` → Gold `#FFD700` →
+  Lemon Chiffon `#FFFACD`, `letterSpacing` large, ombre portée + halo doré.
+- **Écran principal** : le bandeau violet pleine largeur est **réservé à `Trial`** — c'est
+  un appel à l'action, il n'a lieu d'être que là où il y a quelque chose à convertir.
+  `Subscribed` reçoit une pastille dorée discrète avec son décompte, sans bouton.
+  `Pro` ne reçoit rien.
+
+⚠️ **Parité mobile/TV obligatoire** : `TvMainScreen.kt:148` porte le même `if (!isPro)`.
+
+### Ce qui a été écrit
+
+| Élément | Rôle |
+|---|---|
+| `core/data/AccessState.kt` | type scellé `Pro` / `Subscribed(daysLeft)` / `Trial(daysLeft)` / `Expired`, avec `isPremium` et `hasAccess` |
+| `TrialPolicy.accessState()` | logique pure, même ordre de priorité que `remainingDays` pour qu'elles ne puissent pas se contredire |
+| `TrialRepository.getAccessState()` | lecture des valeurs persistées, source de temps injectée |
+| `TrialViewModel.accessState` | `StateFlow<AccessState?>`, `null` tant que non résolu (même précaution que `hasAccess`, cf. P6) |
+| `core/data/OfferPrice.kt` | B3 — prix affiché, achat unique **ou** abonnement |
+| `mobile/ui/common/PremiumBadge.kt` · `tv/ui/common/TvPremiumBadge.kt` | badge doré, dégradé à 5 arrêts repris du Flutter |
+
+`_isPro` et `_hasAccess` sont désormais **dérivés** de `accessState` dans `TrialViewModel` :
+trois sources de vérité qui pouvaient diverger n'en font plus qu'une.
+
+### Vérifié sur appareil (Pixel 7, variante `.debug`, états injectés par `run-as`)
+
+| État injecté | Écran de connexion | Écran principal |
+|---|---|---|
+| `Pro` | **PREMIUM** doré + « Accès à vie. » | **aucun bandeau** |
+| `Subscribed` | **PREMIUM** doré + « Premium : 30 jours restants. » | pastille discrète, **sans bouton ACTIVER** |
+| `Trial` | « Essai gratuit de 3 jours inclus… » (inchangé) | bandeau violet + **ACTIVER** |
+| `Expired` | — | écran-barrière d'achat (P6 toujours actif) |
+
+Le dégradé doré a été contrôlé sur la capture d'écran, pas seulement sur le texte : les
+teintes relevées couvrent les cinq arrêts (`#B09030`, `#E0C040`, `#F0D040`, `#F0E070`),
+donc l'effet métallique est bien rendu et non aplati.
+
+Script de génération des états : `mkprefs.py {pro|subscribed|trial|expired} <epoch_ms>`
+dans le scratchpad — encode le protobuf DataStore Preferences à la main. Il remplace
+celui perdu avec le scratchpad de la session précédente.
+
+⚠️ **Côté TV, seule la compilation est vérifiée** : aucun appareil Android TV ni AVD
+disponible. `TvMainScreen` et `TvSetupScreen` reçoivent le même traitement et le même
+`AccessState`, mais leur rendu n'a pas été observé.
+
+Défaut corrigé au passage : `RailTrialBadge` (TV) affichait ses libellés **codés en dur en
+français** (« jour(s) restant(s) », « Essai expiré ») — désormais dans `strings.xml`, avec
+la version anglaise qui manquait.
+
+**État : 92 tests, 0 échec** (73 + 12 `AccessStateTest` + 7 `OfferPriceTest`).

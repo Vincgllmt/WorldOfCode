@@ -49,6 +49,17 @@ class TrialRepository(
         isPro = isPro(),
     )
 
+    /**
+     * État d'accès pour l'interface : à quel titre l'utilisateur a accès, et non
+     * seulement pour combien de temps. Voir [AccessState].
+     */
+    suspend fun getAccessState(): AccessState = TrialPolicy.accessState(
+        now = now(),
+        trialStartMs = getTrialStartMs(),
+        expiryMs = getExpiryMs(),
+        isPro = isPro(),
+    )
+
     suspend fun hasAccess(): Boolean = TrialPolicy.hasAccess(
         now = now(),
         trialStartMs = getTrialStartMs(),

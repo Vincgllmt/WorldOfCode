@@ -11,6 +11,10 @@
     <string name="field_username">Utilisateur</string>
     <string name="field_password">Mot de passe</string>
     <string name="trial_info">Essai gratuit de 3 jours inclus. Activation Premium disponible ensuite.</string>
+    <string name="premium_days">Premium : %d jours restants.</string>
+    <string name="premium_badge">PREMIUM</string>
+    <string name="trial_banner">Essai gratuit : %d jours restants.</string>
+    <string name="trial_expired">Essai expiré.</string>
     <string name="btn_connect">SE CONNECTER</string>
 
     <!-- Navigation -->
