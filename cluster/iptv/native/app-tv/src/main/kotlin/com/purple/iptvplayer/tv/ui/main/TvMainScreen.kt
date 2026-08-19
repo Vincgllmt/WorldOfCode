@@ -156,6 +156,7 @@ fun TvMainScreen(
                         Spacer(Modifier.height(12.dp))
                         RailPremiumBadge(
                             days     = a.daysLeft,
+                            onClick  = onPurchase,
                             modifier = Modifier.padding(horizontal = 14.dp),
                         )
                     }
@@ -164,6 +165,7 @@ fun TvMainScreen(
                         RailTrialBadge(
                             days     = (a as? AccessState.Trial)?.daysLeft ?: 0,
                             expanded = true,
+                            onClick  = onPurchase,
                             modifier = Modifier.padding(horizontal = 14.dp),
                         )
                     }
@@ -320,13 +322,25 @@ private fun RailItem(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun RailTrialBadge(days: Int, expanded: Boolean, modifier: Modifier = Modifier) {
+private fun RailTrialBadge(days: Int, expanded: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // UX-2 : ce badge était un simple affichage. `onPurchase` n'était consommé
+    // nulle part dans TvMainScreen, si bien qu'un utilisateur Android TV ne pouvait
+    // **jamais** acheter de son plein gré — il devait attendre que la barrière
+    // d'expiration l'y contraigne. Le rendre focalisable ouvre le seul chemin de
+    // conversion de la plateforme.
+    Surface(
+        onClick  = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape    = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
+        colors   = ClickableSurfaceDefaults.colors(
+            containerColor        = PurplePalette.Purple400.copy(alpha = 0.12f),
+            focusedContainerColor = PurplePalette.Purple400,
+            pressedContainerColor = PurplePalette.Purple600,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+    ) {
     Row(
-        modifier = modifier
-            .background(
-                PurplePalette.Purple400.copy(alpha = 0.12f),
-                PurpleShapes.Md,
-            )
+        modifier = Modifier
             .padding(horizontal = if (expanded) 16.dp else 0.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment     = Alignment.CenterVertically,
@@ -348,22 +362,36 @@ private fun RailTrialBadge(days: Int, expanded: Boolean, modifier: Modifier = Mo
             )
         }
     }
+    }
 }
 
 /** Abonné : statut doré et échéance, sans appel à l'action — il a déjà payé. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun RailPremiumBadge(days: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment     = Alignment.CenterVertically,
+private fun RailPremiumBadge(days: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // Focalisable comme le badge d'essai : un abonné doit pouvoir monter en gamme.
+    Surface(
+        onClick  = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape    = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
+        colors   = ClickableSurfaceDefaults.colors(
+            containerColor        = Color.Transparent,
+            focusedContainerColor = PurplePalette.Purple400,
+            pressedContainerColor = PurplePalette.Purple600,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
-        TvPremiumBadge(label = stringResource(R.string.premium_badge))
-        Text(
-            stringResource(R.string.premium_days, days),
-            style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+        ) {
+            TvPremiumBadge(label = stringResource(R.string.premium_badge))
+            Text(
+                stringResource(R.string.premium_days, days),
+                style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
+            )
+        }
     }
 }
 

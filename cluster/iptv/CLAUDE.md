@@ -1283,7 +1283,7 @@ présent, conformément à P9). L'état `Pro` n'en reçoit pas : il n'y a rien a
 **Leçon** : supprimer un élément d'interface mal libellé supprime aussi la fonction qu'il
 portait. Vérifier ce qu'on retire, pas seulement ce qu'on ajoute.
 
-### UX-2 — Sur Android TV, on ne peut pas acheter *(trouvé le 2026-08-19, NON corrigé)*
+### UX-2 — Sur Android TV, on ne peut pas acheter — ✅ corrigé et vérifié au D-pad
 `app-tv/…/ui/main/TvMainScreen.kt`
 
 `TvMainScreen` déclare un paramètre `onPurchase: () -> Unit` … **et ne s'en sert jamais**.
@@ -1296,8 +1296,57 @@ rail affiche son décompte sans qu'aucune action ne soit possible.
 
 **Sévérité : haute — chemin de conversion inexistant sur toute une plateforme.**
 
-**Non corrigé volontairement.** Rendre un élément du rail focalisable touche à la
-navigation D-pad — précisément ce pour quoi l'application a été migrée de Flutter vers le
-natif. Aucun appareil Android TV ni AVD n'est disponible ici : la corriger à l'aveugle
-reviendrait à refaire l'erreur documentée en §5 P4. À traiter quand un émulateur TV sera
-en place (image `android-tv` à installer via `sdkmanager`).
+**Correction** : les deux badges du rail (`RailTrialBadge`, `RailPremiumBadge`) sont
+devenus des `Surface` cliquables suivant le motif exact de `RailItem` — mêmes
+`ClickableSurfaceDefaults`, même `focusedScale`. `onPurchase` est enfin consommé.
+
+**Vérifié au D-pad sur émulateur Android TV**, ce qui était impossible jusqu'ici. Trace
+de navigation relevée, état abonné :
+
+```
+Films → Séries → Ma liste → Téléchargements → Paramètres → [PREMIUM · 30 day(s) remaining]
+```
+
+Le badge s'insère en fin de rail sans perturber l'accès aux éléments existants, et
+DPAD_CENTER ouvre l'écran d'achat (« Unlock unlimited access… », « Maybe later »). Le
+même chemin fonctionne pour l'état `Trial`.
+
+⚠️ `app-tv` reste en **versionCode 8** : la fiche TV (`com.purple.iptvplayer.tv`) n'a pas
+été republiée. À bumper le jour où l'on publie la TV.
+
+
+---
+
+## 11. Émulateur Android TV — enfin disponible (2026-08-19)
+
+L'angle mort de tout le projet — « aucun appareil Android TV, donc `app-tv` n'est jamais
+vérifié » — est levé.
+
+```bash
+export JAVA_HOME=<scratchpad>/jdk-17.0.20+8
+SDK=/home/rigolo/Android/Sdk
+yes | "$SDK"/cmdline-tools/*/bin/sdkmanager --install "system-images;android-33;android-tv;x86"
+echo no | "$SDK"/cmdline-tools/*/bin/avdmanager create avd \
+    --name purple_tv --device "tv_1080p" \
+    --package "system-images;android-33;android-tv;x86" --force
+"$SDK"/emulator/emulator -avd purple_tv -no-audio -no-snapshot -gpu swiftshader_indirect &
+```
+
+Démarrage complet en ~85 s (`getprop sys.boot_completed` == 1).
+
+### Pièges rencontrés
+
+1. **`monkey -c android.intent.category.LAUNCHER` ne lance rien** : l'app TV s'enregistre
+   sous `LEANBACK_LAUNCHER`. Utiliser :
+   ```bash
+   adb shell am start -n com.purple.iptvplayer.tv/.TvActivity
+   ```
+2. **Le nœud focalisé ne porte pas de libellé** : sur Compose TV, `focused="true"` est sur
+   le conteneur `Surface`, le texte est dans ses enfants. Détecter le focus en croisant
+   les `bounds` — script `focus.py` dans le scratchpad. Sans cela, on croit à tort que la
+   navigation D-pad ne fonctionne pas.
+3. **`android-tv` n'a pas de Play Store** (contrairement à `google-tv`) : « No products
+   available » y est normal et ne dit rien de la facturation.
+
+➡️ **Ce qui devient possible** : vérifier `app-tv` au D-pad, et donc traiter l'audit en
+attente de `FavoritesRepository.toggle()` côté TV (§6), jusqu'ici hors d'atteinte.
