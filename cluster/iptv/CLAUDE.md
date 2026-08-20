@@ -3091,3 +3091,55 @@ porte `navigationBarsPadding()` **en plus** de ses 60 dp, et je n'avais compté 
 60 dp. Mesuré après correction : barre de cast 2001–2148, onglets 2257–2337.
 
 **État : 170 tests, 0 échec.**
+
+
+---
+
+## 35. Retour depuis une fiche, et synopsis illisible *(2026-08-20)*
+
+### La recherche était perdue au retour
+
+Ouvrir un résultat détruit la composition de l'écran de liste. L'état de recherche vivait
+dans un `remember` — perdu — au lieu d'un `rememberSaveable`, que Navigation Compose
+restaure pour une destination encore dans la pile.
+
+```kotlin
+var query by remember { mutableStateOf("") }   // avant
+```
+
+Le symptôme décrit : chercher « One Piece », ouvrir un résultat, revenir… et retomber sur
+la liste complète.
+
+Corrigé sur les **trois** écrans de recherche (Direct TV, Films, Séries), et pour deux
+états de la même famille, perdus exactement pareil :
+
+| État | Écran |
+|---|---|
+| `query` | HomeScreen, MoviesScreen, SeriesScreen |
+| `selectedGenre` | MainScreen |
+| `filter` | MyListScreen |
+
+`filter` est un enum : l'**ordinal** est sauvegardé, le sauveur par défaut ne couvrant que
+les types supportés par `Bundle`.
+
+⚠️ Les états volontairement **non** sauvegardés restent tels quels — `drawerOpen`,
+`settingsOpen`, `layoutPickerOpen` : une boîte de dialogue ne doit pas se rouvrir toute
+seule au retour.
+
+**Vérifié sur appareil** : recherche « One Piece », ouverture d'un résultat, retour — la
+requête et ses deux résultats sont toujours là.
+
+### Le synopsis était coupé sans recours
+
+Fiche série uniquement (celle du film était déjà complète) : `maxLines = 3` avec ellipse,
+et aucun moyen de lire la suite.
+
+**Dépliable plutôt que défilant** : un défilement imbriqué dans une page déjà défilante se
+manipule mal au doigt. Le lien « Voir plus » n'apparaît que si le texte déborde
+**réellement** — mesuré via `onTextLayout().hasVisualOverflow`, et non deviné d'après la
+longueur de la chaîne.
+
+**Vérifié sur appareil** : 546 caractères affichés après dépliage, lien passé à
+« Voir moins ».
+
+**État : 170 tests, 0 échec.** Parité : app-tv 100/100, app-mobile 113/113.

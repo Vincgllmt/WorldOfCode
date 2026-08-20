@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
@@ -54,7 +55,10 @@ fun MyListScreen(
     val movieWatchlist  by vm.movieFavorites.collectAsState()
     val seriesWatchlist by vm.seriesFavorites.collectAsState()
 
-    var filter by remember { mutableStateOf(ListFilter.ALL) }
+    // L'ordinal plutôt que l'enum : le sauveur par défaut ne couvre que les types
+    // supportés par Bundle.
+    var filterIndex by rememberSaveable { mutableIntStateOf(ListFilter.ALL.ordinal) }
+    var filter by remember(filterIndex) { mutableStateOf(ListFilter.entries[filterIndex]) }
 
     LaunchedEffect(Unit) {
         vm.loadChannels()

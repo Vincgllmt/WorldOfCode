@@ -127,4 +127,6 @@
     </plurals>
     <string name="cast_unsupported_title">Diffusion impossible</string>
     <string name="cast_unsupported_body">Ce contenu est en %1$s, un format que le Chromecast ne sait pas lire. Essaie un titre en MP4, ou lis-le sur cet appareil.</string>
+    <string name="action_show_more">Voir plus</string>
+    <string name="action_show_less">Voir moins</string>
 </resources>

@@ -127,4 +127,6 @@
     </plurals>
     <string name="cast_unsupported_title">Can\'t be cast</string>
     <string name="cast_unsupported_body">This content is in %1$s, a format Chromecast can\'t play. Try an MP4 title, or play it on this device.</string>
+    <string name="action_show_more">Show more</string>
+    <string name="action_show_less">Show less</string>
 </resources>

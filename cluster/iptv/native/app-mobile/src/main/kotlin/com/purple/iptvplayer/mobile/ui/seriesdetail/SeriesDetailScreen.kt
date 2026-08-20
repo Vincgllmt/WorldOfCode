@@ -7,6 +7,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.animateContentSize
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -123,9 +125,38 @@ fun SeriesDetailScreen(
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(d.name, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                        d.plot?.let {
+                        d.plot?.let { plot ->
                             Spacer(Modifier.height(8.dp))
-                            Text(it, color = TextSub, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            // Le synopsis était coupé à trois lignes sans aucun moyen de
+                            // lire la suite. Dépliable plutôt que défilant : un défilement
+                            // imbriqué dans une page déjà défilante se manipule mal au
+                            // doigt. Le lien n'apparaît que si le texte est réellement
+                            // tronqué — mesuré au rendu, pas supposé d'après sa longueur.
+                            var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
+                            var plotOverflows by remember(plot) { mutableStateOf(false) }
+                            Text(
+                                plot,
+                                color      = TextSub,
+                                fontSize   = 13.sp,
+                                maxLines   = if (plotExpanded) Int.MAX_VALUE else 3,
+                                overflow   = TextOverflow.Ellipsis,
+                                onTextLayout = { if (!plotExpanded) plotOverflows = it.hasVisualOverflow },
+                                modifier   = Modifier.animateContentSize(),
+                            )
+                            if (plotOverflows || plotExpanded) {
+                                Text(
+                                    stringResource(
+                                        if (plotExpanded) R.string.action_show_less
+                                        else R.string.action_show_more
+                                    ),
+                                    color      = PurpleGlow,
+                                    fontSize   = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier   = Modifier
+                                        .padding(top = 4.dp)
+                                        .clickable { plotExpanded = !plotExpanded },
+                                )
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
                         OutlinedButton(

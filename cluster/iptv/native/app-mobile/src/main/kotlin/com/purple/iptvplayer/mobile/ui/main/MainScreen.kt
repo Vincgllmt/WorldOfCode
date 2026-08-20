@@ -108,7 +108,8 @@ fun MainScreen(
     var vodLayoutIndex  by rememberSaveable { mutableIntStateOf(LayoutMode.GRID_MEDIUM.ordinal) }
     val isLiveTab   = currentTab == 0
     val layoutMode  = LayoutMode.entries[if (isLiveTab) liveLayoutIndex else vodLayoutIndex]
-    var selectedGenre    by remember { mutableStateOf<String?>(null) }
+    // Conservé au retour d'une fiche, comme la recherche.
+    var selectedGenre    by rememberSaveable { mutableStateOf<String?>(null) }
     var currentLang      by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
 
     // Proactively load all content so genres are ready when drawer opens

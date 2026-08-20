@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,10 @@ fun SeriesScreen(
     val favorites   by vm.seriesFavorites.collectAsState()
     val recentItems by vm.recentItems.collectAsState()
 
-    var query by remember { mutableStateOf("") }
+    // rememberSaveable et non remember : ouvrir une fiche depuis un résultat détruit la
+    // composition de cet écran. Avec `remember`, la recherche était perdue et le retour
+    // ramenait sur la liste complète au lieu des résultats.
+    var query by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(Unit) { vm.loadSeries() }
 
