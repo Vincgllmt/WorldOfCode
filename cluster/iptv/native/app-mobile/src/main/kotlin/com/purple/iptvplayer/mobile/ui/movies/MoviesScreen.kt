@@ -78,7 +78,11 @@ fun MoviesScreen(
 
     val movieRecents = remember(recentItems) { recentItems.filter { it.type == "movie" } }
 
-    val isGroupedView = selectedGenre == null && query.isEmpty()
+    // Le mode d'affichage **décide** de la vue, comme sur l'onglet live. Auparavant la
+    // condition l'ignorait : la vue groupée par genre s'imposait dès qu'aucun filtre
+    // n'était actif, et choisir « Grille » n'avait aucun effet visible — le sélecteur
+    // ne servait que dans la vue filtrée.
+    val isGroupedView = layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()
 
     Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
         ContentHeader(title = "Films", query = query, onQuery = { query = it })

@@ -3274,3 +3274,45 @@ rouvrir la fiche qu'on y avait ouverte. Et les boîtes de dialogue (`drawerOpen`
 `settingsOpen`, `layoutPickerOpen`) — se rouvrir seules serait un défaut.
 
 **État : 169 tests, 0 échec.**
+
+---
+
+## 39. Le sélecteur de disposition n'agissait pas sur Films et Séries *(2026-08-20)*
+
+Signalé comme une régression. **Vérifié d'abord** : mon diff sur `MoviesScreen.kt` et
+`SeriesScreen.kt` depuis le début de la session ne contient que `rememberSaveable` sur la
+requête et `minLines` sur le titre. La condition en cause est **identique octet pour
+octet** à la version d'avant. Ce n'est donc pas une régression.
+
+### L'écart, mesuré
+
+| Écran | Condition de la vue groupée |
+|---|---|
+| Live (`HomeScreen`) | `layoutMode == THEMES && selectedGenre == null && query.isEmpty()` |
+| Films / Séries | `selectedGenre == null && query.isEmpty()` |
+
+Sur Films et Séries, `layoutMode` n'entrait pas dans la condition : la vue groupée par
+genre s'imposait dès qu'aucun filtre n'était actif, et le mode n'était consulté que dans
+la branche filtrée. D'où l'impression que le sélecteur ne fait rien — il fonctionnait,
+mais seulement après une recherche ou un choix de genre.
+
+Mesuré avant correction, avec une recherche active : Petit → cartes de 311 px, Moyen →
+482 px. Sur la vue par défaut : 341 px dans les trois modes.
+
+### Correction
+
+Les deux écrans adoptent la condition du live. Le défaut VOD passe de `GRID_MEDIUM` à
+**`THEMES`** pour que l'apparence par défaut ne change pas : c'est `THEMES` qui produit les
+rangées par genre déjà en place.
+
+**Vérifié sur appareil**, vue par défaut de Films :
+
+| Mode | Rendu |
+|---|---|
+| Thèmes | 5 en-têtes de genre, cartes 341 px |
+| Grille (Petit) | grille plate, cartes 311 px |
+| Grille (Moyen) | grille plate, cartes 482 px |
+
+Même résultat sur Séries (341 px → 482 px).
+
+**État : 169 tests, 0 échec.**

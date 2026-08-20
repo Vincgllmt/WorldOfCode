@@ -108,7 +108,10 @@ fun MainScreen(
     // n'appellent pas la même forme : une chaîne se reconnaît à son logo et à son nom,
     // un film à son affiche. Deux états distincts, chacun avec son défaut.
     var liveLayoutIndex by rememberSaveable { mutableIntStateOf(LayoutMode.LIST.ordinal) }
-    var vodLayoutIndex  by rememberSaveable { mutableIntStateOf(LayoutMode.GRID_MEDIUM.ordinal) }
+    // THEMES et non GRID_MEDIUM : c'est le mode qui produit les rangées par genre,
+    // c'est-à-dire l'apparence que les onglets Films et Séries avaient déjà. Le défaut
+    // ne change donc pas — mais choisir une grille a désormais un effet.
+    var vodLayoutIndex  by rememberSaveable { mutableIntStateOf(LayoutMode.THEMES.ordinal) }
     val isLiveTab   = currentTab == 0
     val layoutMode  = LayoutMode.entries[if (isLiveTab) liveLayoutIndex else vodLayoutIndex]
     // Conservé au retour d'une fiche, comme la recherche.
