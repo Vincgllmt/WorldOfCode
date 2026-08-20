@@ -3226,3 +3226,51 @@ Les titres de `HomeScreen` ne sont pas touchés : ce sont des lignes de liste av
 `weight(1f)`, où une hauteur variable ne produit pas d'irrégularité.
 
 **État : 169 tests, 0 échec.**
+
+
+---
+
+## 38. Perte d'état — pourquoi il n'y a pas de « partie commune », et où le défaut vit vraiment *(2026-08-20)*
+
+Question posée : « ça aurait dû être géré aussi côté TV, non ? Il n'y a pas une partie
+commune entre mobile et TV ? »
+
+### Non, et c'est structurel
+
+`core` détient la **logique métier** — dépôts, ViewModels, décisions pures. La requête
+tapée dans une barre de recherche est de l'**état d'interface**, propre à chaque écran
+Compose. Il n'existe donc aucun code partagé qui aurait pu corriger les deux d'un coup.
+
+### Et le défaut n'était pas le même des deux côtés
+
+Mesuré, pas supposé :
+
+| Cas | Mobile | TV |
+|---|---|---|
+| Ouvrir une fiche puis revenir | ❌ perdait la recherche (corrigé au §35) | ✅ **jamais eu le défaut** |
+| Changer d'onglet puis revenir | ❌ perdait la recherche | ❌ perdait la recherche |
+
+La TV échappe au premier cas pour une raison de conception : elle n'ouvre pas la fiche par
+**navigation**. `selectedSeriesId` est un état *interne* à `TvSeriesScreen`, l'écran ne
+quitte donc jamais la composition. Sur mobile, la fiche est une destination distincte.
+
+### Le second cas touchait les deux, et `rememberSaveable` n'y suffisait pas
+
+Les deux UI changent d'onglet par un `when (index)`, qui **retire** l'onglet précédent de
+la composition. L'entrée d'un `rememberSaveable` est jetée avec lui : ma correction du §35
+ne couvrait donc que la navigation, pas le changement d'onglet.
+
+Il faut un `rememberSaveableStateHolder()` et un `SaveableStateProvider(index)` autour du
+contenu — posé dans `MainScreen` **et** `TvMainScreen`. Les états de recherche des trois
+écrans TV passent au passage en `rememberSaveable`.
+
+**Vérifié sur les deux plateformes** : recherche « One Piece », aller-retour vers un autre
+onglet, retour — les 8 résultats sont toujours là.
+
+### Ce qui reste délibérément non conservé
+
+`selectedSeriesId` / `selectedMovieId` : revenir sur un onglet doit montrer la liste, pas
+rouvrir la fiche qu'on y avait ouverte. Et les boîtes de dialogue (`drawerOpen`,
+`settingsOpen`, `layoutPickerOpen`) — se rouvrir seules serait un défaut.
+
+**État : 169 tests, 0 échec.**

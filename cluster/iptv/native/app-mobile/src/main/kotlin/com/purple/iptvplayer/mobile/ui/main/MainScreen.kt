@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,6 +98,8 @@ fun MainScreen(
     val seriesGenreFavs  by contentVm.seriesGenreFavorites.collectAsState()
 
     var currentTab       by rememberSaveable { mutableIntStateOf(0) }
+    /** Conserve l'état de chaque onglet quand on en change (cf. plus bas). */
+    val tabStateHolder = rememberSaveableStateHolder()
     var drawerOpen       by remember { mutableStateOf(false) }
     var settingsOpen     by remember { mutableStateOf(false) }
     var layoutPickerOpen by remember { mutableStateOf(false) }
@@ -267,6 +270,13 @@ fun MainScreen(
                 )
 
                 Box(modifier = Modifier.weight(1f)) {
+                    // Chaque onglet garde son état quand on le quitte.
+                    //
+                    // `when (currentTab)` retire l'onglet précédent de la composition, et
+                    // `rememberSaveable` seul ne suffit pas : son entrée est jetée avec
+                    // lui. Sans ce porteur, revenir sur un onglet effaçait la recherche
+                    // qui y était en cours — mesuré.
+                    tabStateHolder.SaveableStateProvider(currentTab) {
                     when (currentTab) {
                         0 -> HomeScreen(
                             onPlayChannel = { url, title, cover, streamId -> onPlayChannel(url, title, cover, streamId) },
@@ -293,6 +303,7 @@ fun MainScreen(
                             onPlayChannel  = onPlayChannel,
                         )
                         4 -> DownloadsScreen(onPlay = { url, title -> onPlayChannel(url, title, "", 0) })
+                    }
                     }
                 }
             }

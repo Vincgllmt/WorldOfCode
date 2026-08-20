@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -75,7 +76,8 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
 
     var selectedMovieId by remember { mutableStateOf<Int?>(null) }
     var selectedGenre   by remember { mutableStateOf<String?>(null) }
-    var searchQuery     by remember { mutableStateOf("") }
+    // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
+    var searchQuery     by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(Unit) { vm.loadMovies() }
     LaunchedEffect(selectedMovieId) {

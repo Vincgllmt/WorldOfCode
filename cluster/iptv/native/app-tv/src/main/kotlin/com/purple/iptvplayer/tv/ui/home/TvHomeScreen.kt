@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.type
@@ -75,8 +76,9 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
     val channelsState by vm.channels.collectAsState()
     val channelFavs   by vm.channelFavorites.collectAsState()
     val genreFavs     by vm.liveGenreFavorites.collectAsState()
-    var searchQuery   by remember { mutableStateOf("") }
-    var selectedGroup by remember { mutableStateOf<String?>(null) }
+    // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
+    var searchQuery   by rememberSaveable { mutableStateOf("") }
+    var selectedGroup by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { vm.loadChannels() }
 

@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.util.LocaleHelper
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +83,8 @@ fun TvMainScreen(
     var selectedIndex by remember { mutableIntStateOf(0) }
     var expanded      by remember { mutableStateOf(false) }
     var railHasFocus  by remember { mutableStateOf(false) }
+    /** Conserve l'état de chaque onglet quand on en change (cf. plus bas). */
+    val tabStateHolder = rememberSaveableStateHolder()
 
     LaunchedEffect(railHasFocus) {
         if (railHasFocus) {
@@ -223,6 +227,10 @@ fun TvMainScreen(
 
         // ── Content area ────────────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            // Chaque onglet garde son état quand on le quitte — même raison que sur
+            // mobile : `when` retire l'onglet précédent de la composition, et
+            // `rememberSaveable` seul verrait son entrée jetée avec lui.
+            tabStateHolder.SaveableStateProvider(selectedIndex) {
             when (selectedIndex) {
                 0 -> TvHomeScreen(onPlay = { url, title, streamId ->
                     onPlay(url, title, "", "live", "", streamId)
@@ -245,6 +253,7 @@ fun TvMainScreen(
                     playerVm  = playerVm,
                     onSignOut = onSignOut,
                 )
+            }
             }
         }
     }
