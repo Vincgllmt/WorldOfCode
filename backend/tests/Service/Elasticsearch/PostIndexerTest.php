@@ -30,7 +30,7 @@ class PostIndexerTest extends TestCase
         return new PostIndexer($this->elasticClient);
     }
 
-    private function makePost(int $id = 42, string $content = 'Hello Junimo'): Post
+    private function makePost(int $id = 42, ?string $content = 'Hello Junimo'): Post
     {
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn(7);
@@ -84,6 +84,28 @@ class PostIndexerTest extends TestCase
     }
 
     // ======================================================================
+    //  dropIndex()
+    // ======================================================================
+
+    public function testDropIndexWhenPresent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(true);
+        $this->elasticClient->expects($this->once())
+            ->method('deleteIndex')
+            ->with(IndexDefinitions::POSTS_INDEX);
+
+        $this->assertTrue($this->makeIndexer()->dropIndex());
+    }
+
+    public function testDropIndexSkippedWhenAbsent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(false);
+        $this->elasticClient->expects($this->never())->method('deleteIndex');
+
+        $this->assertFalse($this->makeIndexer()->dropIndex());
+    }
+
+    // ======================================================================
     //  index()
     // ======================================================================
 
@@ -105,6 +127,21 @@ class PostIndexerTest extends TestCase
             );
 
         $this->makeIndexer()->index($this->makePost());
+    }
+
+    public function testIndexNormalizesNullContentToEmptyString(): void
+    {
+        $post = $this->makePost(content: null);
+
+        $this->elasticClient->expects($this->once())
+            ->method('indexDocument')
+            ->with(
+                $this->anything(),
+                $this->anything(),
+                $this->callback(fn($body) => $body['content'] === '')
+            );
+
+        $this->makeIndexer()->index($post);
     }
 
     public function testIndexIgnoresPostWithoutId(): void
@@ -166,6 +203,21 @@ class PostIndexerTest extends TestCase
         $count = $this->makeIndexer()->bulkIndex($posts);
 
         $this->assertSame(2, $count);
+    }
+
+    public function testBulkIndexSkipsPostsWithoutId(): void
+    {
+        $postWithoutId = $this->createMock(Post::class);
+        $postWithoutId->method('getId')->willReturn(null);
+
+        $posts = [$postWithoutId, $this->makePost(1, 'A')];
+        $this->elasticClient->expects($this->once())
+            ->method('bulk')
+            ->with($this->callback(fn($body) => count($body) === 2 && $body[0]['index']['_id'] === '1'));
+
+        $count = $this->makeIndexer()->bulkIndex($posts);
+
+        $this->assertSame(1, $count);
     }
 
     public function testBulkIndexSkipsEmptyInput(): void
