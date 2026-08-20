@@ -2,7 +2,7 @@
 
 Mémoire de travail de l'agent. À maintenir à jour à chaque décision architecturale.
 
-Dernière mise à jour : 2026-08-18
+Dernière mise à jour : 2026-08-20
 
 ---
 
@@ -860,8 +860,29 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [~] ~~**Bouton de simulation de fin d'essai** derrière `BuildConfig.DEBUG`~~ —
       **annulé par l'utilisateur le 2026-08-20.** Ne pas le reproposer. Le besoin de
       poser un état d'essai reste couvert hors UI par `mkprefs.py` + `run-as` (§3).
-- [ ] **Cast d'une chaîne TV : son sans image.** Exige un Chromecast sur le même réseau,
-      impossible depuis ce poste.
+- [~] ~~**Cast d'une chaîne TV : son sans image.**~~ — **sorti de la liste par
+      l'utilisateur le 2026-08-20.** Ce qui a été établi entre-temps est consigné en §34 et
+      §36 : le récepteur est seul juge du format, la compatibilité n'est pas connaissable
+      côté client, et l'échec est désormais rapporté par le récepteur lui-même.
+
+#### Lot du 2026-08-20 — remarques sur écran réel
+
+- [x] **Nom de la série répété sur chaque épisode** (mobile) — §33.1. Le nettoyage
+      existait côté TV depuis §21 ; extrait dans `core`.
+- [x] **Image de fiche trop zoomée** — §33.2. La hauteur n'y était pour rien : c'est la
+      largeur. Résolu par `backdrop_path`, image paysage présente sur 74 % des séries.
+- [x] **Reprise de lecture écrite sous le mauvais épisode** — §33.3, et marquage « vu »
+      par pastille au lieu d'un titre barré.
+- [x] **« Annuler la saison » pour un seul épisode** — §33.4, pluriel Android.
+- [x] **Télécommande de cast : impossible à fermer, recouvrait les onglets** — §34, §36.
+- [x] **Recherche perdue au retour d'une fiche** — §35, puis **au changement d'onglet**
+      sur les deux UI — §38, qui explique aussi pourquoi il n'existe pas de partie commune.
+- [x] **Synopsis tronqué sans recours** — §35, dépliable.
+- [x] **Grille irrégulière** — §37. Pas une régression : défaut ancien, `minLines = 2`.
+- [x] **Sélecteur de disposition sans effet sur Films et Séries** — §39. Pas une
+      régression non plus : la condition ignorait `layoutMode` hors vue filtrée.
+- [x] **Le rail TV happait le focus** — §40. Cause : mon propre correctif du §23.
+- [x] **Lien M3U pré-rempli sur l'écran de connexion TV**, sans jamais le committer — §41.
 
 #### Facturation
 
@@ -883,7 +904,10 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Couverture
 
-- [ ] `app-tv` reste en **versionCode 8** : aucun correctif TV n'est distribué.
+- [x] **`app-tv` de nouveau publiable** — le plantage de lint qui bloquait toute build de
+      release est levé, version portée à **10 / 1.2.1**, cf. §41. ⚠️ **Toujours pas
+      publiée sur le Play Store** : la build n'existe pour l'instant qu'en chargement
+      latéral.
 - [x] **Parseurs JSON de `XtreamApiClient` protégés** — cf. §27. 14 tests, dont 11 rouges
       constatés avant correction.
 - [x] **Focus qui s'échappe vers le rail en fin de liste** — corrigé, cf. §30.
@@ -990,8 +1014,8 @@ lien d'installation.
 ```bash
 export JAVA_HOME=<jbr d'Android Studio>
 cd cluster/iptv/native
-# 1. versionCode doit dépasser celui déjà publié (actuellement 8 dans le dépôt)
-#    → app-mobile/build.gradle.kts
+# 1. versionCode doit dépasser celui déjà publié (14 au 2026-08-20)
+#    → app-mobile/build.gradle.kts (actuellement 14)
 # 2. produire le bundle
 ./gradlew :app-mobile:bundleRelease
 #    → app-mobile/build/outputs/bundle/release/app-mobile-release.aab
