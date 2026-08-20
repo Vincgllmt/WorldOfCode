@@ -2805,5 +2805,26 @@ sur la machine « rigolo »**. Le perdre rendrait toute mise à jour de l'applic
 impossible sans un reset de clé auprès de Google. Une sauvegarde hors machine est
 autrement plus urgente que la réécriture d'historique.
 
+### ⚠️ Obstacle trouvé au passage : `:app-tv:assembleRelease` échoue
+
+Sans rapport avec la signature — `:app-tv:packageRelease` réussit et l'APK produit est
+bien signé par le bon certificat (SHA1 `f60c729c…620f`, vérifié à `apksigner`). C'est
+l'étape **suivante** qui tombe :
+
+```
+> Task :app-tv:lintVitalAnalyzeRelease FAILED
+  Found class org.jetbrains.kotlin.analysis.api.resolution.KaCallableMemberCall,
+  but interface was expected
+  The crash seems to involve the detector `NonNullableMutableLiveDataDetector`
+```
+
+C'est un **bug de l'outil lint** (incompatibilité entre le lint de `lifecycle` et l'API
+d'analyse Kotlin du toolchain), pas un défaut du code. Il bloque néanmoins toute
+publication de l'app TV. Contournements possibles : désactiver ce détecteur
+(`lint { disable += "NullSafeMutableLiveData" }`) ou aligner les versions. À traiter le
+jour où l'on publie la TV — elle est de toute façon restée en versionCode 8.
+
+`:app-mobile:bundleRelease` n'est pas concerné et fonctionne.
+
 **Sauvegardes prises avant l'opération** (ancien magasin + anciennes propriétés) dans le
 scratchpad de session — donc temporaires. À ne pas confondre avec une vraie sauvegarde.
