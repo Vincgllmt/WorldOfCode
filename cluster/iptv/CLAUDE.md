@@ -2980,17 +2980,61 @@ téléchargement » / « Annuler les N téléchargements ».
 
 Vérifié dans les deux formes, à un puis deux épisodes.
 
-### 5. Télécommande de cast — ⏳ non conclu
+### 5. Cast — le vrai défaut était le format, pas la télécommande
 
-`CastRemoteSheet` est rendu **globalement**, aligné en bas, par-dessus la pile de
-navigation. Observé : une fois connecté, la feuille se déploie en plein écran et se
-rouvrait à chaque tentative de toucher la barre d'onglets, qu'elle recouvre.
+Symptôme rapporté : « aucun bouton ne répond et le contenu ne se diffuse pas ». Les
+boutons ne répondaient pas parce qu'**il n'y avait rien à piloter** : le média n'arrivait
+jamais sur le récepteur.
 
-Ce qui **n'a pas** été reproduit : des commandes qui ne répondent pas alors qu'un média
-joue. Sur un flux live, le bouton central restait sur « lecture » — mais un live n'a ni
-durée ni position, le test n'est pas concluant. À reprendre sur un film.
+Deux hypothèses concurrentes — le Wi-Fi qui bloque l'IP du fournisseur (§8), ou le format
+du conteneur. Mesure du catalogue avant d'aller plus loin :
 
-Appareil de test : **« Télé »** (et non « Salon »). La découverte prend une dizaine de
-secondes avant que l'appareil n'apparaisse dans la liste.
+| Conteneur | Films | Part |
+|---|---|---|
+| **mkv** | 20 104 | **76 %** |
+| mp4 | 4 997 | 19 % |
+| avi | 1 161 | 4 % |
+
+**Google Cast ne lit pas le Matroska** (récepteur par défaut : MP4, WebM, HLS, DASH). Les
+trois films essayés étaient tous des `.mkv`.
+
+➡️ **Tranché par l'utilisateur** : Toy Story 5, en `.mp4`, se diffuse parfaitement,
+télécommande comprise. La cause est donc le **conteneur**, pas le réseau — ce qui a évité
+d'installer un VPN sur l'appareil de cast pour rien.
+
+Ce qui reste faux dans `CastRepository`, et n'a **pas** été corrigé :
+
+```kotlin
+else -> "video/mp2t"                            // annoncé pour un .mkv comme pour un .ts
+.setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)  // même pour une chaîne live
+```
+
+Un `.mkv` est déclaré au récepteur comme du MPEG-TS, et une chaîne live comme un flux
+bufferisé. Corriger ces deux points ne rendra pas le MKV lisible pour autant — seul un
+transcodage ou une source HLS le permettrait.
+
+### 5 bis. Télécommande de cast — trois défauts, corrigés et vérifiés
+
+| Défaut | Cause | État |
+|---|---|---|
+| Impossible de s'en débarrasser | `expanded` démarrait à `true` **et** un `LaunchedEffect(mediaTitle)` la redépliait à chaque changement de titre | repliée par défaut, plus aucune ré-expansion d'office |
+| Elle recouvrait la barre d'onglets | rendue globalement en `BottomCenter`, et **`MiniBar` déclarait un `modifier` sans jamais l'utiliser** — le décalage passé par l'appelant était perdu | décalage de 60 dp sur l'écran principal, `modifier` enfin consommé |
+| Elle survivait à l'arrêt de la lecture | `stop()` arrête le média mais garde la session ; `isConnected` restait vrai | l'arrêt met fin à la session |
+
+Le bouton de pistes a été **supprimé** : son `onClick` était vide, et il ne pouvait rien
+faire — Google Cast ne sait changer de piste audio ou de sous-titres que sur un flux
+adaptatif (HLS/DASH), alors que le fournisseur sert des fichiers progressifs. Le récepteur
+joue la piste par défaut du conteneur, souvent l'anglais, sans alternative. C'est la
+**cinquième** occurrence dans ce projet d'un contrôle déclaré mais jamais branché, après
+`onPurchase` (§UX-2), `onFav` (§13), `TvToggleOption` (§19) et ce `modifier`.
+
+Vérifié sur appareil : la télécommande ne s'ouvre plus d'office, la barre repliée se place
+**au-dessus** des onglets (2064–2211 contre 2257–2337), les cinq onglets répondent, et
+l'arrêt fait disparaître la barre (`Cast Déconnecté`).
+
+Appareil de test : **« Télé »**. La découverte prend une dizaine de secondes avant que
+l'appareil n'apparaisse dans la liste.
+
+Libellé corrigé au passage : `"Ma liste"` était codé en dur dans la barre d'onglets.
 
 **État : 160 tests, 0 échec.**

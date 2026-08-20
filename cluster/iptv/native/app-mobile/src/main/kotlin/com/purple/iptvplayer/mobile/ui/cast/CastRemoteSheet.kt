@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -37,19 +38,24 @@ import com.purple.iptvplayer.R
 fun CastRemoteSheet(
     castVm:   CastViewModel,
     modifier: Modifier = Modifier,
+    /**
+     * Hauteur à réserver sous la barre repliée.
+     *
+     * La feuille est rendue globalement, par-dessus toute la pile de navigation : sans
+     * ce décalage elle recouvrait la barre d'onglets de l'écran principal, et chaque
+     * tentative de changer d'onglet rouvrait la télécommande.
+     */
+    bottomInset: Dp = 0.dp,
 ) {
     val info by castVm.state.collectAsState()
     if (!info.isConnected) return
 
-    // Expanded state logic: expand when media title changes (a new cast starts) or by user
-    var expanded by rememberSaveable { mutableStateOf(true) }
-    
-    // Auto-expand when a new media starts casting
-    LaunchedEffect(info.mediaTitle) {
-        if (info.mediaTitle.isNotEmpty()) {
-            expanded = true
-        }
-    }
+    // Repliée par défaut, et **jamais** dépliée d'office.
+    //
+    // Elle s'ouvrait en plein écran au démarrage puis se rouvrait à chaque changement
+    // de titre : impossible de s'en débarrasser, et toute tentative d'atteindre la
+    // barre d'onglets la relançait. C'est l'utilisateur qui la déplie, en la touchant.
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxWidth()) {
         if (expanded) {
@@ -59,16 +65,20 @@ fun CastRemoteSheet(
                 onPlayPause   = { if (info.isPlaying) castVm.pause() else castVm.play() },
                 onSkipBack    = { castVm.skipBackward() },
                 onSkipFwd     = { castVm.skipForward() },
-                onStop        = { castVm.stop(); expanded = false },
+                // Arrêter la diffusion met fin à la session : sinon `isConnected` reste
+                // vrai et la barre survit indéfiniment, sans contenu et sans moyen de la
+                // faire disparaître.
+                onStop        = { castVm.stop(); castVm.disconnect(); expanded = false },
                 onSeek        = { castVm.seekTo(it) },
                 onDisconnect  = { castVm.disconnect() },
             )
         } else {
             MiniBar(
+                modifier    = Modifier.padding(bottom = bottomInset),
                 info        = info,
                 onExpand    = { expanded = true },
                 onPlayPause = { if (info.isPlaying) castVm.pause() else castVm.play() },
-                onStop      = { castVm.stop() },
+                onStop      = { castVm.stop(); castVm.disconnect() },
             )
         }
     }
@@ -76,13 +86,16 @@ fun CastRemoteSheet(
 
 @Composable
 private fun MiniBar(
+    modifier:    Modifier = Modifier,
     info:        CastInfo,
     onExpand:    () -> Unit,
     onPlayPause: () -> Unit,
     onStop:      () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
+        // `modifier` était déclaré et jamais utilisé : la chaîne repartait de zéro, donc
+        // le décalage passé par l'appelant était perdu et la barre restait sur les onglets.
+        modifier = modifier
             .fillMaxWidth()
             .padding(8.dp)
             .height(64.dp)
@@ -265,7 +278,11 @@ private fun ExpandedRemote(
                 }
 
                 ControlButtonSmall(icon = Icons.Rounded.Forward10, onClick = onSkipFwd)
-                ControlButtonSmall(icon = Icons.Rounded.Subtitles, onClick = {})
+                // Pas de bouton de pistes : Google Cast ne sait changer de piste audio ou
+                // de sous-titres que sur un flux adaptatif (HLS/DASH). Le fournisseur sert
+                // des fichiers progressifs, le récepteur joue donc la piste par défaut du
+                // conteneur — souvent l'anglais — sans alternative. Le bouton existait avec
+                // un `onClick = {}` vide : il promettait un choix qui n'a jamais existé.
             }
 
             Spacer(Modifier.weight(0.15f))

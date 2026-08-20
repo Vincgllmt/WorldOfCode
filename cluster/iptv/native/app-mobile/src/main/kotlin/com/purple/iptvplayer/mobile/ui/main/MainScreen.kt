@@ -850,7 +850,7 @@ private fun BottomNav(currentTab: Int, onTabSelect: (Int) -> Unit) {
         stringResource(R.string.nav_live),
         stringResource(R.string.nav_movies),
         stringResource(R.string.nav_series),
-        "Ma liste",
+        stringResource(R.string.mylist_title),
         stringResource(R.string.nav_downloads),
     )
     val outlinedIcons = listOf(Icons.Outlined.LiveTv, Icons.Outlined.Movie, Icons.Outlined.Tv, Icons.Outlined.Bookmark, Icons.Outlined.Download)

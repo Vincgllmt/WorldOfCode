@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
@@ -23,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.purple.iptvplayer.mobile.ui.theme.BgApp
 import org.koin.compose.koinInject
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
@@ -51,6 +53,9 @@ object Routes {
 
     private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
 }
+
+/** Hauteur de la barre d'onglets de l'écran principal (cf. `MainScreen.BottomNav`). */
+private val BOTTOM_NAV_HEIGHT = 60.dp
 
 @Composable
 fun IptvNavGraph() {
@@ -151,10 +156,14 @@ fun IptvNavGraph() {
             }
         }
 
-        // Global Cast Remote (visible across all screens when casting)
+        // Télécommande de cast, commune à tous les écrans.
+        //
+        // Seul l'écran principal porte une barre d'onglets : ailleurs, rien à éviter.
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
         CastRemoteSheet(
-            castVm   = castVm,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            castVm      = castVm,
+            modifier    = Modifier.align(Alignment.BottomCenter),
+            bottomInset = if (currentRoute == Routes.MAIN) BOTTOM_NAV_HEIGHT else 0.dp,
         )
     }
 }
