@@ -865,8 +865,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Facturation
 
-- [x] **B2 — un achat remboursé ne retire jamais l'accès** — corrigé, cf. §32. Reste à
-      observer une révocation réelle sur une build de Play (AAB versionCode 14 prêt).
+- [x] **B2 — un achat remboursé ne retire jamais l'accès** — corrigé **et prouvé sur
+      build de Play** (versionCode 14), cf. §32.
 - [ ] **B1.5 non observé** : impossible de provoquer un échec de facturation, Play Billing
       sert son cache local. À retenter autrement.
 - [ ] `deliverProduct()` code 30 et 365 jours en dur ; l'échéance réelle exige la Play
@@ -2888,13 +2888,29 @@ suffirait de se faire rembourser pour repartir en essai. Même piège qu'en B1.4
 **Prouvé** : la décision (11 tests), et le fait que la correction ne déconnecte pas un
 utilisateur premium quand Play ne fait pas autorité (mesuré sur appareil).
 
-**Non observé** : la révocation elle-même. L'exercer demande une build installée depuis
-Play, un achat, puis un remboursement « avec suppression du droit » en Play Console —
-séquence qui ne peut pas être automatisée depuis ce poste. L'AAB **versionCode 14 /
-1.1.6** est prêt pour cela.
+### ✅ Révocation prouvée sur build de Play — 2026-08-20
 
-Procédure : acheter, vérifier le bandeau, rembourser en supprimant le droit, attendre la
-propagation (quelques minutes — un `pm clear` immédiat voit encore l'achat, cf. §9), puis
-relancer. Attendu : **bandeau et accès retirés sans action de l'utilisateur**.
+Conditions contrôlées avant toute observation : versionCode **14**, `installerPackageName`
+**`com.android.vending`**.
+
+| Étape | Bandeau | ACTIVER | Verdict |
+|---|---|---|---|
+| Achat `purple_lifetime_999` à 11:33, puis relance complète | absent | absent | `isPro == true` |
+| Remboursement **avec suppression du droit**, relance à 15:01 | **« Essai gratuit : 2 jours restants. »** | **présent** | **accès retiré** |
+
+Aucune action de l'utilisateur entre les deux — pas de « Restaurer ». C'est
+`syncEntitlements()` au démarrage qui a constaté que Play ne reconnaît plus l'achat et a
+retiré le droit. **L'ancien code ne l'aurait jamais fait** : sa boucle était purement
+additive.
+
+⚠️ **Le signal discriminant est « 2 jours », pas « accès retiré ».** Si
+`revokeEntitlements()` avait effacé `trial_start_date`, `initTrial()` aurait réattribué un
+essai **neuf de 3 jours** et le bandeau aurait affiché **3**. Le décompte a simplement
+vieilli depuis la veille : l'essai n'a pas été rendu. Même famille de raisonnement qu'en
+B1.4, où « l'accès revient » était un test qui ne pouvait pas échouer.
+
+Note de méthode : aucun `pm clear` n'a été fait sur cette application. Elle porte les
+identifiants Xtream dans des `EncryptedSharedPreferences` que `pm clear` détruirait
+définitivement (§9) ; le bandeau suffisait comme instrument.
 
 **État : 154 tests, 0 échec.**
