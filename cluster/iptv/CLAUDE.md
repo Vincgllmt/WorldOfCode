@@ -885,6 +885,7 @@ Classé par ce qui contraint le reste, pas par difficulté.
 - [ ] `app-tv` reste en **versionCode 8** : aucun correctif TV n'est distribué.
 - [x] **Parseurs JSON de `XtreamApiClient` protégés** — cf. §27. 14 tests, dont 11 rouges
       constatés avant correction.
+- [x] **Focus qui s'échappe vers le rail en fin de liste** — corrigé, cf. §30.
 - [ ] `DownloadRepository` et `PlayerService` : aucune couverture.
 - [ ] Tests instrumentés (Compose UI) : désormais possibles, un émulateur TV existe (§11).
 
@@ -2250,11 +2251,11 @@ Mesuré après correction : fond du rail large de 144 px, centre à 72 px, centr
 | §16 — le rail s'ouvre après un retrait ou un déplacement dans « Ma liste » | ✅ corrigé (garde-fou `refocusAfterEdit`) |
 | 9 — le rail met en avant le mauvais onglet | ✅ corrigé (liseré + `FocusRequester` par onglet) |
 | 11 — depuis une carte de résultat, Droite remonte à la barre de recherche | ⏳ ouvert |
-| §16 bis — atteindre la fin d'une liste fait sortir le focus vers le rail | ⏳ ouvert |
+| §16 bis — atteindre la fin d'une liste fait sortir le focus vers le rail | ✅ corrigé, cf. §30 |
 
-Les deux restants demandent un `focusGroup`/`focusRestorer` par zone, à poser avec
-précaution : trop contraindre le focus le **piège**, et rendre le rail inatteignable
-serait un défaut pire que ceux-ci.
+Le défaut 11 n'existait pas (§24) ; le §16 bis est corrigé au §30 — et la précaution
+annoncée ici s'est révélée fondée : la première tentative de correction a bien cassé
+autre chose.
 
 ---
 
@@ -2660,3 +2661,75 @@ Le mobile réarme correctement son minuteur d'overlay — `LaunchedEffect(lastIn
 sur le mobile, elle n'invente pas un comportement.
 
 **État : 143 tests, 0 échec** (127 + 16 `VersionPolicyTest`).
+
+
+---
+
+## 30. Le focus qui s'échappait vers le rail — dernier des défauts de focus *(2026-08-20)*
+
+Dernier point ouvert de §16/§23 : arrivé au bout d'une liste, un appui de plus vers le bas
+envoyait le focus dans le rail, qui se dépliait « tout seul ».
+
+### Reproduit d'abord, et le cas n'était pas celui qu'on croyait
+
+§13 attribuait le défaut à « la dernière chaîne d'un genre ». **Faux** : mesuré sur
+ALWAN CHANNELS (24 chaînes), le focus reste sagement sur la dernière ligne. Idem sur le
+panneau des genres (75 entrées) et sur la grille Films.
+
+Le défaut n'apparaît que sur une liste **plus courte que l'écran**. Reproduit sur une
+recherche à un seul résultat :
+
+```
+bas  -> ['☆']         (l'unique résultat)
+bas  -> ['Movies']    ← le rail, déplié (largeur 424 px = 240 dp)
+```
+
+Faute de candidat sous le dernier élément, Compose TV élargit sa recherche et retient le
+focalisable le plus proche — le rail, toujours présent à gauche. Quand la liste remplit
+l'écran, il n'y a pas d'espace vide en dessous et le problème ne se pose pas.
+
+➡️ Compter et reproduire avant de corriger : la description d'origine désignait un cas qui
+fonctionne parfaitement.
+
+### ⚠️ Première correction : bonne intention, mauvais endroit
+
+Interdire la **sortie verticale du contenu** (`focusProperties { exit = … }` sur le
+conteneur de contenu) paraissait naturel. Elle a cassé la remontée d'une liste vers la
+barre de recherche — un déplacement pourtant **interne** au contenu. Détecté par un test
+de non-régression joué avant de conclure, pas après.
+
+### Correction retenue — côté rail
+
+Le garde-fou est posé sur le rail : **on n'y entre pas verticalement**.
+
+```kotlin
+.focusGroup()
+.focusProperties {
+    enter = { direction ->
+        when (direction) {
+            FocusDirection.Up, FocusDirection.Down -> FocusRequester.Cancel
+            else -> FocusRequester.Default
+        }
+    }
+}
+```
+
+Ne touche à aucun déplacement interne au contenu, et **Gauche reste ouvert** — le rail
+n'est donc jamais inatteignable. C'est la précaution annoncée en §23 : piéger le focus
+serait un défaut pire que celui corrigé.
+
+### Vérifié au D-pad
+
+| Contrôle | Résultat |
+|---|---|
+| Bas ×3 au bout d'une liste d'un élément | ✅ focus **immobile** sur le résultat |
+| Liste → haut → barre de recherche | ✅ non-régression, la remontée fonctionne |
+| Contenu → gauche → rail | ✅ le rail reste atteignable |
+| Navigation verticale **dans** le rail | ✅ Live TV → Movies → Series |
+| Rail → droite → contenu | ✅ |
+| Grille Films, 12 appuis vers le bas | ✅ reste dans la grille |
+
+`enter` étant encore `@ExperimentalComposeUiApi` en Compose 1.7 (BOM 2024.09), l'opt-in est
+déclaré sur `TvMainScreen`.
+
+**État : 143 tests, 0 échec.**

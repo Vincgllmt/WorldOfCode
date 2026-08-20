@@ -27,7 +27,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Brush
@@ -62,7 +65,7 @@ import org.koin.androidx.compose.koinViewModel
 
 private data class NavItem(val label: String, val icon: ImageVector)
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun TvMainScreen(
     onPlay:    (url: String, title: String, mediaId: String, type: String, cover: String, streamId: Int) -> Unit,
@@ -135,6 +138,30 @@ fun TvMainScreen(
                 .fillMaxHeight()
                 .width(sidebarWidth)
                 .background(PurplePalette.Bg0)
+                // On n'entre dans le rail **que par la gauche**.
+                //
+                // Sans ce garde-fou, arriver au bout d'une liste et appuyer encore vers
+                // le bas y envoyait le focus : faute de candidat dans la direction
+                // demandée, Compose TV retient le focalisable le plus proche, et le rail
+                // — toujours présent à gauche — est ce candidat. Il se dépliait alors
+                // « tout seul », ce que l'utilisateur a signalé (§16, §23).
+                //
+                // Le garde-fou est posé ici et non sur le contenu : bloquer la sortie
+                // verticale du contenu cassait la remontée d'une liste vers la barre de
+                // recherche, qui est un déplacement **interne** au contenu. Interdire
+                // l'entrée dans le rail ne touche à rien d'autre.
+                //
+                // Gauche reste ouvert, donc le rail n'est jamais inatteignable — piéger
+                // le focus serait un défaut pire que celui corrigé ici.
+                .focusGroup()
+                .focusProperties {
+                    enter = { direction ->
+                        when (direction) {
+                            FocusDirection.Up, FocusDirection.Down -> FocusRequester.Cancel
+                            else -> FocusRequester.Default
+                        }
+                    }
+                }
                 .onFocusEvent { state -> railHasFocus = state.hasFocus }
                 .padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
