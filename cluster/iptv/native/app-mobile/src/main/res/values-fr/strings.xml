@@ -125,8 +125,8 @@
         <item quantity="one">Annuler le téléchargement</item>
         <item quantity="other">Annuler les %1$d téléchargements</item>
     </plurals>
-    <string name="cast_unsupported_title">Diffusion impossible</string>
-    <string name="cast_unsupported_body">Ce contenu est en %1$s, un format que le Chromecast ne sait pas lire. Essaie un titre en MP4, ou lis-le sur cet appareil.</string>
+    <string name="cast_unsupported_title">Lecture impossible</string>
+    <string name="cast_unsupported_body">Le Chromecast n\'a pas réussi à lire ce contenu (%1$s). Son format ou sa piste audio n\'est peut-être pas pris en charge par cet appareil.</string>
     <string name="action_show_more">Voir plus</string>
     <string name="action_show_less">Voir moins</string>
 </resources>

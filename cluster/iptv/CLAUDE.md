@@ -3143,3 +3143,59 @@ longueur de la chaîne.
 « Voir moins ».
 
 **État : 170 tests, 0 échec.** Parité : app-tv 100/100, app-mobile 113/113.
+
+
+---
+
+## 36. Régression du cast — un fait décisif que je n'avais pas vérifié *(2026-08-20)*
+
+Le blocage introduit au §34 a empêché de diffuser **Toy Story 5**, qui fonctionnait avant.
+
+### L'erreur de raisonnement
+
+Chaîne suivie :
+
+1. Google documente le récepteur **par défaut** comme lisant mp4/webm/HLS/DASH, pas le MKV.
+2. Les trois films en échec étaient des `.mkv`.
+3. « Toy Story 5 est un `.mp4` et il passe » ⇒ le conteneur est la cause.
+
+**L'étape 3 était fausse.** Toy Story 5 est un **`.mkv`** (`stream_id` 479268). Je l'ai
+affirmé sans le vérifier, et le fait s'est glissé dans un raisonnement qui, sinon, était
+correct — d'où sa solidité apparente.
+
+⚠️ La preuve était **dans les données que j'avais lues** : le `recent_items_json` affichait
+`"url":".../479268.mkv","title":"Toy Story 5"`. Je suis passé dessus parce qu'elle
+confirmait l'histoire déjà en tête.
+
+**Conséquence** : un garde-fou qui refusait 76 % du catalogue, dont des contenus qui
+marchaient.
+
+### Ce que la mesure établit vraiment
+
+Un récepteur Android TV — ce qu'est l'appareil « Télé » — lit le MKV : sa pile média n'est
+pas celle du récepteur Cast par défaut. **Les capacités dépendent de l'appareil**, et ne
+sont pas connaissables depuis le client.
+
+La cause des échecs initiaux reste donc **non établie**. Piste la plus plausible, non
+vérifiée : le **codec** à l'intérieur du conteneur — Doctor Strange et Robin des Bois
+portent tous deux du TrueHD Atmos 7.1, que beaucoup de récepteurs ne décodent pas.
+
+### Correction
+
+| Avant (§34) | Maintenant |
+|---|---|
+| refus **avant** chargement sur une liste écrite en dur | on tente toujours ; c'est l'échec **rapporté par le récepteur** (`setResultCallback`) qui déclenche le message |
+| pastille « diffusable / non diffusable » sur les affiches | **supprimée** : la compatibilité n'étant pas connaissable, elle mentait |
+| `video/x-matroska` pour un mkv | **repli sur `video/mp2t`**, la valeur avec laquelle un MKV se diffusait |
+
+Le dernier point est délibéré : `video/mp2t` est faux pour du Matroska, mais c'est ce que
+l'application envoyait quand ça marchait — les récepteurs reniflent le contenu réel. Le
+corriger sans pouvoir le vérifier serait très exactement l'erreur du §5 P4.
+
+### Leçon
+
+Un raisonnement différentiel ne vaut que si **chaque** terme est mesuré. Ici un seul fait
+non vérifié — le conteneur du témoin positif — a suffi à inverser la conclusion, et le
+reste de la chaîne, correct, lui a donné l'apparence de la rigueur.
+
+**État : 169 tests, 0 échec.**

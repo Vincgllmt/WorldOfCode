@@ -157,12 +157,14 @@ class CastRepository(
         castedCover   = cover
         castedUrl     = url
         castedType    = type
-        // Un format non lu par le récepteur ne partira jamais : autant le dire tout de
-        // suite plutôt que de laisser l'utilisateur devant une télécommande inerte.
-        if (!CastFormats.isCastable(url)) {
-            _state.update { it.copy(unsupportedFormat = CastFormats.extensionOf(url) ?: "") }
-            return
-        }
+        // ⚠️ **Ne rien présumer du récepteur.** Une première version refusait de charger
+        // les conteneurs absents de la liste documentée par Google (mkv, avi…). C'était
+        // faux : les appareils Android TV qui font office de récepteur lisent le MKV, et
+        // ce blocage a empêché de diffuser des films qui fonctionnaient — 76 % du
+        // catalogue. Les capacités dépendent de l'appareil, pas d'une liste écrite ici.
+        //
+        // On tente donc toujours, et c'est **l'échec réellement rapporté par le
+        // récepteur** qui déclenche le message.
         _state.update { it.copy(unsupportedFormat = null) }
         val contentType = CastFormats.contentType(url)
         val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
@@ -174,13 +176,24 @@ class CastRepository(
             .setContentType(contentType)
             .setMetadata(metadata)
             .build()
-        client.load(
+        val request = client.load(
             MediaLoadRequestData.Builder()
                 .setMediaInfo(mediaInfo)
                 .setAutoplay(true)
                 .setCurrentTime(startPositionMs)
                 .build()
         )
+        // Le récepteur est seul juge : s'il refuse le média, c'est lui qui le dit.
+        request.setResultCallback { result ->
+            if (!result.status.isSuccess) {
+                _state.update {
+                    it.copy(
+                        isPlaying = false,
+                        unsupportedFormat = CastFormats.extensionOf(url) ?: "",
+                    )
+                }
+            }
+        }
         _state.update { it.copy(mediaTitle = title, mediaCover = cover, isPlaying = true) }
     }
 

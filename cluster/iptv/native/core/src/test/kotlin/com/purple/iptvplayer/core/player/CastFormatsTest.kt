@@ -21,16 +21,12 @@ class CastFormatsTest {
     }
 
     @Test
-    fun `le mkv ne l est pas`() {
-        // 76 % du catalogue. C'est le cœur du défaut.
-        assertFalse(CastFormats.isCastable("$base/477580.mkv"))
-        assertTrue(CastFormats.isKnownUnsupported("$base/477580.mkv"))
-    }
-
-    @Test
-    fun `l avi non plus`() {
-        assertFalse(CastFormats.isCastable("$base/206207.avi"))
-        assertTrue(CastFormats.isKnownUnsupported("$base/206207.avi"))
+    fun `le type annonce pour un mkv reste celui qui fonctionnait`() {
+        // `video/mp2t` est faux pour du Matroska, mais c'est la valeur que
+        // l'application envoyait et avec laquelle un MKV se diffusait. Ne pas la
+        // changer sans pouvoir le vérifier (§5 P4).
+        assertEquals("video/mp2t", CastFormats.contentType("$base/477580.mkv"))
+        assertEquals("video/mp2t", CastFormats.contentType("$base/206207.avi"))
     }
 
     @Test

@@ -51,12 +51,15 @@ object CastFormats {
      * un `.mkv` était donc présenté comme du MPEG-TS.
      */
     fun contentType(url: String?): String = when (extensionOf(url)) {
-        "m3u8"         -> "application/x-mpegURL"
-        "mpd"          -> "application/dash+xml"
-        "mp4", "m4v"   -> "video/mp4"
-        "webm"         -> "video/webm"
-        "ts"           -> "video/mp2t"
-        "mkv"          -> "video/x-matroska"
-        else           -> "video/mp4"
+        "m3u8"       -> "application/x-mpegURL"
+        "mpd"        -> "application/dash+xml"
+        "mp4", "m4v" -> "video/mp4"
+        "webm"       -> "video/webm"
+        // ⚠️ **Repli délibéré sur l'ancienne valeur.** `video/mp2t` est faux pour un
+        // `.mkv`, mais c'est ce que l'application envoyait, et un MKV se diffusait bien
+        // chez l'utilisateur. Les récepteurs reniflent le contenu réel plutôt que de se
+        // fier au type annoncé. Corriger cette valeur sans pouvoir le vérifier, c'est
+        // exactement l'erreur du §5 P4 : ne pas durcir un comportement qui marche.
+        else         -> "video/mp2t"
     }
 }
