@@ -33,6 +33,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.epg.EpgTimeline
+import com.purple.iptvplayer.core.player.VersionMode
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -76,6 +77,8 @@ fun PlayerScreen(
     val state       by vm.playerState.collectAsState()
     val castInfo    by castVm.state.collectAsState()
     val epgPrograms by contentVm.epgPrograms.collectAsState()
+    val availableVersions by vm.playerService.availableVersions.collectAsState()
+    val selectedVersion   by vm.playerService.selectedVersion.collectAsState()
 
     val activity = LocalContext.current.findMainActivity()
 
@@ -266,6 +269,21 @@ fun PlayerScreen(
             )
         }
 
+        // Bouton VF / VOSTFR, en bas à droite. Demandé par `raf.md` pour les films et
+        // les séries : il n'a pas de sens sur une chaîne live, qui ne porte qu'une
+        // piste. Masqué quand la carte « épisode suivant » occupe le même coin.
+        if (!isLive && !isInPip && overlayVisible && !showNextSuggestion) {
+            VersionToggle(
+                available = availableVersions,
+                selected  = selectedVersion,
+                onSelect  = { vm.playerService.selectVersion(it) },
+                modifier  = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 16.dp, bottom = 96.dp),
+            )
+        }
+
         // Next episode card — always visible (not gated by overlay) so countdown survives overlay hide/show
         if (showNextSuggestion && !isInPip) {
             NextEpisodeCard(
@@ -286,6 +304,50 @@ fun PlayerScreen(
             viewModel = vm,
             onDismiss = { showTrackSheet = false },
         )
+    }
+}
+
+/**
+ * Bascule VF / VOSTFR.
+ *
+ * N'apparaît que si les **deux** versions existent réellement dans le média : avec une
+ * seule, il n'y a rien à choisir et le bouton ne serait que du bruit sur l'image.
+ * Ce que « exister » veut dire est décidé par `VersionPolicy`, pas ici.
+ */
+@Composable
+private fun VersionToggle(
+    available: Set<VersionMode>,
+    selected:  VersionMode?,
+    onSelect:  (VersionMode) -> Unit,
+    modifier:  Modifier = Modifier,
+) {
+    if (available.size < 2) return
+    Surface(
+        modifier = modifier,
+        shape    = RoundedCornerShape(20.dp),
+        color    = Color.Black.copy(alpha = 0.6f),
+        border   = BorderStroke(1.dp, PurpleGlow.copy(alpha = 0.35f)),
+    ) {
+        Row(modifier = Modifier.padding(3.dp)) {
+            VersionMode.values().filter { it in available }.forEach { mode ->
+                val isOn = mode == selected
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(17.dp))
+                        .background(if (isOn) Purple else Color.Transparent)
+                        .clickable { onSelect(mode) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    Text(
+                        mode.name,
+                        color      = if (isOn) Color.White else Color.White.copy(0.6f),
+                        fontSize   = 12.sp,
+                        fontWeight = if (isOn) FontWeight.Bold else FontWeight.Medium,
+                        letterSpacing = 0.5.sp,
+                    )
+                }
+            }
+        }
     }
 }
 

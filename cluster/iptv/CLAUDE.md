@@ -854,9 +854,9 @@ Classé par ce qui contraint le reste, pas par difficulté.
       le 2026-08-19. Diagnostic initial faux, cf. §14.
 - [x] **Carte EPG sur TV** — faite et vérifiée sur le vrai catalogue, cf. §28. La TV
       n'avait jamais reçu P10/P11 : horaires décalés et barre figée.
-- [ ] **Bouton VF / VOSTFR** au lancement d'un contenu, en bas à droite au-dessus du
-      lecteur. ⚠️ Précision de `raf.md` à ne pas perdre : **la première piste de
-      sous-titres ne fonctionne quasi jamais**, prendre la deuxième si elle existe.
+- [x] **Bouton VF / VOSTFR** — fait et vérifié sur le catalogue réel, cf. §29. La
+      « première piste qui ne fonctionne jamais » est une piste **forcée** : cause
+      identifiée et traitée.
 - [~] ~~**Bouton de simulation de fin d'essai** derrière `BuildConfig.DEBUG`~~ —
       **annulé par l'utilisateur le 2026-08-20.** Ne pas le reproposer. Le besoin de
       poser un état d'essai reste couvert hors UI par `mkprefs.py` + `run-as` (§3).
@@ -2529,3 +2529,117 @@ traduire une de plus. Parité des ressources maintenue : app-tv **100/100**, app
 **État : 127 tests, 0 échec** (120 + 7 `EpgTimelineTest`).
 
 ⚠️ `app-tv` reste en **versionCode 8** : rien de ceci n'est distribué.
+
+
+---
+
+## 29. VF / VOSTFR — la « première piste qui ne marche jamais » est une piste forcée *(2026-08-20)*
+
+Demande de `raf.md`, périmètre précisé par l'utilisateur : **films et séries, pas le
+direct**. La précision associée — « la première piste de sous-titres ne fonctionne quasi
+jamais, prendre la deuxième si elle existe » — n'était pas une superstition, et sa cause
+est mesurable.
+
+### Mesurer avant de concevoir
+
+Le catalogue réel a été sondé à `ffprobe` (le VPN rend le fournisseur joignable) plutôt
+que de supposer ce que contiennent les fichiers :
+
+| Film | Audio | Sous-titres |
+|---|---|---|
+| Monster Summer | eng, **fre** | fre « Complets » |
+| Doctor Strange (MULTI) | eng, **fre**, fre (FR-CA) | eng forcé, eng, **fre forcé**, fre |
+| Avatar **(VOSTFR)** | eng seul | eng « FULL », fre « FULL » |
+| Robin des Bois (2018) | fre ×2, eng ×2 | **fre « Forced »**, fre « French », fre « French SDH » |
+
+Deux enseignements que l'on n'aurait pas devinés :
+
+1. **La cause du constat de `raf.md`.** La première piste française est une piste
+   **forcée** — elle ne porte que les passages en langue étrangère, pas les dialogues.
+   Elle paraît donc « ne rien afficher ». Ce n'est pas un bug du lecteur.
+2. **605 titres portent « (VOSTFR) » dans leur nom** : le fournisseur livre aussi des
+   versions comme des entrées de catalogue **distinctes**. Une entrée VOSTFR n'a pas
+   d'audio français — le bouton doit donc ne proposer que ce qui existe réellement.
+
+### ⚠️ Le drapeau du conteneur ne suffit pas — corrigé en test-first
+
+Première implémentation : ne se fier qu'à `SELECTION_FLAG_FORCED`. Le relevé de
+**Robin des Bois** l'a démentie — ses trois pistes portent `forced=0`, la piste forcée
+n'étant reconnaissable qu'à son **titre** :
+
+```
+lang=fre titre='Forced'      forced=0     ← le drapeau n'est pas posé
+lang=fre titre='French'      forced=0
+lang=fre titre='French SDH'  forced=0
+```
+
+Test écrit avec ces données, **rouge constaté** (`expected:<s2> but was:<s1>` — la piste
+forcée était bien choisie, c'est-à-dire le symptôme signalé), puis correction :
+`isForcedTrack()` retient le drapeau **ou** le titre, en **mot entier** (`\bforc(ed|és|…)\b`)
+pour ne pas écarter à tort un « Reinforced Edition ».
+
+➡️ **On corrige la cause, pas le symptôme.** « Prendre la deuxième piste » aurait marché
+sur ces fichiers-là et échoué dès que l'ordre change ; le critère « non forcée » tient
+quel que soit l'ordre.
+
+### Architecture
+
+`core/player/VersionPolicy.kt` — logique pure, **16 tests**, dont les cas ci-dessus repris
+tels quels. `PlayerService` expose `availableVersions` / `selectedVersion` et applique le
+choix ; les deux UI ne font que rendre un bouton. La sélection de pistes était déjà
+dupliquée entre les deux `PlayerScreen`, ce qui avait produit la divergence de §28 : elle
+ne l'est plus.
+
+`selectedVersion` est **déduit des pistes réellement jouées**, jamais d'un état parallèle :
+le bouton ne peut donc pas annoncer une version que le lecteur ne joue pas.
+
+### Décision de conception
+
+Le bouton n'apparaît que si les **deux** versions existent. Avec une seule il n'y a rien à
+choisir, et sur TV un focalisable de plus coûte un appui à la télécommande sans rien
+apporter (leçon de §25). ⚠️ Discutable : un contenu n'ayant que des sous-titres français
+pourrait mériter un bouton unique « VOSTFR ». À trancher si le besoin apparaît.
+
+### ⚠️ Défaut préexistant trouvé au passage : l'overlay TV se masquait en pleine navigation
+
+Mes premières mesures montraient un focus qui s'échappait de VF vers la racine. J'ai
+d'abord cru à un défaut de mon composant et ajouté un `focusGroup()` — **qui a aggravé les
+choses**. La vraie cause est ailleurs :
+
+```kotlin
+LaunchedEffect(overlayVisible, showSpeedDialog, showTrackDialog) {
+    if (overlayVisible && …) { delay(5_000); overlayVisible = false }
+}
+```
+
+Le minuteur n'est pas réarmé par les appuis — `lastInteractionMs` était **écrit et lu par
+personne**. L'overlay se masquait donc 5 s après son apparition quoi qu'on fasse, et le
+focus retombait à la racine au milieu d'un déplacement. Cela touchait **tous** les
+contrôles, pas seulement le nouveau bouton.
+
+**Correction** : `lastInteractionMs` entre dans la clé de l'effet, et tout appui non
+consommé le rafraîchit. `focusGroup()` a été **retiré** — il corrigeait un problème qui
+n'existait pas (même erreur qu'au §24 : compter avant de conclure).
+
+### ✅ Vérifié sur émulateur TV, catalogue réel
+
+| Observation | Résultat |
+|---|---|
+| Bouton présent sur un film à deux versions | ✅ `Monster Summer · 1× · VF · VOSTFR` |
+| Navigation D-pad | ✅ lecture → VF → (droite) → VOSTFR |
+| Bascule VF | ✅ fond VF `(164,99,229)` violet, VOSTFR sombre |
+| Bascule VOSTFR | ✅ l'inverse, mesuré au pixel |
+| **Pistes lues par ExoPlayer** (Robin des Bois) | ✅ `T fr/Forced/forced=false`, `T fr/French`, `T fr/French SDH` — **le drapeau n'est pas posé**, ce qui confirme la nécessité du critère par titre |
+| **Choix appliqué** | ✅ `CHOIX VOSTFR -> audio=TrueHD Atmos 7.1 sub=French` — audio **anglais**, sous-titre **« French »** et non « Forced » |
+| Choix VF | ✅ `CHOIX VF -> audio=TrueHD 7.1 sub=null` (français, sous-titres coupés) |
+| **Direct** | ✅ overlay `LIVE · AFRICANS CHANNELS · 1×` — **aucun bouton**, périmètre respecté |
+
+### Portée honnête
+
+**Non observé sur téléphone** : le mobile est compilé, couvert par les tests, et son
+overlay a bien été exercé (pistes lues, bouton correctement **absent** sur un contenu à
+version unique). Mais l'apparition et la bascule sur un film à deux versions n'ont pas été
+vues sur mobile — la variante debug du téléphone est configurée sur une playlist M3U
+publique sans VOD, et je n'ai pas reconfiguré l'application de l'utilisateur pour si peu.
+
+**État : 143 tests, 0 échec** (127 + 16 `VersionPolicyTest`).

@@ -39,6 +39,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.purple.iptvplayer.core.epg.EpgTimeline
+import com.purple.iptvplayer.core.player.VersionMode
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -63,6 +64,8 @@ fun TvPlayerScreen(
     val contentVm: ContentViewModel = koinViewModel()
     val state       by vm.playerState.collectAsState()
     val epgPrograms by contentVm.epgPrograms.collectAsState()
+    val availableVersions by vm.playerService.availableVersions.collectAsState()
+    val selectedVersion   by vm.playerService.selectedVersion.collectAsState()
 
     val subSize by vm.subtitleSize.collectAsState(initial = 1.0f)
     val subColor by vm.subtitleColor.collectAsState(initial = "white")
@@ -77,7 +80,11 @@ fun TvPlayerScreen(
     val rootFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
 
-    LaunchedEffect(overlayVisible, showSpeedDialog, showTrackDialog) {
+    // `lastInteractionMs` fait partie de la clé : sans elle, le minuteur n'était jamais
+    // réarmé et l'overlay se masquait 5 s après son apparition, **même en pleine
+    // navigation**. À la télécommande, le focus retombait alors à la racine au milieu
+    // d'un déplacement. `lastInteractionMs` était écrit et lu par personne.
+    LaunchedEffect(overlayVisible, showSpeedDialog, showTrackDialog, lastInteractionMs) {
         if (overlayVisible && !showSpeedDialog && !showTrackDialog) {
             delay(5_000)
             overlayVisible = false
@@ -115,12 +122,19 @@ fun TvPlayerScreen(
             .focusRequester(rootFocus)
             .focusable()
             .onKeyEvent { event ->
-                // Only catch events when overlay is hidden (root has focus then)
-                if (!overlayVisible && event.type == KeyEventType.KeyDown) {
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                // Tout appui compte comme une interaction, y compris quand l'overlay est
+                // déjà visible : les événements non consommés par l'élément focalisé
+                // remontent jusqu'ici avant que le focus ne se déplace.
+                lastInteractionMs = System.currentTimeMillis()
+                // On ne consomme que le premier appui, celui qui rouvre l'overlay ;
+                // les suivants doivent continuer à déplacer le focus.
+                if (overlayVisible) {
+                    false
+                } else {
                     overlayVisible = true
-                    lastInteractionMs = System.currentTimeMillis()
                     true
-                } else false
+                }
             }
     ) {
         // Video surface
@@ -172,6 +186,9 @@ fun TvPlayerScreen(
                 hasNext        = vm.hasNextEpisode(),
                 nextTitle      = vm.getNextMediaTitle(),
                 epgPrograms    = epgPrograms,
+                versions       = availableVersions,
+                selectedVersion = selectedVersion,
+                onSelectVersion = { vm.playerService.selectVersion(it) },
                 playFocus      = playFocus,
                 onBack         = onBack,
                 onPlayPause    = { if (state.status == PlayerStatus.PLAYING) vm.pause() else vm.resume() },
@@ -219,6 +236,9 @@ private fun TvPlayerOverlay(
     hasNext:       Boolean = false,
     nextTitle:     String? = null,
     epgPrograms:   List<EpgProgram> = emptyList(),
+    versions:        Set<VersionMode> = emptySet(),
+    selectedVersion: VersionMode? = null,
+    onSelectVersion: (VersionMode) -> Unit = {},
     playFocus:     FocusRequester,
     onBack:        () -> Unit,
     onPlayPause:   () -> Unit,
@@ -299,6 +319,20 @@ private fun TvPlayerOverlay(
                 }
                 if (!nextDismissed) onNext()
             }
+        }
+
+        // Bouton VF / VOSTFR, en bas à droite. Demandé par `raf.md` pour les films et
+        // les séries : une chaîne live ne porte qu'une piste, il n'y aurait rien à
+        // basculer. Cède la place à la carte « épisode suivant », même coin.
+        if (!isLive && !(showNextSuggestion && !nextDismissed)) {
+            TvVersionToggle(
+                available = versions,
+                selected  = selectedVersion,
+                onSelect  = onSelectVersion,
+                modifier  = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 100.dp, end = 48.dp),
+            )
         }
 
         androidx.compose.animation.AnimatedVisibility(
@@ -554,6 +588,52 @@ private fun TvEpgCard(programs: List<EpgProgram>, modifier: Modifier = Modifier)
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Bascule VF / VOSTFR au D-pad.
+ *
+ * N'apparaît que si les **deux** versions existent réellement dans le média : avec une
+ * seule il n'y a rien à choisir, et un élément focalisable de plus coûte un appui à la
+ * télécommande sans rien apporter (leçon de §25).
+ */
+@Composable
+private fun TvVersionToggle(
+    available: Set<VersionMode>,
+    selected:  VersionMode?,
+    onSelect:  (VersionMode) -> Unit,
+    modifier:  Modifier = Modifier,
+) {
+    if (available.size < 2) return
+    Row(
+        modifier              = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+    ) {
+        VersionMode.values().filter { it in available }.forEach { mode ->
+            var isFocused by remember { mutableStateOf(false) }
+            val isOn = mode == selected
+            Surface(
+                onClick  = { onSelect(mode) },
+                modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
+                shape    = RoundedCornerShape(20.dp),
+                color    = when {
+                    isOn -> TvPurple.copy(alpha = 0.9f)
+                    else -> Color.Black.copy(alpha = 0.6f)
+                },
+                border   = if (isFocused) BorderStroke(2.dp, Color.White) else null,
+            ) {
+                Text(
+                    mode.name,
+                    color         = if (isOn || isFocused) Color.White else Color.White.copy(0.6f),
+                    fontSize      = 15.sp,
+                    fontWeight    = if (isOn) FontWeight.Bold else FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    modifier      = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+                )
             }
         }
     }
