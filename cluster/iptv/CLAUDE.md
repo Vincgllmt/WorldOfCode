@@ -3038,3 +3038,56 @@ l'appareil n'apparaisse dans la liste.
 Libellé corrigé au passage : `"Ma liste"` était codé en dur dans la barre d'onglets.
 
 **État : 160 tests, 0 échec.**
+
+
+---
+
+## 34. Cast — dire ce qui ne passera pas, et suivre ce qui passe *(2026-08-20)*
+
+### Avertir plutôt que laisser deviner
+
+`core/player/CastFormats.kt` — logique pure, **10 tests**. Le récepteur par défaut lit
+`mp4`, `m4v`, `webm`, `m3u8`, `mpd` ; il ne lit ni `mkv`, ni `avi`, ni le MPEG-TS nu.
+
+Trois usages :
+
+1. **Type MIME correct.** L'ancien code annonçait `video/mp2t` pour tout ce qui n'était ni
+   HLS ni DASH — un `.mkv` était donc présenté comme du MPEG-TS.
+2. **Refus explicite.** Une diffusion impossible ouvre un message — « Ce contenu est en
+   MKV, un format que le Chromecast ne sait pas lire » — au lieu de laisser l'utilisateur
+   devant une télécommande inerte.
+3. **Pastille sur les affiches**, *pendant un cast uniquement* : hors session ce serait du
+   bruit sur chaque vignette. Vérifié au pixel — violet vif `(179,136,245)` sur un `.mp4`,
+   gris terne `(107,106,119)` sur un `.mkv`.
+
+⚠️ La pastille ne couvre que les **films** : `SeriesItem` ne porte pas d'URL, le format
+d'un épisode n'est connu qu'après ouverture de la fiche.
+
+### « Reprendre la lecture » ignorait tout ce qui était casté
+
+Au démarrage d'un cast, `PlayerScreen` met le lecteur local en pause et se ferme — or
+c'est lui qui enregistrait la progression, depuis ce lecteur désormais arrêté. Rien n'était
+donc consigné : un film regardé sur le Chromecast n'apparaissait jamais dans la reprise.
+
+`CastRepository` enregistre maintenant toutes les 10 s depuis la position **du récepteur**,
+plus une dernière fois à la fin de session — sans quoi arrêter le cast juste après avoir
+avancé effaçait jusqu'à 10 s. `setPendingMedia` transporte désormais `mediaId` et `type`,
+sans lesquels `updateRecentList` ne retient rien.
+
+**Vérifié dans les données** : après 45 s de cast, l'entrée est en tête de
+`recent_items_json` avec `progress: 8928` et `duration: 2545376`.
+
+### Confirmation rétroactive du défaut d'enchaînement (§33.3)
+
+Dans ces mêmes données, deux épisodes de *The Walking Dead* ont leurs URL **croisées** :
+`2624_430469` pointe vers `430468.mkv`, et l'inverse. C'est la signature exacte du
+`currentMediaId` figé — l'identifiant restait sur l'épisode précédent pendant que la liste
+avançait. Le défaut corrigé au §33.3 avait donc bien laissé des traces réelles.
+
+### Décalage de la barre repliée — deuxième passe
+
+Le premier correctif laissait la barre mordre légèrement les onglets : la barre d'onglets
+porte `navigationBarsPadding()` **en plus** de ses 60 dp, et je n'avais compté que les
+60 dp. Mesuré après correction : barre de cast 2001–2148, onglets 2257–2337.
+
+**État : 170 tests, 0 échec.**

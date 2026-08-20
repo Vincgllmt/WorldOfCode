@@ -48,6 +48,29 @@ fun CastRemoteSheet(
     bottomInset: Dp = 0.dp,
 ) {
     val info by castVm.state.collectAsState()
+
+    // Un format refusé par le récepteur ne produit aucune lecture : sans message,
+    // l'utilisateur reste devant une télécommande qui ne répond à rien.
+    info.unsupportedFormat?.let { ext ->
+        AlertDialog(
+            onDismissRequest = { castVm.clearUnsupportedFormat() },
+            confirmButton = {
+                TextButton(onClick = { castVm.clearUnsupportedFormat() }) {
+                    Text(stringResource(android.R.string.ok), color = PurpleGlow)
+                }
+            },
+            icon  = { Icon(Icons.Rounded.Cast, null, tint = PurpleGlow) },
+            title = { Text(stringResource(R.string.cast_unsupported_title), color = TextPrimary) },
+            text  = {
+                Text(
+                    stringResource(R.string.cast_unsupported_body, ext.uppercase()),
+                    color = TextSub,
+                )
+            },
+            containerColor = BgCard,
+        )
+    }
+
     if (!info.isConnected) return
 
     // Repliée par défaut, et **jamais** dépliée d'office.
@@ -74,7 +97,7 @@ fun CastRemoteSheet(
             )
         } else {
             MiniBar(
-                modifier    = Modifier.padding(bottom = bottomInset),
+                modifier    = Modifier.navigationBarsPadding().padding(bottom = bottomInset),
                 info        = info,
                 onExpand    = { expanded = true },
                 onPlayPause = { if (info.isPlaying) castVm.pause() else castVm.play() },

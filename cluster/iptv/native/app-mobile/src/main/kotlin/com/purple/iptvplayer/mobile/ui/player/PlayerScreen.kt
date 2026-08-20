@@ -97,7 +97,7 @@ fun PlayerScreen(
         if (url.isNotEmpty()) {
             val savedPos = if (mediaId.isNotEmpty()) vm.getSavedProgress(mediaId) else 0L
             vm.playMedia(url, title, mediaId.ifEmpty { null }, savedPos, cover, type)
-            castVm.setPendingMedia(url, title, cover, savedPos)
+            castVm.setPendingMedia(url, title, cover, savedPos, mediaId.ifEmpty { null }, type)
         }
     }
 

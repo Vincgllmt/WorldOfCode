@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.purple.iptvplayer.core.player.CastFormats
+import com.purple.iptvplayer.mobile.viewmodel.CastViewModel
 import coil.compose.AsyncImage
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.model.Movie
@@ -191,6 +193,13 @@ fun GenreRowHeader(genre: String, count: Int, onClick: () -> Unit) {
 
 @Composable
 fun MovieGridItem(movie: Movie, isFav: Boolean, onClick: () -> Unit, onFav: () -> Unit) {
+    // Pastille de diffusion : **uniquement pendant un cast**. Hors session elle serait du
+    // bruit sur chaque affiche, et l'information n'intéresse personne. Pendant un cast,
+    // elle évite de choisir un titre qui ne partira jamais — 76 % du catalogue est en
+    // .mkv, que le Chromecast ne lit pas (cf. CastFormats).
+    val castVm: CastViewModel = koinViewModel()
+    val castInfo by castVm.state.collectAsState()
+    val showCastBadge = castInfo.isConnected
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
@@ -213,6 +222,22 @@ fun MovieGridItem(movie: Movie, isFav: Boolean, onClick: () -> Unit, onFav: () -
                     tint = if (isFav) PurpleGlow else TextPrimary.copy(0.6f),
                     modifier = Modifier.size(18.dp),
                 )
+            }
+            if (showCastBadge) {
+                val castable = CastFormats.isCastable(movie.url)
+                Box(
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(3.dp),
+                ) {
+                    Icon(
+                        imageVector = if (castable) Icons.Rounded.Cast else Icons.Rounded.CastConnected,
+                        contentDescription = null,
+                        tint = if (castable) PurpleGlow else TextSub.copy(0.55f),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
             }
             movie.rating?.let { rating ->
                 Box(
