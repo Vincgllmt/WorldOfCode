@@ -3316,3 +3316,66 @@ rangées par genre déjà en place.
 Même résultat sur Séries (341 px → 482 px).
 
 **État : 169 tests, 0 échec.**
+
+---
+
+## 40. Le rail TV happait le focus — un correctif de §23 devenu la cause *(2026-08-20)*
+
+Signalé : « le menu latéral récupère trop souvent le focus et du coup s'ouvre pour rien ».
+
+### La cause était mon propre correctif
+
+```kotlin
+LaunchedEffect(selectedIndex) {
+    delay(250)
+    runCatching { railFocus[selectedIndex].requestFocus() }
+}
+```
+
+Posé au §23 pour que l'onglet focalisé soit celui qui est affiché. Deux effets non prévus :
+
+1. un `LaunchedEffect` s'exécute **aussi à la première composition** — le rail happait donc
+   le focus **au lancement**. Mesuré : rail déplié, focus sur « Live TV », sans que
+   personne l'ait demandé ;
+2. il le reprenait à **chaque** changement d'onglet.
+
+Comme `LaunchedEffect(railHasFocus) { expanded = railHasFocus }` déplie le rail dès qu'il
+reçoit le focus, il s'ouvrait sans cesse.
+
+### L'invariant de §23 tient sans ce correctif
+
+Le liseré d'onglet actif ne dépend que de `selectedIndex` (`isActive = selectedIndex ==
+index`), pas du focus. Voir quel onglet est affiché ne demandait donc pas de lui donner le
+focus — la moitié utile de §23 reste, l'autre part.
+
+### Correction : c'est le **contenu** qui prend le focus
+
+Le contenu est ce que l'utilisateur veut manipuler après avoir choisi un onglet ; le rail
+reste à un appui vers la gauche. Les `FocusRequester` du rail sont supprimés, devenus
+inutiles — sixième occurrence évitée du « déclaré mais jamais utilisé ».
+
+⚠️ **Deux pièges rencontrés en chemin**, tous deux mesurés :
+
+- **Fenêtre de réessai trop courte.** Au lancement, le contenu n'a aucun élément
+  focalisable tant que le catalogue charge — une vingtaine de secondes sur le vrai
+  catalogue. Avec 2,4 s de tentatives, le focus restait nulle part et le premier appui
+  retombait dans le rail. Fenêtre portée à ~36 s, interrompue dès que le contenu a le focus.
+- **Un garde-fou contre-productif.** J'avais ajouté « ne pas insister si le rail a le
+  focus », pour ne pas le voler à l'utilisateur. Or au moment où l'on choisit un onglet on
+  est **forcément** dans le rail : la boucle rendait la main aussitôt et le focus retombait
+  sur le premier élément du rail. Retiré — la boucle s'arrête de toute façon dès que le
+  contenu a le focus.
+
+### Vérifié à l'émulateur
+
+| Moment | Rail | Focus |
+|---|---|---|
+| Lancement | **replié** | contenu (premier genre) |
+| Gauche depuis le contenu | déplié | rail — voulu |
+| Choix d'un onglet | **replié** | contenu |
+| Droite depuis le rail | replié | contenu |
+
+Non-régression : le rail reste atteignable par la gauche, et sa navigation verticale
+interne fonctionne.
+
+**État : 169 tests, 0 échec.**

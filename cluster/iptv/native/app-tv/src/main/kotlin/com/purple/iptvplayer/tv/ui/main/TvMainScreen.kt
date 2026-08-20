@@ -112,16 +112,41 @@ fun TvMainScreen(
     // panneau de contenu est remplacé, le focus se perd et Compose TV retombe sur le
     // premier focalisable de l'arbre — le premier élément du rail. On le réclame donc
     // explicitement sur l'onglet choisi.
-    val railFocus = remember { List(6) { FocusRequester() } }
+    /**
+     * Le **contenu** prend le focus, pas le rail.
+     *
+     * Une version précédente (§23) focalisait l'onglet du rail après un changement
+     * d'onglet, pour que l'élément focalisé soit celui qui est affiché. Deux effets non
+     * voulus : un `LaunchedEffect` s'exécute aussi à la **première** composition, donc le
+     * rail happait le focus **au lancement** ; et il le reprenait à **chaque** changement
+     * d'onglet. Comme toute arrivée de focus déplie le rail, il s'ouvrait sans cesse.
+     *
+     * L'invariant visé par §23 — voir quel onglet est affiché — est déjà tenu par le
+     * liseré d'onglet actif, qui ne dépend que de `selectedIndex` et pas du focus.
+     *
+     * Le contenu est ce que l'utilisateur veut manipuler après avoir choisi un onglet ;
+     * le rail reste à un appui vers la gauche.
+     */
+    val contentFocus = remember { FocusRequester() }
+    var contentHasFocus by remember { mutableStateOf(false) }
     LaunchedEffect(selectedIndex) {
-        // Après le remplacement du contenu, sinon la demande est écrasée.
+        // La demande est réessayée : au lancement, le contenu n'a **aucun** élément
+        // focalisable tant que le catalogue charge — une vingtaine de secondes sur le
+        // vrai catalogue. Une fenêtre trop courte laissait le focus nulle part, et le
+        // premier appui retombait alors dans le rail, qui s'ouvrait.
         //
-        // ⚠️ Une première version pilotait cet effet par un `pendingRailFocus` remis à
-        // -1 **à l'intérieur** du bloc : modifier l'état qui sert de clé annule et
-        // relance l'effet, si bien que la demande différée n'était jamais exécutée.
-        // La clé est donc `selectedIndex`, que l'effet ne modifie pas.
-        delay(250)
-        runCatching { railFocus[selectedIndex].requestFocus() }
+        // On s'arrête dès que le contenu a le focus — et pas avant.
+        //
+        // ⚠️ Une première version s'arrêtait aussi si le rail avait le focus, pour ne pas
+        // le voler à l'utilisateur. C'était contre-productif : quand on choisit un
+        // onglet, on est **forcément** dans le rail, donc la boucle rendait la main
+        // aussitôt et le focus retombait sur le premier élément du rail.
+        contentHasFocus = false
+        repeat(90) {
+            if (contentHasFocus) return@LaunchedEffect
+            delay(400)
+            runCatching { contentFocus.requestFocus() }
+        }
     }
 
     val navItems = listOf(
@@ -183,7 +208,6 @@ fun TvMainScreen(
                         label          = item.label,
                         isActive       = selectedIndex == index,
                         expanded       = expanded,
-                        focusRequester = railFocus[index],
                         onClick        = { selectedIndex = index },
                     )
                 }
@@ -195,7 +219,6 @@ fun TvMainScreen(
                 label    = navItems.last().label,
                 isActive       = selectedIndex == settingsIndex,
                 expanded       = expanded,
-                focusRequester = railFocus[settingsIndex.coerceAtMost(railFocus.lastIndex)],
                 onClick        = { selectedIndex = settingsIndex },
             )
 
@@ -226,7 +249,14 @@ fun TvMainScreen(
         }
 
         // ── Content area ────────────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .focusRequester(contentFocus)
+                .focusGroup()
+                .onFocusEvent { contentHasFocus = it.hasFocus },
+        ) {
             // Chaque onglet garde son état quand on le quitte — même raison que sur
             // mobile : `when` retire l'onglet précédent de la composition, et
             // `rememberSaveable` seul verrait son entrée jetée avec lui.
@@ -311,7 +341,6 @@ private fun RailItem(
     label:          String,
     isActive:       Boolean,
     expanded:       Boolean,
-    focusRequester: FocusRequester? = null,
     onClick:        () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -332,8 +361,7 @@ private fun RailItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (expanded) 14.dp else 8.dp, vertical = 3.dp)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it },
+            .padding(horizontal = if (expanded) 14.dp else 8.dp, vertical = 3.dp),
         shape = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
         colors = ClickableSurfaceDefaults.colors(
             containerColor        = containerColor,
