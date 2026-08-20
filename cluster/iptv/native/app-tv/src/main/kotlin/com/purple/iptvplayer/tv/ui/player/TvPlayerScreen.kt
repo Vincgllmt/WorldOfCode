@@ -38,6 +38,7 @@ import androidx.media3.common.C
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.purple.iptvplayer.core.epg.EpgTimeline
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -354,8 +355,8 @@ private fun TvPlayerOverlay(
             Column {
                 // EPG for live channels
                 if (isLive && epgPrograms.isNotEmpty()) {
-                    TvEpgBar(epgPrograms)
-                    Spacer(Modifier.height(8.dp))
+                    TvEpgCard(epgPrograms)
+                    Spacer(Modifier.height(12.dp))
                 }
 
                 if (durationMs > 0L) {
@@ -472,59 +473,91 @@ private fun TvSeekBar(
 }
 
 @Composable
-private fun TvEpgBar(programs: List<EpgProgram>) {
-    val now = System.currentTimeMillis()
-    val current = programs.firstOrNull { it.startMs() <= now && it.endMs() > now }
-        ?: programs.firstOrNull()
-    val next = if (current != null) programs.firstOrNull { it.startMs() >= current.endMs() } else null
-    if (current == null) return
-
-    val progress = run {
-        val start = current.startMs(); val end = current.endMs()
-        if (end > start) ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f) else 0f
+private fun TvEpgCard(programs: List<EpgProgram>, modifier: Modifier = Modifier) {
+    // L'instant courant doit être un état qui progresse. Lu une seule fois pendant la
+    // composition — ce que faisait la TV — la barre d'avancement reste figée et la
+    // carte continue d'annoncer un programme terminé pendant toute la session (P10).
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            now = System.currentTimeMillis()
+        }
     }
 
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Tv, null, tint = TvPurpleGlow, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
+    val snap = EpgTimeline.snapshot(programs, now) ?: return
+    val current = snap.current
+    val timeLabel = "${EpgTimeline.formatTime(current, end = false)} – ${EpgTimeline.formatTime(current, end = true)}"
+
+    Surface(
+        modifier        = modifier.widthIn(max = 380.dp),
+        shape           = RoundedCornerShape(16.dp),
+        color           = Color.Black.copy(alpha = 0.72f),
+        border          = BorderStroke(1.dp, TvPurpleGlow.copy(alpha = 0.35f)),
+        shadowElevation = 12.dp,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(TvPurple.copy(alpha = 0.85f))
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.player_live),
+                        color = Color.White, fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp,
+                    )
+                }
+                Text(timeLabel, color = Color.White.copy(0.5f), fontSize = 13.sp)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
             Text(
-                current.title, color = Color.White, fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                current.title,
+                color      = Color.White,
+                fontSize   = 17.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines   = 2,
+                overflow   = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            Text(
-                "${current.start.take(16).takeLast(5)} - ${current.end.take(16).takeLast(5)}",
-                color = Color.White.copy(0.55f), fontSize = 12.sp,
+
+            Spacer(Modifier.height(8.dp))
+
+            LinearProgressIndicator(
+                progress   = { snap.progress },
+                modifier   = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color      = TvPurpleGlow,
+                trackColor = Color.White.copy(0.15f),
             )
-        }
-        Spacer(Modifier.height(6.dp))
-        LinearProgressIndicator(
-            progress   = { progress },
-            modifier   = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-            color      = TvPurpleGlow, trackColor = Color.White.copy(0.2f),
-        )
-        if (next != null) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Suivant - ${next.title}",
-                color = Color.White.copy(0.45f), fontSize = 12.sp, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
+
+            snap.next?.let { next ->
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.SkipNext, null,
+                        tint = Color.White.copy(0.4f), modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        next.title,
+                        color    = Color.White.copy(0.45f),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
-
-private fun EpgProgram.startMs(): Long = tvParseEpgTime(start)
-private fun EpgProgram.endMs():   Long = tvParseEpgTime(end)
-
-private fun tvParseEpgTime(s: String): Long = runCatching {
-    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
-    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-    sdf.parse(s)?.time ?: 0L
-}.getOrDefault(0L)
 
 @Composable
 private fun TvControlButton(

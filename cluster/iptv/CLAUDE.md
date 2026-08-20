@@ -852,13 +852,14 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 - [x] **Retrait d'un favori impossible sur `app-tv`** — ✅ **corrigé et vérifié au D-pad**
       le 2026-08-19. Diagnostic initial faux, cf. §14.
-- [ ] **Carte EPG absente sur TV** — « il manque l'EPG comme sur mobile, c'est une carte
-      en dehors du lecteur ». Portage de `PlayerScreen` (P10/P11 déjà corrigés) vers TV.
+- [x] **Carte EPG sur TV** — faite et vérifiée sur le vrai catalogue, cf. §28. La TV
+      n'avait jamais reçu P10/P11 : horaires décalés et barre figée.
 - [ ] **Bouton VF / VOSTFR** au lancement d'un contenu, en bas à droite au-dessus du
       lecteur. ⚠️ Précision de `raf.md` à ne pas perdre : **la première piste de
       sous-titres ne fonctionne quasi jamais**, prendre la deuxième si elle existe.
-- [ ] **Bouton de simulation de fin d'essai** derrière `BuildConfig.DEBUG`. Le mécanisme
-      existe déjà (`mkprefs.py` + `run-as`, §3) — reste à l'exposer dans l'UI.
+- [~] ~~**Bouton de simulation de fin d'essai** derrière `BuildConfig.DEBUG`~~ —
+      **annulé par l'utilisateur le 2026-08-20.** Ne pas le reproposer. Le besoin de
+      poser un état d'essai reste couvert hors UI par `mkprefs.py` + `run-as` (§3).
 - [ ] **Cast d'une chaîne TV : son sans image.** Exige un Chromecast sur le même réseau,
       impossible depuis ce poste.
 
@@ -2453,3 +2454,78 @@ information que le code n'a pas aujourd'hui — même famille que B2, et même p
 ne pas écrire à l'aveugle.
 
 **État : 120 tests, 0 échec** (116 + 4 sur les parseurs de détail).
+
+
+---
+
+## 28. EPG sur TV — la logique était dupliquée, et les deux copies avaient divergé *(2026-08-20)*
+
+Demande de `raf.md` : « il manque l'EPG comme sur mobile, c'est une carte en dehors du
+lecteur ». La TV avait bien un `TvEpgBar` — mais **faux**, et depuis toujours.
+
+### Le vrai défaut : P10 et P11 n'ont jamais été portés sur TV
+
+| Ligne de `TvPlayerScreen` | Défaut | Corrigé sur mobile en |
+|---|---|---|
+| `tvParseEpgTime(start)` | ignore `startMs`/`endMs` du modèle, reparse la chaîne en UTC | P11b |
+| `current.start.take(16).takeLast(5)` | affiche l'horaire **brut du fournisseur** | P11a |
+| `val now = System.currentTimeMillis()` | lu une fois pendant la composition, horloge figée | P10b |
+
+Cause racine : la décision « quel programme est à l'antenne, et où il en est » était
+**écrite deux fois**, dans `PlayerScreen` et dans `TvPlayerScreen`. C'est exactement ce
+qu'interdit la règle §2.1 — et la duplication a produit ce qu'elle produit toujours :
+les correctifs n'ont été appliqués qu'à une copie.
+
+### Preuve différentielle avant correction
+
+Plutôt que d'affirmer le défaut, l'algorithme TV a été porté **verbatim** dans `core` et
+confronté au scénario mesuré en P11 (panneau en UTC+1, appareil à Paris). Rouge obtenu :
+
+```
+expected:<0.62222224> but was:<0.0>       ← barre d'avancement figée à zéro
+expected:<[20]:00>    but was:<[19]:00>   ← le décalage d'une heure
+l'avancement doit croitre (0.0 -> 0.0)
+```
+
+À noter : le test de **sélection** du programme, lui, passe — par l'accident déjà décrit
+en P11, le repli `programs.firstOrNull()` donnant le bon programme par chance puisque
+l'API renvoie les diffusions à partir de maintenant. C'est ce qui rendait le défaut
+invisible à l'œil : le bon titre s'affichait, avec un mauvais horaire et une barre vide.
+
+### Correction — une seule logique, dans `core`
+
+`core/epg/EpgTimeline.kt` : `startMs`/`endMs` (horodatage Unix d'abord, chaîne en repli),
+`snapshot(programs, now)` (courant, suivant, avancement) et `formatTime` (fuseau de
+l'appareil, injectable pour les tests). **7 tests.**
+
+Les deux UI la consomment désormais ; les helpers privés du mobile ont été supprimés.
+Le portage mobile est fidèle au caractère près — mêmes replis, même formatage — mais
+**n'a pas été réobservé sur téléphone** (Pixel 7 non connecté sur cette session) : il est
+couvert par la compilation et les tests, pas par la mesure.
+
+### ✅ Vérifié sur émulateur TV, catalogue réel de l'utilisateur
+
+TF1 FHD, 11 889 chaînes chargées (VPN actif). Heure de l'appareil **09:06**.
+
+| Observation | Mesure |
+|---|---|
+| Carte affichée | `LIVE · 06:55 – 10:00 · Bonjour ! La Matinale TF1 · ▶ TFou` |
+| Programme courant | correct — 09:06 tombe bien dans 06:55–10:00 |
+| Barre d'avancement | **72,0 %** mesurés au pixel, contre **70,8 %** attendus |
+| Horloge | l'incrustation de TF1 dans le flux affiche **09:05** |
+
+Le dernier point est le contrôle le plus solide : c'est **la chaîne elle-même** qui
+atteste l'heure, indépendamment de l'appareil et de mon calcul. Avant correction, la
+carte aurait affiché l'horaire brut du panneau, décalé.
+
+La carte reprend la forme du mobile (badge `LIVE`, plage horaire, titre, programme
+suivant), en bas à gauche, et suit `overlayVisible` comme le reste des contrôles.
+
+Défaut corrigé au passage : « Suivant - » était **codé en dur en français** sur TV. Il
+disparaît au profit de l'icône du mobile, ce qui supprime la chaîne plutôt que d'en
+traduire une de plus. Parité des ressources maintenue : app-tv **100/100**, app-mobile
+**110/110**.
+
+**État : 127 tests, 0 échec** (120 + 7 `EpgTimelineTest`).
+
+⚠️ `app-tv` reste en **versionCode 8** : rien de ceci n'est distribué.

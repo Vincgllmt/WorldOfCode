@@ -109,4 +109,5 @@
     <string name="label_rating">Rating: %1$s</string>
     <string name="btn_watchlist_add">+ My list</string>
     <string name="btn_watchlist_in">My list</string>
+    <string name="player_live">LIVE</string>
 </resources>

@@ -32,6 +32,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.purple.iptvplayer.R
+import com.purple.iptvplayer.core.epg.EpgTimeline
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -542,19 +543,18 @@ private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Mod
         }
     }
 
-    val current = programs.firstOrNull { it.startMs() <= now && it.endMs() > now }
-        ?: programs.firstOrNull() ?: return
-    val next = programs.firstOrNull { it.startMs() >= current.endMs() }
-
-    val progress = run {
-        val s = current.startMs(); val e = current.endMs()
-        if (e > s) ((now - s).toFloat() / (e - s)).coerceIn(0f, 1f) else 0f
-    }
+    // Sélection et avancement viennent de `core` : la même décision était écrite ici
+    // et dans `TvPlayerScreen`, et les deux copies avaient divergé — la TV n'avait
+    // jamais reçu P10/P11. Voir EpgTimeline.
+    val snap = EpgTimeline.snapshot(programs, now) ?: return
+    val current  = snap.current
+    val next     = snap.next
+    val progress = snap.progress
 
     // Horaires formatés dans le fuseau de l'appareil. Afficher la chaîne brute du
     // fournisseur donnait un horaire faux : mesuré à 20:28 heure locale, le JT de 20h
     // s'affichait « 19:00 – 19:45 », le panneau émettant en UTC+1.
-    val timeLabel = "${formatLocal(current, fallback = current.start)} – ${formatLocal(current, end = true, fallback = current.end)}"
+    val timeLabel = "${EpgTimeline.formatTime(current, end = false)} – ${EpgTimeline.formatTime(current, end = true)}"
 
     Surface(
         modifier  = modifier.widthIn(max = 260.dp),
@@ -622,24 +622,6 @@ private fun EpgFloatingCard(programs: List<EpgProgram>, modifier: Modifier = Mod
         }
     }
 }
-
-/** Préfère l'horodatage Unix, non ambigu ; retombe sur la chaîne d'horaire si absent. */
-private fun EpgProgram.startMs(): Long = startMs ?: parseEpgTime(start)
-private fun EpgProgram.endMs(): Long   = endMs ?: parseEpgTime(end)
-
-private fun formatLocal(p: EpgProgram, end: Boolean = false, fallback: String): String {
-    val ms = (if (end) p.endMs else p.startMs) ?: return fallback.take(16).takeLast(5)
-    val fmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-    fmt.timeZone = java.util.TimeZone.getDefault()
-    return fmt.format(java.util.Date(ms))
-}
-
-private fun parseEpgTime(s: String): Long = runCatching {
-    // Xtream format: "2024-01-15 20:00:00" (server local time assumed UTC-ish)
-    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
-    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-    sdf.parse(s)?.time ?: 0L
-}.getOrDefault(0L)
 
 // ── Control button ────────────────────────────────────────────────────────────
 
