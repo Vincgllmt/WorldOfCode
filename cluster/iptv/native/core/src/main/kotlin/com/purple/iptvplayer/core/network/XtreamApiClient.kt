@@ -152,10 +152,9 @@ class XtreamApiClient {
     // ─── Parsers (run on Dispatchers.Default via caller) ─────────────────────
 
     fun parseChannels(catsJson: String, streamsJson: String, c: Credentials): List<Channel> {
-        val catMap = buildCatMap(JSONArray(catsJson))
-        return JSONArray(streamsJson).let { arr ->
-            (0 until arr.length()).map { i ->
-                val s = arr.getJSONObject(i)
+        val catMap = buildCatMap(catsArrayOrEmpty(catsJson))
+        return JSONArray(streamsJson).objects().map { s ->
+            run {
                 val catId = s.optString("category_id")
                 val streamId = s.optInt("stream_id")
                 Channel(
@@ -171,10 +170,9 @@ class XtreamApiClient {
     }
 
     fun parseMovies(catsJson: String, streamsJson: String, c: Credentials): List<Movie> {
-        val catMap = buildCatMap(JSONArray(catsJson))
-        return JSONArray(streamsJson).let { arr ->
-            (0 until arr.length()).map { i ->
-                val s = arr.getJSONObject(i)
+        val catMap = buildCatMap(catsArrayOrEmpty(catsJson))
+        return JSONArray(streamsJson).objects().map { s ->
+            run {
                 val catId = s.optString("category_id")
                 val id = s.optInt("stream_id")
                 val ext = s.optString("container_extension").ifEmpty { "mp4" }
@@ -191,10 +189,9 @@ class XtreamApiClient {
     }
 
     fun parseSeries(catsJson: String, streamsJson: String): List<SeriesItem> {
-        val catMap = buildCatMap(JSONArray(catsJson))
-        return JSONArray(streamsJson).let { arr ->
-            (0 until arr.length()).map { i ->
-                val s = arr.getJSONObject(i)
+        val catMap = buildCatMap(catsArrayOrEmpty(catsJson))
+        return JSONArray(streamsJson).objects().map { s ->
+            run {
                 val catId = s.optString("category_id")
                 SeriesItem(
                     id     = s.optInt("series_id"),
@@ -235,9 +232,10 @@ class XtreamApiClient {
         val epsData  = data.optJSONObject("episodes") ?: JSONObject()
         val seasons  = mutableMapOf<String, List<Episode>>()
         epsData.keys().forEach { seasonNum ->
-            val epArr = epsData.getJSONArray(seasonNum)
-            seasons[seasonNum] = (0 until epArr.length()).map { i ->
-                val e   = epArr.getJSONObject(i)
+            // Une saison au format inattendu est ignorée : les 36 autres valent mieux
+            // qu'une fiche vide. Le document entier illisible, lui, lève (cf. [objects]).
+            val epArr = runCatching { epsData.getJSONArray(seasonNum) }.getOrNull() ?: return@forEach
+            seasons[seasonNum] = epArr.objects().map { e ->
                 val ext = e.optString("container_extension").ifEmpty { "mp4" }
                 val epId = e.optInt("id")
                 Episode(
@@ -289,12 +287,34 @@ class XtreamApiClient {
     private fun epochSeconds(o: JSONObject, key: String): Long? =
         o.optString(key).takeIf { it.isNotEmpty() }?.toLongOrNull()?.times(1000L)
 
-    private fun buildCatMap(arr: JSONArray): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            map[o.optString("category_id")] = cleanCat(o.optString("category_name"))
+    private fun buildCatMap(arr: JSONArray): Map<String, String> =
+        arr.objects().associate { o ->
+            o.optString("category_id") to cleanCat(o.optString("category_name"))
         }
-        return map
-    }
+
+    /**
+     * Tableau de **catégories** tolérant : un document illisible rend un tableau vide.
+     *
+     * Réservé aux catégories, dont la perte ne coûte qu'un libellé de groupe (les
+     * chaînes retombent sur « Others »). Le document de flux, lui, doit **lever** :
+     * voir la note de [objects].
+     */
+    private fun catsArrayOrEmpty(json: String): JSONArray =
+        runCatching { JSONArray(json) }.getOrNull() ?: JSONArray()
+
+    /**
+     * Objets d'un tableau, les entrées qui n'en sont pas étant **écartées**.
+     *
+     * Une entrée corrompue — un panneau qui insère une chaîne, un `null`, un champ
+     * renommé — ne doit pas coûter les 11 889 entrées saines. C'est le défaut P2,
+     * ici sur le chemin de chargement du catalogue.
+     *
+     * ⚠️ La tolérance s'arrête à l'entrée. Le document **entier** illisible continue
+     * de lever, et ce n'est pas un oubli : `IptvRepository.fetchChannels` écrit son
+     * résultat en cache sans vérifier qu'il est non vide, et son repli hors-ligne vit
+     * dans le `catch`. Avaler l'erreur écraserait donc le catalogue en cache par une
+     * liste vide, en privant l'utilisateur du repli. Une panne doit rester une panne.
+     */
+    private fun JSONArray.objects(): List<JSONObject> =
+        (0 until length()).mapNotNull { i -> runCatching { getJSONObject(i) }.getOrNull() }
 }

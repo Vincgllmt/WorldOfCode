@@ -784,7 +784,7 @@ impossible.
       cherché un niveau trop bas et **aucune publication n'était possible**.
 - [x] `:app-mobile:bundleRelease` produit et signé par la clé d'upload (versionCode 9).
 
-**État : 73 tests, 0 échec.**
+**État : 120 tests, 0 échec.**
 
 ### À faire
 
@@ -882,9 +882,9 @@ Classé par ce qui contraint le reste, pas par difficulté.
 #### Couverture
 
 - [ ] `app-tv` reste en **versionCode 8** : aucun correctif TV n'est distribué.
-- [ ] `DownloadRepository` et `PlayerService` : aucune couverture. Les parseurs JSON de
-      `XtreamApiClient` (`parseChannels`, `parseMovies`, `parseSeriesDetail`) appellent
-      `JSONArray()` sans protection — **exactement le défaut P2**, non corrigé.
+- [x] **Parseurs JSON de `XtreamApiClient` protégés** — cf. §27. 14 tests, dont 11 rouges
+      constatés avant correction.
+- [ ] `DownloadRepository` et `PlayerService` : aucune couverture.
 - [ ] Tests instrumentés (Compose UI) : désormais possibles, un émulateur TV existe (§11).
 
 ---
@@ -2382,3 +2382,74 @@ des interfaces TV.
 | Validation | `mInputShown=true` — clavier ouvert |
 | Saisie « Simpson » | « 2 RESULTS », résultats affichés |
 | Traversée bas/bas/haut, clavier fermé | champ inchangé — **plus aucune touche parasite** |
+
+
+---
+
+## 27. Parseurs de catalogue — la tolérance ne doit pas être uniforme *(2026-08-19)*
+
+Dernier point ouvert du §6 « Couverture » : les parseurs JSON de `XtreamApiClient`
+portaient le défaut P2 — `JSONArray(json)` et `getJSONObject(i)` nus — mais sur le
+chemin de **chargement du catalogue**, autrement plus exposé que « Reprendre la lecture ».
+
+### Rouge constaté avant correction
+
+`core/src/test/…/network/XtreamParsersTest.kt`, 14 tests. Au premier passage :
+**9 échecs sur 10**, tous en `JSONException` :
+
+```
+ECHEC: une chaine corrompue est ecartee … -> org.json.JSONException: JSONArray[1] is not a JSONObject
+ECHEC: un document de chaines illisible … -> org.json.JSONException: A JSONArray text must start with '['
+```
+
+Une seule ligne malformée dans la réponse du panneau — un champ renommé, un `null`
+inséré — et **les 11 889 chaînes étaient perdues**, pas seulement l'entrée fautive.
+
+### ⚠️ La correction évidente était une régression — spécification révisée en cours de route
+
+La première version rendait une liste vide pour *tout* document illisible. Vérification
+faite dans `IptvRepository.fetchChannels` avant de la garder :
+
+```kotlin
+val result = try { … apiClient.parseChannels(catsBody, streamsBody, c) }
+             catch (e: Exception) { cacheRepo.getChannels(allowStale = true)… }
+channelsCache = result
+cacheRepo.saveChannels(result)      // ← aucun garde-fou sur result vide
+```
+
+Le repli hors-ligne de P8 vit **dans le `catch`**. Avaler l'exception aurait donc :
+
+1. empêché ce repli de se déclencher ;
+2. **écrasé le catalogue en cache par une liste vide**, figée 24 h par le TTL de P8.
+
+Transformer une panne bruyante en panne silencieuse et destructrice. C'est la leçon de
+§5 P4 rencontrée une seconde fois — la spécification a été corrigée, pas contournée, et
+les quatre tests concernés réécrits en `assertThrows`.
+
+### Asymétrie retenue
+
+| Niveau | Comportement | Raison |
+|---|---|---|
+| document de flux illisible | **lève** | c'est une panne : le `catch` appelant doit servir le cache périmé |
+| document de **catégories** illisible | dégrade | un libellé de groupe perdu ne vaut pas le catalogue — les chaînes retombent sur « Others » |
+| **entrée isolée** corrompue | écartée | une ligne fautive ne doit pas coûter les autres |
+
+Deux primitives portent cette règle : `catsArrayOrEmpty()` (réservée aux catégories) et
+`JSONArray.objects()` (saut d'entrée). Appliquées à `parseChannels`, `parseMovies`,
+`parseSeries`, `buildCatMap` et `parseSeriesDetail` — où une **saison** au format
+inattendu est désormais ignorée sans coûter les 36 autres.
+
+### Portée honnête de ce qui est prouvé
+
+Prouvé : les 14 tests, sur données fabriquées. **Non observé sur appareil** — provoquer
+une réponse malformée exigerait un panneau complice ou un proxy interposé. Le défaut
+était certain (lecture du code + rouge des tests), le correctif l'est aussi ; c'est le
+*déclenchement en conditions réelles* qui n'est pas mesuré.
+
+Constat annexe, **non corrigé** : `fetchChannels` met en cache un résultat vide sans
+sourciller. Un panneau qui répond légitimement `[]` le temps d'un incident fige donc un
+catalogue vide pour 24 h. Distinguer « vraiment vide » de « incident » demande une
+information que le code n'a pas aujourd'hui — même famille que B2, et même piège :
+ne pas écrire à l'aveugle.
+
+**État : 120 tests, 0 échec** (116 + 4 sur les parseurs de détail).
