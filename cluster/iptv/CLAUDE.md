@@ -3199,3 +3199,30 @@ non vérifié — le conteneur du témoin positif — a suffi à inverser la con
 reste de la chaîne, correct, lui a donné l'apparence de la rigueur.
 
 **État : 169 tests, 0 échec.**
+
+
+---
+
+## 37. Grille irrégulière — pas une régression, un défaut ancien *(2026-08-20)*
+
+Signalé comme une régression : « un titre trop long modifie la taille de l'encadré ».
+
+**Vérifié avant de corriger** : `git diff` sur `MoviesScreen.kt` depuis le début de la
+session ne contient que le passage de `remember` à `rememberSaveable` et un déplacement
+d'import. La ligne du titre est **identique octet pour octet** à la version d'avant :
+
+```kotlin
+Text(movie.name, …, maxLines = 2, overflow = TextOverflow.Ellipsis, …)
+```
+
+Le titre occupe donc une ou deux lignes selon sa longueur, et la carte n'a pas de hauteur
+réservée : une carte à titre long est plus haute que ses voisines. Le comportement
+préexistait — la pastille de cast ajoutée puis retirée n'a laissé aucune trace.
+
+**Corrigé quand même** : `minLines = 2` sur les quatre cartes de grille (Films, Séries, et
+les deux de « Ma liste »). Toutes les cartes réservent deux lignes et s'alignent.
+
+Les titres de `HomeScreen` ne sont pas touchés : ce sont des lignes de liste avec
+`weight(1f)`, où une hauteur variable ne produit pas d'irrégularité.
+
+**État : 169 tests, 0 échec.**

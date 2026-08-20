@@ -228,7 +228,9 @@ fun MovieGridItem(movie: Movie, isFav: Boolean, onClick: () -> Unit, onFav: () -
                 }
             }
         }
-        Text(movie.name, color = TextPrimary, fontSize = 11.sp, maxLines = 2,
+        // minLines = 2 : sans hauteur réservée, un titre sur deux lignes rendait sa carte
+        // plus haute que ses voisines et la grille devenait irrégulière.
+        Text(movie.name, color = TextPrimary, fontSize = 11.sp, minLines = 2, maxLines = 2,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(6.dp))
     }
 }

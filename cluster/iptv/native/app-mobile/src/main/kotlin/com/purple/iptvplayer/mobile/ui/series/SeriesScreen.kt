@@ -196,7 +196,8 @@ fun SeriesGridItem(series: SeriesItem, isFav: Boolean, onClick: () -> Unit, onFa
                 )
             }
         }
-        Text(series.name, color = TextPrimary, fontSize = 11.sp, maxLines = 2,
+        // Hauteur de titre réservée, comme sur la grille des films.
+        Text(series.name, color = TextPrimary, fontSize = 11.sp, minLines = 2, maxLines = 2,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(6.dp))
     }
 }
