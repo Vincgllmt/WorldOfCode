@@ -7,6 +7,25 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+/**
+ * Lien M3U pré-rempli sur l'écran de connexion, **jamais versionné**.
+ *
+ * Il porte les identifiants de l'abonnement : le committer serait la faute déjà commise
+ * avec `keystore.properties` (cf. §31), sur un dépôt partagé. Il se déclare donc dans
+ * `local.properties` — qui est dans le `.gitignore` — sous la clé `purple.defaultM3u`,
+ * ou se passe en ligne de commande par `-Ppurple.defaultM3u=...`.
+ *
+ * Vide par défaut : une build faite ailleurs ne pré-remplit rien.
+ */
+val defaultM3u: String = run {
+    val local = Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }?.let { load(FileInputStream(it)) }
+    }
+    (local.getProperty("purple.defaultM3u")
+        ?: providers.gradleProperty("purple.defaultM3u").orNull
+        ?: "")
+}
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) load(FileInputStream(keystorePropertiesFile))
@@ -20,8 +39,8 @@ android {
         applicationId = "com.purple.iptvplayer.tv"
         minSdk        = 23
         targetSdk     = 36
-        versionCode   = 9
-        versionName   = "1.2.0"
+        versionCode   = 10
+        versionName   = "1.2.1"
     }
 
     signingConfigs {
@@ -49,7 +68,14 @@ android {
     // TV. Desactive le temps que les versions s'alignent.
     lint { disable += "NullSafeMutableLiveData" }
 
-    buildFeatures { compose = true }
+    defaultConfig {
+        buildConfigField("String", "DEFAULT_M3U", "\"${defaultM3u.replace("\"", "\\\"")}\"")
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

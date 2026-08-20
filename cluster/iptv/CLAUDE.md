@@ -3408,3 +3408,18 @@ par un certificat différent de celui de Play (Play App Signing signe avec la cl
 Google). Si la version du Play Store est déjà installée sur l'appareil, cet APK ne pourra
 pas l'écraser : il faut désinstaller d'abord, ce qui **perd les identifiants Xtream** de cet
 appareil (`EncryptedSharedPreferences`, cf. §9).
+
+### Lien M3U pré-rempli — sans jamais le committer
+
+Saisir un lien M3U complet à la télécommande est interminable. L'écran de connexion TV
+peut donc partir avec un lien déjà en place — mais **le lien porte les identifiants de
+l'abonnement**, et le dépôt est partagé : le committer serait la faute déjà commise avec
+`keystore.properties` (§31).
+
+Mécanique retenue : la valeur se déclare dans `native/local.properties` — qui est dans le
+`.gitignore` — sous la clé `purple.defaultM3u`, ou se passe en ligne de commande par
+`-Ppurple.defaultM3u=…`. Elle arrive au code via `BuildConfig.DEFAULT_M3U`, **vide par
+défaut** : une build faite sur une autre machine ne pré-remplit rien et ne divulgue rien.
+
+**Vérifié sur émulateur** (versionCode 10 / 1.2.1) : le champ arrive rempli, et un seul
+appui sur « Se connecter » charge les 11 899 chaînes.

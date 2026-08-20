@@ -35,6 +35,7 @@ import com.purple.iptvplayer.core.viewmodel.TrialViewModel
 import com.purple.iptvplayer.tv.ui.common.TvPremiumBadge
 import com.purple.iptvplayer.core.viewmodel.SetupState
 import com.purple.iptvplayer.core.viewmodel.SetupViewModel
+import com.purple.iptvplayer.tv.BuildConfig
 import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
@@ -47,7 +48,10 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
     val state by vm.state.collectAsState()
 
     var modeIndex  by remember { mutableIntStateOf(0) }
-    var urlText    by remember { mutableStateOf("") }
+    // Pré-rempli depuis `purple.defaultM3u` (local.properties, non versionné) : saisir un
+    // lien M3U complet à la télécommande est interminable. Vide si la propriété n'est pas
+    // définie — donc rien de particulier pour une build faite ailleurs.
+    var urlText    by remember { mutableStateOf(BuildConfig.DEFAULT_M3U) }
     var hostText   by remember { mutableStateOf("") }
     var userText   by remember { mutableStateOf("") }
     var passText   by remember { mutableStateOf("") }
