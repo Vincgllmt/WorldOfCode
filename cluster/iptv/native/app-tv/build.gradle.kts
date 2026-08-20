@@ -20,8 +20,8 @@ android {
         applicationId = "com.purple.iptvplayer.tv"
         minSdk        = 23
         targetSdk     = 36
-        versionCode   = 8
-        versionName   = "1.1.0"
+        versionCode   = 9
+        versionName   = "1.2.0"
     }
 
     signingConfigs {
@@ -41,6 +41,13 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    // Le detecteur NullSafeMutableLiveData plante l'analyse (incompatibilite entre le
+    // lint de `lifecycle` et l'API d'analyse Kotlin du toolchain) : « Found class
+    // KaCallableMemberCall, but interface was expected ». C'est un bug de l'outil, pas
+    // du code, et il bloquait toute build de release — donc toute publication de l'app
+    // TV. Desactive le temps que les versions s'alignent.
+    lint { disable += "NullSafeMutableLiveData" }
 
     buildFeatures { compose = true }
 

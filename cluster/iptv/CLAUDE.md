@@ -2819,10 +2819,11 @@ l'étape **suivante** qui tombe :
 ```
 
 C'est un **bug de l'outil lint** (incompatibilité entre le lint de `lifecycle` et l'API
-d'analyse Kotlin du toolchain), pas un défaut du code. Il bloque néanmoins toute
-publication de l'app TV. Contournements possibles : désactiver ce détecteur
-(`lint { disable += "NullSafeMutableLiveData" }`) ou aligner les versions. À traiter le
-jour où l'on publie la TV — elle est de toute façon restée en versionCode 8.
+d'analyse Kotlin du toolchain), pas un défaut du code.
+
+✅ **Levé le 2026-08-20** : `lint { disable += "NullSafeMutableLiveData" }` dans
+`app-tv/build.gradle.kts`. `:app-tv:assembleRelease` réussit désormais, et l'app TV est de
+nouveau publiable. À réactiver le jour où les versions s'alignent.
 
 `:app-mobile:bundleRelease` n'est pas concerné et fonctionne.
 
@@ -3379,3 +3380,31 @@ Non-régression : le rail reste atteignable par la gauche, et sa navigation vert
 interne fonctionne.
 
 **État : 169 tests, 0 échec.**
+
+---
+
+## 41. Première build de release TV depuis le début du chantier *(2026-08-20)*
+
+`app-tv` était resté en **versionCode 8** depuis le début, et sa publication était bloquée
+par le plantage de lint décrit en §31 — donc rien du travail TV (deux panneaux, carte EPG,
+VF/VOSTFR, quatre correctifs de focus, pastille « vu », conservation d'état, rail qui ne
+happe plus le focus) n'était sorti d'ici.
+
+Blocage levé en désactivant le seul détecteur fautif. Build produite :
+
+| | |
+|---|---|
+| `applicationId` | `com.purple.iptvplayer.tv` |
+| versionCode / versionName | **9** / **1.2.0** |
+| Signature | `CN=Hichem JOUINI`, SHA1 `f60c729c…620f` — clé d'upload |
+| Taille | 6,1 Mo |
+
+**Vérifié** : l'APK **minifié** s'installe et démarre sans plantage (R8 n'a rien cassé),
+`leanback-launchable-activity` bien déclarée.
+
+⚠️ **Chargement latéral sur un appareil réel** : l'app TV n'a **pas** de suffixe
+`applicationIdSuffix` en debug, et une build locale est signée par la clé d'upload — donc
+par un certificat différent de celui de Play (Play App Signing signe avec la clé de
+Google). Si la version du Play Store est déjà installée sur l'appareil, cet APK ne pourra
+pas l'écraser : il faut désinstaller d'abord, ce qui **perd les identifiants Xtream** de cet
+appareil (`EncryptedSharedPreferences`, cf. §9).
