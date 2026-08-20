@@ -21,9 +21,10 @@ class BillingRepository(
     private val trialRepo: TrialRepository,
 ) {
     companion object {
-        const val MONTHLY_ID  = "purple_monthly_099"
-        const val YEARLY_ID   = "purple_yearly_499"
-        const val LIFETIME_ID = "purple_lifetime_999"
+        const val MONTHLY_ID  = BillingProducts.MONTHLY_ID
+        const val YEARLY_ID   = BillingProducts.YEARLY_ID
+        const val LIFETIME_ID = BillingProducts.LIFETIME_ID
+        private const val PLAY_STORE_PACKAGE = "com.android.vending"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -187,23 +188,83 @@ class BillingRepository(
      */
     suspend fun syncEntitlements(): Int {
         if (!billingClient.isReady && !connect()) return 0
-        var restored = 0
+
+        val outcomes = mutableMapOf<String, QueryOutcome>()
+        val owned    = mutableListOf<Purchase>()
+
         for (type in listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)) {
             val params = QueryPurchasesParams.newBuilder().setProductType(type).build()
-            val (_, purchases) = billingClient.queryPurchasesSuspend(params)
-            purchases.forEach { if (handlePurchase(it)) restored++ }
+            val (result, purchases) = billingClient.queryPurchasesSuspend(params)
+            // Le BillingResult était jeté (`val (_, …)`) : c'est ce qui rendait
+            // impossible de distinguer « tu ne possèdes rien » d'une panne, et donc
+            // impossible de retirer un droit sans risquer de déconnecter les abonnés
+            // légitimes.
+            outcomes[type] = if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                val purchased = purchases.filter {
+                    it.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
+                owned += purchased
+                QueryOutcome.Answered(purchased.flatMap { it.products })
+            } else {
+                QueryOutcome.Failed
+            }
         }
-        return restored
+
+        // Acquitter les achats neufs, quel que soit le verdict : sans acquittement,
+        // Play rembourse automatiquement au bout de trois jours.
+        owned.forEach { acknowledgeIfNeeded(it) }
+
+        val decision = EntitlementReconciler.decide(
+            inapp = outcomes.getValue(BillingClient.ProductType.INAPP),
+            subs  = outcomes.getValue(BillingClient.ProductType.SUBS),
+            playIsInstaller = installedByPlay(),
+        )
+        return when (decision) {
+            is EntitlementDecision.Grant -> {
+                deliverProduct(listOf(decision.productId))
+                _purchaseResult.emit(PurchaseResult.Success(decision.productId))
+                1
+            }
+            EntitlementDecision.Revoke -> {
+                // Remboursement, révocation, rétrofacturation : Play a répondu et ne
+                // reconnaît plus rien. L'essai en cours n'est pas touché.
+                trialRepo.revokeEntitlements()
+                0
+            }
+            EntitlementDecision.Unknown -> 0
+        }
+    }
+
+    /**
+     * L'application a-t-elle été installée par le Play Store ?
+     *
+     * Seule condition sous laquelle la liste d'achats de Play fait autorité pour ce
+     * paquet. Une build installée à la main — variante de debug, partage interne,
+     * chargement latéral — reçoit « OK, aucun achat » parce que Play ne connaît pas
+     * l'`applicationId`, pas parce que l'utilisateur n'a rien acheté.
+     */
+    private fun installedByPlay(): Boolean = runCatching {
+        val pm = context.packageManager
+        val installer = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            pm.getInstallSourceInfo(context.packageName).installingPackageName
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstallerPackageName(context.packageName)
+        }
+        installer == PLAY_STORE_PACKAGE
+    }.getOrDefault(false)
+
+    private suspend fun acknowledgeIfNeeded(purchase: Purchase) {
+        if (purchase.isAcknowledged) return
+        val ackParams = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchase.purchaseToken).build()
+        billingClient.acknowledgePurchaseSuspend(ackParams)
     }
 
     private suspend fun handlePurchase(purchase: Purchase): Boolean {
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return false
         deliverProduct(purchase.products)
-        if (!purchase.isAcknowledged) {
-            val ackParams = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken).build()
-            billingClient.acknowledgePurchaseSuspend(ackParams)
-        }
+        acknowledgeIfNeeded(purchase)
         _purchaseResult.emit(PurchaseResult.Success(purchase.products.firstOrNull() ?: ""))
         return true
     }

@@ -269,7 +269,7 @@ n'y figurent pas du tout. Chacun a été traité en Test-First : test écrit d'a
 | S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **corrigé, cf. §31** |
 | S3 | **le `signingConfig` ne trouvait jamais le keystore** | `bundleRelease` en échec sur la machine qui détient la clé — **corrigé** |
 | B1 | facturation : six défauts, dont l'abonné bloqué au 30ᵉ jour | lecture de `BillingRepository`, paramétrage confirmé par l'utilisateur |
-| B2 | un achat remboursé/révoqué ne retire jamais l'accès | lecture de `syncEntitlements` — **non corrigé** |
+| B2 | un achat remboursé/révoqué ne retire jamais l'accès | lecture de `syncEntitlements` — **corrigé, cf. §32** |
 | B3 | prix des abonnements affiché « N/A » sur le paywall | **observé sur appareil** — **non corrigé** |
 
 ### P1 — Un abonné payant est éjecté de l'app le dernier jour de son abonnement
@@ -865,8 +865,8 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Facturation
 
-- [ ] **B2 — un achat remboursé ne retire jamais l'accès** (§5 B2). Exige de distinguer
-      « Play dit que tu n'as rien » d'une panne : ne pas écrire à l'aveugle.
+- [x] **B2 — un achat remboursé ne retire jamais l'accès** — corrigé, cf. §32. Reste à
+      observer une révocation réelle sur une build de Play (AAB versionCode 14 prêt).
 - [ ] **B1.5 non observé** : impossible de provoquer un échec de facturation, Play Billing
       sert son cache local. À retenter autrement.
 - [ ] `deliverProduct()` code 30 et 365 jours en dur ; l'échéance réelle exige la Play
@@ -2828,3 +2828,73 @@ jour où l'on publie la TV — elle est de toute façon restée en versionCode 8
 
 **Sauvegardes prises avant l'opération** (ancien magasin + anciennes propriétés) dans le
 scratchpad de session — donc temporaires. À ne pas confondre avec une vraie sauvegarde.
+
+
+---
+
+## 32. B2 — retirer un droit sans déconnecter les abonnés légitimes *(2026-08-20)*
+
+`syncEntitlements()` n'ajoutait que des droits :
+
+```kotlin
+val (_, purchases) = billingClient.queryPurchasesSuspend(params)   // BillingResult jeté
+purchases.forEach { if (handlePurchase(it)) restored++ }           // rien si la liste est vide
+```
+
+Un achat remboursé, révoqué ou rétrofacturé disparaissait de la réponse de Play sans que
+`setPro()` soit jamais annulé. `is_pro_user` restait vrai **indéfiniment**, y compris dans
+les `EncryptedSharedPreferences` — couche anti-fraude qui jouait alors contre l'éditeur.
+
+### La décision est pure, donc testée
+
+`core/data/EntitlementReconciler.kt` : `decide(inapp, subs, playIsInstaller)` →
+`Grant` / `Revoke` / `Unknown`. **11 tests**, dont 7 rouges constatés d'abord.
+
+Le `BillingResult` cesse d'être jeté : c'est lui qui distingue « Play dit que tu ne
+possèdes rien » d'une panne. Asymétrie assumée — **accorder** est sans risque et se fait
+dès qu'un droit est vu ; **retirer** exige que les deux catalogues aient répondu.
+
+### ⚠️ La correction a introduit exactement le défaut qu'elle devait éviter
+
+Vérification sur appareil, état premium injecté : la première version **a mis
+l'utilisateur dehors**, écran d'achat à la place du bandeau.
+
+Cause : sur la variante `.debug`, l'`applicationId` est suffixé, donc Play répond
+**OK avec une liste vide** — il ne connaît pas ce paquet. Le réconciliateur en concluait
+« tu ne possèdes rien » et révoquait. Techniquement conforme à la spécification, faux dans
+les faits.
+
+C'est la leçon déjà consignée en §9 — « Play Billing ne pouvait rien retourner d'autre
+qu'un catalogue vide » — qui n'avait jamais été encodée. Elle l'est désormais :
+**Play ne fait autorité que sur ce qu'il a lui-même installé** (`installingPackageName ==
+com.android.vending`, avec repli `getInstallerPackageName` sous Android 11).
+
+Preuve différentielle, même appareil et même état injecté :
+
+| Build | Résultat |
+|---|---|
+| sans la condition d'installeur | écran d'achat — accès **retiré à tort** |
+| avec la condition | **`PREMIUM · 30 jours restants`** — accès conservé |
+
+### `trial_start_date` est délibérément conservé
+
+`revokeEntitlements()` efface `is_pro_user` et `subscription_expiry_date`, **pas** la date
+de début d'essai. L'effacer réattribuerait trois jours gratuits à chaque révocation : il
+suffirait de se faire rembourser pour repartir en essai. Même piège qu'en B1.4, où
+`pm clear` rendait l'accès par l'essai neuf et non par la synchronisation.
+
+### Portée honnête
+
+**Prouvé** : la décision (11 tests), et le fait que la correction ne déconnecte pas un
+utilisateur premium quand Play ne fait pas autorité (mesuré sur appareil).
+
+**Non observé** : la révocation elle-même. L'exercer demande une build installée depuis
+Play, un achat, puis un remboursement « avec suppression du droit » en Play Console —
+séquence qui ne peut pas être automatisée depuis ce poste. L'AAB **versionCode 14 /
+1.1.6** est prêt pour cela.
+
+Procédure : acheter, vérifier le bandeau, rembourser en supprimant le droit, attendre la
+propagation (quelques minutes — un `pm clear` immédiat voit encore l'achat, cf. §9), puis
+relancer. Attendu : **bandeau et accès retirés sans action de l'utilisateur**.
+
+**État : 154 tests, 0 échec.**

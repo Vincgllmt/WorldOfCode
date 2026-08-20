@@ -90,6 +90,32 @@ class TrialRepository(
         withContext(Dispatchers.IO) { securePrefs.edit().putLong("subscription_expiry_date", expiry).apply() }
     }
 
+    /**
+     * Retire les droits payants, et **eux seuls**.
+     *
+     * Appelé quand Play ne reconnaît plus aucun achat — remboursement, révocation,
+     * rétrofacturation (défaut B2). Les deux couches sont nettoyées : DataStore et les
+     * `EncryptedSharedPreferences`, dont la vocation anti-fraude jouerait sinon contre
+     * l'éditeur en conservant un `is_pro_user` périmé.
+     *
+     * ⚠️ **`trial_start_date` est délibérément conservé.** L'effacer réattribuerait un
+     * essai gratuit de trois jours à chaque révocation : il suffirait de se faire
+     * rembourser pour repartir en essai. C'est le piège déjà rencontré en B1.4, où
+     * `pm clear` rendait l'accès par l'essai neuf et non par la synchronisation.
+     */
+    suspend fun revokeEntitlements() {
+        context.dataStore.edit {
+            it.remove(KEY_IS_PRO)
+            it.remove(KEY_EXPIRY)
+        }
+        withContext(Dispatchers.IO) {
+            securePrefs.edit()
+                .remove("is_pro_user")
+                .remove("subscription_expiry_date")
+                .apply()
+        }
+    }
+
     suspend fun resetAll() {
         context.dataStore.edit { it.clear() }
         withContext(Dispatchers.IO) { securePrefs.edit().clear().apply() }
