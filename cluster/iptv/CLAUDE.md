@@ -2634,12 +2634,29 @@ n'existait pas (même erreur qu'au §24 : compter avant de conclure).
 | Choix VF | ✅ `CHOIX VF -> audio=TrueHD 7.1 sub=null` (français, sous-titres coupés) |
 | **Direct** | ✅ overlay `LIVE · AFRICANS CHANNELS · 1×` — **aucun bouton**, périmètre respecté |
 
-### Portée honnête
+### ✅ Vérifié sur téléphone (Pixel 7, variante debug, catalogue réel)
 
-**Non observé sur téléphone** : le mobile est compilé, couvert par les tests, et son
-overlay a bien été exercé (pistes lues, bouton correctement **absent** sur un contenu à
-version unique). Mais l'apparition et la bascule sur un film à deux versions n'ont pas été
-vues sur mobile — la variante debug du téléphone est configurée sur une playlist M3U
-publique sans VOD, et je n'ai pas reconfiguré l'application de l'utilisateur pour si peu.
+| Observation | Résultat |
+|---|---|
+| Bouton présent sur « Robin des Bois (2018) » | ✅ `Robin des Bois · 1× · 00:44 · 1:56:08 · VF · VOSTFR` |
+| **État initial** | ✅ **VF** allumé — le téléphone est en français, ExoPlayer a choisi la piste française et `detect()` le rapporte |
+| Bascule VOSTFR | ✅ fond VOSTFR `(147,82,214)` violet, VF éteint |
+| Retour VF | ✅ l'inverse, mesuré au pixel |
+| Contenu à version unique | ✅ bouton **absent** (`A null/null`, `T fr/French` : pas d'audio français, donc pas de choix) |
+
+L'état initial est une confirmation utile en soi : personne n'a appuyé sur VF, la pastille
+s'allume parce que le lecteur joue effectivement la piste française. C'est la preuve que
+`selectedVersion` reflète le lecteur et non un état parallèle.
+
+⚠️ **Le téléphone a été reconfiguré** : la variante `.debug` pointait sur une playlist M3U
+publique sans VOD, il a fallu la connecter au compte Xtream de l'utilisateur pour disposer
+de films. L'ancienne configuration est perdue (identifiants en `EncryptedSharedPreferences`,
+illisibles de l'extérieur). L'application **de production est intacte**.
+
+### Note de parité relevée au passage
+
+Le mobile réarme correctement son minuteur d'overlay — `LaunchedEffect(lastInteractionMs)`
+— alors que la TV ne le faisait pas. La correction TV décrite plus haut aligne donc la TV
+sur le mobile, elle n'invente pas un comportement.
 
 **État : 143 tests, 0 échec** (127 + 16 `VersionPolicyTest`).
