@@ -2914,3 +2914,83 @@ identifiants Xtream dans des `EncryptedSharedPreferences` que `pm clear` détrui
 définitivement (§9) ; le bandeau suffisait comme instrument.
 
 **État : 154 tests, 0 échec.**
+
+
+---
+
+## 33. Quatre défauts de la fiche série, signalés sur l'écran réel *(2026-08-20)*
+
+Remarques de l'utilisateur sur la fiche mobile de « A Shop for Killers ». Chacune a été
+confirmée dans le code **et** mesurée à l'écran.
+
+### 1. Le nom de la série répété sur chaque épisode
+
+`E1 · A Shop for Killers Épisode 1`, sur toute la saison. La TV avait déjà ce nettoyage
+(§21) ; le mobile ne l'a jamais eu. Encore la duplication d'une décision entre les deux
+UI — extrait cette fois dans `core/model/EpisodeTitle.kt`, **6 tests**.
+
+Vérifié à l'écran : `E1 · Épisode 1`.
+
+### 2. L'image de la fiche trop zoomée — la hauteur n'y était pour rien
+
+L'affiche est en **2:3**. L'étirer sur toute la largeur d'un bandeau demande un
+agrandissement d'environ **1,8×**, quelle que soit la hauteur du bandeau : c'est la
+largeur qui commande. Augmenter la hauteur n'aurait rien changé.
+
+La vraie réponse est venue du catalogue : le fournisseur expose `backdrop_path`, une image
+**paysage** (TMDB w1280), présente sur **6 337 des 8 467 séries**. Utilisée en bandeau,
+elle ne demande aucun agrandissement.
+
+`SeriesDetail` et `MovieDetail` portent désormais `backdrop`, alimenté par un lecteur
+tolérant (le champ est un tableau chez ce fournisseur, une chaîne chez d'autres). Le fondu
+est conservé.
+
+⚠️ Le cache de fiches a un TTL de 24 h : le nouveau champ n'apparaît qu'après expiration
+ou purge de `cache/iptv_cache`.
+
+### 3. Reprise de lecture — la position était écrite sous le mauvais épisode
+
+`currentMediaId` était fixé au lancement et **jamais mis à jour** quand la liste de lecture
+avançait. Le code le signalait lui-même :
+
+```kotlin
+// We should update currentUrl/title here too if we want perfect history for auto-advance
+```
+
+Conséquence : dès que l'épisode 2 s'enchaînait, sa position était enregistrée sous
+l'identifiant de l'**épisode 1** — marqué à tort — pendant que le 2 n'enregistrait rien.
+
+`playWithEpisodes` reçoit maintenant le `seriesId` et suit l'index de la liste ;
+l'identifiant de progression, jusqu'ici réécrit à la main à **huit endroits**, vit dans
+`EpisodeTitle.progressId`. Un épisode quitté par avance automatique est explicitement
+marqué comme vu, plutôt que d'espérer que le minuteur de 10 s ait capté une position
+proche de la fin.
+
+Vérifié : après 40 s sur l'épisode 1, une barre de progression apparaît sous sa ligne.
+
+**Marquage « vu » retravaillé** : le titre était **barré**, ce qui se lit « annulé » et non
+« déjà regardé ». Remplacé par une pastille de validation sur la vignette, sur mobile
+**et** sur TV.
+
+### 4. « Annuler la saison » pour un seul épisode
+
+`inProgressIds` retient tout épisode en cours : télécharger un seul épisode faisait
+apparaître « Annuler la saison ». Le libellé devient un pluriel Android — « Annuler le
+téléchargement » / « Annuler les N téléchargements ».
+
+Vérifié dans les deux formes, à un puis deux épisodes.
+
+### 5. Télécommande de cast — ⏳ non conclu
+
+`CastRemoteSheet` est rendu **globalement**, aligné en bas, par-dessus la pile de
+navigation. Observé : une fois connecté, la feuille se déploie en plein écran et se
+rouvrait à chaque tentative de toucher la barre d'onglets, qu'elle recouvre.
+
+Ce qui **n'a pas** été reproduit : des commandes qui ne répondent pas alors qu'un média
+joue. Sur un flux live, le bouton central restait sur « lecture » — mais un live n'a ni
+durée ni position, le test n'est pas concluant. À reprendre sur un film.
+
+Appareil de test : **« Télé »** (et non « Salon »). La découverte prend une dizaine de
+secondes avant que l'appareil n'apparaisse dans la liste.
+
+**État : 160 tests, 0 échec.**

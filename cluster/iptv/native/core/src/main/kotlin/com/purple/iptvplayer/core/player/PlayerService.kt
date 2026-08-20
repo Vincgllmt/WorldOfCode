@@ -19,6 +19,8 @@ data class PlayerState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val playbackSpeed: Float = 1f,
+    /** Index de l'élément courant dans la liste de lecture. */
+    val mediaItemIndex: Int = 0,
     val error: String? = null,
 )
 
@@ -79,7 +81,8 @@ class PlayerService(context: Context) {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 super.onMediaItemTransition(mediaItem, reason)
                 _state.value = _state.value.copy(
-                    title = mediaItem?.mediaMetadata?.title?.toString() ?: ""
+                    title = mediaItem?.mediaMetadata?.title?.toString() ?: "",
+                    mediaItemIndex = player.currentMediaItemIndex,
                 )
             }
 

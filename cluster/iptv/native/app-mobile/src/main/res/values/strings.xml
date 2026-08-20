@@ -59,7 +59,6 @@
     <string name="downloads_section_completed">Downloaded</string>
     <string name="download_cancel">Cancel</string>
     <string name="download_season_progress">%1$d / %2$d episodes</string>
-    <string name="btn_cancel_season">Cancel Season</string>
     <string name="btn_delete_season">Delete Season</string>
     <string name="btn_cancel_all">Cancel all</string>
     <string name="delete_confirm_text">Delete \"%1$s\"?</string>
@@ -122,4 +121,8 @@
     <string name="search_channels">Search channels…</string>
     <string name="action_remove_from_list">Remove from list</string>
     <string name="search_generic">Search…</string>
+    <plurals name="btn_cancel_downloads">
+        <item quantity="one">Cancel download</item>
+        <item quantity="other">Cancel %1$d downloads</item>
+    </plurals>
 </resources>

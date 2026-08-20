@@ -27,12 +27,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
 import com.purple.iptvplayer.core.model.DownloadType
@@ -90,8 +92,13 @@ fun SeriesDetailScreen(
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
                         if (!d.cover.isNullOrEmpty()) {
-                            AsyncImage(model = d.cover, contentDescription = d.name,
-                                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            // Image paysage en priorité, cf. la fiche film : le poster
+                            // 2:3 étiré en bandeau était agrandi d'environ 1,8×.
+                            AsyncImage(
+                                model = d.backdrop?.takeIf { it.isNotBlank() } ?: d.cover,
+                                contentDescription = d.name,
+                                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),
+                            )
                         }
                         Box(modifier = Modifier.fillMaxSize().background(
                             Brush.verticalGradient(listOf(Color.Transparent, BgHome), startY = 120f)
@@ -222,7 +229,17 @@ fun SeriesDetailScreen(
                                         ) {
                                             Icon(Icons.Rounded.Close, null, tint = ColorError, modifier = Modifier.size(16.dp))
                                             Spacer(Modifier.width(6.dp))
-                                            Text(stringResource(R.string.btn_cancel_season), color = ColorError, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                            // Le libellé disait « Annuler la saison » même quand un
+                                            // seul épisode était en cours : ce bouton annule ce qui
+                                            // tourne, pas une saison entière.
+                                            Text(
+                                                pluralStringResource(
+                                                    R.plurals.btn_cancel_downloads,
+                                                    inProgressIds.size,
+                                                    inProgressIds.size,
+                                                ),
+                                                color = ColorError, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                                            )
                                         }
                                     }
                                 }
@@ -270,11 +287,12 @@ fun SeriesDetailScreen(
                                 val dlItem = downloads.find { it.id == dlId }
                                 EpisodeRow(
                                     seriesId = seriesId,
+                                    seriesName = d.name,
                                     seriesCover = d.cover,
                                     episode  = ep,
                                     dlItem   = dlItem,
                                     onClick  = {
-                                        playerVm.playWithEpisodes(episodes, episodes.indexOf(ep), "${seriesId}_${ep.id}", d.cover)
+                                        playerVm.playWithEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
                                         onPlayEpisode("", "", "", "")
                                     },
                                     onDownload = {
@@ -295,8 +313,8 @@ fun SeriesDetailScreen(
                                     onRetryDownload  = { dlVm.retry(dlId) },
                                     onPlayLocal = {
                                         dlItem?.localPath?.let {
-                                            playerVm.playWithEpisodes(episodes, episodes.indexOf(ep), "${seriesId}_${ep.id}", d.cover)
-                                            onPlayEpisode("file://$it", ep.title, "${seriesId}_${ep.id}", d.cover ?: "")
+                                            playerVm.playWithEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
+                                            onPlayEpisode("file://$it", ep.title, EpisodeTitle.progressId(seriesId, ep.id), d.cover ?: "")
                                         }
                                     },
                                 )
@@ -313,6 +331,7 @@ fun SeriesDetailScreen(
 @Composable
 private fun EpisodeRow(
     seriesId:        Int,
+    seriesName:      String,
     seriesCover:     String?,
     episode:         Episode,
     dlItem:          DownloadItem?,
@@ -326,7 +345,7 @@ private fun EpisodeRow(
     var watchedProgress by remember(episode.id) { mutableStateOf(0L) }
     
     LaunchedEffect(episode.id) {
-        watchedProgress = progressRepo.getProgress("${seriesId}_${episode.id}")
+        watchedProgress = progressRepo.getProgress(EpisodeTitle.progressId(seriesId, episode.id))
     }
 
     val totalDurationMs = remember(episode.duration) { episode.duration.toMillis() }
@@ -345,25 +364,45 @@ private fun EpisodeRow(
         ) {
             // Thumbnail
             val coverUrl = episode.cover?.takeIf { it.isNotEmpty() } ?: seriesCover
-            if (!coverUrl.isNullOrEmpty()) {
-                AsyncImage(model = coverUrl, contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.width(100.dp).height(60.dp).clip(RoundedCornerShape(8.dp)))
-            } else {
-                Box(modifier = Modifier.width(100.dp).height(60.dp).clip(RoundedCornerShape(8.dp)).background(BgCard),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.PlayCircle, null, tint = TextPrimary.copy(0.3f), modifier = Modifier.size(28.dp))
+            Box(modifier = Modifier.width(100.dp).height(60.dp)) {
+                if (!coverUrl.isNullOrEmpty()) {
+                    AsyncImage(model = coverUrl, contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)))
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(BgCard),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.PlayCircle, null, tint = TextPrimary.copy(0.3f), modifier = Modifier.size(28.dp))
+                    }
+                }
+                // Un épisode vu se signale par une pastille de validation, pas par un
+                // titre barré : barrer se lit « annulé », pas « déjà regardé ».
+                if (isWatched) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.55f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier.size(26.dp).clip(CircleShape).background(Purple),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.Check, null, tint = Color.White,
+                                modifier = Modifier.size(17.dp))
+                        }
+                    }
                 }
             }
 
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                val textDecoration = if (isWatched) androidx.compose.ui.text.style.TextDecoration.LineThrough else androidx.compose.ui.text.style.TextDecoration.None
                 val textColor = if (isWatched) TextSub else TextPrimary
-                Text("E${episode.episodeNum} · ${episode.title}", color = textColor, fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    textDecoration = textDecoration)
+                // Le fournisseur préfixe le nom de la série à chaque titre d'épisode ;
+                // répété sur toute une saison, le vrai titre se noyait en fin de ligne.
+                Text("E${episode.episodeNum} · ${EpisodeTitle.stripSeriesName(episode.title, seriesName)}",
+                    color = textColor, fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 episode.duration?.let {
                     Spacer(Modifier.height(2.dp))
                     Text(it, color = TextSub, fontSize = 12.sp)

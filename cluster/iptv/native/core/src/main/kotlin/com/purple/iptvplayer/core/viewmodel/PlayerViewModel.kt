@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.purple.iptvplayer.core.data.ProgressRepository
 import com.purple.iptvplayer.core.model.Episode
+import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.player.PlayerService
 import com.purple.iptvplayer.core.player.PlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(
@@ -31,6 +35,13 @@ class PlayerViewModel(
     private var currentCover:   String? = null
     private var currentType:    String? = null
 
+    // Contexte de lecture d'une série, pour suivre l'avance de la liste.
+    private var episodes:            List<Episode> = emptyList()
+    private var episodesSeriesId:    Int? = null
+    private var episodeIndex:        Int = 0
+    /** Dernière durée connue, pour marquer un épisode terminé comme vu. */
+    private var lastKnownDurationMs: Long = 0L
+
     fun playMedia(url: String, title: String, mediaId: String? = null, startPositionMs: Long = 0L, cover: String? = null, type: String? = null) {
         currentMediaId = mediaId
         currentUrl     = url
@@ -47,17 +58,80 @@ class PlayerViewModel(
         startProgressSaving()
     }
 
-    fun playWithEpisodes(episodes: List<Episode>, startIndex: Int, mediaId: String? = null, seriesCover: String? = null) {
-        currentMediaId = mediaId
-        val ep = episodes.getOrNull(startIndex)
-        currentUrl     = ep?.url
-        currentTitle   = ep?.title
-        currentCover   = ep?.cover?.takeIf { it.isNotEmpty() } ?: seriesCover
-        currentType    = "series"
-        
+    /**
+     * Lit une saison à partir de [startIndex].
+     *
+     * [seriesId] et non un `mediaId` déjà construit : la liste avance toute seule, et
+     * l'identifiant de progression doit suivre. Auparavant `currentMediaId` était figé
+     * au premier épisode — la position de l'épisode 2 était donc enregistrée sous
+     * l'identifiant de l'épisode 1, qui se retrouvait marqué à tort pendant que le 2
+     * n'enregistrait rien. Le code le signalait lui-même en commentaire, sans le
+     * corriger.
+     */
+    fun playWithEpisodes(
+        episodes: List<Episode>,
+        startIndex: Int,
+        seriesId: Int,
+        seriesCover: String? = null,
+    ) {
+        this.episodes         = episodes
+        this.episodesSeriesId = seriesId
+        this.episodeIndex     = startIndex
+        currentType           = "series"
+        applyEpisode(startIndex, seriesCover)
+
         val items = episodes.map { Pair(it.url, it.title) }
         playerService.playPlaylist(items, startIndex)
+        observeEpisodeTransitions(seriesCover)
         startProgressSaving()
+    }
+
+    private fun applyEpisode(index: Int, seriesCover: String?) {
+        val ep = episodes.getOrNull(index) ?: return
+        val seriesId = episodesSeriesId ?: return
+        currentMediaId = EpisodeTitle.progressId(seriesId, ep.id)
+        currentUrl     = ep.url
+        currentTitle   = ep.title
+        currentCover   = ep.cover?.takeIf { it.isNotEmpty() } ?: seriesCover
+    }
+
+    private var transitionJob: Job? = null
+
+    private fun observeEpisodeTransitions(seriesCover: String?) {
+        transitionJob?.cancel()
+        transitionJob = viewModelScope.launch {
+            playerService.state
+                .map { it.mediaItemIndex }
+                .distinctUntilChanged()
+                .collect { index ->
+                    if (index == episodeIndex) return@collect
+                    markPreviousEpisodeWatched()
+                    episodeIndex = index
+                    applyEpisode(index, seriesCover)
+                }
+        }
+    }
+
+    /**
+     * Un épisode que la liste vient de quitter a été regardé jusqu'au bout : on le
+     * marque explicitement, plutôt que d'espérer que le minuteur de 10 s ait capté une
+     * position assez proche de la fin.
+     */
+    private fun markPreviousEpisodeWatched() {
+        val id  = currentMediaId ?: return
+        val dur = lastKnownDurationMs
+        if (dur <= 0L) return
+        viewModelScope.launch {
+            progressRepo.saveProgress(
+                mediaId    = id,
+                positionMs = dur,
+                url        = currentUrl,
+                title      = currentTitle,
+                cover      = currentCover,
+                type       = currentType,
+                durationMs = dur,
+            )
+        }
     }
 
     fun nextEpisode(): Boolean {
@@ -126,6 +200,7 @@ class PlayerViewModel(
         val id = currentMediaId ?: return
         val pos = playerService.currentPositionMs()
         val dur = playerService.state.value.durationMs
+        if (dur > 0L) lastKnownDurationMs = dur
         if (pos > 5_000L) {
             viewModelScope.launch { 
                 progressRepo.saveProgress(

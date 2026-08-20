@@ -19,6 +19,8 @@ data class MovieDetail(
     val url: String,
     val cover: String? = null,
     val coverBig: String? = null,
+    /** Image **paysage** (`backdrop_path`), à préférer au poster pour un bandeau large. */
+    val backdrop: String? = null,
     val description: String? = null,
     val duration: String? = null,
     val genre: String? = null,

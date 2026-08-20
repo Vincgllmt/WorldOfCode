@@ -216,6 +216,7 @@ class XtreamApiClient {
             url         = streamUrl(c, "movie", id, ext),
             cover       = info.optString("movie_image").ifEmpty { null },
             coverBig    = info.optString("movie_image").ifEmpty { null },
+            backdrop    = info.backdropOrNull(),
             description = info.optString("plot").ifEmpty { null },
             duration    = info.optString("duration").ifEmpty { null },
             genre       = info.optString("genre").ifEmpty { null },
@@ -254,6 +255,7 @@ class XtreamApiClient {
             id     = seriesId,
             name   = cleanName(info.optString("name")),
             cover  = info.optString("cover").ifEmpty { null },
+            backdrop = info.backdropOrNull(),
             plot   = info.optString("plot").ifEmpty { null },
             seasons = seasons,
         )
@@ -299,6 +301,19 @@ class XtreamApiClient {
      * chaînes retombent sur « Others »). Le document de flux, lui, doit **lever** :
      * voir la note de [objects].
      */
+    /**
+     * Première image de `backdrop_path`.
+     *
+     * Le champ est un **tableau** chez ce fournisseur, mais certains panneaux servent
+     * une simple chaîne : les deux formes sont acceptées, et une valeur inattendue rend
+     * `null` plutôt que de faire tomber la fiche (§27).
+     */
+    private fun JSONObject.backdropOrNull(): String? = runCatching {
+        optJSONArray("backdrop_path")
+            ?.let { arr -> (0 until arr.length()).firstNotNullOfOrNull { arr.optString(it).ifBlank { null } } }
+            ?: optString("backdrop_path").ifBlank { null }
+    }.getOrNull()
+
     private fun catsArrayOrEmpty(json: String): JSONArray =
         runCatching { JSONArray(json) }.getOrNull() ?: JSONArray()
 

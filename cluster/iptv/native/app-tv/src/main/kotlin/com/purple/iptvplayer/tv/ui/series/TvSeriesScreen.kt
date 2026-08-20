@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -47,6 +48,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
 import com.purple.iptvplayer.core.model.DownloadType
@@ -117,8 +119,8 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             onEnqueueAll     = { items -> dlVm.enqueueAll(items) },
             onCancel         = { id -> dlVm.remove(id) },
             onRetry          = { id -> dlVm.retry(id) },
-            onPlayEpisodes   = { episodes, idx, mediaId, cover ->
-                playerVm.playWithEpisodes(episodes, idx, mediaId, cover)
+            onPlayEpisodes   = { episodes, idx, seriesId, cover ->
+                playerVm.playWithEpisodes(episodes, idx, seriesId, cover)
             },
         )
         return
@@ -510,7 +512,7 @@ internal fun TvSeriesDetailPage(
     onEnqueueAll:     (List<DownloadItem>) -> Unit,
     onCancel:         (String) -> Unit,
     onRetry:          (String) -> Unit,
-    onPlayEpisodes:   (episodes: List<Episode>, idx: Int, mediaId: String, cover: String?) -> Unit,
+    onPlayEpisodes:   (episodes: List<Episode>, idx: Int, seriesId: Int, cover: String?) -> Unit,
 ) {
     BackHandler(enabled = true) { onClose() }
 
@@ -728,7 +730,7 @@ internal fun TvSeriesDetailPage(
                                     episode          = ep,
                                     dlItem           = dlItem,
                                     onPlay           = {
-                                        onPlayEpisodes(episodes, episodes.indexOf(ep), "${seriesId}_${ep.id}", d.cover)
+                                        onPlayEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
                                         onPlay("", "", "", "")
                                         onClose()
                                     },
@@ -750,8 +752,8 @@ internal fun TvSeriesDetailPage(
                                     onRetryDownload  = { onRetry(dlId) },
                                     onPlayLocal      = {
                                         dlItem?.localPath?.let {
-                                            onPlayEpisodes(episodes, episodes.indexOf(ep), "${seriesId}_${ep.id}", d.cover)
-                                            onPlay("file://$it", ep.title, "${seriesId}_${ep.id}", d.cover ?: "")
+                                            onPlayEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
+                                            onPlay("file://$it", ep.title, EpisodeTitle.progressId(seriesId, ep.id), d.cover ?: "")
                                             onClose()
                                         }
                                     },
@@ -883,7 +885,7 @@ private fun TvEpisodeRow(
     val progressRepo: com.purple.iptvplayer.core.data.ProgressRepository = org.koin.compose.koinInject()
     var watchedProgress by remember(episode.id) { mutableLongStateOf(0L) }
     LaunchedEffect(episode.id) {
-        watchedProgress = progressRepo.getProgress("${seriesId}_${episode.id}")
+        watchedProgress = progressRepo.getProgress(EpisodeTitle.progressId(seriesId, episode.id))
     }
     val totalDurationMs = remember(episode.duration) { episode.duration.toMillis() }
     val isWatched = remember(watchedProgress, totalDurationMs) {
@@ -930,19 +932,38 @@ private fun TvEpisodeRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 val coverUrl = episode.cover?.takeIf { it.isNotEmpty() } ?: seriesCover
-                if (!coverUrl.isNullOrEmpty()) {
-                    AsyncImage(
-                        model              = coverUrl,
-                        contentDescription = null,
-                        contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.width(104.dp).height(58.dp).clip(PurpleShapes.Md),
-                    )
-                } else {
-                    Box(
-                        modifier         = Modifier.width(104.dp).height(58.dp).clip(PurpleShapes.Md).background(PurplePalette.Bg2),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.PlayCircle, null, tint = PurplePalette.Fg4, modifier = Modifier.size(20.dp))
+                Box(modifier = Modifier.width(104.dp).height(58.dp)) {
+                    if (!coverUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model              = coverUrl,
+                            contentDescription = null,
+                            contentScale       = ContentScale.Crop,
+                            modifier           = Modifier.fillMaxSize().clip(PurpleShapes.Md),
+                        )
+                    } else {
+                        Box(
+                            modifier         = Modifier.fillMaxSize().clip(PurpleShapes.Md).background(PurplePalette.Bg2),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.PlayCircle, null, tint = PurplePalette.Fg4, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    // Pastille « vu », comme sur mobile : barrer un titre se lit
+                    // « annulé », pas « déjà regardé ».
+                    if (isWatched) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().clip(PurpleShapes.Md)
+                                .background(Color.Black.copy(alpha = 0.55f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(
+                                modifier = Modifier.size(26.dp).clip(CircleShape).background(TvPurple),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Rounded.Check, null, tint = Color.White,
+                                    modifier = Modifier.size(17.dp))
+                            }
+                        }
                     }
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -951,11 +972,9 @@ private fun TvEpisodeRow(
                         // serie : « E1 - The Walking Dead : Dead City De vieilles
                         // connaissances ». Repete a chaque ligne, il noyait le vrai
                         // titre en fin de texte. On ne garde que l'episode.
-                        "E${episode.episodeNum}  ·  ${episode.title.stripSeriesName(seriesName)}",
+                        "E${episode.episodeNum}  ·  ${EpisodeTitle.stripSeriesName(episode.title, seriesName)}",
                         style    = LocalPurpleType.current.bodySmall.copy(
-                            color          = if (isWatched) PurplePalette.Fg4 else PurplePalette.Fg2,
-                            textDecoration = if (isWatched) androidx.compose.ui.text.style.TextDecoration.LineThrough
-                                             else androidx.compose.ui.text.style.TextDecoration.None,
+                            color = if (isWatched) PurplePalette.Fg4 else PurplePalette.Fg2,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1033,11 +1052,3 @@ private fun String?.toMillis(): Long {
  * épisode dont le titre *est* le nom de la série — on rend le titre d'origine plutôt
  * qu'une ligne muette.
  */
-private fun String.stripSeriesName(seriesName: String): String {
-    val cleaned = trim()
-    if (seriesName.isBlank()) return cleaned
-    if (!cleaned.startsWith(seriesName, ignoreCase = true)) return cleaned
-    return cleaned.drop(seriesName.length)
-        .trimStart(' ', ':', '-', '\u2013', '\u00A0')
-        .ifBlank { cleaned }
-}

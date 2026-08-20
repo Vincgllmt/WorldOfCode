@@ -156,8 +156,8 @@ fun TvMyListScreen(
             onEnqueueAll      = { items -> dlVm.enqueueAll(items) },
             onCancel          = { id -> dlVm.remove(id) },
             onRetry           = { id -> dlVm.retry(id) },
-            onPlayEpisodes    = { episodes, idx, mediaId, cover ->
-                playerVm.playWithEpisodes(episodes, idx, mediaId, cover)
+            onPlayEpisodes    = { episodes, idx, seriesId, cover ->
+                playerVm.playWithEpisodes(episodes, idx, seriesId, cover)
             },
         )
         return

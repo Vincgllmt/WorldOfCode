@@ -89,8 +89,14 @@ fun MovieDetailScreen(
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     // Hero cover
                     Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                        if (!d.coverBig.isNullOrEmpty()) {
-                            AsyncImage(model = d.coverBig, contentDescription = d.name,
+                        // Image paysage en priorité. Le poster est en 2:3 : l'étirer sur
+                        // toute la largeur d'un bandeau l'agrandit d'environ 1,8× et n'en
+                        // montre qu'une bande centrale — d'où l'aspect « trop zoomé ».
+                        val heroImage = d.backdrop?.takeIf { it.isNotBlank() }
+                            ?: d.coverBig?.takeIf { it.isNotBlank() }
+                            ?: d.cover
+                        if (!heroImage.isNullOrEmpty()) {
+                            AsyncImage(model = heroImage, contentDescription = d.name,
                                 contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         }
                         Box(modifier = Modifier.fillMaxSize().background(
