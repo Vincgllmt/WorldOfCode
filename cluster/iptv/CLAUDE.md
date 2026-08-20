@@ -266,7 +266,7 @@ n'y figurent pas du tout. Chacun a été traité en Test-First : test écrit d'a
 | P10 | carte EPG jamais masquée, et horloge figée | **observé sur appareil** + `raf.md` |
 | P11 | horaires EPG décalés d'une heure, barre d'avancement figée | **observé sur appareil**, 20:28 local affiché « 19:00 – 19:45 » |
 | S1 | validation TLS entièrement désactivée | lecture de `buildTrustAllClient` — **non corrigé, décision produit** |
-| S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **à sortir du suivi** |
+| S2 | mot de passe de signature commité en clair | `native/keystore.properties` suivi par git — **corrigé, cf. §31** |
 | S3 | **le `signingConfig` ne trouvait jamais le keystore** | `bundleRelease` en échec sur la machine qui détient la clé — **corrigé** |
 | B1 | facturation : six défauts, dont l'abonné bloqué au 30ᵉ jour | lecture de `BillingRepository`, paramétrage confirmé par l'utilisateur |
 | B2 | un achat remboursé/révoqué ne retire jamais l'accès | lecture de `syncEntitlements` — **non corrigé** |
@@ -874,10 +874,11 @@ Classé par ce qui contraint le reste, pas par difficulté.
 
 #### Dette et sécurité
 
-- [ ] **`keystore.properties` est suivi par git avec ses mots de passe en clair**, sur un
-      dépôt distant partagé (§5 S2). Le sortir du suivi **et faire tourner la clé**.
-- [ ] `local.properties` versionné (§3) — même geste.
-- [ ] **279 artefacts de build suivis par git** (§7) : `git rm -r --cached` + `.gitignore`.
+- [x] **`keystore.properties`, `local.properties` et 3121 artefacts de build sortis du
+      suivi ; mot de passe de signature changé** — cf. §31.
+- [ ] Décider si l'on réécrit l'historique pour purger l'ancien mot de passe (§31) —
+      il est désormais **sans valeur**, et la réécriture impose un `push --force` sur un
+      dépôt partagé.
 - [ ] Trancher **S1** (TLS désactivé) — décision produit.
 
 #### Couverture
@@ -2733,3 +2734,76 @@ serait un défaut pire que celui corrigé.
 déclaré sur `TvMainScreen`.
 
 **État : 143 tests, 0 échec.**
+
+
+---
+
+## 31. Secret de signature — le diagnostic était plus grave que la réalité *(2026-08-20)*
+
+Point ouvert depuis le premier audit : « `keystore.properties` est suivi par git avec ses
+mots de passe en clair — le sortir du suivi **et faire tourner la clé** ».
+
+### Ce que la mesure a montré
+
+| Question | Réponse |
+|---|---|
+| `keystore.properties` suivi ? | ✅ oui, **un seul commit** (`6b9c219b9`), présent sur `origin/iptv` |
+| `upload-keystore.jks` suivi ? | ❌ **jamais committé**, sur aucune branche, à aucun moment |
+
+➡️ **Le mot de passe était exposé, la clé ne l'a jamais été.** Un mot de passe sans le
+magasin ne permet de signer rien du tout. La remédiation n'était donc pas un *reset de
+clé d'upload* — démarche lourde, qui passe par la Play Console et interrompt la
+publication — mais un simple **changement de mot de passe**, qui laisse le certificat
+intact.
+
+### Le magasin est en PKCS12, ce qui simplifie l'opération
+
+```
+keytool error: -keypasswd commands not supported if -storetype is PKCS12
+```
+
+Ce n'est pas un échec : en PKCS12 le mot de passe de la clé **est** celui du magasin.
+`-storepasswd` change donc les deux d'un coup.
+
+### Vérifié — le certificat est inchangé, la publication n'est pas affectée
+
+| Contrôle | Avant | Après |
+|---|---|---|
+| SHA1 du certificat | `F6:0C:72:9C:FF:6D:…:62:0F` | **identique** |
+| Validité | jusqu'en 2053 | identique |
+| `:app-mobile:bundleRelease` | ✅ | ✅ **signé par le même certificat** (`CN=Hichem JOUINI`, SHA1 identique) |
+
+C'est le point décisif : Play App Signing reconnaît le certificat d'upload, pas le mot de
+passe qui protège le fichier. **Aucune action Play Console n'est requise.**
+
+### Ce qui a été sorti du suivi
+
+| Chemin | Fichiers | Pourquoi |
+|---|---|---|
+| `native/keystore.properties` | 1 | secret |
+| `native/local.properties` | 1 | chemin de SDK propre à chaque machine (§3) |
+| `native/.gradle/`, `native/*/build/`, `native/.kotlin/` | **3121** | 9,6 Mo de verrous et caches binaires |
+
+Le compte de 3121 corrige le « 279 » noté en §7 : 279 était le nombre de fichiers
+*modifiés* par une exécution de Gradle, pas le nombre de fichiers suivis.
+
+**Vérifié** : après un `./gradlew` complet, `git status` ne rapporte plus que le
+`.gitignore` modifié. Auparavant, chaque build noyait les vraies modifications.
+
+### ⏳ Reste à trancher : la réécriture d'historique
+
+L'ancien mot de passe subsiste dans le commit `6b9c219b9` sur `origin/iptv`. Il est
+désormais **sans valeur** — il n'ouvre plus le magasin, et le magasin n'a jamais été
+publié.
+
+Le purger exigerait `git filter-repo` **et un `push --force`** sur un dépôt partagé, ce
+qui réécrit l'historique de tous ceux qui l'ont cloné. Le gain est cosmétique, le coût
+est collectif : à décider par l'équipe, pas par nécessité de sécurité.
+
+⚠️ **Risque réel restant, sans rapport avec git** : `upload-keystore.jks` n'existe **que
+sur la machine « rigolo »**. Le perdre rendrait toute mise à jour de l'application
+impossible sans un reset de clé auprès de Google. Une sauvegarde hors machine est
+autrement plus urgente que la réécriture d'historique.
+
+**Sauvegardes prises avant l'opération** (ancien magasin + anciennes propriétés) dans le
+scratchpad de session — donc temporaires. À ne pas confondre avec une vraie sauvegarde.

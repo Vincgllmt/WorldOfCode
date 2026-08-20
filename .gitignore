@@ -8,3 +8,23 @@ coverage.xml
 
 cluster/iptv/backend/__pycache__
 cluster/iptv/backend/.venv
+# ── Secrets : ne jamais committer (SEC-1) ────────────────────────────────────
+# keystore.properties porte les mots de passe de signature en clair ; il a ete
+# versionne par erreur (commit 6b9c219b9) et les mots de passe ont ete changes
+# depuis. Le .jks lui-meme n'a jamais ete committe et ne doit jamais l'etre.
+cluster/iptv/native/keystore.properties
+*.jks
+*.keystore
+
+# Genere par Android Studio, propre a chaque machine : le committer fait que le
+# depot ne peut builder que chez un seul developpeur a la fois.
+cluster/iptv/native/local.properties
+
+# ── Artefacts de build Gradle/Android ────────────────────────────────────────
+# 3121 fichiers etaient suivis a tort : une seule execution de ./gradlew salissait
+# des centaines de verrous et caches binaires, qui noyaient les vraies
+# modifications dans `git status` et provoquaient des conflits a chaque pull.
+cluster/iptv/native/.gradle/
+cluster/iptv/native/.kotlin/
+cluster/iptv/native/*/build/
+cluster/iptv/native/build/
