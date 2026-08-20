@@ -195,4 +195,21 @@ class SearchControllerTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
     }
+
+    public function testSearchPostsAreIgnoredWhenElasticsearchThrows(): void
+    {
+        $wolf = $this->buildUser(1);
+
+        $searchService = $this->createMock(SearchService::class);
+        $searchService->method('searchUsers')->willReturn([]);
+        $searchService->method('searchGroups')->willReturn([]);
+        $searchService->method('searchPosts')->willThrowException(new \RuntimeException('ES down'));
+
+        $request  = new Request(['q' => 'wolf']);
+        $response = $this->makeController($wolf, null, null, $searchService)->search($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame([], $payload['posts']);
+    }
 }

@@ -77,6 +77,24 @@ class UserIndexerTest extends TestCase
         $this->assertFalse($this->makeIndexer()->createIndexIfNotExists());
     }
 
+    public function testDropIndexWhenPresent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(true);
+        $this->elasticClient->expects($this->once())
+            ->method('deleteIndex')
+            ->with(IndexDefinitions::USERS_INDEX);
+
+        $this->assertTrue($this->makeIndexer()->dropIndex());
+    }
+
+    public function testDropIndexSkippedWhenAbsent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(false);
+        $this->elasticClient->expects($this->never())->method('deleteIndex');
+
+        $this->assertFalse($this->makeIndexer()->dropIndex());
+    }
+
     public function testIndexSendsExpectedDocument(): void
     {
         $this->elasticClient->expects($this->once())
@@ -124,6 +142,14 @@ class UserIndexerTest extends TestCase
         $this->makeIndexer()->delete(7);
     }
 
+    public function testDeleteSwallowsExceptions(): void
+    {
+        $this->elasticClient->method('deleteDocument')->willThrowException(new \RuntimeException('ES down'));
+
+        $this->makeIndexer()->delete(7);
+        $this->expectNotToPerformAssertions();
+    }
+
     public function testBulkIndexProcessesUsers(): void
     {
         $users = [$this->makeUser(1), $this->makeUser(2)];
@@ -132,6 +158,21 @@ class UserIndexerTest extends TestCase
             ->with($this->callback(fn($body) => count($body) === 4));
 
         $this->assertSame(2, $this->makeIndexer()->bulkIndex($users));
+    }
+
+    public function testBulkIndexSkipsUsersWithoutId(): void
+    {
+        $userWithoutId = $this->createMock(User::class);
+        $userWithoutId->method('getId')->willReturn(null);
+
+        $users = [$userWithoutId, $this->makeUser(1)];
+        $this->elasticClient->expects($this->once())
+            ->method('bulk')
+            ->with($this->callback(fn($body) => count($body) === 2 && $body[0]['index']['_id'] === '1'));
+
+        $count = $this->makeIndexer()->bulkIndex($users);
+
+        $this->assertSame(1, $count);
     }
 
     public function testBulkIndexSkipsEmptyInput(): void

@@ -251,6 +251,60 @@ final class PlayControllerTest extends TestCase
         $this->assertSame(1, $data['results'][0]['index']);
     }
 
+    /**
+     * run-tests avec un payload sans "language" retourne 400 (sans exécuter de cas).
+     */
+    public function testRunTestsMissingLanguageReturnsBadRequest(): void
+    {
+        $runner = $this->createStub(GameRunnerInterface::class);
+
+        $response = $this->makeController(new ArenaUser(self::NINES_ID, self::NINES_USERNAME))->runTests(
+            'nier-arena',
+            $this->runTestsRequest('nier-arena', ['code' => 'print("ok")']),
+            $this->makeEm($this->makeChallenge()),
+            $runner,
+        );
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * run-tests sur un défi sans referee retourne 422.
+     */
+    public function testRunTestsWithoutRefereeReturns422(): void
+    {
+        $runner = $this->createStub(GameRunnerInterface::class);
+
+        $response = $this->makeController(new ArenaUser(self::NINES_ID, self::NINES_USERNAME))->runTests(
+            'nier-arena',
+            $this->runTestsRequest('nier-arena', ['language' => 'python', 'code' => 'pass']),
+            $this->makeEm($this->makeChallenge(1, null, null)),
+            $runner,
+        );
+
+        $this->assertSame(422, $response->getStatusCode());
+    }
+
+    /**
+     * run-tests avec un testIndex hors bornes ne fait exécuter aucun cas.
+     */
+    public function testRunTestsWithOutOfRangeIndexReturnsEmptyResults(): void
+    {
+        $runner = $this->createMock(GameRunnerInterface::class);
+        $runner->expects($this->never())->method('play');
+
+        $response = $this->makeController(new ArenaUser(self::NINES_ID, self::NINES_USERNAME))->runTests(
+            'nier-arena',
+            $this->runTestsRequest('nier-arena', ['language' => 'python', 'code' => 'print("RRDDR")', 'testIndex' => 99]),
+            $this->makeEm($this->makeChallenge(2)),
+            $runner,
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertSame([], $data['results']);
+    }
+
     // ========== NOK ==========
 
     /**

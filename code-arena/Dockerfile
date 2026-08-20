@@ -11,7 +11,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libzip-dev \
     ca-certificates \
     curl \
-    && docker-php-ext-install -j"$(nproc)" intl pdo pdo_mysql zip opcache
+    && docker-php-ext-install -j"$(nproc)" intl pdo pdo_mysql zip opcache \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov
 
 # Symfony CLI (serveur de dev) + Composer
 COPY --link --from=ghcr.io/symfony-cli/symfony-cli:latest /usr/local/bin/symfony /usr/local/bin/symfony
