@@ -67,6 +67,7 @@ import com.purple.iptvplayer.mobile.viewmodel.CastViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun MainScreen(
@@ -203,7 +204,7 @@ fun MainScreen(
                         modifier = Modifier.align(Alignment.Start),
                     )
                     Text(
-                        text = stringResource(R.string.premium_days, a.daysLeft),
+                        text = pluralStringResource(R.plurals.premium_days, a.daysLeft, a.daysLeft),
                         color = TextSub, fontSize = 11.sp,
                         modifier = Modifier.padding(top = 1.dp),
                     )
@@ -238,7 +239,7 @@ fun MainScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (trialDays > 0)
-                            stringResource(R.string.trial_banner, trialDays)
+                            pluralStringResource(R.plurals.trial_banner, trialDays, trialDays)
                         else
                             stringResource(R.string.trial_expired),
                         color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp,

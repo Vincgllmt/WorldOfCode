@@ -11,10 +11,8 @@
     <string name="field_username">Utilisateur</string>
     <string name="field_password">Mot de passe</string>
     <string name="trial_info">Essai gratuit de 3 jours inclus. Activation Premium disponible ensuite.</string>
-    <string name="premium_days">%d jours restants.</string>
     <string name="premium_badge">PREMIUM</string>
     <string name="btn_change_plan">Changer d\'offre</string>
-    <string name="trial_banner">Essai gratuit : %d jours restants.</string>
     <string name="trial_expired">Essai expiré.</string>
     <string name="btn_connect">SE CONNECTER</string>
 
@@ -51,7 +49,7 @@
     <string name="label_director">Réalisateur</string>
     <string name="mylist_title">Ma liste</string>
     <string name="mylist_empty">Votre liste est vide</string>
-    <string name="mylist_empty_hint">Ajoutez des films ou des séries depuis leurs fiches</string>
+    <string name="mylist_empty_hint">Ajoutez des chaînes avec l\'étoile de la liste, ou des films et séries depuis leurs fiches.</string>
     <string name="filter_all">Tout</string>
     <string name="filter_channels">Chaînes</string>
     <string name="filter_movies">Films</string>
@@ -75,6 +73,21 @@
     <string name="purchase_later">Plus tard</string>
     <string name="purchase_none">Aucune offre disponible</string>
     <string name="purchase_processing">Paiement en cours...</string>
+    <!-- B2 : repli quand la facturation ne rend aucune offre. Sans eux, la barriere
+         d'acces expire n'aurait plus AUCUN focalisable une fois « Plus tard » retire. -->
+    <string name="downloads_empty_cta">Parcourir les films</string>
+    <string name="player_error">La lecture a échoué. Le flux est peut-être indisponible.</string>
+    <string name="player_no_tracks">Aucune piste alternative sur ce flux.</string>
+    <string name="player_track_n">Piste %1$d</string>
+    <string name="player_subtitle_n">Sous-titre %1$d</string>
+    <string name="purchase_err_offers">Chargement des offres impossible. Réessayez.</string>
+    <string name="purchase_err_restore">Restauration impossible. Réessayez.</string>
+    <string name="purchase_err_nothing">Aucun achat à restaurer sur ce compte Google.</string>
+    <string name="action_see_all">Tout voir · %1$d</string>
+    <string name="mylist_empty_cta">Parcourir les films</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="action_restore">Restaurer mes achats</string>
+    <string name="purchase_blocked_hint">Votre accès a expiré. Choisissez une formule pour continuer.</string>
     <string name="btn_cancel">Annuler</string>
     <string name="btn_cancel_all">Tout annuler</string>
     <string name="btn_confirm_delete">Supprimer</string>

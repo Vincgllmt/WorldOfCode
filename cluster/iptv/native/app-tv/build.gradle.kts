@@ -82,6 +82,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+
+    // Même posture que `core` (§4) : les décisions de l'UI TV sont extraites en objets
+    // purs (TvFocusEntry, TvPageJump, TvBackPolicy, TvPlayerKeys, TvFieldKeys) et testées
+    // en JVM. Les stubs d'`android.jar` rendent leur valeur par défaut au lieu de lever.
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -92,7 +101,9 @@ dependencies {
     implementation(libs.koin.androidx.compose)
     implementation(libs.coil.compose)
     implementation(libs.androidx.tv.material)
-    implementation(libs.androidx.tv.foundation)
+    // `androidx.tv:tv-foundation` retiré : déprécié — TvLazyColumn/TvLazyRow ont été
+    // repliés dans `androidx.compose.foundation.lazy`, qui gère le focus TV depuis
+    // Compose 1.7. Zéro import sur les 18 fichiers de app-tv (cf. §42).
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
@@ -101,4 +112,7 @@ dependencies {
     implementation(libs.androidx.compose.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.ui.tooling.preview)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

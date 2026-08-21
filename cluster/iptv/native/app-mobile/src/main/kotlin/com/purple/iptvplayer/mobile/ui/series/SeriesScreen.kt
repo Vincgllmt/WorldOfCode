@@ -36,6 +36,8 @@ import com.purple.iptvplayer.mobile.ui.movies.ContentHeader
 import com.purple.iptvplayer.mobile.ui.movies.GenreRowHeader
 import com.purple.iptvplayer.mobile.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.res.stringResource
+import com.purple.iptvplayer.R
 
 private val CARD_WIDTH = 130.dp
 
@@ -82,7 +84,7 @@ fun SeriesScreen(
     val isGroupedView = layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()
 
     Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
-        ContentHeader(title = "Séries", query = query, onQuery = { query = it })
+        ContentHeader(title = stringResource(R.string.nav_series), query = query, onQuery = { query = it })
 
         if (selectedGenre != null) {
             ActiveFilterPill(genre = selectedGenre, onClear = { onSelectGenre(null) })

@@ -784,7 +784,7 @@ private fun TrackSelectionSheet(
                 if (textGroups.isNotEmpty()) {
                     TrackSectionHeader("SOUS-TITRES")
                     Spacer(Modifier.height(4.dp))
-                    TrackRow(name = "Désactivé", isSelected = !anySubtitlePlaying) {
+                    TrackRow(name = stringResource(R.string.player_off), isSelected = !anySubtitlePlaying) {
                         player.trackSelectionParameters = player.trackSelectionParameters
                             .buildUpon()
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
@@ -872,8 +872,8 @@ private fun SubtitleStyleContent(subSize: Float, subColor: String, subBg: Boolea
 
     TrackSectionHeader("COULEUR")
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 10.dp)) {
-        ColorOptionSmall(name = "Blanc", color = Color.White, selected = subColor == "white") { viewModel.updateSubtitleColor("white") }
-        ColorOptionSmall(name = "Jaune", color = Color.Yellow, selected = subColor == "yellow") { viewModel.updateSubtitleColor("yellow") }
+        ColorOptionSmall(name = stringResource(R.string.subtitle_color_white), color = Color.White, selected = subColor == "white") { viewModel.updateSubtitleColor("white") }
+        ColorOptionSmall(name = stringResource(R.string.subtitle_color_yellow), color = Color.Yellow, selected = subColor == "yellow") { viewModel.updateSubtitleColor("yellow") }
     }
     
     Spacer(Modifier.height(16.dp))

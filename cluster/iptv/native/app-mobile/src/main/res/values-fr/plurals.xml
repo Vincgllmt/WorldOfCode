@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="trial_banner">
+        <item quantity="one">Essai gratuit : %d jour restant.</item>
+        <item quantity="other">Essai gratuit : %d jours restants.</item>
+    </plurals>
+    <plurals name="premium_days">
+        <item quantity="one">%d jour restant.</item>
+        <item quantity="other">%d jours restants.</item>
+    </plurals>
+</resources>

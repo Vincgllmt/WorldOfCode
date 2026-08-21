@@ -21,9 +21,7 @@
     <string name="nav_movies">Films</string>
     <string name="nav_series">Séries</string>
     <string name="nav_downloads">Téléchargements</string>
-    <string name="trial_banner">Essai gratuit : %d jours restants.</string>
     <string name="premium_lifetime">Accès à vie.</string>
-    <string name="premium_days">%d jours restants.</string>
     <string name="premium_badge">PREMIUM</string>
     <string name="btn_change_plan">Changer d\'offre</string>
     <string name="trial_expired">Essai expiré.</string>
@@ -108,9 +106,11 @@
     <string name="player_live">EN DIRECT</string>
     <string name="player_tracks">Pistes et sous-titres</string>
     <string name="player_sub_style">Style des sous-titres</string>
+    <string name="player_off">Désactivé</string>
     <string name="player_no_tracks">Aucune piste disponible pour ce flux.</string>
     <string name="player_sub_bg">Fond noir semi-transparent</string>
     <string name="mylist_title">Ma liste</string>
+    <string name="mylist_empty_hint">Ajoutez des chaînes avec l\'étoile de la liste, ou des films et séries depuis leurs fiches.</string>
     <string name="mylist_empty">Votre liste est vide</string>
     <string name="badge_movie">FILM</string>
     <string name="badge_series">SÉRIE</string>

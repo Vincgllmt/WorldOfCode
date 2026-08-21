@@ -46,12 +46,17 @@ import com.purple.iptvplayer.tv.ui.common.TvChannelRow
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
+import com.purple.iptvplayer.tv.ui.common.dpadPageJump
+import androidx.compose.runtime.withFrameNanos
+import com.purple.iptvplayer.tv.ui.theme.TvSurfaceDefaults
 
 private enum class ListFilter { ALL, CHANNELS, MOVIES, SERIES }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun TvMyListScreen(
+    /** M5 / G7 — cible de l'état vide : un écran TV ne doit jamais en compter zéro. */
+    onBrowse:      () -> Unit,
     onPlayMovie:   (url: String, title: String, id: Int, cover: String) -> Unit,
     onPlaySeries:  (url: String, title: String, mediaId: String, cover: String) -> Unit,
     onPlayChannel: (url: String, title: String, streamId: Int) -> Unit,
@@ -275,14 +280,19 @@ fun TvMyListScreen(
                         stringResource(R.string.mylist_empty_hint),
                         style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg4),
                     )
+                    Spacer(Modifier.height(24.dp))
+                    TvEmptyStateAction(
+                        label   = stringResource(R.string.mylist_empty_cta),
+                        onClick = onBrowse,
+                    )
                 }
             }
         } else {
             LazyVerticalGrid(
                 // Le focus revient ici après une modification de la liste.
                 columns               = GridCells.Adaptive(minSize = 140.dp),
-                modifier              = Modifier.fillMaxSize(),
-                contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                modifier              = Modifier.fillMaxSize().dpadPageJump(pageSize = 3),   // G8
+                contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),  // M6 — overscan
                 verticalArrangement   = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -347,7 +357,7 @@ private fun MyListMovieCard(movie: Movie, onClick: () -> Unit) {
                         .clip(PurpleShapes.Xs).background(PurplePalette.Purple500.copy(0.92f))
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
-                    androidx.compose.material3.Text(stringResource(R.string.badge_movie), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                    androidx.compose.material3.Text(stringResource(R.string.badge_movie), color = Color.White, fontSize =  12.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -394,7 +404,7 @@ private fun MyListSeriesCard(series: SeriesItem, onClick: () -> Unit) {
                         .clip(PurpleShapes.Xs).background(PurplePalette.Purple700.copy(0.92f))
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
-                    androidx.compose.material3.Text(stringResource(R.string.badge_series), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                    androidx.compose.material3.Text(stringResource(R.string.badge_series), color = Color.White, fontSize =  12.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -404,6 +414,31 @@ private fun MyListSeriesCard(series: SeriesItem, onClick: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp),
+        )
+    }
+}
+
+
+/** Cible unique d'un état vide — même dispositif qu'en G7 (`TvDownloadsScreen`). */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TvEmptyStateAction(label: String, onClick: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { focus.requestFocus() }
+    }
+    Surface(
+        onClick  = onClick,
+        modifier = Modifier.focusRequester(focus),
+        shape    = ClickableSurfaceDefaults.shape(PurpleShapes.Md),
+        colors   = TvSurfaceDefaults.onAccent(),
+        scale    = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 13.dp),
+            style    = LocalPurpleType.current.button,
         )
     }
 }

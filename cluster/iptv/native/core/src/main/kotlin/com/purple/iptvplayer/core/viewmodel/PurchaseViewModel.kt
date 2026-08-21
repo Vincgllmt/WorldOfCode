@@ -12,12 +12,38 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Causes d'échec que l'UI doit savoir traduire. Cf. [PurchaseScreenState.PurchaseError]. */
+enum class PurchaseFailure {
+    /** La Play Console ne renvoie aucune offre, ou le service est indisponible. */
+    OFFERS_UNAVAILABLE,
+    /** La restauration a levé. */
+    RESTORE_FAILED,
+    /** La restauration a abouti mais ce compte Google ne possède aucun achat. */
+    NOTHING_TO_RESTORE,
+}
+
 sealed class PurchaseScreenState {
     object Loading    : PurchaseScreenState()
     object Idle       : PurchaseScreenState()
     object Purchasing : PurchaseScreenState()
     data class PurchaseSuccess(val productId: String) : PurchaseScreenState()
-    data class PurchaseError(val message: String) : PurchaseScreenState()
+    /**
+     * Échec d'achat, de chargement d'offres ou de restauration.
+     *
+     * ⚠️ **Ne jamais y mettre un libellé écrit en dur.** Les trois messages qui vivaient
+     * ici étaient en **français codé en dur**, dans un module partagé par les deux
+     * applications : « Aucun achat à restaurer sur ce compte Google. » s'affichait tel quel
+     * dans l'interface anglaise de l'app TV (observé §43). C'est le défaut M1 transposé
+     * dans `core`, où il touche les deux UI au lieu d'une.
+     *
+     * @param reason cause **typée**, que chaque UI traduit avec ses propres ressources.
+     * @param message message fourni par Play Billing — déjà dans la langue de l'appareil,
+     *   donc rendu tel quel. Prioritaire sur [reason] quand il est présent.
+     */
+    data class PurchaseError(
+        val reason: PurchaseFailure? = null,
+        val message: String? = null,
+    ) : PurchaseScreenState()
 }
 
 class PurchaseViewModel(
@@ -60,7 +86,7 @@ class PurchaseViewModel(
         }
         _state.value = outcome.fold(
             onSuccess = { PurchaseScreenState.Idle },
-            onFailure = { PurchaseScreenState.PurchaseError(it.message ?: "Chargement des offres impossible.") },
+            onFailure = { PurchaseScreenState.PurchaseError(PurchaseFailure.OFFERS_UNAVAILABLE, it.message) },
         )
     }
 
@@ -77,8 +103,8 @@ class PurchaseViewModel(
         // Une restauration qui ne trouve rien doit le dire : rester silencieuse
         // laissait croire à un échec de l'application.
         _state.value = when {
-            outcome.isFailure     -> PurchaseScreenState.PurchaseError("Restauration impossible.")
-            outcome.getOrNull() == 0 -> PurchaseScreenState.PurchaseError("Aucun achat à restaurer sur ce compte Google.")
+            outcome.isFailure     -> PurchaseScreenState.PurchaseError(PurchaseFailure.RESTORE_FAILED)
+            outcome.getOrNull() == 0 -> PurchaseScreenState.PurchaseError(PurchaseFailure.NOTHING_TO_RESTORE)
             else                  -> PurchaseScreenState.Idle
         }
     }
@@ -94,7 +120,8 @@ class PurchaseViewModel(
                     _state.value = PurchaseScreenState.PurchaseSuccess(result.productId)
                 }
                 is PurchaseResult.Error -> {
-                    _state.value = PurchaseScreenState.PurchaseError(result.message)
+                    // Message de Play Billing : déjà localisé par le service, rendu tel quel.
+                    _state.value = PurchaseScreenState.PurchaseError(message = result.message)
                 }
                 // Refermer la feuille de paiement ramène simplement à l'écran, sans message d'échec.
                 PurchaseResult.Cancelled -> {

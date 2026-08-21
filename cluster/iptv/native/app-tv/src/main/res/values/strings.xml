@@ -11,10 +11,8 @@
     <string name="field_username">Username</string>
     <string name="field_password">Password</string>
     <string name="trial_info">3-day free trial included. Premium activation available after.</string>
-    <string name="premium_days">%d day(s) remaining.</string>
     <string name="premium_badge">PREMIUM</string>
     <string name="btn_change_plan">Change plan</string>
-    <string name="trial_banner">Free trial: %d day(s) remaining.</string>
     <string name="trial_expired">Trial expired.</string>
     <string name="btn_connect">CONNECT</string>
 
@@ -77,7 +75,7 @@
     <string name="label_director">Director</string>
     <string name="mylist_title">My list</string>
     <string name="mylist_empty">Your list is empty</string>
-    <string name="mylist_empty_hint">Add movies or series from their pages</string>
+    <string name="mylist_empty_hint">Add channels with the star in the channel list, or movies and series from their pages.</string>
     <string name="filter_all">All</string>
     <string name="filter_channels">Channels</string>
     <string name="filter_movies">Movies</string>
@@ -101,6 +99,21 @@
     <string name="purchase_later">Maybe later</string>
     <string name="purchase_none">No products available</string>
     <string name="purchase_processing">Processing payment...</string>
+    <!-- B2 : repli quand la facturation ne rend aucune offre. Sans eux, la barriere
+         d'acces expire n'aurait plus AUCUN focalisable une fois « Maybe later » retire. -->
+    <string name="downloads_empty_cta">Browse movies</string>
+    <string name="player_error">Playback failed. The stream may be unavailable.</string>
+    <string name="player_no_tracks">No alternative track on this stream.</string>
+    <string name="player_track_n">Track %1$d</string>
+    <string name="player_subtitle_n">Subtitle %1$d</string>
+    <string name="purchase_err_offers">Could not load the plans. Please try again.</string>
+    <string name="purchase_err_restore">Restore failed. Please try again.</string>
+    <string name="purchase_err_nothing">No purchase to restore on this Google account.</string>
+    <string name="action_see_all">See all · %1$d</string>
+    <string name="mylist_empty_cta">Browse movies</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_restore">Restore my purchases</string>
+    <string name="purchase_blocked_hint">Your access has expired. Choose a plan to continue.</string>
     <string name="count_results">%1$d RESULTS</string>
     <string name="count_channels">%1$d CHANNELS - %2$d GENRES</string>
     <string name="count_titles">%1$d TITLES - %2$d GENRES</string>

@@ -10,9 +10,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +59,11 @@ import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.tv.R
+import com.purple.iptvplayer.tv.ui.common.dpadPageJump
+import com.purple.iptvplayer.tv.ui.common.focusAnchor
+import com.purple.iptvplayer.tv.ui.common.rememberTvFocusAnchor
+import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
+import com.purple.iptvplayer.tv.ui.common.tvModalTrap
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
@@ -79,6 +87,45 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
     // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
     var searchQuery     by rememberSaveable { mutableStateOf("") }
 
+    // G5 — rendre le focus à l'affiche qui a ouvert la fiche.
+    val anchor = rememberTvFocusAnchor()
+
+    // Hissés AU-DESSUS du `return` anticipé de la fiche : sinon la LazyColumn et ses
+    // LazyRow quittent la composition avec elle, et leurs LazyListState — créés
+    // implicitement à l'intérieur — meurent avec elles. À la réouverture tout repartait du
+    // haut, et l'ancre n'avait plus de nœud composé à qui rendre le focus.
+    val columnState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val gridState   = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+    val rowStates   = remember { mutableMapOf<String, LazyListState>() }
+
+    // G6 — point d'entrée de l'onglet. `enter` ne doit rendre un requester QUE s'il est
+    // attaché : sur un catalogue en chargement aucune carte n'est composée, et réclamer un
+    // requester détaché lève `IllegalStateException`.
+    val firstCardFocus = remember { FocusRequester() }
+    var firstCardReady by remember { mutableStateOf(false) }
+
+    // G6 — `tvGroupEntry` ne suffit pas seul, constaté à l'émulateur.
+    //
+    // La boucle de reprise de focus de `TvMainScreen` s'arrête dès que **n'importe quel**
+    // focalisable du contenu a le focus. Pendant le chargement du catalogue, le seul
+    // composé est la barre de recherche : elle prend le focus, la boucle s'arrête, et
+    // `enter` n'est plus jamais réévalué. Le point d'entrée doit donc se réclamer lui-même
+    // au moment où il devient disponible.
+    //
+    // ⚠️ Une seule fois (`entryClaimed`), et jamais après : rejouer cette demande à chaque
+    // recomposition volerait le focus à l'utilisateur — c'est le défaut du §40, dont la
+    // clé était `selectedIndex` et non un événement ponctuel. Ici la clé bascule une fois,
+    // quand la première carte se compose.
+    var entryClaimed by remember { mutableStateOf(false) }
+    LaunchedEffect(firstCardReady) {
+        if (firstCardReady && !entryClaimed) {
+            entryClaimed = true
+            withFrameNanos { }
+            runCatching { firstCardFocus.requestFocus() }
+        }
+    }
+
+
     LaunchedEffect(Unit) { vm.loadMovies() }
     LaunchedEffect(selectedMovieId) {
         selectedMovieId?.let { vm.loadMovieDetail(it) }
@@ -93,12 +140,9 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
     val movieRecents = remember(recentItems) { recentItems.filter { it.type == "movie" } }
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(selectedMovieId) {
-        if (selectedMovieId == null) {
-            delay(30)
-            focusManager.clearFocus()
-        }
-    }
+    // G5 — `focusManager.clearFocus()` a été RETIRÉ d'ici. Il rendait le focus à la
+    // racine à chaque fermeture de fiche ; Compose redescendait alors au premier
+    // focalisable de l'arbre — le rail — qui se dépliait « tout seul » (G2).
 
     // ── Full-screen detail page ───────────────────────────────────────────────
     if (selectedMovieId != null) {
@@ -110,7 +154,9 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             detail           = detail,
             dlItem           = dlItem,
             isInWatchlist    = isInWatchlist,
-            onClose          = { selectedMovieId = null },
+            // Les DEUX voies de fermeture (RETOUR et « Fermer ») passent par le même
+            // point : c'est ce qui manquait, elles donnaient deux résultats différents.
+            onClose          = { selectedMovieId = null; anchor.restore() },
             onPlay           = onPlay,
             onToggleWatchlist = { selectedMovieId?.let { vm.toggleMovieFavorite(it.toString()) } },
             onDownload       = {
@@ -130,7 +176,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                 detail?.let { d ->
                     dlItem?.localPath?.let {
                         onPlay("file://$it", d.name, d.id, d.cover ?: "")
-                        selectedMovieId = null
+                        selectedMovieId = null; anchor.restore()
                     }
                 }
             },
@@ -149,7 +195,23 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
         searched.sortedByDescending { movieFavorites.contains(it.id.toString()) }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(PurplePalette.Bg1)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurplePalette.Bg1)
+            // G6 — la barre de recherche était le premier focalisable dans l'ordre de
+            // composition, donc le point d'entrée par défaut de l'onglet. La recherche est
+            // une action secondaire : elle ne doit pas être ce qu'on trouve en arrivant.
+            .tvGroupEntry(target = {
+                // ⚠️ G6 et G5 visent le même nœud et se disputaient le focus. Mesuré :
+                // fermer une fiche détruit l'élément focalisé, Compose ré-entre dans le
+                // groupe, `enter` rendait la PREMIÈRE carte — et l'ancre de G5 n'avait
+                // plus rien à restaurer. La rangée repartait du début avec elle.
+                //
+                // Le point d'entrée s'efface donc tant qu'une restauration est en attente.
+                firstCardFocus.takeIf { firstCardReady && anchor.pending == null }
+            }),
+    ) {
 
         // ── Header ────────────────────────────────────────────────────────────
         Row(
@@ -233,7 +295,8 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                 }
                 if (isGroupedView) {
                     LazyColumn(
-                        modifier       = Modifier.fillMaxSize(),
+                        state          = columnState,
+                        modifier       = Modifier.fillMaxSize().dpadPageJump(pageSize = 4),
                         contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
                         if (movieRecents.isNotEmpty()) {
@@ -253,7 +316,10 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                             else -> false
                                         } else false
                                     },
-                                    contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                                    // M6 — marge de FIN portée à 48 dp : les guides Android TV demandent 5 % de la
+                                    // largeur (96 px sur 1920) en zone d'overscan. Départ inchangé, il aligne
+                                    // le contenu sur le titre.
+                                    contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 ) {
                                     lazyItems(movieRecents, key = { it.id }) { itm ->
@@ -280,17 +346,31 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                 val sorted = remember(movies, movieFavorites) {
                                     movies.sortedByDescending { movieFavorites.contains(it.id.toString()) }
                                 }
+                                val isFirstRow = genre == grouped.firstOrNull()?.first
                                 LazyRow(
-                                    contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                                    // État hissé : la position horizontale survit à
+                                    // l'ouverture d'une fiche (G5).
+                                    state                 = rowStates.getOrPut(genre) { LazyListState() },
+                                    contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
                                     lazyItems(sorted, key = { it.id }) { movie ->
+                                        val isEntryPoint = isFirstRow && movie.id == sorted.firstOrNull()?.id
+                                        if (isEntryPoint) {
+                                            DisposableEffect(Unit) {
+                                                firstCardReady = true
+                                                onDispose { firstCardReady = false }
+                                            }
+                                        }
                                         TvMoviePosterCard(
                                             movie         = movie,
                                             downloads     = downloads,
                                             isInWatchlist = movieFavorites.contains(movie.id.toString()),
-                                            onClick       = { selectedMovieId = movie.id },
-                                            modifier      = Modifier.width(100.dp),
+                                            onClick       = { anchor.rememberOrigin(movie.id); selectedMovieId = movie.id },
+                                            modifier      = Modifier
+                                                .width(100.dp)
+                                                .focusAnchor(anchor, movie.id)
+                                                .then(if (isEntryPoint) Modifier.focusRequester(firstCardFocus) else Modifier),
                                         )
                                     }
                                 }
@@ -300,18 +380,34 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                 } else {
                     LazyVerticalGrid(
                         columns               = GridCells.Adaptive(minSize = 140.dp),
-                        modifier              = Modifier.fillMaxSize(),
-                        contentPadding        = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                        state                 = gridState,
+                        modifier              = Modifier
+                            .fillMaxSize()
+                            // G9 — le `▼` depuis la barre de recherche doit tomber sur le
+                            // PREMIER résultat, pas sur le plus proche en abscisse.
+                            .tvGroupEntry(target = { firstCardFocus.takeIf { firstCardReady && anchor.pending == null } })
+                            .dpadPageJump(pageSize = 3),
+                        contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
                         verticalArrangement   = Arrangement.spacedBy(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(filtered, key = { it.id }) { movie ->
+                            val isEntryPoint = movie.id == filtered.firstOrNull()?.id
+                            if (isEntryPoint) {
+                                DisposableEffect(Unit) {
+                                    firstCardReady = true
+                                    onDispose { firstCardReady = false }
+                                }
+                            }
                             TvMoviePosterCard(
                                 movie         = movie,
                                 downloads     = downloads,
                                 isInWatchlist = movieFavorites.contains(movie.id.toString()),
-                                onClick       = { selectedMovieId = movie.id },
-                                modifier      = Modifier.fillMaxWidth(),
+                                onClick       = { anchor.rememberOrigin(movie.id); selectedMovieId = movie.id },
+                                modifier      = Modifier
+                                    .fillMaxWidth()
+                                    .focusAnchor(anchor, movie.id)
+                                    .then(if (isEntryPoint) Modifier.focusRequester(firstCardFocus) else Modifier),
                             )
                         }
                     }
@@ -388,7 +484,7 @@ private fun TvMoviePosterCard(movie: Movie, downloads: List<DownloadItem>, isInW
                         androidx.compose.material3.Text(
                             text       = rating.take(3),
                             color      = Color.White,
-                            fontSize   = 10.sp,
+                            fontSize   =  12.sp,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -460,9 +556,23 @@ internal fun TvMovieDetailPage(
     onRetry:          () -> Unit,
     onPlayLocal:      () -> Unit,
 ) {
+    // Contrat de `tvModalTrap` : un BackHandler DOIT exister, sinon le focus est enfermé
+    // sans issue. Il est là — mais il ne recevait jamais la touche avant B4.
     BackHandler(enabled = true) { onClose() }
 
-    Box(modifier = Modifier.fillMaxSize().background(PurplePalette.Bg1)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurplePalette.Bg1)
+            // G4 — la fiche se PRÉSENTE comme une modale mais n'en est pas une : elle est
+            // rendue à l'intérieur du Box de contenu de TvMainScreen, donc le rail reste un
+            // frère focalisable. Un `◀` depuis « Lire » ne trouvait rien à gauche, la
+            // recherche s'élargissait au parent, et le rail était là.
+            //
+            // Le garde-fou du §30, posé côté rail, ne couvre que Haut/Bas : il ne pouvait
+            // rien contre l'axe horizontal, qui est justement l'axe de sortie d'une fiche.
+            .tvModalTrap(),
+    ) {
         if (detail == null) {
             CircularProgressIndicator(
                 color    = PurplePalette.Purple400,
@@ -904,14 +1014,18 @@ private fun TvMovieGenreHeader(genre: String, count: Int, isFav: Boolean, onSele
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                // G12 — l'en-tête EST une action : elle ouvre la vue complète du genre,
+                // seule échappatoire aux 566 appuis `▶` d'une rangée d'ANIMATION. Mais
+                // rien ne le signalait : elle ressemblait à un titre de section, et le
+                // chevron de 16 dp à 32 % d'opacité ne se lit pas à trois mètres.
                 Text(
-                    "($count)",
-                    style = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
+                    stringResource(R.string.action_see_all, count),
+                    style = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple300),
                 )
                 Icon(
                     Icons.Rounded.ChevronRight, null,
                     tint     = PurplePalette.Purple300,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

@@ -21,9 +21,7 @@
     <string name="nav_movies">Films</string>
     <string name="nav_series">Series</string>
     <string name="nav_downloads">Downloads</string>
-    <string name="trial_banner">Free trial: %d day(s) remaining.</string>
     <string name="premium_lifetime">Lifetime access.</string>
-    <string name="premium_days">%d day(s) remaining.</string>
     <string name="premium_badge">PREMIUM</string>
     <string name="btn_change_plan">Change plan</string>
     <string name="trial_expired">Trial expired.</string>
@@ -108,9 +106,11 @@
     <string name="player_live">LIVE</string>
     <string name="player_tracks">Tracks &amp; subtitles</string>
     <string name="player_sub_style">Subtitle style</string>
+    <string name="player_off">Off</string>
     <string name="player_no_tracks">No track available for this stream.</string>
     <string name="player_sub_bg">Dark semi-transparent background</string>
     <string name="mylist_title">My list</string>
+    <string name="mylist_empty_hint">Add channels with the star in the channel list, or movies and series from their pages.</string>
     <string name="mylist_empty">Your list is empty</string>
     <string name="badge_movie">MOVIE</string>
     <string name="badge_series">SERIES</string>

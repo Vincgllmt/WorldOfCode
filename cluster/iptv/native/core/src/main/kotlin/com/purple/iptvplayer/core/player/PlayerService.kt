@@ -26,6 +26,33 @@ data class PlayerState(
 
 enum class PlayerStatus { IDLE, BUFFERING, PLAYING, PAUSED, ENDED, ERROR }
 
+/**
+ * Réconciliation des statuts du lecteur.
+ *
+ * **Le défaut corrigé (G1, cause réelle).** ExoPlayer notifie `onPlayerError`, puis
+ * bascule en `STATE_IDLE` — ce qui déclenche `onPlaybackStateChanged`, dont la branche
+ * `else` posait `PlayerStatus.IDLE` **par-dessus** `PlayerStatus.ERROR`. Le statut d'erreur
+ * ne survivait donc pas à l'appel suivant.
+ *
+ * C'est pour cela que l'écran de lecture TV restait noir et muet, et — la logique vivant
+ * dans `core` — **le bloc d'erreur du mobile n'a jamais fonctionné non plus**, bien qu'il
+ * soit écrit depuis toujours (`PlayerScreen.kt:208`). L'audit avait attribué G1 à l'absence
+ * de rendu côté TV : c'était vrai mais second.
+ */
+object PlayerStatusPolicy {
+
+    /**
+     * @param previous statut courant, avant l'événement.
+     * @param incoming statut déduit du nouvel état de lecture.
+     *
+     * `ERROR` n'est effacé que par une **relance** — `BUFFERING` ou tout état actif — et
+     * jamais par le `IDLE` qui suit mécaniquement l'échec.
+     */
+    fun reconcile(previous: PlayerStatus, incoming: PlayerStatus): PlayerStatus =
+        if (previous == PlayerStatus.ERROR && incoming == PlayerStatus.IDLE) PlayerStatus.ERROR
+        else incoming
+}
+
 class PlayerService(context: Context) {
 
     val player: ExoPlayer = ExoPlayer.Builder(context).build()
@@ -60,20 +87,28 @@ class PlayerService(context: Context) {
     init {
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val incoming = when (playbackState) {
+                    Player.STATE_BUFFERING -> PlayerStatus.BUFFERING
+                    Player.STATE_READY     -> if (player.isPlaying) PlayerStatus.PLAYING else PlayerStatus.PAUSED
+                    Player.STATE_ENDED     -> PlayerStatus.ENDED
+                    else                   -> PlayerStatus.IDLE
+                }
                 _state.value = _state.value.copy(
-                    status = when (playbackState) {
-                        Player.STATE_BUFFERING -> PlayerStatus.BUFFERING
-                        Player.STATE_READY     -> if (player.isPlaying) PlayerStatus.PLAYING else PlayerStatus.PAUSED
-                        Player.STATE_ENDED     -> PlayerStatus.ENDED
-                        else                   -> PlayerStatus.IDLE
-                    },
+                    // Sans cette réconciliation, le STATE_IDLE qui suit `onPlayerError`
+                    // effaçait le statut ERROR — cf. PlayerStatusPolicy.
+                    status     = PlayerStatusPolicy.reconcile(_state.value.status, incoming),
                     durationMs = player.duration.coerceAtLeast(0L),
                 )
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // Même garde : `isPlaying = false` accompagne un échec et poserait PAUSED
+                // par-dessus ERROR, ce qui donnerait un lecteur « en pause » sur un flux
+                // qui n'a jamais démarré.
+                val incoming = if (isPlaying) PlayerStatus.PLAYING else PlayerStatus.PAUSED
                 _state.value = _state.value.copy(
-                    status = if (isPlaying) PlayerStatus.PLAYING else PlayerStatus.PAUSED,
+                    status = if (_state.value.status == PlayerStatus.ERROR && !isPlaying)
+                                 PlayerStatus.ERROR else incoming,
                 )
                 if (isPlaying) startProgressPolling() else progressJob?.cancel()
             }

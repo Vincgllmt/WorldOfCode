@@ -48,6 +48,7 @@ import com.purple.iptvplayer.R
 import com.purple.iptvplayer.mobile.ui.theme.*
 import com.purple.iptvplayer.mobile.util.LocaleHelper
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun SetupScreen(onSuccess: () -> Unit) {
@@ -236,7 +237,7 @@ fun SetupScreen(onSuccess: () -> Unit) {
                 )
                 is AccessState.Subscribed -> PremiumBadge(
                     label = stringResource(R.string.premium_badge),
-                    subtitle = stringResource(R.string.premium_days, a.daysLeft),
+                    subtitle = pluralStringResource(R.plurals.premium_days, a.daysLeft, a.daysLeft),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 // Essai en cours, expiré, ou état pas encore résolu : l'argument

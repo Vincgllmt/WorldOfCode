@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.tv.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,9 +22,17 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 sealed class TvScreen {
-    object Setup    : TvScreen()
-    object Main     : TvScreen()
-    object Purchase : TvScreen()
+    object Setup : TvScreen()
+    object Main  : TvScreen()
+
+    /**
+     * @param blocking l'écran est atteint comme **barrière** (accès expiré) et non par
+     *   ouverture volontaire depuis le badge d'essai. Même donnée que
+     *   `Routes.purchase(blocking)` côté mobile (P9). Elle commande deux choses : la
+     *   présence du lien « Plus tard » (B2) et celle du `BackHandler` (B4).
+     */
+    data class Purchase(val blocking: Boolean = false) : TvScreen()
+
     data class Player(val url: String, val title: String, val mediaId: String = "", val type: String = "", val cover: String = "", val streamId: Int = 0) : TvScreen()
 }
 
@@ -39,13 +48,31 @@ fun TvNavGraph() {
         // Wait until hasAccess is resolved (TrialViewModel.init already launched refresh())
         val access = trialVm.hasAccess.first { it != null }
         currentScreen = when {
-            access == false -> TvScreen.Purchase
+            access == false -> TvScreen.Purchase(blocking = true)
             creds == null   -> TvScreen.Setup
             else            -> TvScreen.Main
         }
     }
 
-    when (val screen = currentScreen) {
+    val screen = currentScreen
+
+    // B4 — une destination = une règle de retour.
+    //
+    // `TvNavGraph` est une machine à états sans pile de navigation : sans ce handler,
+    // `RETOUR` traversait jusqu'à l'Activity, qui se terminait — en pleine lecture au
+    // troisième appui. Ce qui n'a pas de destination laisse volontairement la touche
+    // remonter, donc quitte l'application : c'est le comportement Leanback attendu depuis
+    // une racine (Main, Setup), et le seul acceptable depuis la barrière d'achat, dont
+    // sortir vers Main rouvrirait la fuite de B2.
+    //
+    // ⚠️ Ne suffit pas seul dans le lecteur : `TvPlayerScreen` doit aussi cesser de
+    // consommer `Key.Back`, sinon l'Activity ne voit jamais la touche et ce handler n'est
+    // pas notifié. Cf. `TvPlayerKeys`.
+    BackHandler(enabled = TvBackPolicy.handlesBack(screen)) {
+        TvBackPolicy.destinationFor(screen)?.let { currentScreen = it }
+    }
+
+    when (screen) {
         null -> Box(
             modifier = Modifier.fillMaxSize().background(TvBgApp),
             contentAlignment = Alignment.Center,
@@ -57,7 +84,7 @@ fun TvNavGraph() {
 
         is TvScreen.Main -> TvMainScreen(
             onPlay     = { url, title, mediaId, type, cover, streamId -> currentScreen = TvScreen.Player(url, title, mediaId, type, cover, streamId) },
-            onPurchase = { currentScreen = TvScreen.Purchase },
+            onPurchase = { currentScreen = TvScreen.Purchase(blocking = false) },
             onSignOut  = {
                 kotlinx.coroutines.MainScope().launch {
                     credRepo.clear()
@@ -67,7 +94,10 @@ fun TvNavGraph() {
         )
 
         is TvScreen.Purchase -> TvPurchaseScreen(
-            onBack    = { currentScreen = TvScreen.Main },
+            // B2 — `null` sur la barrière : le lien « Plus tard » était le seul focalisable
+            // de l'écran et ouvrait le catalogue complet en deux appuis.
+            onBack    = if (TvPurchaseAccess.allowsDismiss(screen.blocking))
+                            ({ currentScreen = TvScreen.Main }) else null,
             onSuccess = { currentScreen = TvScreen.Main },
         )
 

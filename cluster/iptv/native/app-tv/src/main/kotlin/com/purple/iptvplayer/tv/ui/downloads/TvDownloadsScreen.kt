@@ -32,9 +32,30 @@ import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Surface
+import com.purple.iptvplayer.tv.ui.theme.LocalPurpleType
+import com.purple.iptvplayer.tv.ui.theme.PurplePalette
+import com.purple.iptvplayer.tv.ui.theme.PurpleShapes
+import com.purple.iptvplayer.tv.ui.common.dpadPageJump
 
 @Composable
-fun TvDownloadsScreen(onPlay: (url: String, title: String) -> Unit) {
+fun TvDownloadsScreen(
+    onPlay: (url: String, title: String) -> Unit,
+    /**
+     * G7 — un écran de télévision ne devrait jamais présenter zéro cible focalisable.
+     *
+     * L'onglet vide n'en exposait aucune : la boucle de réessai de `contentFocus` tournait
+     * 90 fois sans aboutir, le focus restait dans le rail, et — `railHasFocus` étant vrai
+     * en permanence — le rail restait déplié à 480 px. `▶` ne pouvait rien faire : il n'y
+     * avait littéralement rien à droite, et la télécommande *paraissait* morte.
+     */
+    onBrowse: () -> Unit,
+) {
     val vm: DownloadViewModel = koinViewModel()
     val downloads by vm.downloads.collectAsState()
 
@@ -72,10 +93,16 @@ fun TvDownloadsScreen(onPlay: (url: String, title: String) -> Unit) {
                     Text(stringResource(R.string.downloads_empty_sub),
                         color = TvTextSub, fontSize = 15.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 64.dp))
+                    Spacer(Modifier.height(24.dp))
+                    TvEmptyStateAction(
+                        label   = stringResource(R.string.downloads_empty_cta),
+                        onClick = onBrowse,
+                    )
                 }
             }
         } else {
             LazyColumn(
+                modifier = Modifier.dpadPageJump(pageSize = 6),   // G8
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -162,7 +189,7 @@ private fun TvSectionHeader(title: String, actionLabel: String? = null, onAction
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        Text(title.uppercase(), color = TvPurpleGlow, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Text(title.uppercase(), color = TvPurpleGlow, fontSize =  12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         if (actionLabel != null && onAction != null) {
             TvFocusableButton(label = actionLabel, icon = Icons.Rounded.DeleteSweep, color = TvColorError, onClick = onAction)
         }
@@ -202,7 +229,7 @@ private fun TvActiveDownloadRow(item: DownloadItem, onCancel: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(item.title, color = TvTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            item.subtitle?.let { Text(it, color = TvTextSub, fontSize = 13.sp, maxLines = 1) }
+            item.subtitle?.let { Text(it, color = TvTextSub, fontSize =  14.sp, maxLines = 1) }
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(
                 progress = { item.progress / 100f },
@@ -240,11 +267,11 @@ private fun TvQueuedRow(item: DownloadItem, onCancel: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(item.title, color = TvTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            item.subtitle?.let { Text(it, color = TvTextSub, fontSize = 13.sp, maxLines = 1) }
+            item.subtitle?.let { Text(it, color = TvTextSub, fontSize =  14.sp, maxLines = 1) }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(Icons.Rounded.Schedule, null, tint = TvTextSub.copy(0.6f), modifier = Modifier.size(14.dp))
-                Text(stringResource(R.string.download_queued), color = TvTextSub, fontSize = 13.sp)
+                Text(stringResource(R.string.download_queued), color = TvTextSub, fontSize =  14.sp)
             }
         }
         TvFocusableButton(
@@ -271,8 +298,8 @@ private fun TvFailedRow(item: DownloadItem, onRetry: () -> Unit, onDelete: () ->
         Column(modifier = Modifier.weight(1f)) {
             Text(item.title, color = TvTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            item.subtitle?.let { Text(it, color = TvTextSub, fontSize = 13.sp, maxLines = 1) }
-            Text(stringResource(R.string.download_failed), color = TvColorError, fontSize = 13.sp)
+            item.subtitle?.let { Text(it, color = TvTextSub, fontSize =  14.sp, maxLines = 1) }
+            Text(stringResource(R.string.download_failed), color = TvColorError, fontSize =  14.sp)
         }
         TvFocusableButton(label = stringResource(R.string.btn_retry), icon = Icons.Rounded.Refresh,
             color = TvPurpleGlow, onClick = onRetry)
@@ -306,11 +333,11 @@ private fun TvCompletedRow(item: DownloadItem, onPlay: () -> Unit, onDelete: () 
         Column(modifier = Modifier.weight(1f)) {
             Text(item.title, color = if (isFocused) Color.White else TvTextPrimary,
                 fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            item.subtitle?.let { Text(it, color = TvTextSub, fontSize = 13.sp, maxLines = 1) }
+            item.subtitle?.let { Text(it, color = TvTextSub, fontSize =  14.sp, maxLines = 1) }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
-                Text(stringResource(R.string.download_done), color = Color(0xFF4CAF50), fontSize = 13.sp)
+                Text(stringResource(R.string.download_done), color = Color(0xFF4CAF50), fontSize =  14.sp)
             }
         }
         TvFocusableButton(label = stringResource(R.string.btn_play), icon = Icons.Rounded.PlayCircle,
@@ -357,7 +384,7 @@ private fun TvSeriesGroupRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(seriesName, color = TvTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${episodes.size} episodes", color = TvTextSub, fontSize = 13.sp)
+                Text("${episodes.size} episodes", color = TvTextSub, fontSize =  14.sp)
             }
             Icon(
                 if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
@@ -432,7 +459,42 @@ private fun TvFocusableButton(
     ) {
         Icon(icon, null, tint = if (isFocused) color else TvTextSub, modifier = Modifier.size(20.dp))
         if (label != null) {
-            Text(label, color = if (isFocused) color else TvTextSub, fontSize = 13.sp)
+            Text(label, color = if (isFocused) color else TvTextSub, fontSize =  14.sp)
         }
+    }
+}
+
+
+/**
+ * Cible unique d'un état vide — cf. G7.
+ *
+ * Elle prend le focus d'office : sans elle le focus reste prisonnier du rail, qui reste
+ * alors déplié et occupe un quart de l'écran.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TvEmptyStateAction(label: String, onClick: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { focus.requestFocus() }
+    }
+    Surface(
+        onClick  = onClick,
+        modifier = Modifier.focusRequester(focus),
+        shape    = ClickableSurfaceDefaults.shape(PurpleShapes.Md),
+        colors   = ClickableSurfaceDefaults.colors(
+            containerColor        = PurplePalette.Bg2,
+            contentColor          = PurplePalette.Fg1,
+            focusedContainerColor = PurplePalette.Purple400,
+            focusedContentColor   = PurplePalette.FgOnPrimary,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 13.dp),
+            style    = LocalPurpleType.current.button,
+        )
     }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M8 — « Free trial: 3 day(s) remaining. » : le pluriel était contourné par une
+  parenthèse au lieu d'être résolu.
+
+  ⚠️ Le français et l'anglais n'ont PAS les mêmes catégories : `one` couvre 0 et 1 en
+  français, seulement 1 en anglais. Chaque fichier porte donc ses propres formes — ne pas
+  copier l'un dans l'autre.
+-->
+<resources>
+    <plurals name="trial_banner">
+        <item quantity="one">Free trial: %d day remaining.</item>
+        <item quantity="other">Free trial: %d days remaining.</item>
+    </plurals>
+    <plurals name="premium_days">
+        <item quantity="one">%d day remaining.</item>
+        <item quantity="other">%d days remaining.</item>
+    </plurals>
+</resources>

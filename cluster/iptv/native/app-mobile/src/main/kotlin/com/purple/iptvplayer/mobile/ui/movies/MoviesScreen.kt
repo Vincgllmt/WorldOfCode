@@ -85,7 +85,7 @@ fun MoviesScreen(
     val isGroupedView = layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()
 
     Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
-        ContentHeader(title = "Films", query = query, onQuery = { query = it })
+        ContentHeader(title = stringResource(R.string.nav_movies), query = query, onQuery = { query = it })
 
         if (selectedGenre != null) {
             ActiveFilterPill(genre = selectedGenre, onClear = { onSelectGenre(null) })

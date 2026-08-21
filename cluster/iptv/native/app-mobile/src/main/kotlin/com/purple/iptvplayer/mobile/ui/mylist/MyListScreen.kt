@@ -151,8 +151,11 @@ fun MyListScreen(
                     Spacer(Modifier.height(16.dp))
                     Text(stringResource(R.string.mylist_empty), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
+                    // M5 — c'était un littéral français codé en dur : le même défaut que
+                    // M1, sur l'autre application. La formulation est désormais partagée
+                    // avec `app-tv`, et elle cite bien les trois types.
                     Text(
-                        "Ajoutez des chaînes avec l'étoile de la liste, ou des films et séries depuis leurs fiches.",
+                        stringResource(R.string.mylist_empty_hint),
                         color = TextSub, fontSize = 14.sp, lineHeight = 20.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )

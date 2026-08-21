@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -61,8 +62,17 @@ import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.common.TvChannelRow
+import com.purple.iptvplayer.tv.ui.common.TvGenrePreview
+import com.purple.iptvplayer.tv.ui.common.dpadPageJump
+import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
+import com.purple.iptvplayer.tv.ui.theme.TvSurfaceDefaults
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
+import androidx.tv.material3.LocalContentColor
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.onFocusEvent
+import kotlinx.coroutines.delay
 
 private fun cleanLabel(s: String): String =
     s.replace(Regex("[^\\p{L}\\p{N}\\s|\\-+.&'()/]+"), " ")
@@ -79,6 +89,19 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
     // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
     var searchQuery   by rememberSaveable { mutableStateOf("") }
     var selectedGroup by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // G9 — point d'entrée de la grille de résultats.
+    val firstResultFocus = remember { FocusRequester() }
+    var firstResultReady by remember { mutableStateOf(false) }
+
+    // G15 — le genre survolé, et sa version temporisée qui pilote le panneau droit.
+    var focusedGenre by remember { mutableStateOf<String?>(null) }
+    var previewGenre by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(focusedGenre) {
+        val g = focusedGenre ?: return@LaunchedEffect
+        delay(TvGenrePreview.FOLLOW_DELAY_MS)
+        previewGenre = g
+    }
 
     LaunchedEffect(Unit) { vm.loadChannels() }
 
@@ -177,16 +200,28 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                 when {
                     // ── Search results ────────────────────────────────────────
                     searchQuery.isNotEmpty() -> LazyColumn(
-                        modifier            = Modifier.fillMaxSize(),
+                        modifier            = Modifier
+                            .fillMaxSize()
+                            // `▼` depuis la barre retenait le résultat le plus proche en
+                            // ABSCISSE — le n°2 (x=533) plutôt que le n°1 (x=192).
+                            .tvGroupEntry(target = { firstResultFocus.takeIf { firstResultReady } })
+                            .dpadPageJump(pageSize = 8),
                         contentPadding      = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        items(searchResults, key = { it.url }) { channel ->
+                        itemsIndexed(searchResults, key = { _, c -> c.url }) { index, channel ->
+                            if (index == 0) {
+                                DisposableEffect(Unit) {
+                                    firstResultReady = true
+                                    onDispose { firstResultReady = false }
+                                }
+                            }
                             TvChannelRow(
-                                channel = channel,
-                                isFav   = channelFavs.contains(channel.name),
-                                onPlay  = { onPlay(channel.url, channel.name, channel.streamId ?: 0) },
-                                onFav   = { vm.toggleChannelFavorite(channel.name) },
+                                channel  = channel,
+                                isFav    = channelFavs.contains(channel.name),
+                                onPlay   = { onPlay(channel.url, channel.name, channel.streamId ?: 0) },
+                                onFav    = { vm.toggleChannelFavorite(channel.name) },
+                                modifier = if (index == 0) Modifier.focusRequester(firstResultFocus) else Modifier,
                             )
                         }
                     }
@@ -196,7 +231,15 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                     // atteindre la 40ᵉ chaîne d'un genre y demandait 40 appuis à droite.
                     // Ici haut/bas avance d'une chaîne, un seul axe par panneau.
                     else -> {
-                        val currentGenre = selectedGroup ?: grouped.firstOrNull()?.first
+                        // G15 — le panneau droit suit désormais le FOCUS, pas seulement
+                        // la validation. `selectedGroup` reste prioritaire : c'est
+                        // l'intention explicite, et la seule qui survive à un changement
+                        // d'onglet.
+                        val currentGenre = TvGenrePreview.resolve(
+                            selected  = selectedGroup,
+                            previewed = previewGenre,
+                            first     = grouped.firstOrNull()?.first,
+                        )
                         val shown = remember(grouped, currentGenre, channelFavs) {
                             (grouped.find { it.first == currentGenre }?.second ?: emptyList())
                                 .sortedByDescending { channelFavs.contains(it.name) }
@@ -205,7 +248,13 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                         Row(modifier = Modifier.fillMaxSize()) {
 
                             LazyColumn(
-                                modifier            = Modifier.width(360.dp).fillMaxHeight(),
+                                modifier            = Modifier
+                                    .width(360.dp)
+                                    .fillMaxHeight()
+                                    // G8/G11 — PAGE_UP/PAGE_DOWN (et CHANNEL_UP/DOWN)
+                                    // déplacent le focus au lieu de le détruire. 10 lignes
+                                    // de genres tiennent à l'écran.
+                                    .dpadPageJump(pageSize = 10),
                                 contentPadding      = PaddingValues(start = 24.dp, end = 12.dp, bottom = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
@@ -216,13 +265,21 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                                         isSelected  = genre == currentGenre,
                                         isFav       = genreFavs.contains(genre),
                                         onClick     = { selectedGroup = genre },
+                                        // Survoler reprend la main sur une validation
+                                        // antérieure, sinon le panneau resterait figé sur
+                                        // le dernier genre validé.
+                                        onFocused    = { focusedGenre = genre; selectedGroup = null },
                                         onToggleFav = { vm.toggleLiveGenreFavorite(genre) },
                                     )
                                 }
                             }
 
                             LazyColumn(
-                                modifier            = Modifier.weight(1f).fillMaxHeight(),
+                                modifier            = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    // Lignes de chaînes, plus hautes : 8 par écran.
+                                    .dpadPageJump(pageSize = 8),
                                 contentPadding      = PaddingValues(start = 12.dp, end = 24.dp, bottom = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
@@ -268,6 +325,11 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
     }
     Row(
         modifier              = modifier
+            // G9 — on n'entre dans la barre que par le HAUT. Elle est ancrée en haut à
+            // droite (x ≈ 1312) alors que les résultats commencent à gauche (x = 192) :
+            // `▶` sur le dernier résultat d'une ligne, faute de voisin à droite, remontait
+            // s'y poser. Même raisonnement que le rail au §30, sur l'autre axe.
+            .tvGroupEntry(blocked = setOf(FocusDirection.Left, FocusDirection.Right))
             // Un champ de texte **consomme** les touches directionnelles : une fois le
             // curseur dans la barre de recherche, Bas ne ressortait jamais et les
             // résultats — pourtant focalisables — étaient inatteignables à la
@@ -345,9 +407,13 @@ internal fun TvGenreChip(label: String, selected: Boolean, onClick: () -> Unit, 
     Surface(
         onClick           = onClick,
         shape             = ClickableSurfaceDefaults.shape(PurpleShapes.Pill),
+        // G10 — un chip sélectionné est DÉJÀ sur l'accent : son contenu doit être sombre
+        // même sans focus, sinon il reste à 3,27 : 1 en permanence.
         colors            = ClickableSurfaceDefaults.colors(
             containerColor        = if (selected) PurplePalette.Purple400 else PurplePalette.Bg2,
+            contentColor          = if (selected) PurplePalette.FgOnPrimary else PurplePalette.Fg2,
             focusedContainerColor = PurplePalette.Purple400,
+            focusedContentColor   = PurplePalette.FgOnPrimary,
         ),
         border            = ClickableSurfaceDefaults.border(
             border = Border(
@@ -375,14 +441,14 @@ internal fun TvGenreChip(label: String, selected: Boolean, onClick: () -> Unit, 
             if (isGenreFav) {
                 Icon(
                     Icons.Rounded.Bookmark, null,
-                    tint     = if (selected || isFocused) Color.White else PurplePalette.Purple300,
+                    tint     = LocalContentColor.current,
                     modifier = Modifier.size(11.dp),
                 )
             }
             Text(
                 label,
                 style = LocalPurpleType.current.bodySmall.copy(
-                    color      = if (selected || isFocused) Color.White else PurplePalette.Fg2,
+                    color      = LocalContentColor.current,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                 ),
             )
@@ -398,19 +464,28 @@ private fun TvGenreItem(
     isSelected:  Boolean,
     isFav:       Boolean,
     onClick:     () -> Unit,
+    /** G15 — signale le survol sans devenir un second focalisable (§8.10). */
+    onFocused:   () -> Unit,
     onToggleFav: () -> Unit,
 ) {
+    // G11 — l'étoile de genre facturait elle aussi un appui à chaque traversée.
+    var rowHasFocus by remember { mutableStateOf(false) }
+
     Row(
+        modifier = Modifier
+            .focusGroup()
+            .onFocusEvent { rowHasFocus = it.hasFocus },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Surface(
             onClick  = onClick,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { if (it.isFocused) onFocused() },
             shape    = ClickableSurfaceDefaults.shape(PurpleShapes.Md),
-            colors   = ClickableSurfaceDefaults.colors(
-                containerColor        = if (isSelected) PurplePalette.Purple400.copy(alpha = 0.18f) else Color.Transparent,
-                focusedContainerColor = PurplePalette.Purple400,
+            colors   = TvSurfaceDefaults.onAccent(
+                containerColor = if (isSelected) PurplePalette.Purple400.copy(alpha = 0.18f) else Color.Transparent,
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
         ) {
@@ -421,7 +496,7 @@ private fun TvGenreItem(
                 Text(
                     genre.uppercase(),
                     style    = LocalPurpleType.current.bodySmall.copy(
-                        color = PurplePalette.Fg1, fontWeight = FontWeight.SemiBold,
+                        color = LocalContentColor.current, fontWeight = FontWeight.SemiBold,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -429,23 +504,32 @@ private fun TvGenreItem(
                 )
                 Text(
                     count.toString(),
-                    style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg3),
+                    // Le compteur reste secondaire au repos ; sur l'accent il doit suivre,
+                    // sinon `Fg3` (55 % de blanc) tombe sous 2 : 1.
+                    style = LocalPurpleType.current.bodySmall.copy(
+                        color = LocalContentColor.current.copy(alpha = 0.65f),
+                    ),
                 )
             }
         }
         Surface(
             onClick = onToggleFav,
+            modifier = Modifier
+                .alpha(if (rowHasFocus) 1f else 0.35f)
+                .focusProperties { canFocus = rowHasFocus },
             shape   = ClickableSurfaceDefaults.shape(PurpleShapes.Xs),
-            colors  = ClickableSurfaceDefaults.colors(
-                containerColor        = Color.Transparent,
-                focusedContainerColor = PurplePalette.Purple400,
-            ),
+            colors  = TvSurfaceDefaults.onAccent(containerColor = Color.Transparent),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
         ) {
+            val focused = LocalContentColor.current == PurplePalette.FgOnPrimary
             Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                 Text(
                     if (isFav) "★" else "☆",
-                    color    = if (isFav) Color(0xFFFFD700) else PurplePalette.Fg4,
+                    color    = when {
+                        focused -> PurplePalette.FgOnPrimary   // l'or tombe à 2,1 : 1 sur l'accent
+                        isFav   -> Color(0xFFFFD700)
+                        else    -> PurplePalette.Fg4
+                    },
                     fontSize = 16.sp,
                 )
             }

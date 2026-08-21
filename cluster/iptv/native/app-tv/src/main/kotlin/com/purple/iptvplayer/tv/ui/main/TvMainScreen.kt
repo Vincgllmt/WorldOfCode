@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,6 +36,8 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -56,7 +60,12 @@ import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
 import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
 import com.purple.iptvplayer.tv.ui.common.TvPremiumBadge
+import com.purple.iptvplayer.tv.ui.common.TvRailExpansion
+import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
+import com.purple.iptvplayer.tv.ui.common.focusAnchor
+import com.purple.iptvplayer.tv.ui.common.rememberTvFocusAnchor
 import com.purple.iptvplayer.tv.ui.downloads.TvDownloadsScreen
+import com.purple.iptvplayer.tv.ui.navigation.TvTabBackPolicy
 import com.purple.iptvplayer.tv.ui.home.TvHomeScreen
 import com.purple.iptvplayer.tv.ui.movies.TvMoviesScreen
 import com.purple.iptvplayer.tv.ui.mylist.TvMyListScreen
@@ -64,8 +73,12 @@ import com.purple.iptvplayer.tv.ui.series.TvSeriesScreen
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.res.pluralStringResource
 
 private data class NavItem(val label: String, val icon: ImageVector)
+
+/** Clé d'ancre du bouton de déconnexion — cf. `TvFocusAnchor`. */
+private const val LOGOUT_ANCHOR = "settings.logout"
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -80,18 +93,34 @@ fun TvMainScreen(
     val isPro         by trialVm.isPro.collectAsState()
     val access        by trialVm.accessState.collectAsState()
 
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    // G14 — `rememberSaveable` et non `remember` : `activity.recreate()` (changement de
+    // langue) détruisait l'Activity et ramenait systématiquement sur Direct TV. Sept
+    // appuis pour revenir aux Paramètres — dans une interface dont on ne lit plus les
+    // libellés si l'on s'est trompé de langue.
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
     var expanded      by remember { mutableStateOf(false) }
     var railHasFocus  by remember { mutableStateOf(false) }
     /** Conserve l'état de chaque onglet quand on en change (cf. plus bas). */
     val tabStateHolder = rememberSaveableStateHolder()
 
+    // G2 — le rail se dépliait dès que le focus y entrait, **sans distinguer pourquoi**.
+    // Or les quatre reproductions de l'audit sont toutes des arrivées non demandées : le
+    // focus y tombe par réattribution quand l'élément focalisé disparaît, et l'animation
+    // décale alors tout le contenu de 336 px.
+    //
+    // La première couche du correctif est ailleurs — G5 supprime ces arrivées. Reste à
+    // exiger une intention pour le dépliage résiduel. `hasFocus` ne dit pas pourquoi le
+    // focus est arrivé ; **la touche pressée, si**.
+    var lastLeftPressMs by remember { mutableLongStateOf(0L) }
+
     LaunchedEffect(railHasFocus) {
-        if (railHasFocus) {
+        if (!railHasFocus) {
+            expanded = false
+            return@LaunchedEffect
+        }
+        if (TvRailExpansion.shouldExpand(railHasFocus, System.currentTimeMillis(), lastLeftPressMs)) {
             delay(100)
             expanded = true
-        } else {
-            expanded = false
         }
     }
 
@@ -101,11 +130,9 @@ fun TvMainScreen(
         label         = "rail-width",
     )
 
-    val firstNavFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        delay(150)
-        try { firstNavFocus.requestFocus() } catch (_: Exception) { }
-    }
+    // G3 — un requester par entrée du rail : `enter` doit mener à l'onglet AFFICHÉ, pas au
+    // voisin géométriquement le plus proche de la ligne qu'on vient de quitter.
+    val railFocus = remember { List(6) { FocusRequester() } }
 
     // Un FocusRequester par onglet, pour garantir que **l'onglet focalisé est celui
     // qui est affiché**. Valider « Séries » renvoyait le focus sur « Direct TV » : le
@@ -152,14 +179,49 @@ fun TvMainScreen(
     val navItems = listOf(
         NavItem(stringResource(R.string.nav_live),       Icons.Rounded.LiveTv),
         NavItem(stringResource(R.string.nav_movies),           Icons.Rounded.Movie),
-        NavItem(stringResource(R.string.nav_series),          Icons.Rounded.Tv),
+        // M7 — `Tv` (un moniteur) et `LiveTv` (un téléviseur) sont deux rectangles sur
+        // pied : indiscernables à 22 dp et à trois mètres, alors que ce sont les deux
+        // catégories les plus utilisées. `VideoLibrary` évoque une pile d'épisodes.
+        NavItem(stringResource(R.string.nav_series),          Icons.Rounded.VideoLibrary),
         NavItem(stringResource(R.string.nav_mylist),        Icons.Rounded.Bookmarks),
         NavItem(stringResource(R.string.nav_downloads), Icons.Rounded.Download),
         NavItem(stringResource(R.string.nav_settings),      Icons.Rounded.Settings),
     )
     val settingsIndex = navItems.size - 1
 
-    Row(modifier = Modifier.fillMaxSize().background(PurplePalette.Bg1)) {
+    // Remonté depuis TvSettingsPage : le `BackHandler` de Main doit pouvoir refermer une
+    // confirmation ouverte AVANT de quitter l'onglet — sinon un seul appui ferait les deux.
+    var settingsOverlayOpen by remember { mutableStateOf(false) }
+
+    // B4 (second volet, constaté à l'émulateur) — `Main` est UNE destination du NavGraph
+    // mais SIX onglets pour l'utilisateur. Le premier jet de B4 le traitait comme une
+    // racine : `RETOUR` depuis les Paramètres quittait l'application. L'audit excluait ce
+    // cas — la touche ne doit s'échapper que depuis l'écran d'accueil.
+    //
+    // Ce handler reste inactif sur l'accueil sans surcouche : la touche remonte alors au
+    // `TvNavGraph`, qui la laisse quitter. Les `BackHandler` internes des onglets
+    // (TvHomeScreen, TvMoviesScreen…) sont enregistrés plus tard, donc prioritaires : un
+    // genre ouvert ou une recherche en cours se referme d'abord.
+    BackHandler(enabled = TvTabBackPolicy.handlesBack(selectedIndex, settingsOverlayOpen)) {
+        when (TvTabBackPolicy.actionFor(selectedIndex, settingsOverlayOpen)) {
+            TvTabBackPolicy.Action.DismissOverlay -> settingsOverlayOpen = false
+            TvTabBackPolicy.Action.GoHome         -> selectedIndex = TvTabBackPolicy.HOME_INDEX
+            TvTabBackPolicy.Action.Escape         -> Unit
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurplePalette.Bg1)
+            // Observation pure : on ne consomme rien, on note l'intention (G2).
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                    lastLeftPressMs = System.currentTimeMillis()
+                }
+                false
+            },
+    ) {
 
         // ── SideRail ─────────────────────────────────────────────────────────
         Column(
@@ -182,15 +244,14 @@ fun TvMainScreen(
                 //
                 // Gauche reste ouvert, donc le rail n'est jamais inatteignable — piéger
                 // le focus serait un défaut pire que celui corrigé ici.
-                .focusGroup()
-                .focusProperties {
-                    enter = { direction ->
-                        when (direction) {
-                            FocusDirection.Up, FocusDirection.Down -> FocusRequester.Cancel
-                            else -> FocusRequester.Default
-                        }
-                    }
-                }
+                // Garde-fou du §30 conservé (Haut/Bas refusés), plus le point d'entrée
+                // latéral de G3 : `◀` mène à l'onglet affiché. `enter` n'est évalué que
+                // pendant une recherche de focus, donc jamais à la première composition —
+                // c'est ce qui le distingue du LaunchedEffect retiré au §40.
+                .tvGroupEntry(
+                    blocked = setOf(FocusDirection.Up, FocusDirection.Down),
+                    target  = { railFocus.getOrNull(selectedIndex) },
+                )
                 .onFocusEvent { state -> railHasFocus = state.hasFocus }
                 .padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -209,6 +270,7 @@ fun TvMainScreen(
                         isActive       = selectedIndex == index,
                         expanded       = expanded,
                         onClick        = { selectedIndex = index },
+                        modifier       = Modifier.focusRequester(railFocus[index]),
                     )
                 }
             }
@@ -220,6 +282,7 @@ fun TvMainScreen(
                 isActive       = selectedIndex == settingsIndex,
                 expanded       = expanded,
                 onClick        = { selectedIndex = settingsIndex },
+                modifier       = Modifier.focusRequester(railFocus[settingsIndex]),
             )
 
             // Badge d'état (UX-1) — même règle que sur mobile : un achat définitif
@@ -272,16 +335,22 @@ fun TvMainScreen(
                     onPlay(url, title, mediaId, "series", cover, 0)
                 })
                 3 -> TvMyListScreen(
+                    // M5 / G7 — l'état vide doit offrir une cible.
+                    onBrowse = { selectedIndex = 1 },
                     onPlayMovie  = { url, title, id, cover -> onPlay(url, title, id.toString(), "movie", cover, 0) },
                     onPlaySeries = { url, title, mediaId, cover -> onPlay(url, title, mediaId, "series", cover, 0) },
                     onPlayChannel = { url, title, streamId -> onPlay(url, title, "", "live", "", streamId) },
                 )
-                4 -> TvDownloadsScreen(onPlay = { url, title ->
-                    onPlay(url, title, "", "", "", 0)
-                })
+                4 -> TvDownloadsScreen(
+                    onPlay   = { url, title -> onPlay(url, title, "", "", "", 0) },
+                    // G7 — l'état vide devient une action : bascule sur l'onglet Films.
+                    onBrowse = { selectedIndex = 1 },
+                )
                 5 -> TvSettingsPage(
-                    playerVm  = playerVm,
-                    onSignOut = onSignOut,
+                    playerVm            = playerVm,
+                    onSignOut           = onSignOut,
+                    logoutConfirmOpen   = settingsOverlayOpen,
+                    onLogoutConfirmOpen = { settingsOverlayOpen = it },
                 )
             }
             }
@@ -342,6 +411,8 @@ private fun RailItem(
     isActive:       Boolean,
     expanded:       Boolean,
     onClick:        () -> Unit,
+    /** Ajouté pour G3 : le point d'entrée du rail doit pouvoir désigner cette entrée. */
+    modifier:       Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -351,15 +422,17 @@ private fun RailItem(
         isActive  -> PurplePalette.Purple400.copy(alpha = 0.18f)
         else      -> Color.Transparent
     }
+    // G10 — blanc sur `Purple400` ne donne que 3,27 : 1. Le rail est le repère permanent
+    // de l'écran : c'est l'élément qu'on lit le plus souvent de loin.
     val iconTint = when {
-        isFocused -> Color.White
+        isFocused -> PurplePalette.FgOnPrimary
         isActive  -> PurplePalette.Purple300
         else      -> PurplePalette.Fg3
     }
 
     Surface(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = if (expanded) 14.dp else 8.dp, vertical = 3.dp),
         shape = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
@@ -405,7 +478,13 @@ private fun RailItem(
                         .width(3.dp)
                         .height(if (isActive) 20.dp else 0.dp)
                         .clip(PurpleShapes.Xs)
-                        .background(if (isActive) PurplePalette.Purple200 else Color.Transparent),
+                        // Le liseré d'onglet actif doit rester visible quand la pastille
+                        // est remplie d'accent : `Purple200` y disparaîtrait.
+                        .background(when {
+                            !isActive -> Color.Transparent
+                            isFocused -> PurplePalette.FgOnPrimary
+                            else      -> PurplePalette.Purple200
+                        }),
                 )
             }
             Icon(
@@ -461,12 +540,21 @@ private fun RailTrialBadge(days: Int, expanded: Boolean, onClick: () -> Unit, mo
         )
         if (expanded) {
             val label = if (days > 0)
-                stringResource(R.string.trial_banner, days)
+                pluralStringResource(R.plurals.trial_banner, days, days)
             else
                 stringResource(R.string.trial_expired)
             Text(
                 label,
-                style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
+                style    = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
+                modifier = Modifier.weight(1f),
+            )
+            // M8 — le badge ouvre l'écran d'achat depuis le §10, mais rien ne le disait :
+            // il ressemblait à un état, pas à une action.
+            Icon(
+                Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint               = PurplePalette.Purple300,
+                modifier           = Modifier.size(16.dp),
             )
         }
     }
@@ -496,7 +584,7 @@ private fun RailPremiumBadge(days: Int, onClick: () -> Unit, modifier: Modifier 
         ) {
             TvPremiumBadge(label = stringResource(R.string.premium_badge))
             Text(
-                stringResource(R.string.premium_days, days),
+                pluralStringResource(R.plurals.premium_days, days, days),
                 style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg2),
             )
         }
@@ -510,6 +598,9 @@ private fun RailPremiumBadge(days: Int, onClick: () -> Unit, modifier: Modifier 
 private fun TvSettingsPage(
     playerVm:  PlayerViewModel,
     onSignOut: () -> Unit,
+    /** Hissé dans `TvMainScreen` : son `BackHandler` doit pouvoir refermer la confirmation. */
+    logoutConfirmOpen: Boolean,
+    onLogoutConfirmOpen: (Boolean) -> Unit,
 ) {
     val context     = LocalContext.current
     val activity    = context as? ComponentActivity
@@ -517,14 +608,27 @@ private fun TvSettingsPage(
     val subColor    by playerVm.subtitleColor.collectAsState(initial = "white")
     val subBg       by playerVm.subtitleBackground.collectAsState(initial = false)
     var currentLang by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
-    var showLogoutConfirm by remember { mutableStateOf(false) }
+    val logoutAnchor = rememberTvFocusAnchor()
+    val confirmFocus = remember { FocusRequester() }
 
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         try { firstFocus.requestFocus() } catch (_: Exception) {}
     }
 
-    // Centred card — everything visible at a glance, no scroll needed
+    // B3 — la carte dépassait 1080 px et n'avait AUCUN défilement ; le commentaire
+    // « everything visible at a glance, no scroll needed » était faux sur 1080p.
+    //
+    // Le mécanisme n'est pas seulement du confort : une `Column` mesure ses enfants avec
+    // la hauteur **restante**, donc une fois la contrainte épuisée les derniers enfants
+    // sont mesurés à hauteur ~0. C'est ce qui réconcilie les trois symptômes mesurés —
+    // `▼` ne trouvait pas le bouton « Déconnexion » (la recherche directionnelle ne retient
+    // pas un nœud plat), `▲` l'atteignait par rebouclage, et il était « invisible, seul un
+    // liseré rouge dépasse » : c'était la bordure d'un nœud aplati.
+    //
+    // Un conteneur défilable mesure en hauteur NON BORNÉE : chaque enfant reprend sa taille
+    // naturelle et redevient un candidat de focus. Compose y déclenche en outre
+    // `bringIntoView` au changement de focus, donc le bouton se présente de lui-même.
     Box(
         modifier         = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -532,9 +636,13 @@ private fun TvSettingsPage(
         Column(
             modifier            = Modifier
                 .widthIn(max = 500.dp)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .focusGroup()
                 .clip(PurpleShapes.Lg)
                 .background(PurplePalette.Bg0)
-                .padding(horizontal = 32.dp, vertical = 28.dp),
+                // Marge de sécurité TV (5 % — overscan), au lieu de 28.dp.
+                .padding(horizontal = 32.dp, vertical = PurpleSpacing.TvSafeY),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // ── Header ────────────────────────────────────────────────────────
@@ -544,11 +652,11 @@ private fun TvSettingsPage(
                     style = LocalPurpleType.current.h2.copy(color = PurplePalette.Fg1),
                     modifier = Modifier.weight(1f),
                 )
-                androidx.compose.material3.Text(
-                    stringResource(R.string.action_back),
-                    color    = PurplePalette.Fg4,
-                    fontSize = 13.sp,
-                )
+                // M2 — « Retour » était un `Text` nu : il ressemblait à un bouton mais
+                // n'était ni cliquable ni focalisable, et n'apparaissait dans aucun
+                // parcours de focus. Supprimé plutôt que rendu focalisable : depuis B4,
+                // `RETOUR` sort des Paramètres et `◀` mène au rail — la fonction est
+                // couverte deux fois, et un focalisable de plus a un coût (§8.10).
             }
 
             // ── Language ──────────────────────────────────────────────────────
@@ -652,23 +760,28 @@ private fun TvSettingsPage(
                 androidx.compose.material3.Text(
                     stringResource(R.string.settings_logout_desc),
                     color      = PurplePalette.Fg3,
-                    fontSize   = 13.sp,
+                    fontSize   =  14.sp,
                     lineHeight = 18.sp,
                 )
                 Spacer(Modifier.height(4.dp))
-                if (!showLogoutConfirm) {
+                if (!logoutConfirmOpen) {
                     TvSettingsButton(
                         label       = stringResource(R.string.btn_logout),
                         selected    = false,
                         accentColor = PurplePalette.Danger,
-                        onClick     = { showLogoutConfirm = true },
+                        onClick     = { logoutAnchor.rememberOrigin(LOGOUT_ANCHOR); onLogoutConfirmOpen(true) },
+                        modifier    = Modifier.focusAnchor(logoutAnchor, LOGOUT_ANCHOR),
                     )
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         TvSettingsButton(
                             label    = stringResource(R.string.btn_cancel),
                             selected = false,
-                            onClick  = { showLogoutConfirm = false },
+                            // Annuler détruit ces deux boutons : sans ancre, le focus
+                            // retombe sur le focalisable le plus proche de l'arbre — le
+                            // rail — qui se déplie alors « tout seul » (G2).
+                            onClick  = { onLogoutConfirmOpen(false); logoutAnchor.restore() },
+                            modifier = Modifier.focusRequester(confirmFocus),
                         )
                         TvSettingsButton(
                             label       = stringResource(R.string.btn_logout),
@@ -677,6 +790,14 @@ private fun TvSettingsPage(
                             onClick     = onSignOut,
                         )
                     }
+                    LaunchedEffect(Unit) {
+                        withFrameNanos { }
+                        runCatching { confirmFocus.requestFocus() }
+                    }
+                    // RETOUR ferme la confirmation depuis le BackHandler de Main, qui ne
+                    // sait rien de l'ancre : on la réarme ici pour que les DEUX voies de
+                    // fermeture rendent le focus au même endroit (leçon de G5).
+                    DisposableEffect(Unit) { onDispose { logoutAnchor.restore() } }
                 }
             }
         }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +41,24 @@ object PurplePalette {
     val Fg2 = Color(0xC7FFFFFF)   // 78 %
     val Fg3 = Color(0x8CFFFFFF)   // 55 %
     val Fg4 = Color(0x52FFFFFF)   // 32 %
-    val FgOnPrimary = Color(0xFFFFFFFF)
+    /**
+     * Contenu posé **sur un fond d'accent** — G10.
+     *
+     * Il valait blanc, et surtout presque personne ne le lisait : les composants codaient
+     * `Fg1` en dur pendant que `focusedContainerColor` passait à `Purple400`. Mesuré au
+     * pixel : blanc sur `Bg2` = **18,06 : 1** au repos, blanc sur `#B36BFC` = **3,27 : 1**
+     * au focus. L'élément désigné devenait le moins lisible de l'écran — l'inverse de ce
+     * qu'il faut à trois mètres.
+     *
+     * En sombre sur le même lavande : **6,00 : 1** — au-dessus du seuil WCAG AA (4,5), et
+     * c'est le plafond praticable : `#0B0414`, presque noir, ne monte qu'à 6,17. Le
+     * remplissage — l'identité du produit — ne bouge pas ; seul le contenu s'inverse.
+     *
+     * ⚠️ **Ne vaut que sur l'accent *clair*.** Sur `Purple600` (état pressé, plus sombre),
+     * ce jeton retombe à **3,68 : 1** alors que le blanc y donne 5,32. Le contenu doit
+     * suivre la clarté du fond, pas être uniforme — cf. [TvSurfaceDefaults.onAccent].
+     */
+    val FgOnPrimary = Color(0xFF12061F)
 
     val Line1 = Color(0x14FFFFFF)   // 8 % white — divider
     val Line2 = Color(0x73B36BFC)   // 45 % lavender — focus outline
@@ -64,6 +82,40 @@ val TvTextSub     = PurplePalette.Fg3
 val TvBorder      = PurplePalette.Line1
 val TvColorError  = PurplePalette.Danger
 val TvColorGold   = PurplePalette.Rating
+
+// ── Surfaces focalisables ─────────────────────────────────────────────────────
+
+/**
+ * Jeux de couleurs partagés des `Surface` TV.
+ *
+ * La décision « quel contenu sur un fond d'accent » ne doit exister qu'à **un seul**
+ * endroit (§8.2) : elle était écrite composant par composant, et aucun ne la faisait
+ * suivre l'état de focus.
+ *
+ * `androidx.tv.material3.Surface` publie sa couleur de contenu dans `LocalContentColor`
+ * selon l'état d'interaction : il suffit de déclarer `focusedContentColor` et de laisser
+ * les `Text`/`Icon` en hériter, au lieu de coder `Fg1`.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+object TvSurfaceDefaults {
+
+    /** Ligne ou carte qui se remplit d'accent au focus. */
+    @Composable
+    fun onAccent(
+        containerColor: Color = PurplePalette.Bg2,
+        contentColor: Color = PurplePalette.Fg1,
+    ) = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+        containerColor        = containerColor,
+        contentColor          = contentColor,
+        focusedContainerColor = PurplePalette.Purple400,
+        // Accent CLAIR → contenu sombre : 6,00 : 1 au lieu de 3,27.
+        focusedContentColor   = PurplePalette.FgOnPrimary,
+        pressedContainerColor = PurplePalette.Purple600,
+        // Accent SOMBRE → contenu clair : 5,32 : 1. Garder le jeton sombre ici le ferait
+        // tomber à 3,68 — un uniforme aurait dégradé l'état pressé en corrigeant le focus.
+        pressedContentColor   = PurplePalette.Fg1,
+    )
+}
 
 // ── Motion ────────────────────────────────────────────────────────────────────
 
@@ -149,29 +201,32 @@ val DefaultPurpleType = PurpleType(
         fontSize   = 17.sp,
         lineHeight = 22.sp,
     ),
+    // M3 — 34 des 64 tailles de police étaient sous 14 sp. Le minimum Android TV est
+    // 12 sp, la recommandation pour du texte courant 18 sp ; seules 6 valeurs sur 64
+    // l'atteignaient. Le socle est relevé ici, les littéraux au fil des écrans.
     body = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize   = 15.sp,
-        lineHeight = 22.sp,
+        fontSize   = 18.sp,
+        lineHeight = 26.sp,
     ),
     bodySmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize   = 13.sp,
-        lineHeight = 18.sp,
+        fontSize   = 15.sp,
+        lineHeight = 21.sp,
     ),
     meta = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
-        fontSize   = 13.sp,
-        lineHeight = 13.sp,
+        fontSize   = 14.sp,
+        lineHeight = 16.sp,
     ),
     capsLabel = TextStyle(
         fontFamily    = FontFamily.Default,
         fontWeight    = FontWeight.SemiBold,
-        fontSize      = 11.sp,
-        lineHeight    = 11.sp,
+        fontSize      = 12.sp,          // plancher Android TV
+        lineHeight    = 14.sp,
         letterSpacing = 0.10.em,
     ),
     brandWordmark = TextStyle(
@@ -188,6 +243,23 @@ val DefaultPurpleType = PurpleType(
         lineHeight = 15.sp,
     ),
 )
+
+/**
+ * Micro-étiquette — badges LIVE, FILM, SÉRIE, BEST DEAL.
+ *
+ * Plancher Android TV : **12 sp**. Les badges de « Ma liste » étaient à 8 sp, soit 16 px de
+ * haut sur un écran 1080p ; ceux du paywall et du lecteur à 10 sp.
+ */
+val TvBadgeText = TextStyle(
+    fontFamily    = FontFamily.Default,
+    fontWeight    = FontWeight.Black,
+    fontSize      = 12.sp,
+    lineHeight    = 14.sp,
+    letterSpacing = 0.08.em,
+)
+
+/** Plancher absolu de l'interface TV. Aucun style ne doit descendre en dessous. */
+val TvMinFontSize = 12.sp
 
 val LocalPurpleType = staticCompositionLocalOf { DefaultPurpleType }
 

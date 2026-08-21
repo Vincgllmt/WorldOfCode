@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,10 @@ import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
 import com.purple.iptvplayer.tv.ui.common.KeepScreenOn
 import com.purple.iptvplayer.tv.R
+import com.purple.iptvplayer.tv.ui.common.tvModalTrap
+import com.purple.iptvplayer.tv.ui.navigation.PlayerControl
+import com.purple.iptvplayer.tv.ui.navigation.TvOverlayFocus
+import com.purple.iptvplayer.tv.ui.navigation.TvPlayerKeys
 import com.purple.iptvplayer.tv.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
@@ -78,7 +83,11 @@ fun TvPlayerScreen(
     val isLive = state.durationMs <= 0L
 
     val rootFocus = remember { FocusRequester() }
-    val playFocus = remember { FocusRequester() }
+
+    // G13 — un requester par contrôle, et le dernier focalisé.
+    val controlFocus = remember { PlayerControl.entries.associateWith { FocusRequester() } }
+    var lastControl  by remember { mutableStateOf(PlayerControl.PlayPause) }
+    var overlayEverShown by remember { mutableStateOf(false) }
 
     // `lastInteractionMs` fait partie de la clé : sans elle, le minuteur n'était jamais
     // réarmé et l'overlay se masquait 5 s après son apparition, **même en pleine
@@ -91,13 +100,22 @@ fun TvPlayerScreen(
         }
     }
 
-    // Transfer focus to play button when overlay appears; root when hidden
+    // G13 — défaut sensé à la PREMIÈRE apparition seulement ; ensuite on rend à
+    // l'utilisateur le contrôle qu'il avait quitté.
+    //
+    // L'effet d'origine réclamait le bouton central à chaque bascule de `overlayVisible`,
+    // donc à chaque réapparition : c'est la variante « au réaffichage » du piège §8.8 —
+    // l'état qui sert de clé est aussi celui que l'effet écrase.
     LaunchedEffect(overlayVisible) {
+        if (!overlayVisible) {
+            runCatching { rootFocus.requestFocus() }
+            return@LaunchedEffect
+        }
         delay(80)
-        try {
-            if (overlayVisible && !showSpeedDialog && !showTrackDialog) playFocus.requestFocus()
-            else rootFocus.requestFocus()
-        } catch (_: Exception) { }
+        if (showSpeedDialog || showTrackDialog) return@LaunchedEffect
+        val target = TvOverlayFocus.targetFor(overlayEverShown, lastControl)
+        overlayEverShown = true
+        runCatching { controlFocus.getValue(target).requestFocus() }
     }
 
     LaunchedEffect(url) {
@@ -125,16 +143,22 @@ fun TvPlayerScreen(
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 // Tout appui compte comme une interaction, y compris quand l'overlay est
                 // déjà visible : les événements non consommés par l'élément focalisé
-                // remontent jusqu'ici avant que le focus ne se déplace.
-                lastInteractionMs = System.currentTimeMillis()
-                // On ne consomme que le premier appui, celui qui rouvre l'overlay ;
-                // les suivants doivent continuer à déplacer le focus.
-                if (overlayVisible) {
-                    false
-                } else {
-                    overlayVisible = true
-                    true
+                // remontent jusqu'ici avant que le focus ne se déplace. RETOUR en est
+                // exclu — il quitte l'écran, il n'y prolonge rien.
+                if (TvPlayerKeys.countsAsInteraction(event.key)) {
+                    lastInteractionMs = System.currentTimeMillis()
                 }
+                // On ne consomme que le premier appui, celui qui rouvre l'overlay ; les
+                // suivants doivent continuer à déplacer le focus.
+                //
+                // B4 — et **jamais** RETOUR : consommer un événement fait renvoyer `true`
+                // à `ComposeView.dispatchKeyEvent`, donc l'Activity ne le voit pas et
+                // l'`OnBackPressedDispatcher` n'est pas notifié. C'est ce qui faisait que
+                // deux appuis étaient avalés par l'overlay et que le troisième éjectait
+                // vers le lanceur TV, en pleine lecture.
+                val consumed = TvPlayerKeys.consumesToRevealOverlay(event.key, overlayVisible)
+                if (consumed) overlayVisible = true
+                consumed
             }
     ) {
         // Video surface
@@ -175,6 +199,47 @@ fun TvPlayerScreen(
             )
         }
 
+        // G1 — un échec de lecture ne produisait AUCUN message : le spinner disparaissait
+        // et rien ne le remplaçait. Écran noir et muet, sans la moindre prise à la
+        // télécommande. Le socle expose pourtant `PlayerStatus.ERROR` et `state.error`, et
+        // le mobile les rend depuis toujours (PlayerScreen.kt:208) — douzième occurrence du
+        // motif §8.2, le correctif n'ayant été écrit que d'un côté.
+        if (state.status == PlayerStatus.ERROR) {
+            val retryFocus = remember { FocusRequester() }
+            LaunchedEffect(Unit) {
+                // L'overlay porte la flèche de retour : on ne laisse pas l'utilisateur
+                // devant un écran noir sans repère.
+                overlayVisible = true
+                withFrameNanos { }
+                runCatching { retryFocus.requestFocus() }
+            }
+            Column(
+                modifier            = Modifier.align(Alignment.Center).tvModalTrap(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Rounded.ErrorOutline, null, tint = TvColorError,
+                     modifier = Modifier.size(56.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    state.error ?: stringResource(R.string.player_error),
+                    color = TvColorError, fontSize = 16.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                Spacer(Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TvTextButton(
+                        label    = stringResource(R.string.action_retry),
+                        onClick  = {
+                            vm.playMedia(url, title, mediaId.ifEmpty { null },
+                                cover = cover.ifEmpty { null }, type = type.ifEmpty { null })
+                        },
+                        modifier = Modifier.focusRequester(retryFocus),
+                    )
+                    TvTextButton(label = stringResource(R.string.action_back), onClick = onBack)
+                }
+            }
+        }
+
         if (overlayVisible) {
             TvPlayerOverlay(
                 title          = state.title,
@@ -189,7 +254,8 @@ fun TvPlayerScreen(
                 versions       = availableVersions,
                 selectedVersion = selectedVersion,
                 onSelectVersion = { vm.playerService.selectVersion(it) },
-                playFocus      = playFocus,
+                controlFocus     = controlFocus,
+                onControlFocused = { lastControl = it },
                 onBack         = onBack,
                 onPlayPause    = { if (state.status == PlayerStatus.PLAYING) vm.pause() else vm.resume() },
                 onSeekForward  = { vm.seekTo((state.positionMs + 10_000L).coerceAtMost(state.durationMs)) },
@@ -225,6 +291,16 @@ fun TvPlayerScreen(
     }
 }
 
+/** Déclare l'identité d'un contrôle et mémorise son focus. */
+@Composable
+private fun Modifier.playerControl(
+    id: PlayerControl,
+    requesters: Map<PlayerControl, FocusRequester>,
+    onFocused: (PlayerControl) -> Unit,
+): Modifier = this
+    .focusRequester(requesters.getValue(id))
+    .onFocusChanged { if (it.isFocused) onFocused(id) }
+
 @Composable
 private fun TvPlayerOverlay(
     title:         String,
@@ -239,7 +315,8 @@ private fun TvPlayerOverlay(
     versions:        Set<VersionMode> = emptySet(),
     selectedVersion: VersionMode? = null,
     onSelectVersion: (VersionMode) -> Unit = {},
-    playFocus:     FocusRequester,
+    controlFocus:     Map<PlayerControl, FocusRequester>,
+    onControlFocused: (PlayerControl) -> Unit,
     onBack:        () -> Unit,
     onPlayPause:   () -> Unit,
     onSeekForward:  () -> Unit,
@@ -259,14 +336,16 @@ private fun TvPlayerOverlay(
                 .align(Alignment.TopCenter)
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
-                        playFocus.requestFocus(); true
+                        runCatching { controlFocus.getValue(PlayerControl.PlayPause).requestFocus() }
+                        true
                     } else false
                 }
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(0.85f), Color.Transparent)))
                 .padding(horizontal = 32.dp, vertical = 16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TvControlButton(icon = Icons.Rounded.ArrowBack, onClick = onBack, size = 28)
+                TvControlButton(icon = Icons.Rounded.ArrowBack, onClick = onBack, size = 28,
+                    modifier = Modifier.playerControl(PlayerControl.Back, controlFocus, onControlFocused))
                 Spacer(Modifier.width(16.dp))
                 if (isLive) {
                     Text("LIVE", color = Color.Red, fontSize = 12.sp, fontWeight = FontWeight.Black,
@@ -275,32 +354,36 @@ private fun TvPlayerOverlay(
                 Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(12.dp))
-                TvControlButton(icon = Icons.Rounded.Tune, onClick = onOpenTracks, size = 24)
+                TvControlButton(icon = Icons.Rounded.Tune, onClick = onOpenTracks, size = 24,
+                    modifier = Modifier.playerControl(PlayerControl.Tracks, controlFocus, onControlFocused))
                 Spacer(Modifier.width(8.dp))
                 TvTextButton(
-                    label   = if (playbackSpeed == 1f) "1×" else "${playbackSpeed}×",
-                    onClick = onOpenSpeed,
+                    label    = if (playbackSpeed == 1f) "1×" else "${playbackSpeed}×",
+                    onClick  = onOpenSpeed,
+                    modifier = Modifier.playerControl(PlayerControl.Speed, controlFocus, onControlFocused),
                 )
             }
         }
 
-        // Center controls — play button gets the playFocus requester
+        // Center controls — le bouton central porte son identite PlayerControl (G13)
         Row(
             modifier              = Modifier.align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment     = Alignment.CenterVertically,
         ) {
             if (!isLive) {
-                TvControlButton(Icons.Rounded.Replay10, onClick = onSeekBackward, size = 40)
+                TvControlButton(Icons.Rounded.Replay10, onClick = onSeekBackward, size = 40,
+                    modifier = Modifier.playerControl(PlayerControl.Rewind, controlFocus, onControlFocused))
             }
             TvControlButton(
                 icon     = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 onClick  = onPlayPause,
                 size     = 56,
-                modifier = Modifier.focusRequester(playFocus),
+                modifier = Modifier.playerControl(PlayerControl.PlayPause, controlFocus, onControlFocused),
             )
             if (!isLive) {
-                TvControlButton(Icons.Rounded.Forward10, onClick = onSeekForward, size = 40)
+                TvControlButton(Icons.Rounded.Forward10, onClick = onSeekForward, size = 40,
+                    modifier = Modifier.playerControl(PlayerControl.Forward, controlFocus, onControlFocused))
             }
         }
 
@@ -404,10 +487,12 @@ private fun TvPlayerOverlay(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TvControlButton(Icons.Rounded.Replay, onClick = onRestart, size = 28)
+                        TvControlButton(Icons.Rounded.Replay, onClick = onRestart, size = 28,
+                            modifier = Modifier.playerControl(PlayerControl.Restart, controlFocus, onControlFocused))
                         if (hasNext) {
                             Spacer(Modifier.width(16.dp))
-                            TvControlButton(Icons.Rounded.SkipNext, onClick = onNext, size = 32)
+                            TvControlButton(Icons.Rounded.SkipNext, onClick = onNext, size = 32,
+                                modifier = Modifier.playerControl(PlayerControl.Next, controlFocus, onControlFocused))
                         }
                         Spacer(Modifier.width(20.dp))
                         Text(positionMs.toTimeString(), color = Color.White.copy(0.7f), fontSize = 14.sp)
@@ -543,11 +628,11 @@ private fun TvEpgCard(programs: List<EpgProgram>, modifier: Modifier = Modifier)
                 ) {
                     Text(
                         stringResource(R.string.player_live),
-                        color = Color.White, fontSize = 10.sp,
+                        color = Color.White, fontSize =  12.sp,
                         fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp,
                     )
                 }
-                Text(timeLabel, color = Color.White.copy(0.5f), fontSize = 13.sp)
+                Text(timeLabel, color = Color.White.copy(0.5f), fontSize =  14.sp)
             }
 
             Spacer(Modifier.height(8.dp))
@@ -583,7 +668,7 @@ private fun TvEpgCard(programs: List<EpgProgram>, modifier: Modifier = Modifier)
                     Text(
                         next.title,
                         color    = Color.White.copy(0.45f),
-                        fontSize = 13.sp,
+                        fontSize =  14.sp,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
@@ -663,11 +748,11 @@ private fun TvControlButton(
 }
 
 @Composable
-private fun TvTextButton(label: String, onClick: () -> Unit) {
+private fun TvTextButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
-        modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
+        modifier = modifier.onFocusChanged { isFocused = it.isFocused },
         shape = RoundedCornerShape(8.dp),
         color = if (isFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
         border = if (isFocused) BorderStroke(2.dp, Color.White) else null,
@@ -706,7 +791,21 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                 
                 Spacer(Modifier.height(24.dp))
 
-                if (currentTab == 0) {
+                if (currentTab == 0 && audioGroups.isEmpty() && textGroups.isEmpty()) {
+                    // M9 — le dialogue s'ouvrait vide : deux onglets, un bouton « Fermer »,
+                    // et rien entre les deux. Rien ne distinguait « il n'y a pas d'autre
+                    // piste » de « ça n'a pas chargé ». La chaîne existait déjà côté mobile.
+                    Box(
+                        modifier         = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            stringResource(R.string.player_no_tracks),
+                            color = TvTextSub, fontSize = 14.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                } else if (currentTab == 0) {
                     Box(modifier = Modifier.weight(1f)) {
                         androidx.compose.foundation.lazy.LazyColumn {
                             if (audioGroups.isNotEmpty()) {
@@ -715,7 +814,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                                     val group = audioGroups[gIdx]
                                     (0 until group.length).forEach { tIdx ->
                                         val fmt = group.getTrackFormat(tIdx)
-                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: "Piste ${tIdx + 1}"
+                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: stringResource(R.string.player_track_n, tIdx + 1)
                                         TvTrackRow(name = name, selected = group.isTrackSelected(tIdx)) {
                                             player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                                                 .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(tIdx)))
@@ -739,7 +838,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                                     val group = textGroups[gIdx]
                                     (0 until group.length).forEach { tIdx ->
                                         val fmt = group.getTrackFormat(tIdx)
-                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: "Sous-titre ${tIdx + 1}"
+                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: stringResource(R.string.player_subtitle_n, tIdx + 1)
                                         TvTrackRow(name = name, selected = anySubtitlePlaying && group.isTrackSelected(tIdx)) {
                                             player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                                                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
@@ -757,14 +856,24 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(stringResource(R.string.player_size), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Petit" to 0.75f, "Moyen" to 1.0f, "Grand" to 1.5f).forEach { (label, value) ->
-                                TvTabButton(label = label, selected = subSize == value) { viewModel.updateSubtitleSize(value) }
+                            // M1 — ces trois libellés étaient codés en dur en français dans
+                            // une interface anglaise. La campagne du §17 les avait manqués
+                            // parce qu'ils ne portent aucun accent. Les clés existaient
+                            // déjà, elles servent au panneau Paramètres.
+                            listOf(
+                                R.string.subtitle_size_small  to 0.75f,
+                                R.string.subtitle_size_medium to 1.0f,
+                                R.string.subtitle_size_large  to 1.5f,
+                            ).forEach { (labelRes, value) ->
+                                TvTabButton(label = stringResource(labelRes), selected = subSize == value) {
+                                    viewModel.updateSubtitleSize(value)
+                                }
                             }
                         }
                         Text(stringResource(R.string.player_color), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            TvColorOption(name = "Blanc", color = Color.White, selected = subColor == "white") { viewModel.updateSubtitleColor("white") }
-                            TvColorOption(name = "Jaune", color = Color.Yellow, selected = subColor == "yellow") { viewModel.updateSubtitleColor("yellow") }
+                            TvColorOption(name = stringResource(R.string.subtitle_color_white),  color = Color.White,  selected = subColor == "white")  { viewModel.updateSubtitleColor("white") }
+                            TvColorOption(name = stringResource(R.string.subtitle_color_yellow), color = Color.Yellow, selected = subColor == "yellow") { viewModel.updateSubtitleColor("yellow") }
                         }
                         TvToggleOption(label = stringResource(R.string.player_sub_bg), checked = subBg) { viewModel.updateSubtitleBackground(it) }
                         Text(stringResource(R.string.player_preview), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold)
