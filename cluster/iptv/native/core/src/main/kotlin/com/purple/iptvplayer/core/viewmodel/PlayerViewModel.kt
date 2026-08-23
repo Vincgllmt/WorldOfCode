@@ -14,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(
@@ -157,7 +158,63 @@ class PlayerViewModel(
     fun seekTo(positionMs: Long) = playerService.seekTo(positionMs)
     fun restart() = playerService.seekTo(0L)
     fun setSpeed(speed: Float) = playerService.setSpeed(speed)
-    fun stop() { saveProgressNow(); playerService.stop() }
+
+    /**
+     * Quitte la lecture : dernier enregistrement, puis **plus rien**.
+     *
+     * ⚠️ Les deux dernières lignes sont le correctif du défaut « impossible de retirer un
+     * film de *Reprendre la lecture* ». [startProgressSaving] lance une boucle infinie
+     * dans `viewModelScope` ; ce `ViewModel` étant porté par l'Activity, la boucle
+     * survivait à la sortie du lecteur et **continuait d'écrire toutes les 10 s**.
+     * `player.stop()` ne remet pas la position à zéro : `currentPosition` restait
+     * au-dessus du seuil de 5 s, `saveProgress` repassait donc par `updateRecentList` et
+     * **réinsérait l'entrée en tête de liste**. L'utilisateur la retirait, elle
+     * réapparaissait dans les dix secondes.
+     *
+     * Couper la boucle ne suffit pas : `onCleared` réenregistre lui aussi. On efface donc
+     * l'identifiant — la sauvegarde vient d'avoir lieu, il n'y a plus rien à écrire.
+     */
+    fun stop() {
+        saveProgressNow()
+        progressSavingJob?.cancel()
+        progressSavingJob = null
+        currentMediaId = null
+        playerService.stop()
+    }
+
+    // ── Pistes audio et sous-titres ──────────────────────────────────────────
+    // La décision vit dans PlayerService / TrackPolicy : les deux UI ne font que
+    // l'appeler. Elles écrivaient chacune leur propre séquence d'override, sans jamais
+    // vérifier que l'appareil savait décoder la piste (§8.2).
+
+    val audioTracks = playerService.audioTracks
+    val textTracks  = playerService.textTracks
+
+    /** @return `false` si l'appareil ne sait pas lire cette piste. */
+    fun selectAudioTrack(id: String): Boolean = playerService.selectAudioTrack(id)
+
+    /** [id] à `null` coupe les sous-titres. */
+    fun selectTextTrack(id: String?): Boolean = playerService.selectTextTrack(id)
+
+    /**
+     * Relance après un échec de lecture, **sans l'override qui a pu le provoquer**.
+     *
+     * Sans `clearTrackOverrides`, « Réessayer » rejouait le flux avec la piste que le
+     * décodeur venait de refuser : même cause, même erreur, et aucune sortie.
+     */
+    fun retry() {
+        playerService.clearTrackOverrides()
+        if (episodes.isNotEmpty() && episodesSeriesId != null) {
+            // Sur une série, l'écran de lecture a été ouvert avec une URL vide — la liste
+            // d'épisodes est passée séparément. L'ancien « Réessayer » relançait donc
+            // `playMedia("")` et ne pouvait rien produire.
+            playWithEpisodes(episodes, episodeIndex, episodesSeriesId!!, currentCover)
+            return
+        }
+        val url      = currentUrl ?: return
+        val resumeAt = playerService.state.value.positionMs
+        playMedia(url, currentTitle ?: "", currentMediaId, resumeAt, currentCover, currentType)
+    }
 
     fun hasPreviousEpisode(): Boolean = playerService.player.hasPreviousMediaItem()
     fun hasNextEpisode(): Boolean = playerService.player.hasNextMediaItem()
@@ -187,9 +244,19 @@ class PlayerViewModel(
         viewModelScope.launch { settingsRepo.setLanguage(lang) }
     }
 
+    private var progressSavingJob: Job? = null
+
+    /**
+     * Une seule boucle à la fois, et arrêtée par [stop].
+     *
+     * Sans le `cancel`, chaque lecture en empilait une de plus : après cinq films, cinq
+     * boucles réécrivaient le même média en parallèle. Cf. [stop] pour le défaut que cela
+     * provoquait dans « Reprendre la lecture ».
+     */
     private fun startProgressSaving() {
-        viewModelScope.launch {
-            while (true) {
+        progressSavingJob?.cancel()
+        progressSavingJob = viewModelScope.launch {
+            while (isActive) {
                 delay(10_000)
                 saveProgressNow()
             }

@@ -2,6 +2,7 @@ package com.purple.iptvplayer.tv.ui.common
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -316,4 +318,86 @@ fun Modifier.dpadPageJump(pageSize: Int = 8): Modifier {
         // *en plus* du déplacement de focus, et l'élément focalisé sort de l'écran.
         true
     }
+}
+
+// ── 7. Entrée dans une rangée horizontale ─────────────────────────────────────
+
+/**
+ * Point d'entrée d'une `LazyRow` de catalogue.
+ *
+ * **Le défaut corrigé.** Sur l'onglet Films, `▼` depuis un en-tête de genre tombait sur une
+ * affiche **au milieu** de la rangée, jamais sur la première. Ce n'est pas un défaut de
+ * `LazyRow` : à distance verticale égale, la recherche directionnelle de Compose départage
+ * les candidats par l'écart entre les **centres** sur l'axe horizontal. Or l'en-tête de
+ * genre porte un `Modifier.weight(1f)` — il occupe toute la largeur, son centre est celui
+ * de l'écran, et l'affiche « la plus proche » est mécaniquement celle du milieu. Aucun
+ * réglage de la rangée ne corrige cela : il faut imposer le point d'entrée, comme
+ * [tvGroupEntry] le fait déjà pour un onglet (G6) et pour la grille de résultats (G9).
+ *
+ * **Pourquoi la dernière affiche visitée, et pas toujours la première.** La position de
+ * défilement de la rangée est conservée (état hissé, G5). Après un défilement la première
+ * affiche n'est plus composée, et réclamer un `FocusRequester` détaché lève
+ * `IllegalStateException` — le piège déjà rencontré au G6. La dernière focalisée, elle,
+ * était visible quand on a quitté la rangée : elle est toujours là. Et retrouver une
+ * rangée là où on l'avait laissée est le comportement attendu sur télécommande.
+ *
+ * **Un requester par élément, jamais déplacé.** La tentation est de ne poser le requester
+ * que sur l'élément d'entrée, donc de le déplacer à chaque changement de focus. Ce serait
+ * lire un état en composition — toutes les affiches de la rangée se recomposeraient à
+ * chaque appui — et modifier les modifiers de focus **pendant** un déplacement de focus,
+ * exactement le genre de geste qui a produit le §40. Chaque élément garde donc le sien ;
+ * seule la lecture, faite au moment de la recherche de focus, décide lequel servir.
+ */
+@Stable
+class TvRowFocus {
+
+    private val requesters = mutableMapOf<Any, FocusRequester>()
+    /** Clés dont le nœud est actuellement composé — les seules réclamables. */
+    private val attached   = mutableSetOf<Any>()
+    private var lastFocused: Any? = null
+    private var firstKey: Any? = null
+
+    internal fun requesterFor(key: Any): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
+
+    internal fun onAttached(key: Any, isFirst: Boolean) {
+        attached += key
+        if (isFirst) firstKey = key
+    }
+
+    internal fun onDetached(key: Any) { attached -= key }
+
+    internal fun onFocused(key: Any) { lastFocused = key }
+
+    /**
+     * Cible d'entrée, ou `null` quand aucune n'est composée — `enter` retombe alors sur
+     * `FocusRequester.Default` plutôt que sur un requester détaché.
+     */
+    internal fun entry(): FocusRequester? =
+        listOfNotNull(lastFocused, firstKey)
+            .firstOrNull { it in attached }
+            ?.let { requesters[it] }
+}
+
+@Composable
+fun rememberTvRowFocus(): TvRowFocus = remember { TvRowFocus() }
+
+/** À poser sur la `LazyRow`. */
+fun Modifier.tvRowEntry(row: TvRowFocus): Modifier = tvGroupEntry(target = { row.entry() })
+
+/**
+ * À poser sur **chaque** élément de la rangée.
+ *
+ * `onFocusChanged` est placé **avant** la cible de focus de la carte : un
+ * `FocusEventModifierNode` n'observe que ce qui le suit dans l'arbre. L'ordre inverse —
+ * celui de `TvTrackRow` dans le dialogue des pistes — ne notifie jamais rien.
+ */
+@Composable
+fun Modifier.tvRowItem(row: TvRowFocus, key: Any, isFirst: Boolean = false): Modifier {
+    DisposableEffect(key, isFirst) {
+        row.onAttached(key, isFirst)
+        onDispose { row.onDetached(key) }
+    }
+    return this
+        .onFocusChanged { if (it.isFocused) row.onFocused(key) }
+        .focusRequester(row.requesterFor(key))
 }

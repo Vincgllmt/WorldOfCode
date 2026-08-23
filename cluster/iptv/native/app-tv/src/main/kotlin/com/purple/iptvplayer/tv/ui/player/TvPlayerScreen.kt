@@ -35,14 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
-import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionOverride
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.purple.iptvplayer.core.epg.EpgTimeline
 import com.purple.iptvplayer.core.player.VersionMode
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
+import com.purple.iptvplayer.core.player.TrackInfo
+import com.purple.iptvplayer.core.player.TrackPolicy
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
 import com.purple.iptvplayer.tv.ui.common.KeepScreenOn
@@ -229,10 +228,11 @@ fun TvPlayerScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TvTextButton(
                         label    = stringResource(R.string.action_retry),
-                        onClick  = {
-                            vm.playMedia(url, title, mediaId.ifEmpty { null },
-                                cover = cover.ifEmpty { null }, type = type.ifEmpty { null })
-                        },
+                        // `vm.retry()` et non `playMedia` : il efface d'abord les
+                        // overrides de pistes. Sans cela, relancer après un échec dû à
+                        // une piste illisible rejouait le flux avec cette même piste, et
+                        // échouait à l'identique — le bouton ne pouvait pas aboutir.
+                        onClick  = { vm.retry() },
                         modifier = Modifier.focusRequester(retryFocus),
                     )
                     TvTextButton(label = stringResource(R.string.action_back), onClick = onBack)
@@ -279,7 +279,6 @@ fun TvPlayerScreen(
 
     if (showTrackDialog) {
         TvTrackDialog(
-            player    = vm.playerService.player,
             viewModel = vm,
             onDismiss = { showTrackDialog = false },
         )
@@ -762,14 +761,33 @@ private fun TvTextButton(label: String, onClick: () -> Unit, modifier: Modifier 
     }
 }
 
+/**
+ * Sélecteur de pistes.
+ *
+ * **Le défaut corrigé (« le changement de piste provoque une erreur »).** Ce dialogue
+ * lisait `player.currentTracks` et posait lui-même l'override — comme le faisaient déjà,
+ * chacun de son côté, la feuille du mobile et `PlayerService.selectVersion`. Aucune des
+ * trois copies ne consultait `Tracks.Group.isTrackSupported` : une piste que l'appareil ne
+ * sait pas décoder (E-AC3, DTS…) y figurait comme les autres, et la choisir faisait échouer
+ * l'initialisation du décodeur, donc `onPlayerError`, donc l'écran d'erreur du §45. Il n'y
+ * avait aucune sortie : « Réessayer » rejouait le flux avec le même override.
+ *
+ * La sélection remonte donc dans `core` ([PlayerViewModel.selectAudioTrack]), avec le
+ * garde-fou de [TrackPolicy] ; ce dialogue ne fait plus qu'afficher et appeler.
+ *
+ * Deux défauts de lisibilité corrigés au passage, tous deux propres à ce dialogue jamais
+ * exercé (`AUDIT_TV_UX.md`, note de fin) :
+ * - le libellé était `langue ?: titre`, dans cet ordre : deux pistes françaises
+ *   s'affichaient toutes deux « français », impossible de savoir ce qu'on sélectionnait ;
+ * - `TvTrackRow` posait `onFocusChanged` **après** son `clickable`, donc après la cible de
+ *   focus : la callback n'était jamais appelée et **aucune ligne ne s'éclairait**. On
+ *   naviguait à l'aveugle dans la liste.
+ */
 @Composable
-private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismiss: () -> Unit) {
-    val tracks      = player.currentTracks
-    val audioGroups = remember(tracks) { tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO } }
-    val textGroups  = remember(tracks) { tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT } }
-    val anySubtitlePlaying = remember(tracks) {
-        textGroups.any { g -> (0 until g.length).any { g.isTrackSelected(it) } }
-    }
+private fun TvTrackDialog(viewModel: PlayerViewModel, onDismiss: () -> Unit) {
+    val audioTracks by viewModel.audioTracks.collectAsState()
+    val textTracks  by viewModel.textTracks.collectAsState()
+    val anySubtitlePlaying = textTracks.any { it.isSelected }
 
     val subSize by viewModel.subtitleSize.collectAsState(initial = 1.0f)
     val subColor by viewModel.subtitleColor.collectAsState(initial = "white")
@@ -791,7 +809,7 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                 
                 Spacer(Modifier.height(24.dp))
 
-                if (currentTab == 0 && audioGroups.isEmpty() && textGroups.isEmpty()) {
+                if (currentTab == 0 && audioTracks.isEmpty() && textTracks.isEmpty()) {
                     // M9 — le dialogue s'ouvrait vide : deux onglets, un bouton « Fermer »,
                     // et rien entre les deux. Rien ne distinguait « il n'y a pas d'autre
                     // piste » de « ça n'a pas chargé ». La chaîne existait déjà côté mobile.
@@ -806,46 +824,47 @@ private fun TvTrackDialog(player: ExoPlayer, viewModel: PlayerViewModel, onDismi
                         )
                     }
                 } else if (currentTab == 0) {
+                    val unsupported = stringResource(R.string.player_track_unsupported)
+                    val forced      = stringResource(R.string.player_track_forced)
                     Box(modifier = Modifier.weight(1f)) {
                         androidx.compose.foundation.lazy.LazyColumn {
-                            if (audioGroups.isNotEmpty()) {
+                            if (audioTracks.isNotEmpty()) {
                                 item { Text(stringResource(R.string.player_audio), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                                items(audioGroups.size) { gIdx ->
-                                    val group = audioGroups[gIdx]
-                                    (0 until group.length).forEach { tIdx ->
-                                        val fmt = group.getTrackFormat(tIdx)
-                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: stringResource(R.string.player_track_n, tIdx + 1)
-                                        TvTrackRow(name = name, selected = group.isTrackSelected(tIdx)) {
-                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                                                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(tIdx)))
-                                                .build()
-                                            onDismiss()
-                                        }
+                                items(audioTracks.size) { idx ->
+                                    val track = audioTracks[idx]
+                                    TvTrackRow(
+                                        name     = trackLabel(track, stringResource(R.string.player_track_n, idx + 1), forced),
+                                        selected = track.isSelected,
+                                        // Une piste illisible reste affichée — la masquer
+                                        // ferait croire à un média mono-piste (§8.6) —
+                                        // mais n'est plus choisissable.
+                                        enabled  = TrackPolicy.isSelectable(track),
+                                        note     = unsupported.takeIf { !TrackPolicy.isSelectable(track) },
+                                    ) {
+                                        viewModel.selectAudioTrack(track.id)
+                                        onDismiss()
                                     }
                                 }
                                 item { Spacer(Modifier.height(16.dp)) }
                             }
-                            if (textGroups.isNotEmpty()) {
+                            if (textTracks.isNotEmpty()) {
                                 item { Text(stringResource(R.string.player_subs), color = TvTextSub, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                                 item {
                                     TvTrackRow(name = stringResource(R.string.player_off), selected = !anySubtitlePlaying) {
-                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                                        viewModel.selectTextTrack(null)
                                         onDismiss()
                                     }
                                 }
-                                items(textGroups.size) { gIdx ->
-                                    val group = textGroups[gIdx]
-                                    (0 until group.length).forEach { tIdx ->
-                                        val fmt = group.getTrackFormat(tIdx)
-                                        val name = fmt.language?.let { java.util.Locale(it).displayLanguage } ?: fmt.label ?: stringResource(R.string.player_subtitle_n, tIdx + 1)
-                                        TvTrackRow(name = name, selected = anySubtitlePlaying && group.isTrackSelected(tIdx)) {
-                                            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(tIdx)))
-                                                .build()
-                                            onDismiss()
-                                        }
+                                items(textTracks.size) { idx ->
+                                    val track = textTracks[idx]
+                                    TvTrackRow(
+                                        name     = trackLabel(track, stringResource(R.string.player_subtitle_n, idx + 1), forced),
+                                        selected = anySubtitlePlaying && track.isSelected,
+                                        enabled  = TrackPolicy.isSelectable(track),
+                                        note     = unsupported.takeIf { !TrackPolicy.isSelectable(track) },
+                                    ) {
+                                        viewModel.selectTextTrack(track.id)
+                                        onDismiss()
                                     }
                                 }
                             }
@@ -920,24 +939,70 @@ private fun TvTabButton(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/**
+ * @param enabled `false` rend la ligne non focalisable : le D-pad la saute, elle reste
+ *   lisible mais ne peut pas être choisie.
+ * @param note mention affichée sous le nom — la raison pour laquelle la ligne est inerte.
+ */
 @Composable
-private fun TvTrackRow(name: String, selected: Boolean, onClick: () -> Unit) {
+private fun TvTrackRow(
+    name: String,
+    selected: Boolean,
+    enabled: Boolean = true,
+    note: String? = null,
+    onClick: () -> Unit,
+) {
     var isFocused by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isFocused) Color.White.copy(alpha = 0.1f) else Color.Transparent)
-            .clickable(onClick = onClick)
+            .background(if (isFocused) Color.White.copy(alpha = 0.16f) else Color.Transparent)
+            // ⚠️ **L'ORDRE COMPTE**, comme pour `focusProperties`/`focusGroup` (§44). Un
+            // `FocusEventModifierNode` n'observe que les cibles de focus placées APRÈS
+            // lui. `.clickable().onFocusChanged{}` — l'ordre d'origine — ne notifiait
+            // donc jamais rien : aucune ligne ne s'éclairait, on choisissait à l'aveugle.
             .onFocusChanged { isFocused = it.isFocused }
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = TvPurpleGlow))
+        RadioButton(selected = selected, onClick = null, enabled = enabled,
+            colors = RadioButtonDefaults.colors(selectedColor = TvPurpleGlow))
         Spacer(Modifier.width(12.dp))
-        Text(name, color = if (selected) TvPurpleGlow else Color.White, fontSize = 14.sp)
+        Column {
+            Text(
+                name,
+                color = when {
+                    !enabled -> TvTextSub
+                    selected -> TvPurpleGlow
+                    else     -> Color.White
+                },
+                fontSize = 14.sp,
+            )
+            if (note != null) {
+                Text(note, color = TvTextSub, fontSize = 11.sp)
+            }
+        }
     }
 }
+
+/**
+ * Nom affiché d'une piste : la décision est dans `core` ([TrackPolicy.label]), seule la
+ * résolution du code de langue en nom lisible reste ici — elle dépend de la locale de
+ * l'appareil.
+ */
+@Composable
+private fun trackLabel(track: TrackInfo, fallback: String, forcedSuffix: String): String =
+    TrackPolicy.label(
+        track        = track,
+        languageName = track.language
+            ?.let { runCatching { java.util.Locale(it).displayLanguage }.getOrNull() }
+            ?.takeIf { it.isNotBlank() },
+        fallback        = fallback,
+        forcedSuffix    = forcedSuffix,
+        languageAliases = TrackPolicy.languageAliases(track.language),
+    )
 
 @Composable
 private fun TvColorOption(name: String, color: Color, selected: Boolean, onClick: () -> Unit) {

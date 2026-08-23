@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.purple.iptvplayer.core.data.CredentialsRepository
@@ -42,6 +43,18 @@ fun TvNavGraph() {
     val credRepo: CredentialsRepository = koinInject()
 
     var currentScreen by remember { mutableStateOf<TvScreen?>(null) }
+
+    /**
+     * Retient l'état de chaque destination pendant qu'elle quitte la composition.
+     *
+     * Sans lui, partir dans le lecteur détruisait **tout** `TvMainScreen` : l'onglet
+     * courant, la fiche ouverte, la position des listes. Quitter la lecture d'un film
+     * ramenait donc sur Direct TV, jamais sur la fiche d'où l'on venait — signalé à
+     * l'usage, et c'est exactement la leçon du §38 (« `rememberSaveable` ne survit pas à
+     * un `when` qui retire la branche de la composition ») appliquée un cran plus haut :
+     * elle valait déjà pour les onglets, elle vaut aussi pour les destinations.
+     */
+    val navStateHolder = rememberSaveableStateHolder()
 
     LaunchedEffect(Unit) {
         val creds = credRepo.load()
@@ -82,7 +95,8 @@ fun TvNavGraph() {
 
         is TvScreen.Setup -> TvSetupScreen(onSuccess = { currentScreen = TvScreen.Main })
 
-        is TvScreen.Main -> TvMainScreen(
+        is TvScreen.Main -> navStateHolder.SaveableStateProvider("main") {
+            TvMainScreen(
             onPlay     = { url, title, mediaId, type, cover, streamId -> currentScreen = TvScreen.Player(url, title, mediaId, type, cover, streamId) },
             onPurchase = { currentScreen = TvScreen.Purchase(blocking = false) },
             onSignOut  = {
@@ -91,7 +105,8 @@ fun TvNavGraph() {
                     currentScreen = TvScreen.Setup
                 }
             },
-        )
+            )
+        }
 
         is TvScreen.Purchase -> TvPurchaseScreen(
             // B2 — `null` sur la barrière : le lien « Plus tard » était le seul focalisable

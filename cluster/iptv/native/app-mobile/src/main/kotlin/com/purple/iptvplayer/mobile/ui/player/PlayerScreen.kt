@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.purple.iptvplayer.R
@@ -36,6 +34,8 @@ import com.purple.iptvplayer.core.epg.EpgTimeline
 import com.purple.iptvplayer.core.player.VersionMode
 import com.purple.iptvplayer.core.model.EpgProgram
 import com.purple.iptvplayer.core.player.PlayerStatus
+import com.purple.iptvplayer.core.player.TrackInfo
+import com.purple.iptvplayer.core.player.TrackPolicy
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
 import com.purple.iptvplayer.mobile.ui.common.ImmersiveFullScreen
@@ -212,10 +212,13 @@ fun PlayerScreen(
             ) {
                 Icon(Icons.Rounded.ErrorOutline, null, tint = ColorError, modifier = Modifier.size(56.dp))
                 Spacer(Modifier.height(8.dp))
-                Text(state.error ?: "Playback error", color = ColorError, fontSize = 14.sp)
+                Text(state.error ?: stringResource(R.string.player_error), color = ColorError, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { vm.playMedia(url, title, mediaId.ifEmpty { null }, cover = cover, type = type) },
+                    // `retry()` efface d'abord les overrides de pistes : sans cela, une
+                    // relance après un échec dû à une piste illisible rejouait la même
+                    // piste et échouait à l'identique.
+                    onClick = { vm.retry() },
                     colors  = ButtonDefaults.buttonColors(containerColor = Purple),
                 ) { Text(stringResource(R.string.action_retry)) }
             }
@@ -300,7 +303,6 @@ fun PlayerScreen(
     // Track selection bottom sheet
     if (showTrackSheet) {
         TrackSelectionSheet(
-            player    = vm.playerService.player,
             viewModel = vm,
             onDismiss = { showTrackSheet = false },
         )
@@ -710,17 +712,17 @@ private fun ControlButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrackSelectionSheet(
-    player: ExoPlayer,
     viewModel: PlayerViewModel,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val tracks     = player.currentTracks
-    val audioGroups = remember(tracks) { tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO } }
-    val textGroups  = remember(tracks) { tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT } }
-    val anySubtitlePlaying = remember(tracks) {
-        textGroups.any { g -> (0 until g.length).any { g.isTrackSelected(it) } }
-    }
+    // La sélection de pistes vit dans `core` — cf. la même correction côté TV et le §8.2 :
+    // cette feuille en tenait sa troisième copie, et comme les deux autres elle ne
+    // consultait jamais `isTrackSupported`. Choisir une piste que l'appareil ne sait pas
+    // décoder faisait échouer la lecture, sans aucun retour possible.
+    val audioTracks by viewModel.audioTracks.collectAsState()
+    val textTracks  by viewModel.textTracks.collectAsState()
+    val anySubtitlePlaying = textTracks.any { it.isSelected }
 
     val subSize by viewModel.subtitleSize.collectAsState(initial = 1.0f)
     val subColor by viewModel.subtitleColor.collectAsState(initial = "white")
@@ -761,55 +763,47 @@ private fun TrackSelectionSheet(
             Spacer(Modifier.height(8.dp))
 
             if (currentTab == 0) {
-                if (audioGroups.isNotEmpty()) {
-                    TrackSectionHeader("AUDIO")
+                val unsupported = stringResource(R.string.player_track_unsupported)
+                val forced      = stringResource(R.string.player_track_forced)
+                if (audioTracks.isNotEmpty()) {
+                    TrackSectionHeader(stringResource(R.string.player_audio))
                     Spacer(Modifier.height(4.dp))
-                    audioGroups.forEachIndexed { _, group ->
-                        (0 until group.length).forEach { trackIdx ->
-                            val fmt      = group.getTrackFormat(trackIdx)
-                            val name     = fmt.language?.let { langCodeToName(it) } ?: fmt.label ?: "Track ${trackIdx + 1}"
-                            val selected = group.isTrackSelected(trackIdx)
-                            TrackRow(name = name, isSelected = selected) {
-                                player.trackSelectionParameters = player.trackSelectionParameters
-                                    .buildUpon()
-                                    .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(trackIdx)))
-                                    .build()
-                                onDismiss()
-                            }
+                    audioTracks.forEachIndexed { idx, track ->
+                        TrackRow(
+                            name       = trackLabel(track, stringResource(R.string.player_track_n, idx + 1), forced),
+                            isSelected = track.isSelected,
+                            enabled    = TrackPolicy.isSelectable(track),
+                            note       = unsupported.takeIf { !TrackPolicy.isSelectable(track) },
+                        ) {
+                            viewModel.selectAudioTrack(track.id)
+                            onDismiss()
                         }
                     }
                     Spacer(Modifier.height(16.dp))
                 }
 
-                if (textGroups.isNotEmpty()) {
-                    TrackSectionHeader("SOUS-TITRES")
+                if (textTracks.isNotEmpty()) {
+                    TrackSectionHeader(stringResource(R.string.player_subs))
                     Spacer(Modifier.height(4.dp))
                     TrackRow(name = stringResource(R.string.player_off), isSelected = !anySubtitlePlaying) {
-                        player.trackSelectionParameters = player.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                            .build()
+                        viewModel.selectTextTrack(null)
                         onDismiss()
                     }
-                    textGroups.forEachIndexed { _, group ->
-                        (0 until group.length).forEach { trackIdx ->
-                            val fmt      = group.getTrackFormat(trackIdx)
-                            val name     = fmt.language?.let { langCodeToName(it) } ?: fmt.label ?: "Subtitle ${trackIdx + 1}"
-                            val selected = anySubtitlePlaying && group.isTrackSelected(trackIdx)
-                            TrackRow(name = name, isSelected = selected) {
-                                player.trackSelectionParameters = player.trackSelectionParameters
-                                    .buildUpon()
-                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                    .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(trackIdx)))
-                                    .build()
-                                onDismiss()
-                            }
+                    textTracks.forEachIndexed { idx, track ->
+                        TrackRow(
+                            name       = trackLabel(track, stringResource(R.string.player_subtitle_n, idx + 1), forced),
+                            isSelected = anySubtitlePlaying && track.isSelected,
+                            enabled    = TrackPolicy.isSelectable(track),
+                            note       = unsupported.takeIf { !TrackPolicy.isSelectable(track) },
+                        ) {
+                            viewModel.selectTextTrack(track.id)
+                            onDismiss()
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                 }
 
-                if (audioGroups.isEmpty() && textGroups.isEmpty()) {
+                if (audioTracks.isEmpty() && textTracks.isEmpty()) {
                     Text(stringResource(R.string.player_no_tracks), color = TextSub, fontSize = 14.sp)
                     Spacer(Modifier.height(16.dp))
                 }
@@ -905,14 +899,26 @@ private fun TrackSectionHeader(label: String) {
     Text(label, color = TextSub, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
 }
 
+/**
+ * @param enabled `false` pour une piste que l'appareil ne sait pas décoder : la ligne
+ *   reste affichée — la masquer ferait croire à un média mono-piste (§8.6) — mais ne
+ *   répond plus.
+ * @param note raison affichée sous le nom quand la ligne est inerte.
+ */
 @Composable
-private fun TrackRow(name: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun TrackRow(
+    name: String,
+    isSelected: Boolean,
+    enabled: Boolean = true,
+    note: String? = null,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(if (isSelected) Purple.copy(0.15f) else Color.Transparent)
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -922,14 +928,37 @@ private fun TrackRow(name: String, isSelected: Boolean, onClick: () -> Unit) {
             null, tint = if (isSelected) PurpleGlow else TextSub,
             modifier = Modifier.size(20.dp),
         )
-        Text(
-            name,
-            color      = if (isSelected) PurpleGlow else TextPrimary,
-            fontSize   = 15.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-        )
+        Column {
+            Text(
+                name,
+                color      = when {
+                    !enabled   -> TextSub
+                    isSelected -> PurpleGlow
+                    else       -> TextPrimary
+                },
+                fontSize   = 15.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            )
+            if (note != null) {
+                Text(note, color = TextSub, fontSize = 12.sp)
+            }
+        }
     }
 }
+
+/**
+ * Nom affiché d'une piste : la décision est dans `core` ([TrackPolicy.label]) ; seule la
+ * résolution du code de langue reste ici, elle dépend de la locale de l'appareil.
+ */
+@Composable
+private fun trackLabel(track: TrackInfo, fallback: String, forcedSuffix: String): String =
+    TrackPolicy.label(
+        track        = track,
+        languageName = track.language?.let { langCodeToName(it) },
+        fallback        = fallback,
+        forcedSuffix    = forcedSuffix,
+        languageAliases = TrackPolicy.languageAliases(track.language),
+    )
 
 private fun langCodeToName(code: String): String = runCatching {
     java.util.Locale(code).displayLanguage

@@ -2,7 +2,7 @@
 
 Mémoire de travail de l'agent. À maintenir à jour à chaque décision architecturale.
 
-Dernière mise à jour : 2026-08-21
+Dernière mise à jour : 2026-08-22
 
 > **Où est le détail.** Ce fichier ne garde que ce qu'il faut savoir *avant* de toucher au
 > code : où est le vrai code, les règles d'architecture, la toolchain, ce qui reste à
@@ -289,7 +289,7 @@ Corrigés depuis : **B3** (prix des abonnements, §10), **B1** les six défauts 
 **B2** (révocation, §32), **S2/S3** (signature, §31). Restent ouverts : **S1** (TLS) et
 les trois points de facturation listés en §6.
 
-**État de la suite : 231 tests, 0 échec** — 173 dans `core`
+**État de la suite : 244 tests, 0 échec** — 186 dans `core`
 (`./gradlew :core:testDebugUnitTest`) + 58 dans `app-tv`
 (`./gradlew :app-tv:testDebugUnitTest`, source set créé au §43).
 
@@ -411,10 +411,11 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
    portait.** Retirer « ACTIVER » à l'abonné a supprimé le seul chemin vers l'écran
    d'achat (§10). Vérifier ce qu'on retire, pas seulement ce qu'on ajoute — de même,
    ajouter `FLAG_KEEP_SCREEN_ON` impose de le retirer à la sortie (§18).
-7. **« Déclaré mais jamais branché » est le motif récurrent de ce code** — six
+7. **« Déclaré mais jamais branché » est le motif récurrent de ce code** — sept
    occurrences : `onPurchase` (§10 UX-2), `onFav` (§13), `TvToggleOption` (§19), le
    `modifier` de `MiniBar` (§33), `lastInteractionMs` (§29), les `FocusRequester` du
-   rail (§40). Devant un contrôle inerte, chercher d'abord s'il est câblé.
+   rail (§40), l'`onClose` de `TvRecentCard` (§49). Devant un contrôle inerte, chercher
+   d'abord s'il est câblé.
 8. **Compose** : modifier l'état qui sert de clé à un `LaunchedEffect` l'annule et le
    relance (§23) ; un `LaunchedEffect` s'exécute **aussi à la première composition**
    (§40) ; `produceState` sans clé capture la valeur initiale (§5 P6) ;
@@ -438,7 +439,11 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
 14. **Toute modification de la gestion du focus TV se vérifie à l'émulateur** (§11) —
     c'est précisément le sujet qui a fait quitter Flutter. Une correction trop large
     piège le focus, défaut pire que celui corrigé (§23, §30).
-15. **Play ne fait autorité que sur ce qu'il a lui-même installé.** Sur une variante à
+15. **Une boucle de fond qui survit à son écran réécrit ce que l'utilisateur vient
+    d'effacer.** « Impossible de retirer » se lisait comme un défaut de l'interface ; la
+    cause était un `while (true)` jamais annulé qui réinsérait l'entrée dix secondes plus
+    tard. Devant une suppression qui « ne prend pas », chercher qui écrit encore (§49).
+16. **Play ne fait autorité que sur ce qu'il a lui-même installé.** Sur une variante à
     `applicationId` suffixé il répond « OK, liste vide » : en conclure une révocation met
     dehors un utilisateur légitime (§32). Toute observation de facturation faite hors
     d'une build installée par `com.android.vending` est ininterprétable (§9).
@@ -491,3 +496,4 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
 | 46 | **Lot 4 livré** (G10, M3, M6) ; **le contenu suit la clarté du fond** — le jeton sombre vaut 6,00 sur l'accent focalisé mais 3,68 sur l'accent pressé | on touche à une couleur de focus ou à une taille de police |
 | 47 | **Lot 5 livré** (G8, G11, G12, G15) ; **une boucle synchrone de `moveFocus` ne marche pas dans une liste paresseuse** ; `bounds` ne mesure pas un saut de liste | on touche à un saut de page ou au panneau des genres |
 | 48 | **Lot 6 livré** (M2, M5, M7, M8) ; `tools/check_strings.py` — parité `<plurals>` + littéraux **non accentués** ; il a trouvé **5 libellés français en dur dans `app-mobile`** | on ajoute un libellé, ou avant une publication |
+| 49 | **Trois défauts remontés à l'usage** : la reprise de lecture se réinsérait toute seule (boucle jamais annulée) ; le sélecteur de pistes proposait des pistes que le décodeur refuse, sans issue ; `▼` depuis un genre tombait au milieu de la rangée | on touche à `ProgressRepository`/`PlayerViewModel`, au sélecteur de pistes, ou à l'entrée d'une rangée TV |

@@ -158,6 +158,12 @@ class PlayerService(context: Context) {
                     // Une piste « forcée » ne porte que les passages en langue
                     // étrangère : c'est elle qui paraît « ne rien afficher ».
                     isForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0,
+                    // `allowExceedsCapabilities = true` : on n'écarte que ce que
+                    // l'appareil ne sait **pas du tout** décoder. Une piste seulement
+                    // au-delà des capacités reste jouable, quitte à saccader — la
+                    // refuser priverait l'utilisateur d'un choix qui fonctionne.
+                    isSupported = group.isTrackSupported(trackIndex, /* allowExceedsCapabilities = */ true),
+                    isSelected  = group.isTrackSelected(trackIndex),
                 )
                 handles[id] = group to trackIndex
                 if (group.type == C.TRACK_TYPE_AUDIO) {
@@ -177,12 +183,80 @@ class PlayerService(context: Context) {
         _selectedVersion.value   = VersionPolicy.detect(selectedAudio, selectedText)
     }
 
+    // ── Sélection manuelle des pistes ────────────────────────────────────────
+    // Le dialogue « Pistes et sous-titres » écrivait cette séquence lui-même, dans
+    // chacune des deux UI. Elle vit ici, une fois, avec le garde-fou qui manquait aux
+    // trois copies : on ne pose pas d'override sur une piste que le décodeur refuse
+    // (cf. [TrackPolicy]).
+
+    /**
+     * Bascule sur la piste audio [id].
+     *
+     * @return `false` si la piste est inconnue ou non prise en charge — l'appelant peut
+     *   alors le dire à l'utilisateur au lieu de le laisser devant un écran d'erreur.
+     */
+    fun selectAudioTrack(id: String): Boolean {
+        val track  = _audioTracks.value.firstOrNull { it.id == id } ?: return false
+        if (!TrackPolicy.isSelectable(track)) return false
+        val handle = trackHandles[id] ?: return false
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setOverrideForType(
+                TrackSelectionOverride(handle.first.mediaTrackGroup, listOf(handle.second)),
+            )
+            .build()
+        return true
+    }
+
+    /**
+     * Bascule sur la piste de sous-titres [id], ou les coupe quand [id] est `null`.
+     *
+     * Couper les sous-titres est **toujours** possible : c'est le seul moyen de sortir
+     * d'une piste illisible, il ne doit dépendre d'aucune capacité de décodage.
+     */
+    fun selectTextTrack(id: String?): Boolean {
+        if (id == null) {
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+            return true
+        }
+        val track  = _textTracks.value.firstOrNull { it.id == id } ?: return false
+        if (!TrackPolicy.isSelectable(track)) return false
+        val handle = trackHandles[id] ?: return false
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .setOverrideForType(
+                TrackSelectionOverride(handle.first.mediaTrackGroup, listOf(handle.second)),
+            )
+            .build()
+        return true
+    }
+
+    /**
+     * Rend au lecteur sa sélection automatique.
+     *
+     * Les `trackSelectionParameters` **survivent à `setMediaItem`** : sans cet appel, une
+     * relance après échec rejouait le flux avec l'override fautif et échouait à
+     * l'identique. Le bouton « Réessayer » de l'écran d'erreur ne pouvait donc pas
+     * aboutir — l'utilisateur était enfermé.
+     */
+    fun clearTrackOverrides() {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .clearOverrides()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .build()
+    }
+
     /**
      * Bascule le média sur la version demandée. Sans effet si elle n'est pas
      * disponible — l'UI ne doit de toute façon proposer que [availableVersions].
      */
     fun selectVersion(mode: VersionMode) {
         val choice = VersionPolicy.resolve(mode, _audioTracks.value, _textTracks.value) ?: return
+        // Même garde-fou que la sélection manuelle : une version dont la piste audio
+        // n'est pas décodable ne doit pas être appliquée, elle ne produirait qu'une
+        // erreur de lecture.
+        if (!TrackPolicy.canSelect(choice.audio) || !TrackPolicy.canSelect(choice.subtitle)) return
         var params = player.trackSelectionParameters.buildUpon()
 
         choice.audio?.let { info ->

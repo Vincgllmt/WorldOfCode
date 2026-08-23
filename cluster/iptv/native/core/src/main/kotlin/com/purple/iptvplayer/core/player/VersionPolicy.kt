@@ -12,6 +12,17 @@ data class TrackInfo(
      * [VersionPolicy.isForcedTrack].
      */
     val isForced: Boolean = false,
+    /**
+     * L'appareil sait-il décoder cette piste ?
+     *
+     * Renseigné depuis `Tracks.Group.isTrackSupported`. Une piste non prise en charge —
+     * un E-AC3 ou un DTS sur un boîtier qui n'a pas le décodeur — reste **listée** par
+     * ExoPlayer : rien ne la distingue des autres tant qu'on ne consulte pas ce drapeau.
+     * La sélectionner fait échouer l'initialisation du décodeur, donc `onPlayerError`.
+     */
+    val isSupported: Boolean = true,
+    /** Piste réellement jouée à l'instant du relevé. */
+    val isSelected: Boolean = false,
 )
 
 /** Version de visionnage proposée à l'utilisateur. */

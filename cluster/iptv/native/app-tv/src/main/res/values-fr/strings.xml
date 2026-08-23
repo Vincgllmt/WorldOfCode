@@ -119,4 +119,12 @@
     <string name="btn_watchlist_add">+ Ma liste</string>
     <string name="btn_watchlist_in">Ma liste</string>
     <string name="player_live">LIVE</string>
+    <!-- Reprendre la lecture : retrait d'une entrée à la télécommande -->
+    <string name="recent_hint_remove">Maintenir OK pour retirer</string>
+    <string name="recent_remove_title">Retirer de la reprise de lecture ?</string>
+    <string name="action_remove">Retirer</string>
+    <string name="action_cancel">Annuler</string>
+    <!-- Sélecteur de pistes -->
+    <string name="player_track_unsupported">Non prise en charge par cet appareil</string>
+    <string name="player_track_forced">(forcés)</string>
 </resources>

@@ -64,6 +64,10 @@ import com.purple.iptvplayer.core.model.SeriesItem
 import com.purple.iptvplayer.tv.ui.common.dpadPageJump
 import com.purple.iptvplayer.tv.ui.common.focusAnchor
 import com.purple.iptvplayer.tv.ui.common.rememberTvFocusAnchor
+import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
+import com.purple.iptvplayer.tv.ui.common.tvRowEntry
+import com.purple.iptvplayer.tv.ui.common.tvRowItem
+import com.purple.iptvplayer.tv.ui.common.TvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
@@ -88,17 +92,24 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
     val seriesFavorites  by vm.seriesFavorites.collectAsState()
     val seriesGenreFavs  by vm.seriesGenreFavorites.collectAsState()
 
-    var selectedSeriesId by remember { mutableStateOf<Int?>(null) }
-    var selectedGenre    by remember { mutableStateOf<String?>(null) }
+    var selectedSeriesId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedGenre    by rememberSaveable { mutableStateOf<String?>(null) }
     // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
     var searchQuery      by rememberSaveable { mutableStateOf("") }
 
     // G5 / G6 — même dispositif que TvMoviesScreen : ancre de focus, états de liste hissés
     // au-dessus du `return` anticipé de la fiche, point d'entrée explicite.
     val anchor      = rememberTvFocusAnchor()
+    // L'ancre est un `remember` : elle ne survit pas à l'aller-retour au lecteur. Si la
+    // fiche est restaurée, on lui redonne son origine — sinon la refermer retomberait sur
+    // la première affiche au lieu de celle d'où l'on venait.
+    LaunchedEffect(Unit) { selectedSeriesId?.let { anchor.rememberOrigin(it) } }
     val columnState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val gridState   = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
     val rowStates   = remember { mutableMapOf<String, LazyListState>() }
+    // Un point d'entrée par rangée, hissé pour la même raison que `rowStates`.
+    val rowFocuses  = remember { mutableMapOf<String, TvRowFocus>() }
+    val recentsRow  = rememberTvRowFocus()
     val firstCardFocus = remember { FocusRequester() }
     var firstCardReady by remember { mutableStateOf(false) }
 
@@ -293,7 +304,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                                             Key.DirectionDown -> { focusManager.moveFocus(FocusDirection.Down); true }
                                             else -> false
                                         } else false
-                                    },
+                                    }.tvRowEntry(recentsRow),
                                     // M6 — marge de FIN portée à 48 dp : les guides Android TV demandent 5 % de la
                                     // largeur (96 px sur 1920) en zone d'overscan. Départ inchangé, il aligne
                                     // le contenu sur le titre.
@@ -307,7 +318,12 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                                                 val sid = itm.id.split("_").firstOrNull()?.toIntOrNull() ?: 0
                                                 selectedSeriesId = sid
                                             },
-                                            onClose = { vm.clearRecentItem(itm.id) },
+                                            onRemove = { vm.clearRecentItem(itm.id) },
+                                            modifier = Modifier.tvRowItem(
+                                                row     = recentsRow,
+                                                key     = itm.id,
+                                                isFirst = itm.id == seriesRecents.firstOrNull()?.id,
+                                            ),
                                         )
                                     }
                                 }
@@ -328,8 +344,12 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                                     series.sortedByDescending { seriesFavorites.contains(it.id.toString()) }
                                 }
                                 val isFirstRow = genre == grouped.firstOrNull()?.first
+                                val rowFocus   = rowFocuses.getOrPut(genre) { TvRowFocus() }
                                 LazyRow(
                                     state                 = rowStates.getOrPut(genre) { LazyListState() },
+                                    // `▼` depuis l'en-tête de genre entre par la PREMIÈRE
+                                    // affiche, plus par celle du milieu — cf. TvRowFocus.
+                                    modifier              = Modifier.tvRowEntry(rowFocus),
                                     contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
@@ -347,6 +367,11 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                                             onClick       = { anchor.rememberOrigin(s.id); selectedSeriesId = s.id },
                                             modifier      = Modifier
                                                 .width(100.dp)
+                                                .tvRowItem(
+                                                    row     = rowFocus,
+                                                    key     = s.id,
+                                                    isFirst = s.id == sorted.firstOrNull()?.id,
+                                                )
                                                 .focusAnchor(anchor, s.id)
                                                 .then(if (isEntryPoint) Modifier.focusRequester(firstCardFocus) else Modifier),
                                         )
@@ -823,9 +848,11 @@ internal fun TvSeriesDetailPage(
                                     episode          = ep,
                                     dlItem           = dlItem,
                                     onPlay           = {
+                                        // Cf. la fiche film : ne pas refermer la fiche en
+                                        // lançant un épisode, sinon quitter le lecteur ne
+                                        // rend pas la liste des épisodes.
                                         onPlayEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
                                         onPlay("", "", "", "")
-                                        onClose()
                                     },
                                     onDownload       = {
                                         onEnqueue(DownloadItem(
@@ -847,7 +874,6 @@ internal fun TvSeriesDetailPage(
                                         dlItem?.localPath?.let {
                                             onPlayEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
                                             onPlay("file://$it", ep.title, EpisodeTitle.progressId(seriesId, ep.id), d.cover ?: "")
-                                            onClose()
                                         }
                                     },
                                 )

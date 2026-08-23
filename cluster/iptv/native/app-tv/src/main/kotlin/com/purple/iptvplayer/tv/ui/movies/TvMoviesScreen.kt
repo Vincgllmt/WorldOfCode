@@ -41,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -62,6 +63,10 @@ import com.purple.iptvplayer.tv.R
 import com.purple.iptvplayer.tv.ui.common.dpadPageJump
 import com.purple.iptvplayer.tv.ui.common.focusAnchor
 import com.purple.iptvplayer.tv.ui.common.rememberTvFocusAnchor
+import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
+import com.purple.iptvplayer.tv.ui.common.tvRowEntry
+import com.purple.iptvplayer.tv.ui.common.tvRowItem
+import com.purple.iptvplayer.tv.ui.common.TvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
@@ -82,13 +87,17 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
     val movieFavorites    by vm.movieFavorites.collectAsState()
     val movieGenreFavs    by vm.movieGenreFavorites.collectAsState()
 
-    var selectedMovieId by remember { mutableStateOf<Int?>(null) }
-    var selectedGenre   by remember { mutableStateOf<String?>(null) }
+    var selectedMovieId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedGenre   by rememberSaveable { mutableStateOf<String?>(null) }
     // Conservé quand on quitte l'onglet, cf. le porteur d'état de TvMainScreen.
     var searchQuery     by rememberSaveable { mutableStateOf("") }
 
     // G5 — rendre le focus à l'affiche qui a ouvert la fiche.
     val anchor = rememberTvFocusAnchor()
+    // L'ancre est un `remember` : elle ne survit pas à l'aller-retour au lecteur. Si la
+    // fiche est restaurée, on lui redonne son origine — sinon la refermer retomberait sur
+    // la première affiche au lieu de celle d'où l'on venait.
+    LaunchedEffect(Unit) { selectedMovieId?.let { anchor.rememberOrigin(it) } }
 
     // Hissés AU-DESSUS du `return` anticipé de la fiche : sinon la LazyColumn et ses
     // LazyRow quittent la composition avec elle, et leurs LazyListState — créés
@@ -97,6 +106,10 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
     val columnState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val gridState   = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
     val rowStates   = remember { mutableMapOf<String, LazyListState>() }
+    // Un point d'entrée par rangée, hissé pour la même raison que `rowStates` : il doit
+    // survivre à l'ouverture d'une fiche, sinon la rangée oublie où on l'avait laissée.
+    val rowFocuses  = remember { mutableMapOf<String, TvRowFocus>() }
+    val recentsRow  = rememberTvRowFocus()
 
     // G6 — point d'entrée de l'onglet. `enter` ne doit rendre un requester QUE s'il est
     // attaché : sur un catalogue en chargement aucune carte n'est composée, et réclamer un
@@ -315,7 +328,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                             Key.DirectionDown -> { focusManager.moveFocus(FocusDirection.Down); true }
                                             else -> false
                                         } else false
-                                    },
+                                    }.tvRowEntry(recentsRow),
                                     // M6 — marge de FIN portée à 48 dp : les guides Android TV demandent 5 % de la
                                     // largeur (96 px sur 1920) en zone d'overscan. Départ inchangé, il aligne
                                     // le contenu sur le titre.
@@ -326,7 +339,12 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                         TvRecentCard(
                                             item    = itm,
                                             onPlay  = { onPlay(itm.url, itm.title, itm.id.toIntOrNull() ?: 0, itm.cover ?: "") },
-                                            onClose = { vm.clearRecentItem(itm.id) },
+                                            onRemove = { vm.clearRecentItem(itm.id) },
+                                            modifier = Modifier.tvRowItem(
+                                                row     = recentsRow,
+                                                key     = itm.id,
+                                                isFirst = itm.id == movieRecents.firstOrNull()?.id,
+                                            ),
                                         )
                                     }
                                 }
@@ -347,10 +365,14 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                     movies.sortedByDescending { movieFavorites.contains(it.id.toString()) }
                                 }
                                 val isFirstRow = genre == grouped.firstOrNull()?.first
+                                val rowFocus   = rowFocuses.getOrPut(genre) { TvRowFocus() }
                                 LazyRow(
                                     // État hissé : la position horizontale survit à
                                     // l'ouverture d'une fiche (G5).
                                     state                 = rowStates.getOrPut(genre) { LazyListState() },
+                                    // `▼` depuis l'en-tête de genre entre par la PREMIÈRE
+                                    // affiche, plus par celle du milieu — cf. TvRowFocus.
+                                    modifier              = Modifier.tvRowEntry(rowFocus),
                                     contentPadding        = PaddingValues(start = 24.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
@@ -369,6 +391,11 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                             onClick       = { anchor.rememberOrigin(movie.id); selectedMovieId = movie.id },
                                             modifier      = Modifier
                                                 .width(100.dp)
+                                                .tvRowItem(
+                                                    row     = rowFocus,
+                                                    key     = movie.id,
+                                                    isFirst = movie.id == sorted.firstOrNull()?.id,
+                                                )
                                                 .focusAnchor(anchor, movie.id)
                                                 .then(if (isEntryPoint) Modifier.focusRequester(firstCardFocus) else Modifier),
                                         )
@@ -700,8 +727,12 @@ internal fun TvMovieDetailPage(
                             primary  = true,
                             modifier = Modifier.focusRequester(playFocusRequester),
                             onClick  = {
+                                // La fiche ne se referme PLUS en lançant la lecture.
+                                // C'est cette ligne qui faisait qu'en quittant le lecteur
+                                // on retombait sur la liste : l'état était mis à null
+                                // *avant* de partir, il n'y avait donc rien à restaurer.
+                                // Signalé à l'usage — l'attente est de revenir sur la fiche.
                                 onPlay(detail.url, detail.name, detail.id, detail.cover ?: detail.coverBig ?: "")
-                                onClose()
                             },
                         )
                         TvDownloadActionButton(
@@ -821,15 +852,49 @@ fun TvThemeCard(
     }
 }
 
+/**
+ * Carte de la rangée « Reprendre la lecture ».
+ *
+ * **Le défaut corrigé.** `onClose` était déclaré, transmis par les deux écrans… et jamais
+ * branché : rien, dans la carte, ne l'appelait. Sur mobile le retrait passe par une croix
+ * qu'on touche ; sur TV il n'existait tout simplement **aucun** moyen de retirer une
+ * entrée. Huitième occurrence du motif §8.7 — devant un contrôle inerte, chercher d'abord
+ * s'il est câblé.
+ *
+ * **Pourquoi un appui long plutôt qu'une croix.** Une croix focalisable ajoute un
+ * focalisable par carte dans une rangée horizontale : `▶` ne passerait plus d'une affiche
+ * à la suivante mais de l'affiche à sa croix, doublant le nombre d'appuis pour parcourir la
+ * rangée (§8.10). L'appui long est le geste des lanceurs Android TV pour la même action, et
+ * `androidx.tv.material3.Surface` le gère nativement (`onLongClick` = `repeatCount` 1 sur
+ * `DPAD_CENTER`). Il n'est en revanche pas découvrable seul : la carte focalisée l'annonce.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun TvRecentCard(item: RecentItem, onPlay: () -> Unit, onClose: () -> Unit) {
+fun TvRecentCard(
+    item: RecentItem,
+    onPlay: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    var confirming by remember { mutableStateOf(false) }
+
+    if (confirming) {
+        TvConfirmDialog(
+            title      = stringResource(R.string.recent_remove_title),
+            message    = item.title,
+            confirm    = stringResource(R.string.action_remove),
+            cancel     = stringResource(R.string.action_cancel),
+            onConfirm  = { confirming = false; onRemove() },
+            onDismiss  = { confirming = false },
+        )
+    }
 
     Surface(
         onClick           = onPlay,
-        modifier          = Modifier.size(width = 260.dp, height = 146.dp),
+        onLongClick       = { confirming = true },
+        modifier          = modifier.size(width = 260.dp, height = 146.dp),
         shape             = ClickableSurfaceDefaults.shape(shape = PurpleShapes.Md),
         colors            = ClickableSurfaceDefaults.colors(
             containerColor        = PurplePalette.Bg2,
@@ -882,21 +947,33 @@ fun TvRecentCard(item: RecentItem, onPlay: () -> Unit, onClose: () -> Unit) {
                     )
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val typeLabel = when (item.type) {
-                        "movie"  -> "FILMS"
-                        "series" -> "SÉRIES"
-                        else     -> "DIRECT TV"
-                    }
-                    Box(
-                        Modifier
-                            .clip(PurpleShapes.Xs)
-                            .background(PurplePalette.Purple400.copy(0.35f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                    ) {
+                    // La carte focalisée annonce l'appui long **à la place** de sa
+                    // pastille de type : la hauteur est fixe (146 dp), un troisième
+                    // élément dans cette colonne la ferait déborder. La pastille est
+                    // informative, l'indication est actionnable — c'est elle qui prime
+                    // au moment où l'utilisateur peut agir.
+                    if (isFocused) {
                         Text(
-                            typeLabel,
-                            style = LocalPurpleType.current.capsLabel.copy(color = Color.White),
+                            stringResource(R.string.recent_hint_remove),
+                            style = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple200),
                         )
+                    } else {
+                        val typeLabel = when (item.type) {
+                            "movie"  -> "FILMS"
+                            "series" -> "SÉRIES"
+                            else     -> "DIRECT TV"
+                        }
+                        Box(
+                            Modifier
+                                .clip(PurpleShapes.Xs)
+                                .background(PurplePalette.Purple400.copy(0.35f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                typeLabel,
+                                style = LocalPurpleType.current.capsLabel.copy(color = Color.White),
+                            )
+                        }
                     }
                     if (item.duration > 0) {
                         LinearProgressIndicator(
@@ -909,6 +986,90 @@ fun TvRecentCard(item: RecentItem, onPlay: () -> Unit, onClose: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Confirmation à deux boutons, pour une action destructive à la télécommande.
+ *
+ * Le focus arrive sur **Annuler** : un appui long mal maîtrisé ne doit pas pouvoir
+ * enchaîner sur une suppression au coup d'`OK` suivant.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun TvConfirmDialog(
+    title: String,
+    message: String,
+    confirm: String,
+    cancel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val cancelFocus = remember { FocusRequester() }
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            Modifier
+                .widthIn(max = 460.dp)
+                .clip(PurpleShapes.Lg)
+                .background(PurplePalette.Bg2)
+                .border(1.dp, PurplePalette.Line1, PurpleShapes.Lg),
+        ) {
+            Column(Modifier.padding(24.dp)) {
+                Text(title, style = LocalPurpleType.current.h2.copy(color = PurplePalette.Fg1))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    message,
+                    style    = LocalPurpleType.current.body.copy(color = PurplePalette.Fg3),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TvDialogButton(
+                        label    = cancel,
+                        onClick  = onDismiss,
+                        modifier = Modifier.focusRequester(cancelFocus),
+                    )
+                    TvDialogButton(label = confirm, danger = true, onClick = onConfirm)
+                }
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { cancelFocus.requestFocus() }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TvDialogButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    danger: Boolean = false,
+) {
+    val accent = if (danger) PurplePalette.Danger else PurplePalette.Purple400
+    Surface(
+        onClick  = onClick,
+        modifier = modifier,
+        shape    = ClickableSurfaceDefaults.shape(PurpleShapes.Md),
+        colors   = ClickableSurfaceDefaults.colors(
+            containerColor        = PurplePalette.Bg3,
+            focusedContainerColor = accent,
+            contentColor          = PurplePalette.Fg2,
+            focusedContentColor   = Color.White,
+        ),
+        border   = ClickableSurfaceDefaults.border(
+            border        = Border(border = androidx.compose.foundation.BorderStroke(1.dp, PurplePalette.Line1), shape = PurpleShapes.Md),
+            focusedBorder = Border(border = androidx.compose.foundation.BorderStroke(2.dp, accent), shape = PurpleShapes.Md),
+        ),
+    ) {
+        Text(
+            label,
+            style    = LocalPurpleType.current.body,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+        )
     }
 }
 

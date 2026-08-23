@@ -3827,3 +3827,129 @@ rien ne le signale.
 Les polices agrandies (M3) rendent la carte des Paramètres plus haute : **B3 a été rejoué**.
 `▼` atteint toujours « Sign out », entièrement visible et focalisé, la carte défilant.
 Aucune régression.
+
+---
+
+## 49. Trois défauts remontés à l'usage sur l'app TV *(2026-08-22)*
+
+Trois constats de l'utilisateur, sur la build TV chargée latéralement. Aucun ne venait
+d'`AUDIT_TV_UX.md` : ils portent sur des chemins que l'audit n'avait pas pu exercer.
+
+**Aucun n'a pu être rejoué à l'émulateur** — l'utilisateur l'a écarté en séance (« si
+l'émulateur est trop lent fais sans »). Les trois causes sont donc établies **par lecture
+du code**, et chacune est démontrable ligne à ligne ; ce qui suit distingue à chaque fois ce
+qui est prouvé de ce qui reste à vérifier à l'écran.
+
+### 1. Impossible de retirer un film de « Reprendre la lecture »
+
+**Deux défauts superposés**, et corriger l'un sans l'autre n'aurait rien donné.
+
+**(a) Aucune commande.** `TvRecentCard` recevait `onClose`, les deux écrans le
+transmettaient… et la carte ne l'appelait nulle part. Huitième occurrence du motif §8.7.
+Le mobile a une croix qu'on touche ; sur TV il n'existait **aucun** moyen de retirer une
+entrée.
+
+Retenu : **appui long sur `OK`**, puis confirmation. Une croix focalisable aurait ajouté un
+focalisable par carte dans une rangée horizontale — `▶` serait passé de l'affiche à sa
+croix au lieu de l'affiche suivante, doublant le nombre d'appuis (§8.10).
+`androidx.tv.material3.Surface` gère nativement `onLongClick` (`repeatCount` 1 sur
+`DPAD_CENTER`). L'appui long ne se devine pas : la carte focalisée l'annonce, **à la place**
+de sa pastille de type — la carte fait 146 dp de haut, un troisième élément dans cette
+colonne la ferait déborder. Le focus d'arrivée de la confirmation est **Annuler**.
+
+**(b) Et l'entrée revenait toute seule.** C'est la vraie cause du mot « impossible ».
+`PlayerViewModel.startProgressSaving()` lançait `viewModelScope.launch { while (true) { … } }`
+— jamais annulée, et une de plus **à chaque lecture**. Ce `ViewModel` étant porté par
+l'Activity (pas de NavHost dans `app-tv` : `TvNavGraph` est un `when`), la boucle survivait
+à la sortie du lecteur et continuait d'écrire toutes les 10 s.
+
+Le maillon décisif : `PlayerService.stop()` appelle `player.stop()`, qui **ne remet pas la
+position à zéro**. `saveProgressNow()` lisait donc une position au-dessus du seuil de 5 s,
+`ProgressRepository.saveProgress` repassait par `updateRecentList`, et **réinsérait l'entrée
+en tête**. L'utilisateur la retirait, elle réapparaissait dans les dix secondes.
+
+Correctif dans `core`, donc valable pour les deux applications (le mobile appelle lui aussi
+`vm.stop()` à la sortie du lecteur) : la boucle est retenue dans un `Job`, annulée par
+`stop()`, et `currentMediaId` est effacé — sinon `onCleared()` réécrivait à son tour.
+
+### 2. Le changement de piste provoque une erreur
+
+`AUDIT_TV_UX.md` le disait en note de fin : le dialogue des pistes **rempli** n'avait jamais
+pu être exercé. Il ne l'avait donc jamais été du tout.
+
+**Cause première, prouvée par absence.** Trois écritures de la même décision — la feuille du
+mobile, le dialogue TV, `PlayerService.selectVersion` — et **aucune** ne consultait
+`Tracks.Group.isTrackSupported`. Une piste que l'appareil ne sait pas décoder (E-AC3, DTS,
+TrueHD sur un boîtier d'entrée de gamme) est **listée par ExoPlayer comme les autres** ;
+poser un override dessus fait échouer l'initialisation du décodeur, donc `onPlayerError`,
+donc le bloc d'erreur du §45. Troisième occurrence du motif §8.2 dans ce seul fichier.
+
+**Et il n'y avait pas de sortie.** Les `trackSelectionParameters` **survivent à
+`setMediaItem`** : « Réessayer » rejouait le flux avec l'override fautif et échouait à
+l'identique. Sur une série c'était pire — l'écran de lecture est ouvert avec une URL vide,
+la liste d'épisodes étant passée séparément ; le bouton relançait donc `playMedia("")` et ne
+pouvait rien produire.
+
+**Deux défauts de lisibilité, découverts en relisant le dialogue**, tous deux capables à eux
+seuls de faire choisir la mauvaise piste :
+
+- `TvTrackRow` posait `.clickable().onFocusChanged{}` — dans cet ordre. Un
+  `FocusEventModifierNode` n'observe que les cibles de focus placées **après** lui : la
+  callback n'était jamais appelée, **aucune ligne ne s'éclairait**. On parcourait la liste à
+  l'aveugle. Même piège d'ordre qu'au §44 pour `focusProperties`/`focusGroup`.
+- le libellé était `langue ?: titre`, dans cet ordre. Deux pistes françaises — un AC3 5.1 et
+  un AAC stéréo — s'affichaient toutes deux « français ». Rien ne les distinguait.
+
+**Correctifs.** La sélection remonte dans `core` (`PlayerService.selectAudioTrack` /
+`selectTextTrack` / `clearTrackOverrides`), derrière `TrackPolicy` — logique pure, 13 tests.
+Une piste illisible reste **affichée** mais n'est plus focalisable, avec la raison écrite
+dessous : la masquer ferait croire à un média mono-piste (§8.6). Couper les sous-titres
+reste toujours possible, quelles que soient les capacités : c'est le seul moyen de sortir
+d'une piste illisible. `retry()` efface les overrides avant de relancer, et gère la branche
+« série ». Les deux UI sont converties — la feuille du mobile portait exactement les mêmes
+défauts, plus cinq littéraux (`"AUDIO"`, `"SOUS-TITRES"`, `"Track N"`, `"Subtitle N"`,
+`"Playback error"`) que `check_strings.py` ne voyait pas, faute d'accents (§48).
+
+⚠️ **Ce qui reste à vérifier à l'écran.** Que l'erreur observée par l'utilisateur soit bien
+un décodeur refusé est l'hypothèse la mieux étayée, pas une mesure. Une seconde cause reste
+possible et n'est pas traitée : sur une source progressive, un changement de piste force
+`ProgressiveMediaPeriod` à relancer le chargement, et un fournisseur qui limite les
+connexions simultanées peut refuser la seconde. Le relevé qui trancherait est le message de
+`PlaybackException` affiché par le bloc d'erreur — **il est désormais lisible à l'écran**,
+et le chemin n'est plus sans issue quelle que soit la cause.
+
+### 3. `▼` depuis un genre tombait au milieu de la rangée
+
+**Ce n'est pas un défaut de `LazyRow`.** À distance verticale égale, la recherche
+directionnelle de Compose départage les candidats par l'écart entre les **centres** sur
+l'axe horizontal. Or `TvMovieGenreHeader` porte un `Modifier.weight(1f)` : il occupe toute
+la largeur, son centre est celui de l'écran, et l'affiche « la plus proche » est
+mécaniquement celle du milieu. Aucun réglage de la rangée ne corrige cela — il faut imposer
+le point d'entrée, comme le §43 le fait déjà pour un onglet (G6) et pour la grille (G9).
+
+`TvRowFocus` + `tvRowEntry` / `tvRowItem` dans `TvFocusKit`, appliqués aux rangées de genre
+**et** aux rangées « Reprendre la lecture » des deux onglets.
+
+Deux choix qui méritent d'être écrits, parce que la solution évidente est fausse :
+
+1. **La dernière affiche visitée, pas systématiquement la première.** La position de
+   défilement des rangées est conservée depuis le §43 (état hissé). Après un défilement, la
+   première affiche n'est **plus composée** — réclamer son `FocusRequester` lèverait
+   `IllegalStateException`, le piège même du G6. La dernière focalisée, elle, était visible
+   quand on a quitté la rangée. Sur une rangée jamais visitée, c'est bien la première.
+2. **Un requester par élément, jamais déplacé.** Ne le poser que sur l'élément d'entrée
+   obligerait à le déplacer à chaque changement de focus : ce serait lire un état en
+   composition — toutes les affiches se recomposeraient à chaque appui — et modifier les
+   modifiers de focus **pendant** un déplacement de focus, exactement le geste qui a produit
+   le §40. `TvRowFocus` ne contient donc aucun `mutableStateOf` ; il n'est lu qu'au moment
+   de la recherche de focus.
+
+⚠️ **À vérifier à l'émulateur** (§8.14) : `▼` depuis un en-tête de genre doit éclairer la
+**première** affiche ; `▲` depuis l'en-tête suivant doit rendre la rangée au-dessus là où on
+l'avait laissée ; et `PAGE_DOWN` (§47) doit continuer de traverser les rangées.
+
+### État
+
+244 tests, 0 échec — 186 dans `core` (+13, `TrackPolicyTest`), 58 dans `app-tv`.
+`check_strings.py` : parité 117/117 (`app-tv`) et 120/120 (`app-mobile`).
+

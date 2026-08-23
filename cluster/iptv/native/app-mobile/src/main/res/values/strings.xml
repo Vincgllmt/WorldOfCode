@@ -129,4 +129,12 @@
     <string name="cast_unsupported_body">The Chromecast couldn\'t play this content (%1$s). Its format or audio track may not be supported by that device.</string>
     <string name="action_show_more">Show more</string>
     <string name="action_show_less">Show less</string>
+    <!-- Sélecteur de pistes -->
+    <string name="player_audio">AUDIO</string>
+    <string name="player_subs">SUBTITLES</string>
+    <string name="player_track_n">Track %1$d</string>
+    <string name="player_subtitle_n">Subtitle %1$d</string>
+    <string name="player_track_unsupported">Not supported by this device</string>
+    <string name="player_track_forced">(forced)</string>
+    <string name="player_error">Playback failed.</string>
 </resources>
