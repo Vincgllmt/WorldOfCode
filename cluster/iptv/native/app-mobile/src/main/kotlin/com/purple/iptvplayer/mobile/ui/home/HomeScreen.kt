@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,15 +22,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.mobile.ui.common.ChannelRow
@@ -40,21 +38,18 @@ import org.koin.androidx.compose.koinViewModel
 import com.purple.iptvplayer.R
 
 /**
- * Disposition d'un catalogue.
+ * Écran des chaînes live.
  *
- * [LIST] a été ajouté pour les **chaînes live** et en est le défaut : l'identité d'une
- * chaîne tient dans un logo et un nom, pas dans une vignette 16:9 qu'il faut remplir de
- * fond vide. Les grilles restent pertinentes pour Films et Séries, dont les affiches
- * portent une vraie information.
+ * Deux vues, et l'état décide laquelle — il n'y a plus de sélecteur de disposition.
+ * Sans thème ni recherche, l'écran est une **liste de thèmes** ; choisir un thème (ou
+ * taper une recherche) bascule en **liste de chaînes**, filtrée. L'identité d'une chaîne
+ * tient dans un logo et un nom : une grille de vignettes 16:9 n'y ajoutait rien.
  */
-enum class LayoutMode { LIST, THEMES, GRID_SMALL, GRID_MEDIUM }
-
 @Composable
 fun HomeScreen(
     onPlayChannel: (url: String, title: String, cover: String, streamId: Int) -> Unit,
     selectedGenre: String?,
     onSelectGenre: (String?) -> Unit,
-    layoutMode:    LayoutMode,
 ) {
     val vm: ContentViewModel = koinViewModel()
     val channelsState by vm.channels.collectAsState()
@@ -85,11 +80,14 @@ fun HomeScreen(
             .sortedWith(compareBy({ !genreFavs.contains(it.key) }, { it.key }))
     }
 
-    val allGrouped = remember(allChannels) {
+    // Un thème mis en favori remonte en tête de la liste des thèmes — c'est la
+    // contrepartie visible du signet, avec sa présence dans « Ma liste ».
+    val allGrouped = remember(allChannels, genreFavs) {
         allChannels
             .groupBy { (it.group ?: "Other").trim().lowercase() }
-            .entries.sortedBy { it.key }
+            .entries
             .map { (_, items) -> (items.first().group ?: "Other").trim() to items }
+            .sortedWith(compareBy({ !genreFavs.contains(it.first) }, { it.first.lowercase() }))
     }
 
     when (channelsState) {
@@ -100,11 +98,9 @@ fun HomeScreen(
             Text((channelsState as ContentState.Error).message, color = ColorError)
         }
         else -> {
-            val cardWidth: Dp = when (layoutMode) {
-                LayoutMode.GRID_SMALL  -> 120.dp
-                LayoutMode.GRID_MEDIUM -> 170.dp
-                LayoutMode.THEMES, LayoutMode.LIST -> 0.dp
-            }
+            // La liste de thèmes est l'accueil de l'onglet ; tout le reste est une liste
+            // de chaînes filtrée.
+            val showThemes = selectedGenre == null && query.isEmpty()
 
             Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
                 // Search field
@@ -173,12 +169,22 @@ fun HomeScreen(
                         start = 16.dp, end = 16.dp,
                         top = 16.dp, bottom = 16.dp,
                     ),
-                    // Une liste dense n'a pas besoin du même air qu'une grille de cartes.
-                    verticalArrangement = Arrangement.spacedBy(
-                        if (layoutMode == LayoutMode.LIST) 2.dp else 12.dp
-                    ),
+                    // Une liste dense n'a pas besoin du même air qu'une pile de cartes.
+                    verticalArrangement = Arrangement.spacedBy(if (showThemes) 12.dp else 2.dp),
                 ) {
-                    if (layoutMode == LayoutMode.LIST) {
+                    if (showThemes) {
+                        allGrouped.forEach { (genre, list) ->
+                            item(key = "theme_$genre") {
+                                ThemeCard(
+                                    label      = genre,
+                                    subtitle   = pluralStringResource(R.plurals.count_channels, list.size, list.size),
+                                    isFavorite = genreFavs.contains(genre),
+                                    onFavorite = { vm.toggleLiveGenreFavorite(genre) },
+                                    onClick    = { onSelectGenre(genre) },
+                                )
+                            }
+                        }
+                    } else {
                         // Liste plate : un seul axe de défilement. L'imbrication d'une
                         // LazyRow dans une LazyColumn obligeait à faire défiler
                         // horizontalement pour atteindre la 40ᵉ chaîne d'un genre.
@@ -202,48 +208,6 @@ fun HomeScreen(
                                 )
                             }
                         }
-                    } else if (layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()) {
-                        allGrouped.forEach { (genre, list) ->
-                            item(key = "theme_$genre") {
-                                ThemeCard(
-                                    label = genre,
-                                    count = list.size,
-                                    itemType = if (list.size > 1) "chaînes" else "chaîne",
-                                    onClick = { onSelectGenre(genre) }
-                                )
-                            }
-                        }
-                    } else {
-                        grouped.forEach { (genre, channels) ->
-                            if (layoutMode != LayoutMode.THEMES) {
-                                item(key = "header_$genre") {
-                                    GroupHeader(
-                                        genre      = genre,
-                                        count      = channels.size,
-                                        isFavorite = genreFavs.contains(genre),
-                                        isSelected = selectedGenre == genre,
-                                        onFavorite = { vm.toggleLiveGenreFavorite(genre) },
-                                        onClick    = { onSelectGenre(if (selectedGenre == genre) null else genre) },
-                                    )
-                                }
-                            }
-
-                            item(key = "row_$genre") {
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    items(channels, key = { it.url }) { channel ->
-                                        ChannelCard(
-                                            channel   = channel,
-                                            isFav     = favorites.contains(channel.name),
-                                            cardWidth = if (layoutMode == LayoutMode.THEMES) 170.dp else cardWidth,
-                                            onPlay    = { onPlayChannel(channel.url, channel.name, channel.logo ?: "", channel.streamId ?: 0) },
-                                            onFav     = { vm.toggleChannelFavorite(channel.name) },
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -263,16 +227,29 @@ fun SectionHeader(title: String) {
     }
 }
 
+/**
+ * Carte d'un thème.
+ *
+ * Le signet est la seule façon de mettre un thème en favori depuis que le tiroir a
+ * disparu : il le remonte en tête de cet écran **et** le fait apparaître dans « Ma
+ * liste ». C'est aussi le geste de retrait, depuis « Ma liste » comme depuis ici.
+ */
 @Composable
-fun ThemeCard(label: String, count: Int, itemType: String, onClick: () -> Unit) {
+fun ThemeCard(
+    label:      String,
+    subtitle:   String,
+    isFavorite: Boolean,
+    onFavorite: () -> Unit,
+    onClick:    () -> Unit,
+) {
     Surface(
         onClick = onClick,
         color = BgCard,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, BorderPurple.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, if (isFavorite) Purple.copy(alpha = 0.55f) else BorderPurple.copy(alpha = 0.2f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 16.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -284,14 +261,22 @@ fun ThemeCard(label: String, count: Int, itemType: String, onClick: () -> Unit) 
             ) {
                 Icon(Icons.Rounded.Folder, null, tint = PurpleGlow, modifier = Modifier.size(24.dp))
             }
-            
+
             Spacer(Modifier.width(16.dp))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(label.uppercase(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                Text("$count $itemType", color = TextSub, fontSize = 13.sp)
+                Text(subtitle, color = TextSub, fontSize = 13.sp)
             }
-            
+
+            IconButton(onClick = onFavorite, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                    contentDescription = null,
+                    tint = if (isFavorite) Purple else TextSub.copy(alpha = 0.45f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Icon(Icons.Rounded.ChevronRight, null, tint = TextSub, modifier = Modifier.size(20.dp))
         }
     }
@@ -480,35 +465,5 @@ private fun GroupHeader(
                 modifier = Modifier.size(20.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun ChannelCard(
-    channel:   Channel,
-    isFav:     Boolean,
-    cardWidth: Dp,
-    onPlay:    () -> Unit,
-    onFav:     () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .width(cardWidth)
-            .clip(RoundedCornerShape(10.dp))
-            .background(BgCard)
-            .clickable { onPlay() },
-    ) {
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
-            if (!channel.logo.isNullOrEmpty()) {
-                AsyncImage(model = channel.logo, contentDescription = null,
-                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(BgSurface), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.LiveTv, null, tint = TextSub.copy(0.35f), modifier = Modifier.size(26.dp))
-                }
-            }
-        }
-        Text(text = channel.name, color = TextPrimary, fontSize = 10.sp, maxLines = 2,
-            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp))
     }
 }

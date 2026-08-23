@@ -46,11 +46,11 @@ fun SeriesScreen(
     onSeriesDetail: (id: Int) -> Unit,
     selectedGenre:  String?,
     onSelectGenre: (String?) -> Unit,
-    layoutMode:    LayoutMode,
 ) {
     val vm: ContentViewModel = koinViewModel()
     val seriesState by vm.series.collectAsState()
     val favorites   by vm.seriesFavorites.collectAsState()
+    val genreFavs   by vm.seriesGenreFavorites.collectAsState()
     val recentItems by vm.recentItems.collectAsState()
 
     // rememberSaveable et non remember : ouvrir une fiche depuis un résultat détruit la
@@ -62,11 +62,13 @@ fun SeriesScreen(
 
     val allSeries = (seriesState as? ContentState.Success)?.data ?: emptyList()
 
-    val allGrouped = remember(allSeries) {
+    // Les thèmes favoris remontent en tête, comme sur l'onglet live.
+    val allGrouped = remember(allSeries, genreFavs) {
         allSeries
             .groupBy { (it.group ?: "Other").trim().lowercase() }
-            .entries.sortedBy { it.key }
+            .entries
             .map { (_, items) -> (items.first().group ?: "Other").trim() to items }
+            .sortedWith(compareBy({ !genreFavs.contains(it.first) }, { it.first.lowercase() }))
     }
 
     val filtered = remember(allSeries, query, selectedGenre) {
@@ -77,11 +79,10 @@ fun SeriesScreen(
 
     val seriesRecents = remember(recentItems) { recentItems.filter { it.type == "series" } }
 
-    // Le mode d'affichage **décide** de la vue, comme sur l'onglet live. Auparavant la
-    // condition l'ignorait : la vue groupée par genre s'imposait dès qu'aucun filtre
-    // n'était actif, et choisir « Grille » n'avait aucun effet visible — le sélecteur
-    // ne servait que dans la vue filtrée.
-    val isGroupedView = layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()
+    // Deux vues, et l'état seul décide laquelle : les rangées par thème tant que rien
+    // n'est filtré, la grille dès qu'un thème est choisi ou qu'une recherche est en
+    // cours. Le sélecteur de disposition a disparu avec le tiroir.
+    val isGroupedView = selectedGenre == null && query.isEmpty()
 
     Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
         ContentHeader(title = stringResource(R.string.nav_series), query = query, onQuery = { query = it })
@@ -125,7 +126,13 @@ fun SeriesScreen(
                         // Grouped categories
                         allGrouped.forEach { (genre, list) ->
                             item(key = "header_$genre") {
-                                GenreRowHeader(genre = genre, count = list.size, onClick = { onSelectGenre(genre) })
+                                GenreRowHeader(
+                                    genre      = genre,
+                                    count      = list.size,
+                                    isFavorite = genreFavs.contains(genre),
+                                    onFavorite = { vm.toggleSeriesGenreFavorite(genre) },
+                                    onClick    = { onSelectGenre(genre) },
+                                )
                             }
                             item(key = "row_$genre") {
                                 LazyRow(
@@ -147,12 +154,9 @@ fun SeriesScreen(
                         }
                     }
                 } else {
-                    val adaptiveSize = when (layoutMode) {
-                        LayoutMode.GRID_SMALL -> 100.dp
-                        else                  -> 140.dp
-                    }
+                    // Grille (Petit) : la seule qui reste une fois le filtre appliqué.
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(adaptiveSize),
+                        columns = GridCells.Adaptive(100.dp),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),

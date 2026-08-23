@@ -76,7 +76,6 @@
     <string name="mylist_title">My list</string>
     <string name="mylist_empty">Your list is empty</string>
     <string name="mylist_empty_hint">Add channels with the star in the channel list, or movies and series from their pages.</string>
-    <string name="filter_all">All</string>
     <string name="filter_channels">Channels</string>
     <string name="filter_movies">Movies</string>
     <string name="filter_series">Series</string>

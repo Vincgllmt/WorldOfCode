@@ -47,11 +47,11 @@ fun MoviesScreen(
     onMovieDetail: (id: Int) -> Unit,
     selectedGenre: String?,
     onSelectGenre: (String?) -> Unit,
-    layoutMode:    LayoutMode,
 ) {
     val vm: ContentViewModel = koinViewModel()
     val moviesState by vm.movies.collectAsState()
     val favorites   by vm.movieFavorites.collectAsState()
+    val genreFavs   by vm.movieGenreFavorites.collectAsState()
     val recentItems by vm.recentItems.collectAsState()
 
     // rememberSaveable et non remember : ouvrir une fiche depuis un résultat détruit la
@@ -63,11 +63,13 @@ fun MoviesScreen(
 
     val allMovies = (moviesState as? ContentState.Success)?.data ?: emptyList()
 
-    val allGrouped = remember(allMovies) {
+    // Les thèmes favoris remontent en tête, comme sur l'onglet live.
+    val allGrouped = remember(allMovies, genreFavs) {
         allMovies
             .groupBy { (it.group ?: "Other").trim().lowercase() }
-            .entries.sortedBy { it.key }
+            .entries
             .map { (_, items) -> (items.first().group ?: "Other").trim() to items }
+            .sortedWith(compareBy({ !genreFavs.contains(it.first) }, { it.first.lowercase() }))
     }
 
     val filtered = remember(allMovies, query, selectedGenre) {
@@ -78,11 +80,10 @@ fun MoviesScreen(
 
     val movieRecents = remember(recentItems) { recentItems.filter { it.type == "movie" } }
 
-    // Le mode d'affichage **décide** de la vue, comme sur l'onglet live. Auparavant la
-    // condition l'ignorait : la vue groupée par genre s'imposait dès qu'aucun filtre
-    // n'était actif, et choisir « Grille » n'avait aucun effet visible — le sélecteur
-    // ne servait que dans la vue filtrée.
-    val isGroupedView = layoutMode == LayoutMode.THEMES && selectedGenre == null && query.isEmpty()
+    // Deux vues, et l'état seul décide laquelle : les rangées par thème tant que rien
+    // n'est filtré, la grille dès qu'un thème est choisi ou qu'une recherche est en
+    // cours. Le sélecteur de disposition a disparu avec le tiroir.
+    val isGroupedView = selectedGenre == null && query.isEmpty()
 
     Column(modifier = Modifier.fillMaxSize().background(BgHome)) {
         ContentHeader(title = stringResource(R.string.nav_movies), query = query, onQuery = { query = it })
@@ -123,7 +124,13 @@ fun MoviesScreen(
                         // Grouped categories
                         allGrouped.forEach { (genre, list) ->
                             item(key = "header_$genre") {
-                                GenreRowHeader(genre = genre, count = list.size, onClick = { onSelectGenre(genre) })
+                                GenreRowHeader(
+                                    genre      = genre,
+                                    count      = list.size,
+                                    isFavorite = genreFavs.contains(genre),
+                                    onFavorite = { vm.toggleMovieGenreFavorite(genre) },
+                                    onClick    = { onSelectGenre(genre) },
+                                )
                             }
                             item(key = "row_$genre") {
                                 LazyRow(
@@ -145,12 +152,9 @@ fun MoviesScreen(
                         }
                     }
                 } else {
-                    val adaptiveSize = when (layoutMode) {
-                        LayoutMode.GRID_SMALL -> 100.dp
-                        else                  -> 140.dp
-                    }
+                    // Grille (Petit) : la seule qui reste une fois le filtre appliqué.
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(adaptiveSize),
+                        columns = GridCells.Adaptive(100.dp),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -171,13 +175,26 @@ fun MoviesScreen(
     }
 }
 
+/**
+ * En-tête d'une rangée de thème.
+ *
+ * Le signet vient du tiroir supprimé : c'était le seul endroit d'où l'on pouvait mettre
+ * un thème de films ou de séries en favori. Retirer le tiroir sans le déplacer ici aurait
+ * supprimé la fonction avec l'élément qui la portait.
+ */
 @Composable
-fun GenreRowHeader(genre: String, count: Int, onClick: () -> Unit) {
+fun GenreRowHeader(
+    genre:      String,
+    count:      Int,
+    isFavorite: Boolean,
+    onFavorite: () -> Unit,
+    onClick:    () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(start = 16.dp, end = 12.dp, top = 20.dp, bottom = 2.dp),
+            .padding(start = 16.dp, end = 4.dp, top = 20.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -194,6 +211,14 @@ fun GenreRowHeader(genre: String, count: Int, onClick: () -> Unit) {
         Text("($count)", color = TextSub, fontSize = 12.sp)
         Spacer(Modifier.width(2.dp))
         Icon(Icons.Rounded.ChevronRight, null, tint = TextSub, modifier = Modifier.size(16.dp))
+        IconButton(onClick = onFavorite, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                contentDescription = null,
+                tint = if (isFavorite) Purple else TextSub.copy(alpha = 0.45f),
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 

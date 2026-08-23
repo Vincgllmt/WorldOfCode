@@ -1,21 +1,15 @@
 package com.purple.iptvplayer.mobile.ui.main
 
 import android.app.Activity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -30,14 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,8 +39,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.core.data.CredentialsRepository
-import com.purple.iptvplayer.core.viewmodel.ContentState
-import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.data.AccessState
 import com.purple.iptvplayer.core.viewmodel.TrialViewModel
 import com.purple.iptvplayer.mobile.ui.common.PremiumBadge
@@ -57,7 +46,6 @@ import com.purple.iptvplayer.mobile.ui.cast.CastButton
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
 import com.purple.iptvplayer.mobile.ui.downloads.DownloadsScreen
 import com.purple.iptvplayer.mobile.ui.home.HomeScreen
-import com.purple.iptvplayer.mobile.ui.home.LayoutMode
 import com.purple.iptvplayer.mobile.ui.movies.MoviesScreen
 import com.purple.iptvplayer.mobile.ui.mylist.MyListScreen
 import com.purple.iptvplayer.mobile.ui.series.SeriesScreen
@@ -83,7 +71,6 @@ fun MainScreen(
     val scope    = rememberCoroutineScope()
 
     val trialVm:   TrialViewModel   = koinViewModel()
-    val contentVm: ContentViewModel = koinViewModel()
     val castVm:    CastViewModel    = koinViewModel()
     val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel()
     val credRepo:  CredentialsRepository = koinInject()
@@ -91,88 +78,18 @@ fun MainScreen(
     val remainingDays by trialVm.remainingDays.collectAsState()
     val isPro         by trialVm.isPro.collectAsState()
     val access        by trialVm.accessState.collectAsState()
-    val channelsState by contentVm.channels.collectAsState()
-    val moviesState   by contentVm.movies.collectAsState()
-    val seriesState   by contentVm.series.collectAsState()
-    val genreFavs        by contentVm.liveGenreFavorites.collectAsState()
-    val movieGenreFavs   by contentVm.movieGenreFavorites.collectAsState()
-    val seriesGenreFavs  by contentVm.seriesGenreFavorites.collectAsState()
 
     var currentTab       by rememberSaveable { mutableIntStateOf(0) }
     /** Conserve l'état de chaque onglet quand on en change (cf. plus bas). */
     val tabStateHolder = rememberSaveableStateHolder()
-    var drawerOpen       by remember { mutableStateOf(false) }
     var settingsOpen     by remember { mutableStateOf(false) }
-    var layoutPickerOpen by remember { mutableStateOf(false) }
-    // Store as Int to avoid enum serialization issues with rememberSaveable + NavHost
-    // La disposition était partagée par les trois onglets, alors que le live et la VOD
-    // n'appellent pas la même forme : une chaîne se reconnaît à son logo et à son nom,
-    // un film à son affiche. Deux états distincts, chacun avec son défaut.
-    var liveLayoutIndex by rememberSaveable { mutableIntStateOf(LayoutMode.LIST.ordinal) }
-    // THEMES et non GRID_MEDIUM : c'est le mode qui produit les rangées par genre,
-    // c'est-à-dire l'apparence que les onglets Films et Séries avaient déjà. Le défaut
-    // ne change donc pas — mais choisir une grille a désormais un effet.
-    var vodLayoutIndex  by rememberSaveable { mutableIntStateOf(LayoutMode.THEMES.ordinal) }
-    val isLiveTab   = currentTab == 0
-    val layoutMode  = LayoutMode.entries[if (isLiveTab) liveLayoutIndex else vodLayoutIndex]
-    // Conservé au retour d'une fiche, comme la recherche.
+    // Conservé au retour d'une fiche, comme la recherche. Le tiroir des genres a disparu :
+    // le filtre se choisit désormais sur l'écran lui-même, en touchant un thème — ou
+    // depuis « Ma liste », qui ouvre l'onglet du thème avec son filtre déjà posé. La
+    // remise à zéro se fait donc à la barre du bas, et non plus sur `currentTab`, sinon
+    // elle effacerait le filtre que « Ma liste » vient de poser.
     var selectedGenre    by rememberSaveable { mutableStateOf<String?>(null) }
     var currentLang      by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
-
-    // Proactively load all content so genres are ready when drawer opens
-    LaunchedEffect(Unit) {
-        contentVm.loadChannels()
-        contentVm.loadMovies()
-        contentVm.loadSeries()
-    }
-
-    // Reset genre filter when switching tabs
-    LaunchedEffect(currentTab) { selectedGenre = null }
-
-    val allChannels = (channelsState as? ContentState.Success)?.data ?: emptyList()
-    val allMovies   = (moviesState   as? ContentState.Success)?.data ?: emptyList()
-    val allSeries   = (seriesState   as? ContentState.Success)?.data ?: emptyList()
-
-    // Per-tab genre data for the drawer (case-insensitive deduplication)
-    val currentGenres = remember(currentTab, allChannels, allMovies, allSeries) {
-        fun deduplicateGenres(groups: List<String?>): List<String> =
-            groups.mapNotNull { it?.trim() }
-                .groupBy { it.lowercase() }
-                .map { (_, names) -> names.first() }
-                .sortedBy { it.lowercase() }
-        when (currentTab) {
-            0 -> deduplicateGenres(allChannels.map { it.group })
-            1 -> deduplicateGenres(allMovies.map { it.group })
-            2 -> deduplicateGenres(allSeries.map { it.group })
-            else -> emptyList()
-        }
-    }
-    val currentGenreCountMap = remember(currentTab, allChannels, allMovies, allSeries) {
-        fun countByGroup(groups: List<String?>): Map<String, Int> =
-            groups.mapNotNull { it?.trim() }
-                .groupBy { it.lowercase() }
-                .entries.associate { (lowKey, names) ->
-                    names.first() to names.size
-                }
-        when (currentTab) {
-            0 -> allChannels.groupBy { (it.group ?: "Others").trim().lowercase() }
-                    .entries.associate { (_, items) -> (items.first().group?.trim() ?: "Others") to items.size }
-            1 -> allMovies.groupBy { (it.group ?: "Others").trim().lowercase() }
-                    .entries.associate { (_, items) -> (items.first().group?.trim() ?: "Others") to items.size }
-            2 -> allSeries.groupBy { (it.group ?: "Others").trim().lowercase() }
-                    .entries.associate { (_, items) -> (items.first().group?.trim() ?: "Others") to items.size }
-            else -> emptyMap()
-        }
-    }
-    val currentTotalItems = remember(currentTab, allChannels, allMovies, allSeries) {
-        when (currentTab) { 0 -> allChannels.size; 1 -> allMovies.size; 2 -> allSeries.size; else -> 0 }
-    }
-    val currentGenreFavs = when (currentTab) {
-        0    -> genreFavs
-        1    -> movieGenreFavs
-        2    -> seriesGenreFavs
-        else -> emptySet()
-    }
 
     Column(modifier = Modifier.fillMaxSize().background(BgApp)) {
 
@@ -259,89 +176,55 @@ fun MainScreen(
         }
 
         // ── Main area ─────────────────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                TopBar(
-                    showHamburger       = currentTab < 3,
-                    onHamburger         = { drawerOpen = true },
-                    layoutPickerOpen    = layoutPickerOpen,
-                    layoutMode          = layoutMode,
-                    showListOption      = isLiveTab,
-                    setLayoutPickerOpen = { layoutPickerOpen = it },
-                    onLayoutSelect      = { m -> if (isLiveTab) liveLayoutIndex = m.ordinal else vodLayoutIndex = m.ordinal; layoutPickerOpen = false },
-                    onSettings          = { settingsOpen = true },
-                    castSlot            = { CastButton(modifier = Modifier.size(40.dp), tint = Color.White) },
-                )
+        // Le Box qui enveloppait cette colonne servait à superposer le tiroir des
+        // genres ; il n'a plus rien à recouvrir.
+        Column(modifier = Modifier.weight(1f)) {
+            TopBar(
+                onSettings = { settingsOpen = true },
+                castSlot   = { CastButton(modifier = Modifier.size(40.dp), tint = Color.White) },
+            )
 
-                Box(modifier = Modifier.weight(1f)) {
-                    // Chaque onglet garde son état quand on le quitte.
-                    //
-                    // `when (currentTab)` retire l'onglet précédent de la composition, et
-                    // `rememberSaveable` seul ne suffit pas : son entrée est jetée avec
-                    // lui. Sans ce porteur, revenir sur un onglet effaçait la recherche
-                    // qui y était en cours — mesuré.
-                    tabStateHolder.SaveableStateProvider(currentTab) {
-                    when (currentTab) {
-                        0 -> HomeScreen(
-                            onPlayChannel = { url, title, cover, streamId -> onPlayChannel(url, title, cover, streamId) },
-                            selectedGenre = selectedGenre,
-                            onSelectGenre = { selectedGenre = it },
-                            layoutMode    = layoutMode,
-                        )
-                        1 -> MoviesScreen(
-                            onPlayMovie   = onPlayMovie,
-                            onMovieDetail = onMovieDetail,
-                            selectedGenre = selectedGenre,
-                            onSelectGenre = { selectedGenre = it },
-                            layoutMode    = layoutMode,
-                        )
-                        2 -> SeriesScreen(
-                            onSeriesDetail = onSeriesDetail,
-                            selectedGenre  = selectedGenre,
-                            onSelectGenre  = { selectedGenre = it },
-                            layoutMode     = layoutMode,
-                        )
-                        3 -> MyListScreen(
-                            onMovieDetail  = onMovieDetail,
-                            onSeriesDetail = onSeriesDetail,
-                            onPlayChannel  = onPlayChannel,
-                        )
-                        4 -> DownloadsScreen(onPlay = { url, title -> onPlayChannel(url, title, "", 0) })
-                    }
-                    }
+            Box(modifier = Modifier.weight(1f)) {
+                // Chaque onglet garde son état quand on le quitte.
+                //
+                // `when (currentTab)` retire l'onglet précédent de la composition, et
+                // `rememberSaveable` seul ne suffit pas : son entrée est jetée avec
+                // lui. Sans ce porteur, revenir sur un onglet effaçait la recherche
+                // qui y était en cours — mesuré.
+                tabStateHolder.SaveableStateProvider(currentTab) {
+                when (currentTab) {
+                    0 -> HomeScreen(
+                        onPlayChannel = { url, title, cover, streamId -> onPlayChannel(url, title, cover, streamId) },
+                        selectedGenre = selectedGenre,
+                        onSelectGenre = { selectedGenre = it },
+                    )
+                    1 -> MoviesScreen(
+                        onPlayMovie   = onPlayMovie,
+                        onMovieDetail = onMovieDetail,
+                        selectedGenre = selectedGenre,
+                        onSelectGenre = { selectedGenre = it },
+                    )
+                    2 -> SeriesScreen(
+                        onSeriesDetail = onSeriesDetail,
+                        selectedGenre  = selectedGenre,
+                        onSelectGenre  = { selectedGenre = it },
+                    )
+                    3 -> MyListScreen(
+                        onMovieDetail  = onMovieDetail,
+                        onSeriesDetail = onSeriesDetail,
+                        onPlayChannel  = onPlayChannel,
+                        // Un thème favori renvoie vers son onglet, filtre posé.
+                        onOpenTheme    = { tab, genre -> selectedGenre = genre; currentTab = tab },
+                    )
+                    4 -> DownloadsScreen(onPlay = { url, title -> onPlayChannel(url, title, "", 0) })
                 }
-            }
-
-            // Genre drawer overlay (shown on tabs 0–2)
-            if (currentTab < 3) {
-                DrawerOverlay(
-                    visible          = drawerOpen,
-                    tabLabel         = when (currentTab) {
-                        0 -> stringResource(R.string.nav_live)
-                        1 -> stringResource(R.string.nav_movies)
-                        else -> stringResource(R.string.nav_series)
-                    },
-                    genres           = currentGenres,
-                    genreCountMap    = currentGenreCountMap,
-                    totalItems       = currentTotalItems,
-                    genreFavs        = currentGenreFavs,
-                    showBookmarks    = true,
-                    selectedGenre    = selectedGenre,
-                    onSelectGenre    = { selectedGenre = it; drawerOpen = false },
-                    onFavGenre       = { genre ->
-                        when (currentTab) {
-                            0    -> contentVm.toggleLiveGenreFavorite(genre)
-                            1    -> contentVm.toggleMovieGenreFavorite(genre)
-                            2    -> contentVm.toggleSeriesGenreFavorite(genre)
-                        }
-                    },
-                    onChangeAccount  = { drawerOpen = false; settingsOpen = true },
-                    onClose          = { drawerOpen = false },
-                )
+                }
             }
         }
 
-        BottomNav(currentTab = currentTab, onTabSelect = { currentTab = it })
+        // Changer d'onglet à la main efface le filtre ; y arriver depuis « Ma liste »
+        // le conserve.
+        BottomNav(currentTab = currentTab, onTabSelect = { currentTab = it; selectedGenre = null })
     }
 
     if (settingsOpen) {
@@ -370,29 +253,9 @@ fun MainScreen(
 
 @Composable
 private fun TopBar(
-    showHamburger:       Boolean,
-    onHamburger:         () -> Unit,
-    layoutPickerOpen:    Boolean,
-    layoutMode:          LayoutMode,
-    showListOption:      Boolean,
-    setLayoutPickerOpen: (Boolean) -> Unit,
-    onLayoutSelect:      (LayoutMode) -> Unit,
-    onSettings:          () -> Unit,
-    castSlot:            @Composable (() -> Unit)? = null,
+    onSettings: () -> Unit,
+    castSlot:   @Composable (() -> Unit)? = null,
 ) {
-    data class LayoutOption(val mode: LayoutMode, val icon: ImageVector, val label: String)
-
-    val layoutOptions = listOfNotNull(
-        // La liste n'est proposée que sur le live : elle n'aurait pas de sens sur des
-        // affiches de films.
-        if (showListOption)
-            LayoutOption(LayoutMode.LIST, Icons.AutoMirrored.Rounded.FormatListBulleted, stringResource(R.string.layout_list))
-        else null,
-        LayoutOption(LayoutMode.THEMES,     Icons.Rounded.ViewList, stringResource(R.string.layout_themes)),
-        LayoutOption(LayoutMode.GRID_SMALL, Icons.Rounded.Apps,     stringResource(R.string.layout_small)),
-        LayoutOption(LayoutMode.GRID_MEDIUM,Icons.Rounded.GridView, stringResource(R.string.layout_medium)),
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -401,13 +264,7 @@ private fun TopBar(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showHamburger) {
-            IconButton(onClick = onHamburger) {
-                Icon(Icons.Rounded.Menu, null, tint = TextPrimary)
-            }
-        } else {
-            Spacer(Modifier.width(12.dp))
-        }
+        Spacer(Modifier.width(12.dp))
 
         Row(
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
@@ -429,258 +286,9 @@ private fun TopBar(
             )
         }
 
-        Box {
-            IconButton(onClick = { setLayoutPickerOpen(true) }) {
-                Icon(Icons.Rounded.GridView, null, tint = if (layoutPickerOpen) PurpleGlow else TextPrimary)
-            }
-            DropdownMenu(
-                expanded = layoutPickerOpen,
-                onDismissRequest = { setLayoutPickerOpen(false) },
-                modifier = Modifier.background(BgCard),
-            ) {
-                layoutOptions.forEach { opt ->
-                    val selected = layoutMode == opt.mode
-                    DropdownMenuItem(
-                        text = {
-                            Text(opt.label,
-                                color = if (selected) PurpleGlow else TextPrimary,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                fontSize = 14.sp)
-                        },
-                        leadingIcon = {
-                            Icon(opt.icon, null,
-                                tint = if (selected) PurpleGlow else TextSub,
-                                modifier = Modifier.size(20.dp))
-                        },
-                        onClick = { onLayoutSelect(opt.mode) },
-                        modifier = Modifier.background(if (selected) Purple.copy(alpha = 0.15f) else Color.Transparent),
-                        colors = MenuDefaults.itemColors(textColor = TextPrimary),
-                    )
-                }
-            }
-        }
-
         castSlot?.invoke()
         IconButton(onClick = onSettings) {
             Icon(Icons.Rounded.Settings, null, tint = TextPrimary)
-        }
-    }
-}
-
-// ── Drawer overlay ────────────────────────────────────────────────────────────
-
-@Composable
-private fun DrawerOverlay(
-    visible:        Boolean,
-    tabLabel:       String,
-    genres:         List<String>,
-    genreCountMap:  Map<String, Int>,
-    totalItems:     Int,
-    genreFavs:      Collection<String>,
-    showBookmarks:  Boolean,
-    selectedGenre:  String?,
-    onSelectGenre:  (String?) -> Unit,
-    onFavGenre:     (String) -> Unit,
-    onChangeAccount: () -> Unit,
-    onClose:        () -> Unit,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter   = slideInHorizontally(initialOffsetX = { -it }),
-        exit    = slideOutHorizontally(targetOffsetX = { -it }),
-    ) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            GenreDrawer(
-                tabLabel        = tabLabel,
-                genres          = genres,
-                genreCountMap   = genreCountMap,
-                totalItems      = totalItems,
-                genreFavs       = genreFavs,
-                showBookmarks   = showBookmarks,
-                selectedGenre   = selectedGenre,
-                onSelectGenre   = onSelectGenre,
-                onFavGenre      = onFavGenre,
-                onChangeAccount = onChangeAccount,
-                onClose         = onClose,
-                modifier        = Modifier.fillMaxHeight().fillMaxWidth(0.82f),
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .clickable { onClose() },
-            )
-        }
-    }
-}
-
-// ── Genre drawer ──────────────────────────────────────────────────────────────
-
-@Composable
-private fun GenreDrawer(
-    tabLabel:       String,
-    genres:         List<String>,
-    genreCountMap:  Map<String, Int>,
-    totalItems:     Int,
-    genreFavs:      Collection<String>,
-    showBookmarks:  Boolean,
-    selectedGenre:  String?,
-    onSelectGenre:  (String?) -> Unit,
-    onFavGenre:     (String) -> Unit,
-    onChangeAccount: () -> Unit,
-    onClose:        () -> Unit,
-    modifier:       Modifier,
-) {
-    var drawerSearch by remember { mutableStateOf("") }
-
-    val displayed = remember(genres, genreFavs, drawerSearch) {
-        val q = drawerSearch.normalizeSearch()
-        genres
-            .filter { q.isEmpty() || it.normalizeSearch().contains(q) }
-            .sortedWith(compareBy({ !genreFavs.contains(it) }, { it }))
-    }
-
-    Column(modifier = modifier.background(BgCard)) {
-
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.width(3.dp).height(22.dp).clip(RoundedCornerShape(2.dp)).background(Purple))
-            Spacer(Modifier.width(10.dp))
-            Text(tabLabel, color = PurpleGlow, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.weight(1f))
-            IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, null, tint = TextPrimary)
-            }
-        }
-
-        // Search field
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(BgHome)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Search, null, tint = TextSub, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            BasicTextField(
-                value = drawerSearch,
-                onValueChange = { drawerSearch = it },
-                singleLine = true,
-                textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
-                cursorBrush = SolidColor(Purple),
-                modifier = Modifier.weight(1f),
-                decorationBox = { inner ->
-                    if (drawerSearch.isEmpty()) {
-                        Text(stringResource(R.string.drawer_search_hint), color = TextSub.copy(0.4f), fontSize = 14.sp)
-                    }
-                    inner()
-                },
-            )
-            if (drawerSearch.isNotEmpty()) {
-                IconButton(onClick = { drawerSearch = "" }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Rounded.Close, null, tint = TextSub, modifier = Modifier.size(14.dp))
-                }
-            }
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            // "All genres" row
-            item {
-                val allSelected = selectedGenre == null
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .then(
-                            if (allSelected)
-                                Modifier.border(1.5.dp, Purple, RoundedCornerShape(12.dp)).background(Purple.copy(0.10f))
-                            else Modifier
-                        )
-                        .clickable { onSelectGenre(null) }
-                        .padding(horizontal = 14.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (allSelected) {
-                        Box(Modifier.width(3.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(Purple))
-                        Spacer(Modifier.width(10.dp))
-                    }
-                    Text(
-                        stringResource(R.string.genre_all),
-                        color = if (allSelected) PurpleGlow else TextPrimary,
-                        fontSize = 15.sp, fontWeight = if (allSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("$totalItems",
-                        color = if (allSelected) PurpleGlow else TextSub,
-                        fontSize = 15.sp, fontWeight = if (allSelected) FontWeight.ExtraBold else FontWeight.Normal)
-                }
-            }
-
-            if (drawerSearch.isEmpty()) {
-                item {
-                    Text("${genres.size} genres", color = TextSub, fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 26.dp, top = 6.dp, bottom = 2.dp))
-                }
-            }
-
-            items(displayed, key = { it }) { genre ->
-                val count    = genreCountMap[genre] ?: 0
-                val selected = selectedGenre == genre
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelectGenre(genre) }
-                        .padding(start = 26.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(genre,
-                        color = if (selected) PurpleGlow else TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f))
-                    Text("$count", color = TextSub, fontSize = 14.sp)
-                    if (showBookmarks) {
-                        Spacer(Modifier.width(6.dp))
-                        IconButton(onClick = { onFavGenre(genre) }, modifier = Modifier.size(30.dp)) {
-                            Icon(
-                                imageVector = if (genreFavs.contains(genre)) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                                contentDescription = null,
-                                tint = if (genreFavs.contains(genre)) Purple else TextSub.copy(0.4f),
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    } else {
-                        Spacer(Modifier.width(8.dp))
-                    }
-                }
-            }
-        }
-
-        // Change account
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onChangeAccount() }
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .navigationBarsPadding(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(Icons.Rounded.Logout, null, tint = ColorError, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.change_account), color = ColorError, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -906,8 +514,3 @@ private fun BottomNav(currentTab: Int, onTabSelect: (Int) -> Unit) {
         }
     }
 }
-
-private fun String.normalizeSearch(): String =
-    java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
-        .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
-        .lowercase()

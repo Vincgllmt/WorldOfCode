@@ -26,20 +26,12 @@
     <string name="btn_change_plan">Changer d\'offre</string>
     <string name="trial_expired">Essai expiré.</string>
     <string name="btn_activate">ACTIVER</string>
-    <string name="drawer_search_hint">Rechercher un genre…</string>
-    <string name="genre_all">Tous les genres</string>
-    <string name="change_account">Changer de compte</string>
     <string name="settings_title">Paramètres &amp; Compte</string>
     <string name="settings_language">Langue</string>
     <string name="settings_logout_title">Se déconnecter ?</string>
     <string name="settings_logout_desc">Toutes vos données locales seront conservées sur cet appareil.</string>
     <string name="btn_cancel">Annuler</string>
     <string name="btn_logout">Déconnexion</string>
-    <string name="layout_themes">Thèmes</string>
-    <string name="layout_list">Liste</string>
-    <string name="layout_small">Grille (Petit)</string>
-    <string name="layout_medium">Grille (Moyen)</string>
-    <string name="layout_large">Grille (Grand)</string>
 
     <!-- Downloads -->
     <string name="btn_download">Télécharger</string>
@@ -112,9 +104,10 @@
     <string name="mylist_title">Ma liste</string>
     <string name="mylist_empty_hint">Ajoutez des chaînes avec l\'étoile de la liste, ou des films et séries depuis leurs fiches.</string>
     <string name="mylist_empty">Votre liste est vide</string>
+    <string name="mylist_empty_themes_hint">Touchez le signet à côté d\'un thème, sur Direct TV, Films ou Séries, pour l\'épingler ici.</string>
     <string name="badge_movie">FILM</string>
     <string name="badge_series">SÉRIE</string>
-    <string name="filter_all">Tout</string>
+    <string name="filter_themes">Thèmes</string>
     <string name="filter_channels">Chaînes</string>
     <string name="filter_movies">Films</string>
     <string name="filter_series">Séries</string>

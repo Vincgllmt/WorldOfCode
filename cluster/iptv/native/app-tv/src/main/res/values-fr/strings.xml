@@ -50,7 +50,6 @@
     <string name="mylist_title">Ma liste</string>
     <string name="mylist_empty">Votre liste est vide</string>
     <string name="mylist_empty_hint">Ajoutez des chaînes avec l\'étoile de la liste, ou des films et séries depuis leurs fiches.</string>
-    <string name="filter_all">Tout</string>
     <string name="filter_channels">Chaînes</string>
     <string name="filter_movies">Films</string>
     <string name="filter_series">Séries</string>

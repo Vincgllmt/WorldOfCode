@@ -3953,3 +3953,105 @@ l'avait laissée ; et `PAGE_DOWN` (§47) doit continuer de traverser les rangée
 244 tests, 0 échec — 186 dans `core` (+13, `TrackPolicyTest`), 58 dans `app-tv`.
 `check_strings.py` : parité 117/117 (`app-tv`) et 120/120 (`app-mobile`).
 
+---
+
+## 50. L'app mobile réorganisée autour des thèmes *(2026-08-22)*
+
+Demande de l'utilisateur, en quatre points : le tiroir latéral (bouton burger) n'a plus
+d'utilité ; Direct TV s'ouvre sur ses **thèmes**, qu'on peut mettre en favori et qui
+filtrent la liste au clic ; Films et Séries n'ont plus qu'un mode d'accueil (les thèmes) et
+qu'une grille filtrée (« Petit », le « Moyen » disparaît) ; le bouton de changement de
+disposition s'en va avec le burger. Et, sur les **deux** applications, le filtre « Tout » de
+« Ma liste » est retiré.
+
+### Ce que le sélecteur de disposition coûtait vraiment
+
+`LayoutMode` avait quatre valeurs pour trois onglets, deux états persistés (`liveLayoutIndex`,
+`vodLayoutIndex`), et deux d'entre elles ne servaient qu'à faire varier la largeur d'une
+carte. La vue affichée dépend en réalité de **l'état du filtre**, pas d'une préférence :
+sans thème choisi on montre les thèmes, avec un thème choisi on montre son contenu. L'enum a
+donc été supprimé, pas réduit — un mode qu'aucune condition ne peut plus atteindre est du
+code mort qui ressuscite au premier correctif.
+
+| Onglet | Rien de filtré | Thème choisi, ou recherche en cours |
+|---|---|---|
+| Direct TV | cartes de thème | liste de chaînes (`ChannelRow`) |
+| Films / Séries | rangées d'affiches par thème | grille `Adaptive(100.dp)` |
+
+### Le tiroir portait quatre fonctions, pas une
+
+C'est le piège du §8.6, et il fallait le traiter avant de supprimer quoi que ce soit. Le
+tiroir servait à : choisir un genre, **mettre un genre en favori**, tout réafficher, et
+changer de compte. Trois ont été replacées, une a été perdue sciemment :
+
+- choisir un genre → la carte de thème (live) et l'en-tête de rangée (VOD) ;
+- **mettre en favori** → le signet est passé sur `ThemeCard` **et** sur `GenreRowHeader` ;
+  sans ce déplacement, les thèmes favoris de Films et Séries n'auraient plus eu **aucun**
+  point d'entrée, alors que `movieGenreFavorites` continuait d'exister dans `core` ;
+- tout réafficher → la pastille de filtre active, déjà là ;
+- changer de compte → l'engrenage, qui ouvre le même dialogue de déconnexion.
+- ⚠️ **perdue : la recherche de genre.** Le tiroir avait son propre champ, qui cherchait
+  dans les *noms de genre*. Le champ de l'écran cherche dans les *noms de contenu*. Taper
+  « sport » donne désormais les chaînes de sport, plus le dossier SPORT. C'est un choix, pas
+  un oubli : deux listes de nature différente dans un même résultat sont illisibles.
+
+### « Ma liste » : « Tout » remplacé par « Thèmes »
+
+« Tout » empilait des lignes de chaîne pleine largeur et des affiches 2:3 dans une seule
+grille — sur TV, cela donnait au D-pad une géométrie irrégulière. Sur mobile il est remplacé
+par un quatrième filtre **Thèmes** (choix de l'utilisateur, alternative écartée : les
+thèmes en tête de chaque filtre), qui réunit les favoris des trois onglets parce qu'ils
+s'ouvrent tous de la même façon : `onOpenTheme(tab, genre)` pose l'onglet **et** le filtre.
+
+Deux conséquences qui ne se voient pas dans la maquette :
+
+1. **La remise à zéro du filtre a changé d'accroche.** Elle était sur
+   `LaunchedEffect(currentTab)` ; elle aurait donc effacé le filtre que « Ma liste » venait
+   de poser, dans la recomposition qui suit. Elle est passée sur le clic de la barre du bas :
+   changer d'onglet à la main efface, y arriver par un thème conserve.
+2. **Le signet reste allumé sur la carte, dans « Ma liste ».** C'est le geste de retrait —
+   sans lui, sortir un thème de la liste obligerait à retrouver son onglet (§14, §49).
+
+Sur `app-tv`, seul « Tout » est retiré ; le filtre par défaut devient « Chaînes ».
+⚠️ Conséquence assumée : un utilisateur qui n'a que des films en favori ouvre désormais
+« Ma liste » sur un écran vide au lieu de sa liste. L'état vide porte son action (§43 G7).
+
+### Deux défauts trouvés en chemin, corrigés
+
+- `MyListScreen` : le filtre choisi s'écrivait dans une copie `remember`, jamais dans
+  l'ordinal `rememberSaveable` prévu pour le conserver. Changer de filtre puis tourner
+  l'écran ramenait au défaut. Le commentaire décrivait l'intention, le code faisait autre
+  chose — motif §8.7, appliqué à un état plutôt qu'à un contrôle.
+- `"$total titre${if (total > 1) "s" else ""}"` et `"$count chaînes"` : deux littéraux
+  français en dur, invisibles pour `check_strings.py` (paramètres hors `LABEL_PARAMS`).
+  Passés en `<plurals>` — `count_channels`, `count_movies`, `count_series`, `count_themes`,
+  `count_titles` — d'autant qu'un thème n'est pas un « titre ».
+
+Neuf libellés sans appelant ont été retirés (`layout_*`, `genre_all`, `drawer_search_hint`,
+`change_account`, `filter_all`).
+
+### État
+
+244 tests, 0 échec (inchangés : la modification est entièrement dans les deux UI).
+`check_strings.py` : parité 116/116 (`app-tv`), 113/113 + 7/7 pluriels (`app-mobile`).
+
+### Vérifié sur appareil *(Pixel 7, Android 17, build debug — 2026-08-23)*
+
+Les six points sont observés, pas déduits :
+
+| Geste | Observé |
+|---|---|
+| Ouverture de Direct TV | liste de thèmes, favoris en tête et signet rempli ; ni burger ni sélecteur |
+| Clic sur un thème | pastille de filtre + bascule en liste de chaînes |
+| Signet sur un thème non favori | remonte en tête de l'onglet **et** apparaît dans « Ma liste » |
+| « Ma liste » → thème de films | ouvre l'onglet Films filtré, en grille 3 colonnes |
+| Retour depuis une fiche film | filtre conservé |
+| Changement d'onglet à la barre du bas | filtre effacé |
+
+Deux détails confirmés au passage : les pluriels suivent le type (« 167 chaînes », « 65
+films », « 1 titre », « 3 thèmes »), et le signet allumé dans « Ma liste » retire bien le
+thème — le compteur passe de 4 à 3 dans la seconde.
+
+⚠️ Reste non observé : le comportement de `app-tv`. L'APK de release a été fournie à
+l'utilisateur, elle n'a pas été exercée ici.
+

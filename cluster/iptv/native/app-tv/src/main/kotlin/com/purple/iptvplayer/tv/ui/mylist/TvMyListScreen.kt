@@ -50,7 +50,12 @@ import com.purple.iptvplayer.tv.ui.common.dpadPageJump
 import androidx.compose.runtime.withFrameNanos
 import com.purple.iptvplayer.tv.ui.theme.TvSurfaceDefaults
 
-private enum class ListFilter { ALL, CHANNELS, MOVIES, SERIES }
+/**
+ * « Tout » a été retiré : il empilait des lignes de chaîne pleine largeur et des affiches
+ * 2:3 dans la même grille, ce qui donnait au D-pad une géométrie irrégulière. Chaque
+ * filtre ne présente plus qu'une seule forme de carte.
+ */
+private enum class ListFilter { CHANNELS, MOVIES, SERIES }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -78,7 +83,7 @@ fun TvMyListScreen(
     val seriesWatchlist by vm.seriesFavorites.collectAsState()
     val downloads       by dlVm.downloads.collectAsState()
 
-    var filter           by remember { mutableStateOf(ListFilter.ALL) }
+    var filter           by remember { mutableStateOf(ListFilter.CHANNELS) }
 
     // §16 — le rail se déplie dès que le focus y entre, et Compose TV l'y renvoie quand
     // l'élément focalisé disparaît : retirer ou déplacer un favori ouvrait donc le
@@ -207,7 +212,6 @@ fun TvMyListScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.mylist_title), style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1))
                 val total = when (filter) {
-                    ListFilter.ALL      -> favChannels.size + watchlistMovies.size + watchlistSeries.size
                     ListFilter.CHANNELS -> favChannels.size
                     ListFilter.MOVIES   -> watchlistMovies.size
                     ListFilter.SERIES   -> watchlistSeries.size
@@ -220,7 +224,6 @@ fun TvMyListScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ListFilter.ALL      to stringResource(R.string.filter_all),
                     ListFilter.CHANNELS to stringResource(R.string.filter_channels),
                     ListFilter.MOVIES   to stringResource(R.string.filter_movies),
                     ListFilter.SERIES   to stringResource(R.string.filter_series),
@@ -263,7 +266,6 @@ fun TvMyListScreen(
 
         // ── Content ────────────────────────────────────────────────────────
         val isEmpty = when (filter) {
-            ListFilter.ALL      -> favChannels.isEmpty() && watchlistMovies.isEmpty() && watchlistSeries.isEmpty()
             ListFilter.CHANNELS -> favChannels.isEmpty()
             ListFilter.MOVIES   -> watchlistMovies.isEmpty()
             ListFilter.SERIES   -> watchlistSeries.isEmpty()
@@ -297,7 +299,7 @@ fun TvMyListScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
-                if (filter == ListFilter.ALL || filter == ListFilter.CHANNELS) {
+                if (filter == ListFilter.CHANNELS) {
                     itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { _, c -> "c_" + c.url }) { index, channel ->
                         TvChannelRow(
                             channel  = channel,
@@ -309,12 +311,12 @@ fun TvMyListScreen(
                         )
                     }
                 }
-                if (filter == ListFilter.ALL || filter == ListFilter.MOVIES) {
+                if (filter == ListFilter.MOVIES) {
                     items(watchlistMovies, key = { "m_${it.id}" }) { movie ->
                         MyListMovieCard(movie = movie, onClick = { selectedMovieId = movie.id })
                     }
                 }
-                if (filter == ListFilter.ALL || filter == ListFilter.SERIES) {
+                if (filter == ListFilter.SERIES) {
                     items(watchlistSeries, key = { "s_${it.id}" }) { series ->
                         MyListSeriesCard(series = series, onClick = { selectedSeriesId = series.id })
                     }

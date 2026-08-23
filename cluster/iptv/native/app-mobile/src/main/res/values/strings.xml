@@ -26,20 +26,12 @@
     <string name="btn_change_plan">Change plan</string>
     <string name="trial_expired">Trial expired.</string>
     <string name="btn_activate">ACTIVATE</string>
-    <string name="drawer_search_hint">Search genre…</string>
-    <string name="genre_all">All genres</string>
-    <string name="change_account">Change account</string>
     <string name="settings_title">Settings &amp; Account</string>
     <string name="settings_language">Language</string>
     <string name="settings_logout_title">Sign out?</string>
     <string name="settings_logout_desc">All your local data will be kept on this device.</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_logout">Sign out</string>
-    <string name="layout_themes">Themes</string>
-    <string name="layout_list">List</string>
-    <string name="layout_small">Small Grid</string>
-    <string name="layout_medium">Medium Grid</string>
-    <string name="layout_large">Large Grid</string>
 
     <!-- Downloads -->
     <string name="btn_download">Download</string>
@@ -112,9 +104,10 @@
     <string name="mylist_title">My list</string>
     <string name="mylist_empty_hint">Add channels with the star in the channel list, or movies and series from their pages.</string>
     <string name="mylist_empty">Your list is empty</string>
+    <string name="mylist_empty_themes_hint">Tap the bookmark next to a theme in Direct TV, Movies or Series to pin it here.</string>
     <string name="badge_movie">MOVIE</string>
     <string name="badge_series">SERIES</string>
-    <string name="filter_all">All</string>
+    <string name="filter_themes">Themes</string>
     <string name="filter_channels">Channels</string>
     <string name="filter_movies">Movies</string>
     <string name="filter_series">Series</string>
