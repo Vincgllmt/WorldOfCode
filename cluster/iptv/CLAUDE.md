@@ -110,7 +110,7 @@ cd /home/rigolo/Documents/woc/cluster/iptv/native
 | Point | État sur cette machine |
 |---|---|
 | `native/local.properties` | ✅ **déjà correct** (`sdk.dir=/home/rigolo/Android/Sdk`) — rien à ajuster ; c'est la version du dépôt, la machine « hjouini » n'avait pas committé sa correction |
-| JDK | ⚠️ **absent** — seul `openjdk-17-jre-headless` est installé, **pas de `javac`**, et pas d'Android Studio. Gradle ne démarre pas. Résolu **sans sudo** en dépliant un Temurin 17 dans le scratchpad (`api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`) |
+| JDK | ⚠️ **absent** — seul `openjdk-17-jre-headless` est installé, **pas de `javac`**, et pas d'Android Studio. Gradle ne démarre pas. Résolu **sans sudo** en dépliant un Temurin 17 dans le scratchpad (`api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`). ⚠️ Le scratchpad est **propre à une session** : le JDK d'une session précédente disparaît, et Gradle échoue alors sur « JAVA_HOME points to invalid directory ». Le re-déplier (≈ 185 Mo, 1 min) fait partie de la mise en route |
 | Android SDK | ✅ complet — build-tools 34/35/36.1/37, platforms 34→36.1, emulator, image `google_apis_playstore` android-37 |
 | `adb` | ✅ sur le `PATH`, aucune règle udev à corriger |
 | Appareil | ✅ **Pixel 7 (`panther`, Android 17) connecté et autorisé** |
@@ -338,9 +338,15 @@ ici.
 
 ### Publication
 
-- [ ] **`app-tv` n'est pas publiée sur le Play Store** : la build 10 / 1.2.1 n'existe qu'en
+- [ ] **Téléverser `app-mobile` 15 / 1.2.0** : l'AAB est produit et signé, les textes de
+      « Nouveautés » sont prêts dans [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md). Le
+      téléversement est **manuel** (pas d'accès à la Play Developer API, §9). ⚠️ Passer par
+      la **piste de test interne** avant la production : aucune build minifiée n'a été
+      exercée, tout n'a été vérifié qu'en debug. Cf. §51.
+- [ ] **`app-tv` n'est pas publiée sur le Play Store** : la build 11 / 1.3.0 n'existe qu'en
       chargement latéral. Tout le travail TV (deux panneaux, carte EPG, VF/VOSTFR, les
-      quatre correctifs de focus, conservation d'état) n'est donc pas distribué. Cf. §41.
+      correctifs de focus, les 28 défauts du D-pad, conservation d'état) n'est donc pas
+      distribué. Cf. §41, §51.
 - [ ] Réactiver `NullSafeMutableLiveData` dans `app-tv/build.gradle.kts` le jour où les
       versions de lint s'alignent (désactivé pour débloquer la release, §31).
 
@@ -498,3 +504,4 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
 | 48 | **Lot 6 livré** (M2, M5, M7, M8) ; `tools/check_strings.py` — parité `<plurals>` + littéraux **non accentués** ; il a trouvé **5 libellés français en dur dans `app-mobile`** | on ajoute un libellé, ou avant une publication |
 | 49 | **Trois défauts remontés à l'usage** : la reprise de lecture se réinsérait toute seule (boucle jamais annulée) ; le sélecteur de pistes proposait des pistes que le décodeur refuse, sans issue ; `▼` depuis un genre tombait au milieu de la rangée | on touche à `ProgressRepository`/`PlayerViewModel`, au sélecteur de pistes, ou à l'entrée d'une rangée TV |
 | 50 | **L'app mobile réorganisée autour des thèmes** : `LayoutMode` supprimé, tiroir et burger retirés ; le tiroir portait **quatre** fonctions, trois replacées, une perdue sciemment ; « Tout » → « Thèmes » dans « Ma liste » | on touche à la navigation mobile, à un mode d'affichage, ou aux favoris de thème |
+| 51 | **Release mobile 1.2.0 préparée** : la 14 était la seule publiée ; versions bumpées (mobile 15 / 1.2.0, TV 11 / 1.3.0) ; `docs/RELEASE_NOTES.md` ; la build minifiée reste non exercée | on publie une version, ou on cherche ce qui est déjà distribué |

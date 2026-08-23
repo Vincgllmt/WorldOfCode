@@ -4055,3 +4055,36 @@ thème — le compteur passe de 4 à 3 dans la seconde.
 ⚠️ Reste non observé : le comportement de `app-tv`. L'APK de release a été fournie à
 l'utilisateur, elle n'a pas été exercée ici.
 
+---
+
+## 51. Préparation de la release mobile 1.2.0 *(2026-08-23)*
+
+Première publication mobile depuis la **1.1.6 / versionCode 14**, et il fallait d'abord
+établir *laquelle* était publiée : le dépôt ne le dit nulle part. La preuve est au §32 —
+la révocation d'achat y est mesurée sur une build dont `installerPackageName` vaut
+`com.android.vending`, en versionCode 14. Tout ce qui a suivi est donc inédit pour un
+utilisateur du Play Store : **neuf commits** touchant `app-mobile` ou `core`, plus le
+travail non committé du §49 et du §50.
+
+`app-mobile` passe en **15 / 1.2.0**, `app-tv` en **11 / 1.3.0**. Les deux applications ont
+leur propre ligne de version : elles n'ont ni la même fiche, ni le même canal de
+distribution (l'app TV n'est pas publiée du tout, §41).
+
+Les textes de « Nouveautés » et le changelog complet vivent désormais dans
+**[`docs/RELEASE_NOTES.md`](RELEASE_NOTES.md)**, avec le contrôle des 500 caractères que
+Play impose par langue — le vérifier avant de coller, pas après.
+
+### Ce qui n'est pas vérifié, et pourquoi ça compte
+
+Le parcours du §50 a été observé sur la variante **debug**, qui n'est pas minifiée. La
+release l'est (`isMinifyEnabled = true`). Les règles `-keep` couvrent `core.model` et
+Moshi — c'est-à-dire le cache du catalogue, seul endroit du projet qui dépend de la
+réflexion — mais aucune build minifiée n'a été exercée. C'est exactement ce à quoi sert la
+piste de test interne (§9), et c'est la raison pour laquelle on n'y coupe pas.
+
+### Rappel de méthode
+
+Le téléversement reste **manuel** : pas d'accès à la Play Developer API depuis ce dépôt.
+Et `versionCode` doit dépasser le publié, jamais l'égaler — Play refuse, et un APK
+sideloadé de même code s'installe sans rien annoncer, ce qui rend une vérification
+ininterprétable.
