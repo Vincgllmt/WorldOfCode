@@ -291,12 +291,37 @@ $prompt"
     # Quand il n'y en a pas, on le DIT — sauter en silence ferait croire qu'un
     # défaut d'UI a été vérifié alors qu'aucun pixel n'a été rendu.
     ECRAN="non exécutés (aucun appareil)"
-    local code_ecran=0
-    run_instrumented ":app-tv" "$(tv_device)" "$instr_out" || code_ecran=$?
+    local code_ecran=0 essais_ecran=0
+    while :; do
+      code_ecran=0
+      run_instrumented ":app-tv" "$(tv_device)" "$instr_out" || code_ecran=$?
+
+      # Une PANNE D'APPAREIL n'est pas un défaut de code : on rejoue la
+      # vérification, on ne relance surtout pas le worker. Sans cette
+      # distinction, les quatre tentatives s'épuisent à faire corriger un agent
+      # qui n'a rien à corriger — constaté sur l'issue #3, 11 min et 2,65 $
+      # brûlés sur un « System has crashed ».
+      if [ "$code_ecran" -ne 0 ] && [ "$code_ecran" -ne 2 ] \
+         && is_device_failure "$instr_out" && [ "$essais_ecran" -lt 2 ]; then
+        essais_ecran=$((essais_ecran + 1))
+        log_warn "Panne d'appareil (pas un échec de test) — vérification rejouée ($essais_ecran/2)."
+        condense_gradle "$instr_out" | head -3 | sed 's/^/    /'
+        continue
+      fi
+      break
+    done
+
     case "$code_ecran" in
       0) ECRAN="✅ app-tv vérifiée à l'écran"; vert=1; break ;;
       2) ECRAN="⚠️ non vérifié à l'écran — aucun appareil"; vert=1; break ;;
-      *) log_err "Tests instrumentés ROUGES — le défaut se voit à l'écran."
+      *) if is_device_failure "$instr_out"; then
+           # L'appareil n'a jamais tenu : on ne fait pas porter le chapeau au
+           # code, et on ne prétend pas non plus l'avoir vérifié.
+           log_warn "Appareil instable après $essais_ecran reprises — vérification à l'écran abandonnée."
+           ECRAN="⚠️ NON vérifié — l'appareil a planté ($essais_ecran reprises)"
+           vert=1; break
+         fi
+         log_err "Tests instrumentés ROUGES — le défaut se voit à l'écran."
          condense_gradle "$instr_out" | sed 's/^/    /'
          ECRAN="❌ app-tv rouge à l'écran" ;;
     esac

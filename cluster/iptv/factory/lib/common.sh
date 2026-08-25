@@ -180,9 +180,27 @@ run_gradle() {
 # qu'elles rapportent.
 condense_gradle() {
   local f="$1"
-  grep -E '^(e:|w: .*error|FAILURE:|BUILD (SUCCESSFUL|FAILED))|Task .* FAILED|Execution failed for task|^\s+> |tests? completed|FAILED$|expected:.*but was:|^\s+at com\.purple\.' "$f" \
+  # Le motif couvre DEUX formats : la sortie JVM et celle de
+  # `connectedAndroidTest`. Appris à l'usage : réglé sur le seul format JVM, il
+  # ne transmettait qu'un « FAILURE: Build failed » creux sur un échec
+  # instrumenté — le worker repartait corriger à l'aveugle un défaut qui
+  # n'existait pas.
+  grep -E '^(e:|w: .*error|FAILURE:|BUILD (SUCCESSFUL|FAILED))|Task .* FAILED|Execution failed for task|^\s+> |tests? completed|FAILED$|expected:.*but was:|^\s+at com\.purple\.|INSTRUMENTATION_|System has crashed|Test run failed|onError:|com\.purple\..*Test >|Starting [0-9]+ tests|No connected devices|INSTALL_FAILED' "$f" \
     | grep -vE 'Download|Daemon|Deprecated Gradle|is never used' \
     | head -80
+}
+
+# --- Panne d'appareil ou échec de test ? ----------------------------------
+#
+# Distinction essentielle : un émulateur qui plante n'est PAS un défaut de code.
+# Constaté le 2026-08-25 — « INSTRUMENTATION_ABORTED: System has crashed » après
+# 11 min, sur un correctif par ailleurs juste. Sans cette distinction, les
+# quatre tentatives s'épuisent à faire corriger un agent qui n'a rien à corriger,
+# et le quota part en fumée.
+#
+# Rend 0 si la sortie porte les marques d'une panne d'INFRASTRUCTURE.
+is_device_failure() {
+    grep -qE 'INSTRUMENTATION_ABORTED|System has crashed|Test run failed to complete|No connected devices|device .*offline|INSTALL_FAILED|Failed to install|adb: device .*not found' "$1" 2>/dev/null
 }
 
 # --- Tests instrumentés : la seule preuve qui voit un écran ---------------
@@ -232,7 +250,14 @@ count_tests() {
 # Empreinte de la suite de tests : quels fichiers, et combien de @Test.
 # Comparée avant/après le worker.
 fingerprint_tests() {
-  find "$NATIVE_DIR" -path '*/src/test/*' -name '*Test.kt' 2>/dev/null | sort \
+  # ⚠️ `src/test` ET `src/androidTest`. La première version ne voyait que le JVM :
+  # un agent pouvait supprimer TOUS les tests instrumentés sans que le garde-fou
+  # bronche. Trouvé en constatant que l'empreinte restait à 269 alors qu'un
+  # fichier de 6 @Test venait d'être ajouté sous androidTest. Le trou était
+  # d'autant plus grave que ces tests sont les seuls à prouver ce qui se voit à
+  # l'écran : la partie la moins remplaçable de la suite était la moins protégée.
+  find "$NATIVE_DIR" \( -path '*/src/test/*' -o -path '*/src/androidTest/*' \) \
+       -name '*Test.kt' 2>/dev/null | sort \
     | while read -r f; do
         printf '%s:%s\n' "${f#"$REPO_DIR"/}" "$(grep -c '@Test' "$f" 2>/dev/null || echo 0)"
       done
