@@ -160,6 +160,88 @@ except Exception: print(9999)" 2>/dev/null || echo 9999)"
   log_ok "Pré-vol : environnement conforme, arbre propre."
 }
 
+# --- Consignes et quotas : partagés par l'orchestrateur ET l'audit ---------
+
+# Reconnaît une limite d'usage dans la sortie de `claude -p`.
+#
+# ⚠️ Le motif DOIT couvrir « **session** limit », pas seulement « usage limit ».
+# Appris à la dure : l'audit du 2026-08-25 a traversé 13 périmètres en 37 s, tous
+# comptés « 0 défaut », et s'est déclaré terminé. Le message était
+# « You've hit your session limit · resets 1:30pm (Europe/Paris) », qu'aucune
+# alternative ne matchait. Un quota non reconnu ne fait pas échouer bruyamment :
+# il rend un résultat VIDE qui ressemble à s'y méprendre à un succès.
+est_limite_quota() {
+  grep -qiE "session limit|usage limit|rate.?limit|quota|too many requests|resets? +(at )?[0-9]|api_error_status.{0,4}429" <<< "$1"
+}
+
+dormir_par_tranches() {
+  local total="$1" reste="$total"
+  while [ "$reste" -gt 0 ]; do
+    local part=$(( reste < FACTORY_QUOTA_SLICE ? reste : FACTORY_QUOTA_SLICE ))
+    log_warn "Quota atteint — pause de $((part / 60)) min (reste $((reste / 60)) min)."
+    sleep "$part"
+    reste=$(( reste - part ))
+  done
+}
+
+# Secondes à attendre jusqu'au réarmement annoncé. Vide si aucune heure lisible.
+# Format observé : « resets 1:30pm (Europe/Paris) ». Une minute de marge : se
+# réveiller pile à la seconde du réarmement redonne un refus.
+secondes_avant_reset() {
+  RESET_TEXTE="$1" python3 <<'PYRESET' 2>/dev/null
+import os, re, datetime
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
+texte = os.environ.get("RESET_TEXTE", "")
+m = re.search(r"resets?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?:\s*\(([^)]+)\))?", texte, re.I)
+if m:
+    h = int(m.group(1)); mn = int(m.group(2) or 0); ampm = (m.group(3) or "").lower()
+    if ampm == "pm" and h != 12: h += 12
+    if ampm == "am" and h == 12: h = 0
+    tz = None
+    if ZoneInfo and m.group(4):
+        try: tz = ZoneInfo(m.group(4).strip())
+        except Exception: tz = None
+    maintenant = datetime.datetime.now(tz)
+    cible = maintenant.replace(hour=h, minute=mn, second=0, microsecond=0)
+    if cible <= maintenant:
+        cible += datetime.timedelta(days=1)
+    print(int((cible - maintenant).total_seconds()) + 60)
+PYRESET
+}
+
+# Attend le réarmement, à l'heure annoncée quand elle l'est.
+attendre_reset() {
+  local secondes; secondes="$(secondes_avant_reset "$1")"
+  if [ -z "$secondes" ] || ! [ "$secondes" -ge 1 ] 2>/dev/null; then
+    log_warn "Limite d'usage, heure de reprise non annoncée — pause de $((FACTORY_QUOTA_SLICE / 60)) min."
+    dormir_par_tranches "$FACTORY_QUOTA_SLICE"; return
+  fi
+  log_warn "Limite de session. Reprise dans $((secondes / 60)) min, vers $(date -d "+$secondes seconds" '+%H:%M')."
+  dormir_par_tranches "$secondes"
+}
+
+# Rend un fichier de consigne en substituant {{CLE}} par sa valeur.
+#
+# ⚠️ L'échappement de « & » n'est pas facultatif. Dans `${var//motif/valeur}`,
+# **bash 5.2 traite `&` comme sed** : il le remplace par le texte trouvé. Un
+# titre d'issue tout à fait ordinaire — « Basculer VF & VOSTFR » — produirait
+# donc « Basculer VF {{TITRE}} VOSTFR » dans le prompt du worker. Silencieux,
+# et découvert en testant un titre piégé plutôt qu'un titre poli.
+# (Vérifié sur bash 5.2.21 ; `sed` a exactement le même piège, changer d'outil
+# ne l'évite pas.)
+rendre_prompt() {
+  local fichier="$1"; shift
+  local rendu; rendu="$(cat "$fichier")"
+  while [ $# -ge 2 ]; do
+    local cle="$1" val="$2"; shift 2
+    rendu="${rendu//\{\{$cle\}\}/${val//&/\\&}}"
+  done
+  printf '%s' "$rendu"
+}
+
 # --- Gradle ----------------------------------------------------------------
 
 # La boucle de travail du projet (CLAUDE.md §4). C'est le SEUL juge de paix :

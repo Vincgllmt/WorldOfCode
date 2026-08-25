@@ -55,20 +55,6 @@ preflight
 # Une limite d'usage n'est pas un échec de la tâche : c'est une pause. On dort
 # par tranches, en journalisant chacune — dans un log, un processus muet et un
 # processus planté se ressemblent trop.
-est_limite_quota() {
-  grep -qiE 'usage limit|rate.?limit|quota|too many requests|resets? at' <<< "$1"
-}
-
-dormir_par_tranches() {
-  local total="$1" reste="$total"
-  while [ "$reste" -gt 0 ]; do
-    local part=$(( reste < FACTORY_QUOTA_SLICE ? reste : FACTORY_QUOTA_SLICE ))
-    log_warn "Quota atteint — pause de $((part / 60)) min (reste $((reste / 60)) min)."
-    sleep "$part"
-    reste=$(( reste - part ))
-  done
-}
-
 # ---------------------------------------------------------------------------
 #  Le worker éphémère
 # ---------------------------------------------------------------------------
@@ -137,25 +123,6 @@ lancer_worker() {
   log "Worker terminé — $tours tour(s), \$$cout, session $(cat "$SESSION_FILE")"
 
   [ "$(jq -r '.is_error' "$json")" = "false" ]
-}
-
-# Rend un fichier de consigne en substituant {{CLE}} par sa valeur.
-#
-# ⚠️ L'échappement de « & » n'est pas facultatif. Dans `${var//motif/valeur}`,
-# **bash 5.2 traite `&` comme sed** : il le remplace par le texte trouvé. Un
-# titre d'issue tout à fait ordinaire — « Basculer VF & VOSTFR » — produirait
-# donc « Basculer VF {{TITRE}} VOSTFR » dans le prompt du worker. Silencieux,
-# et découvert en testant un titre piégé plutôt qu'un titre poli.
-# (Vérifié sur bash 5.2.21 ; `sed` a exactement le même piège, changer d'outil
-# ne l'évite pas.)
-rendre_prompt() {
-  local fichier="$1"; shift
-  local rendu; rendu="$(cat "$fichier")"
-  while [ $# -ge 2 ]; do
-    local cle="$1" val="$2"; shift 2
-    rendu="${rendu//\{\{$cle\}\}/${val//&/\\&}}"
-  done
-  printf '%s' "$rendu"
 }
 
 # Extrait un champ du bloc <<<RAPPORT … RAPPORT>>>.
