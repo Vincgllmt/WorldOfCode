@@ -67,6 +67,8 @@ import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvRowEntry
 import com.purple.iptvplayer.tv.ui.common.tvRowItem
 import com.purple.iptvplayer.tv.ui.common.TvRowFocus
+import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
+import com.purple.iptvplayer.tv.ui.navigation.TvLongPressGuard
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
@@ -669,6 +671,11 @@ internal fun TvMovieDetailPage(
                 }
 
                 // Info + action buttons
+                //
+                // Le texte vit dans un bloc défilable et les boutons restent **hors** de
+                // lui : mis dans le défilement, arriver sur « Lire » aurait fait sauter la
+                // vue en bas de fiche, titre compris. Ils gardent leur place, le texte
+                // bouge dessous.
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -676,50 +683,50 @@ internal fun TvMovieDetailPage(
                         .padding(horizontal = 36.dp, vertical = 40.dp),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    detail.genre?.let {
+                    TvScrollableBlock(modifier = Modifier.weight(1f, fill = false)) {
+                        detail.genre?.let {
+                            Text(
+                                it.uppercase(),
+                                style = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple300),
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
                         Text(
-                            it.uppercase(),
-                            style = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple300),
+                            // Le fournisseur suffixe souvent « - 2024 » au titre, alors qu'une
+                            // puce affiche déjà la date : on retire le doublon. Comparer à
+                            // `detail.year` ne suffisait pas — ce champ porte la date
+                            // complète (« 2024-01-15 »), jamais la seule année.
+                            detail.name.trim().replace(YEAR_SUFFIX, ""),
+                            style    = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            detail.year?.let     { TvMetaChip(it) }
+                            detail.duration?.let { TvMetaChip(it) }
+                            detail.rating?.let   { TvMetaChip(stringResource(R.string.label_rating, it)) }
+                        }
+                        detail.description?.let {
+                            Spacer(Modifier.height(20.dp))
+                            // Plus de `heightIn` ni de `verticalScroll` ici : le pavé entier
+                            // défile, et il est focalisable — un `verticalScroll` posé sur un
+                            // `Text` ne recevait aucune touche, faute d'être focalisable.
+                            Text(
+                                it,
+                                style = LocalPurpleType.current.body.copy(color = PurplePalette.Fg2),
+                            )
+                        }
+                        detail.director?.takeIf { it.isNotBlank() }?.let {
+                            Spacer(Modifier.height(12.dp))
+                            TvMovieMetaRow(stringResource(R.string.label_director), it)
+                        }
+                        detail.cast?.takeIf { it.isNotBlank() }?.let {
+                            Spacer(Modifier.height(6.dp))
+                            TvMovieMetaRow(stringResource(R.string.label_cast), it)
+                        }
                     }
-                    Text(
-                        // Le fournisseur suffixe souvent « - 2024 » au titre, alors qu'une
-                        // puce affiche déjà la date : on retire le doublon. Comparer à
-                        // `detail.year` ne suffisait pas — ce champ porte la date
-                        // complète (« 2024-01-15 »), jamais la seule année.
-                        detail.name.trim().replace(YEAR_SUFFIX, ""),
-                        style    = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        detail.year?.let     { TvMetaChip(it) }
-                        detail.duration?.let { TvMetaChip(it) }
-                        detail.rating?.let   { TvMetaChip(stringResource(R.string.label_rating, it)) }
-                    }
-                    detail.description?.let {
-                        Spacer(Modifier.height(20.dp))
-                        // Défilable plutôt que tronqué : un synopsis long était coupé
-                        // sans aucun moyen d'en lire la fin.
-                        Text(
-                            it,
-                            style    = LocalPurpleType.current.body.copy(color = PurplePalette.Fg2),
-                            modifier = Modifier
-                                .heightIn(max = 210.dp)
-                                .verticalScroll(rememberScrollState()),
-                        )
-                    }
-                    detail.director?.takeIf { it.isNotBlank() }?.let {
-                        Spacer(Modifier.height(12.dp))
-                        TvMovieMetaRow(stringResource(R.string.label_director), it)
-                    }
-                    detail.cast?.takeIf { it.isNotBlank() }?.let {
-                        Spacer(Modifier.height(6.dp))
-                        TvMovieMetaRow(stringResource(R.string.label_cast), it)
-                    }
-                    Spacer(Modifier.height(36.dp))
+                    Spacer(Modifier.height(28.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         TvDetailButton(
                             label    = stringResource(R.string.btn_play),
@@ -743,7 +750,8 @@ internal fun TvMovieDetailPage(
                             onPlay     = onPlayLocal,
                         )
                         TvDetailButton(
-                            label   = if (isInWatchlist) "Ma liste" else stringResource(R.string.btn_watchlist_add),
+                            label   = if (isInWatchlist) stringResource(R.string.btn_watchlist_in)
+                                      else stringResource(R.string.btn_watchlist_add),
                             icon    = if (isInWatchlist) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                             primary = false,
                             onClick = onToggleWatchlist,
@@ -1006,10 +1014,35 @@ fun TvConfirmDialog(
     onDismiss: () -> Unit,
 ) {
     val cancelFocus = remember { FocusRequester() }
+
+    /**
+     * ⚠️ **Le relâchement de l'appui long arrive dans le dialogue.**
+     *
+     * Signalé à l'usage : « l'encart s'ouvre bien mais lorsque je lâche le bouton il
+     * disparaît ». Ce n'est pas un défaut d'affichage. `onLongClick` part au **`repeatCount`
+     * 1** de `DPAD_CENTER`, c'est-à-dire pendant que la touche est encore enfoncée ; le
+     * dialogue s'ouvre, prend le focus de fenêtre, et c'est **lui** qui reçoit l'`ACTION_UP`
+     * quand l'utilisateur relâche. `androidx.tv.material3.Surface` déclenche son `onClick`
+     * sur cet `ACTION_UP` — sans avoir jamais vu l'`ACTION_DOWN` correspondant — donc
+     * « Annuler », qui porte le focus d'arrivée, se valide tout seul.
+     *
+     * On avale donc tout relâchement d'`OK` tant qu'aucun appui n'a été vu **dans le
+     * dialogue**. Un relâchement sans appui n'appartient pas à cette fenêtre.
+     */
+    var enterArmed by remember { mutableStateOf(false) }
+
     Dialog(onDismissRequest = onDismiss) {
         Box(
             Modifier
                 .widthIn(max = 460.dp)
+                .onPreviewKeyEvent { event ->
+                    if (!TvLongPressGuard.isConfirmKey(event.key)) return@onPreviewKeyEvent false
+                    when {
+                        event.type == KeyEventType.KeyDown -> { enterArmed = true; false }
+                        event.type == KeyEventType.KeyUp && !enterArmed -> true
+                        else -> false
+                    }
+                }
                 .clip(PurpleShapes.Lg)
                 .background(PurplePalette.Bg2)
                 .border(1.dp, PurplePalette.Line1, PurpleShapes.Lg),

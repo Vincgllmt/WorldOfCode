@@ -215,8 +215,13 @@ private fun TvPriceCard(
                 },
                 shape = RoundedCornerShape(16.dp),
             )
-            .focusable()
+            // ⚠️ ORDRE : `onFocusChanged` AVANT `focusable()`. Un
+            // `FocusEventModifierNode` n'observe que les cibles de focus placées **après**
+            // lui ; dans l'ordre inverse la callback n'est jamais appelée, `isFocused`
+            // reste faux, et **aucune carte ne s'éclaire**. Quatrième occurrence du piège
+            // du §49.2 — la même que `TvTrackRow`.
             .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .onKeyEvent { event ->
                 if (!isLoading && event.type == KeyEventType.KeyUp &&
                     (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
@@ -280,8 +285,12 @@ private fun TvSecondaryButton(
                 color = if (isFocused) TvPurpleGlow else TvTextPrimary.copy(0.18f),
                 shape = RoundedCornerShape(12.dp),
             )
-            .focusable()
+            // Même piège d'ordre que TvPriceCard, et il coûtait plus cher ici : sur la
+            // barrière d'accès expiré, ces deux boutons sont les **seuls** focalisables de
+            // l'écran. Sans liseré, l'écran paraît mort — signalé à l'usage, « je ne peux
+            // pas naviguer ». Le focus y était pourtant, invisible.
             .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp &&
                     (event.key == Key.DirectionCenter || event.key == Key.Enter)) {

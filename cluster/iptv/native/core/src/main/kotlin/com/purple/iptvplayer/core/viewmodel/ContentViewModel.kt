@@ -99,19 +99,44 @@ class ContentViewModel(
     private val _movieDetail = MutableStateFlow<ContentState<MovieDetail>?>(null)
     val movieDetail: StateFlow<ContentState<MovieDetail>?> = _movieDetail.asStateFlow()
 
+    /** Identifiant de la fiche déjà en mémoire, pour ne pas la recharger pour rien. */
+    private var loadedMovieDetailId: Int? = null
+
+    /**
+     * ⚠️ **Ne pas repasser par `Loading` quand la fiche est déjà là.**
+     *
+     * Le défaut signalé à l'usage : « depuis le lecteur, la touche retour … on devrait
+     * revenir sur la fiche du contenu ». On y revenait — sur une fiche **vidée**. Ce
+     * `ViewModel` est porté par l'Activity, donc `_movieDetail` survit à l'aller-retour ;
+     * mais l'écran, lui, quitte la composition, son `LaunchedEffect(selectedMovieId)` se
+     * rejoue au retour, et cette méthode écrasait aussitôt la fiche chargée par
+     * `Loading`. L'utilisateur retombait sur une roue d'attente sur fond sombre —
+     * indiscernable du lecteur qu'il venait de quitter — puis sur la fiche, une requête
+     * réseau plus tard.
+     *
+     * C'est la contrepartie non vue du correctif qui a cessé de refermer la fiche en
+     * lançant la lecture : garder la fiche ouverte n'a de valeur que si on la retrouve
+     * **remplie**.
+     */
     fun loadMovieDetail(id: Int) {
+        if (loadedMovieDetailId == id && _movieDetail.value is ContentState.Success) return
         viewModelScope.launch {
             _movieDetail.value = ContentState.Loading
             try {
                 val detail = iptvRepo.fetchMovieDetail(id)
                 _movieDetail.value = ContentState.Success(detail)
+                loadedMovieDetailId = id
             } catch (e: Exception) {
                 _movieDetail.value = ContentState.Error(e.message ?: "Error")
+                loadedMovieDetailId = null
             }
         }
     }
 
-    fun clearMovieDetail() { _movieDetail.value = null }
+    fun clearMovieDetail() {
+        _movieDetail.value = null
+        loadedMovieDetailId = null
+    }
 
     // ─── Series ──────────────────────────────────────────────────────────────
 
@@ -147,19 +172,28 @@ class ContentViewModel(
     private val _seriesDetail = MutableStateFlow<ContentState<SeriesDetail>?>(null)
     val seriesDetail: StateFlow<ContentState<SeriesDetail>?> = _seriesDetail.asStateFlow()
 
+    private var loadedSeriesDetailId: Int? = null
+
+    /** Même garde que [loadMovieDetail] — la fiche série revient remplie, pas vide. */
     fun loadSeriesDetail(id: Int) {
+        if (loadedSeriesDetailId == id && _seriesDetail.value is ContentState.Success) return
         viewModelScope.launch {
             _seriesDetail.value = ContentState.Loading
             try {
                 val detail = iptvRepo.fetchSeriesDetail(id)
                 _seriesDetail.value = ContentState.Success(detail)
+                loadedSeriesDetailId = id
             } catch (e: Exception) {
                 _seriesDetail.value = ContentState.Error(e.message ?: "Error")
+                loadedSeriesDetailId = null
             }
         }
     }
 
-    fun clearSeriesDetail() { _seriesDetail.value = null }
+    fun clearSeriesDetail() {
+        _seriesDetail.value = null
+        loadedSeriesDetailId = null
+    }
 
     // ─── EPG ─────────────────────────────────────────────────────────────────
 

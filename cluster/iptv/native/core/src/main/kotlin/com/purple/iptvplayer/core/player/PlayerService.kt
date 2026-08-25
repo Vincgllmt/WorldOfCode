@@ -302,7 +302,14 @@ class PlayerService(context: Context) {
         player.playWhenReady = true
         _state.value = PlayerState(
             status = PlayerStatus.BUFFERING,
-            title = items.getOrNull(startIndex)?.second ?: ""
+            title = items.getOrNull(startIndex)?.second ?: "",
+            // ⚠️ `PlayerState()` remet `mediaItemIndex` à 0 — or on démarre à [startIndex].
+            // Ce zéro était lu comme un **changement d'épisode** par
+            // `PlayerViewModel.observeEpisodeTransitions` : lancer l'épisode 5 marquait le
+            // 5 comme terminé, faisait glisser le contexte sur le 1, puis marquait le 1 à
+            // l'arrivée du vrai index. Trois entrées de « Reprendre la lecture » pour une
+            // seule lecture.
+            mediaItemIndex = startIndex,
         )
     }
 

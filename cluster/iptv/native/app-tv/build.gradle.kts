@@ -54,6 +54,27 @@ android {
     }
 
     buildTypes {
+        debug {
+            /*
+             * Signée de la **clé d'upload**, quand elle est disponible sur la machine.
+             *
+             * Android refuse de remplacer une application par une build d'une autre
+             * signature : sans cela, installer la debug par-dessus la release imposerait de
+             * désinstaller d'abord, donc de perdre identifiants, favoris et « Reprendre la
+             * lecture ». Or c'est précisément cet historique qui sert à vérifier un
+             * correctif à l'usage.
+             *
+             * Conditionnel : la machine « hjouini » n'a pas le keystore (§3), et un
+             * `signingConfig` au `storeFile` nul ferait échouer jusqu'à la build de debug.
+             */
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            // Pour qu'aucune capture d'écran ne laisse de doute sur ce qui tourne : une
+            // debug signée de la clé de production ressemble sinon trait pour trait à une
+            // release.
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

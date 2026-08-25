@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,6 +45,12 @@ class PlayerViewModel(
     private var lastKnownDurationMs: Long = 0L
 
     fun playMedia(url: String, title: String, mediaId: String? = null, startPositionMs: Long = 0L, cover: String? = null, type: String? = null) {
+        // La durée du média précédent ne dit rien de celui-ci : la garder faisait marquer
+        // « terminé » un épisode dont on ne connaissait pas encore la longueur.
+        lastKnownDurationMs = 0L
+        episodes            = emptyList()
+        episodesSeriesId    = null
+        transitionJob?.cancel()
         currentMediaId = mediaId
         currentUrl     = url
         currentTitle   = title
@@ -79,6 +86,7 @@ class PlayerViewModel(
         this.episodesSeriesId = seriesId
         this.episodeIndex     = startIndex
         currentType           = "series"
+        lastKnownDurationMs   = 0L
         applyEpisode(startIndex, seriesCover)
 
         val items = episodes.map { Pair(it.url, it.title) }
@@ -98,12 +106,23 @@ class PlayerViewModel(
 
     private var transitionJob: Job? = null
 
+    /**
+     * Suit l'avance de la liste — et **rien d'autre**.
+     *
+     * ⚠️ `drop(1)` : ce flux est un `StateFlow`, il rejoue sa valeur courante à la
+     * souscription. Cette première valeur est l'état que [PlayerService.playPlaylist]
+     * vient de poser, pas une transition ; la traiter comme telle marquait un épisode
+     * comme terminé au moment même où on le lançait. Le garde `index == episodeIndex` ne
+     * suffisait pas : il dépendait de ce que `PlayerState` porte le bon index de départ,
+     * ce qu'il ne faisait pas.
+     */
     private fun observeEpisodeTransitions(seriesCover: String?) {
         transitionJob?.cancel()
         transitionJob = viewModelScope.launch {
             playerService.state
                 .map { it.mediaItemIndex }
                 .distinctUntilChanged()
+                .drop(1)
                 .collect { index ->
                     if (index == episodeIndex) return@collect
                     markPreviousEpisodeWatched()
@@ -178,6 +197,12 @@ class PlayerViewModel(
         saveProgressNow()
         progressSavingJob?.cancel()
         progressSavingJob = null
+        // Même raison que la boucle d'enregistrement : `playerService.stop()` remet l'état
+        // à neuf, donc `mediaItemIndex` à 0. Un suivi encore actif y lirait une transition
+        // vers l'épisode 1 et le réinsérerait dans « Reprendre la lecture » — exactement
+        // le défaut que ce `stop()` a été écrit pour supprimer.
+        transitionJob?.cancel()
+        transitionJob = null
         currentMediaId = null
         playerService.stop()
     }

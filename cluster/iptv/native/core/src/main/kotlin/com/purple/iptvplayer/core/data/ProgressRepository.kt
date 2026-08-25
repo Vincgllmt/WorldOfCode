@@ -50,30 +50,25 @@ class ProgressRepository(private val context: Context) {
         parseRecentJson(json)
     }
 
+    /**
+     * Insertion en tête, **regroupée** : cf. [RecentPolicy]. Un épisode ne s'ajoute plus à
+     * côté des autres épisodes de sa série, il les remplace.
+     */
     private suspend fun updateRecentList(
         id: String, url: String, title: String, cover: String?, type: String, pos: Long, dur: Long
     ) {
         context.progressDataStore.edit { prefs ->
             val json = prefs[KEY_RECENT_JSON] ?: "[]"
-            val list = parseRecentJson(json).toMutableList()
-            
-            // Remove existing entry for this id
-            list.removeAll { it.id == id }
-            
-            // Add at start
-            list.add(0, RecentItem(id, url, title, cover, type, pos, dur, System.currentTimeMillis()))
-            
-            // Limit to 20 items
-            val limited = list.take(20)
-            
-            prefs[KEY_RECENT_JSON] = encodeRecentJson(limited)
+            val item = RecentItem(id, url, title, cover, type, pos, dur, System.currentTimeMillis())
+            val list = RecentPolicy.upsert(parseRecentJson(json), item)
+            prefs[KEY_RECENT_JSON] = encodeRecentJson(list)
         }
     }
 
     private suspend fun removeFromRecent(id: String) {
         context.progressDataStore.edit { prefs ->
             val json = prefs[KEY_RECENT_JSON] ?: "[]"
-            val list = parseRecentJson(json).filter { it.id != id }
+            val list = RecentPolicy.remove(parseRecentJson(json), id)
             prefs[KEY_RECENT_JSON] = encodeRecentJson(list)
         }
     }

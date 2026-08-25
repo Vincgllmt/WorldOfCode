@@ -82,6 +82,23 @@ fun TvPlayerScreen(
     val isLive = state.durationMs <= 0L
 
     val rootFocus = remember { FocusRequester() }
+    /**
+     * La racine a-t-elle **elle-même** le focus ?
+     *
+     * ⚠️ C'est la moitié manquante du correctif « impossible de naviguer sur le lecteur ».
+     * Le `Box` racine occupe tout l'écran ; quand c'est **lui** qui porte le focus, la
+     * recherche directionnelle de Compose ne trouve plus aucun candidat, dans aucune
+     * direction : elle exige qu'un candidat dépasse le rectangle focalisé du côté visé, et
+     * rien ne dépasse le plein écran. Les touches partaient donc dans le vide.
+     *
+     * Deux causes s'y ajoutaient. Un `LaunchedEffect` de fin de composable reprenait le
+     * focus à la racine 100 ms après l'entrée, soit 20 ms après que l'overlay l'ait donné
+     * au bouton central — il est supprimé. Et **chaque appui réarme le minuteur** de
+     * masquage (§29) : l'overlay ne se cachait donc jamais tant que l'utilisateur appuyait,
+     * et le seul chemin qui rendait le focus à un contrôle — masquer puis réafficher — ne
+     * s'ouvrait plus jamais. L'écran restait figé aussi longtemps qu'on insistait.
+     */
+    var rootFocused by remember { mutableStateOf(false) }
 
     // G13 — un requester par contrôle, et le dernier focalisé.
     val controlFocus = remember { PlayerControl.entries.associateWith { FocusRequester() } }
@@ -137,9 +154,20 @@ fun TvPlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(rootFocus)
+            .onFocusChanged { rootFocused = it.isFocused }
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                // Filet de sécurité : si la racine porte encore le focus alors que
+                // l'overlay est affiché, aucune direction ne peut aboutir (cf.
+                // `rootFocused`). On rend la main aux contrôles au lieu de laisser la
+                // touche se perdre — un contrôle disparu de la composition, comme
+                // « Épisode suivant » en fin de saison, suffit à retomber dans ce cas.
+                if (TvPlayerKeys.reentersOverlay(event.key, overlayVisible, rootFocused)) {
+                    runCatching { controlFocus.getValue(lastControl).requestFocus() }
+                    lastInteractionMs = System.currentTimeMillis()
+                    return@onKeyEvent true
+                }
                 // Tout appui compte comme une interaction, y compris quand l'overlay est
                 // déjà visible : les événements non consommés par l'élément focalisé
                 // remontent jusqu'ici avant que le focus ne se déplace. RETOUR en est
@@ -284,10 +312,6 @@ fun TvPlayerScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
-        delay(100)
-        try { rootFocus.requestFocus() } catch (_: Exception) { }
-    }
 }
 
 /** Déclare l'identité d'un contrôle et mémorise son focus. */

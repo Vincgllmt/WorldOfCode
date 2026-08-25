@@ -68,6 +68,7 @@ import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvRowEntry
 import com.purple.iptvplayer.tv.ui.common.tvRowItem
 import com.purple.iptvplayer.tv.ui.common.TvRowFocus
+import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
@@ -628,6 +629,18 @@ internal fun TvSeriesDetailPage(
     BackHandler(enabled = true) { onClose() }
 
     val firstDetailFocus = remember { FocusRequester() }
+    /**
+     * La première ligne d'épisode est-elle **composée** ?
+     *
+     * Hissé au-dessus du `when (detailState)` : la branche `Success` entre et sort de la
+     * composition à chaque rechargement, un `remember` posé dedans repartirait de zéro.
+     *
+     * Ce drapeau est la clé des deux corrections de focus de la fiche : réclamer un
+     * `FocusRequester` détaché lève, et le point d'entrée du groupe doit s'effacer tant
+     * que sa cible n'existe pas — même dispositif que G6/G9 sur la grille (§43).
+     */
+    var firstEpisodeReady by remember { mutableStateOf(false) }
+    var episodeFocusClaimed by remember(seriesId) { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -653,8 +666,24 @@ internal fun TvSeriesDetailPage(
                 var selectedSeason by remember { mutableStateOf(sortedSeasons.firstOrNull()) }
                 val focusManager   = LocalFocusManager.current
 
-                LaunchedEffect(Unit) {
-                    try { firstDetailFocus.requestFocus() } catch (_: Exception) {}
+                // ⚠️ **L'ancien effet ne pouvait pas aboutir** — c'est pour cela que le
+                // focus arrivait sur « Ma liste » alors que le code visait déjà le premier
+                // épisode. Il partait dès que le détail était chargé ; la `LazyColumn` des
+                // épisodes, elle, ne compose ses lignes qu'à la **mise en page** suivante.
+                // `firstDetailFocus` n'était donc rattaché à aucun nœud, `requestFocus()`
+                // levait, le `catch` avalait — et Compose retombait sur le premier
+                // focalisable de l'arbre, le bouton « Ma liste » de la colonne gauche.
+                // Piège du G6, mot pour mot (§43).
+                //
+                // On attend donc que la ligne se compose et le dise. Une seule fois
+                // (`episodeFocusClaimed`) : rejouer la demande volerait ensuite le focus à
+                // l'utilisateur, le défaut du §40.
+                LaunchedEffect(firstEpisodeReady) {
+                    if (firstEpisodeReady && !episodeFocusClaimed) {
+                        episodeFocusClaimed = true
+                        withFrameNanos { }
+                        runCatching { firstDetailFocus.requestFocus() }
+                    }
                 }
 
                 // Ambient background
@@ -716,19 +745,21 @@ internal fun TvSeriesDetailPage(
                         )
                         d.plot?.let {
                             Spacer(Modifier.height(10.dp))
-                            // Défilable plutôt que tronqué à 5 lignes : le synopsis était
-                            // coupé sans aucun moyen d'en lire la fin.
-                            Text(
-                                it,
-                                style    = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg3),
-                                // `weight` et non une hauteur fixe : le synopsis prend
-                                // la place *restante*, donc les boutons d'action tiennent
-                                // toujours dans l'écran. Avec une hauteur en dur, un long
-                                // synopsis les repoussait hors du cadre.
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .verticalScroll(rememberScrollState()),
-                            )
+                            // `weight` et non une hauteur fixe : le synopsis prend la place
+                            // *restante*, donc les boutons d'action tiennent toujours dans
+                            // l'écran. Avec une hauteur en dur, un long synopsis les
+                            // repoussait hors du cadre.
+                            //
+                            // Le `verticalScroll` était posé sur le `Text`, qui n'est pas
+                            // focalisable : à la télécommande il ne recevait aucune touche
+                            // et le synopsis restait coupé net. `TvScrollableBlock` porte
+                            // la cible de focus, donc les touches.
+                            TvScrollableBlock(modifier = Modifier.weight(1f, fill = false)) {
+                                Text(
+                                    it,
+                                    style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg3),
+                                )
+                            }
                         }
                         Spacer(Modifier.height(14.dp))
                         // Les deux actions sur une seule ligne : empilées, elles
@@ -829,17 +860,35 @@ internal fun TvSeriesDetailPage(
 
                         // Episode list
                         val episodes = d.seasons[selectedSeason] ?: emptyList()
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // `▶` depuis « Ma liste » tombait au **milieu** de la liste : à
+                        // distance horizontale égale, la recherche directionnelle départage
+                        // par l'écart des centres sur l'axe vertical, et « Ma liste » est en
+                        // bas d'une colonne de 280 dp. C'est le défaut du §49.3, transposé
+                        // de l'axe horizontal à l'axe vertical — et il se corrige de la même
+                        // façon : en imposant le point d'entrée.
+                        LazyColumn(
+                            modifier            = Modifier.tvGroupEntry(
+                                target = { firstDetailFocus.takeIf { firstEpisodeReady } },
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             lazyItems(episodes, key = { it.id }) { ep ->
                                 val dlId   = "ep_${seriesId}_${ep.id}"
                                 val dlItem = downloads.find { it.id == dlId }
+                                val isFirstEpisode = ep.id == episodes.firstOrNull()?.id
+                                if (isFirstEpisode) {
+                                    DisposableEffect(Unit) {
+                                        firstEpisodeReady = true
+                                        onDispose { firstEpisodeReady = false }
+                                    }
+                                }
                                 TvEpisodeRow(
                                     // L'action premiere d'une serie est de regarder un
                                     // episode : le focus d'arrivee va donc au premier,
                                     // et non au bouton « Ma liste » comme auparavant —
                                     // depuis lequel aucune direction ne menait aux
                                     // episodes.
-                                    modifier         = if (ep == episodes.firstOrNull())
+                                    modifier         = if (isFirstEpisode)
                                                            Modifier.focusRequester(firstDetailFocus)
                                                        else Modifier,
                                     seriesId         = seriesId,

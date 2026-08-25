@@ -2,6 +2,7 @@ package com.purple.iptvplayer.tv.ui.navigation
 
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 
 /**
  * Décisions de navigation de `app-tv`, extraites des composables pour être testables sans
@@ -111,6 +112,56 @@ object TvPlayerKeys {
      * `RETOUR` en est exclu pour la même raison : il quitte l'écran, il n'y prolonge rien.
      */
     fun countsAsInteraction(key: Key): Boolean = key != Key.Back
+
+    /** Les quatre directions, seules touches concernées par une recherche de focus. */
+    private val DIRECTIONS = setOf(
+        Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight,
+    )
+
+    /**
+     * `true` quand la touche doit **ramener le focus dans l'overlay** au lieu de suivre
+     * son cours.
+     *
+     * Le cas corrigé (« impossible de naviguer sur le lecteur ») : l'overlay est affiché,
+     * mais c'est le `Box` racine — plein écran — qui porte le focus. La recherche
+     * directionnelle de Compose ne retient un candidat que s'il **dépasse** le rectangle
+     * focalisé du côté visé ; rien ne dépasse le plein écran, donc aucune direction
+     * n'aboutit, dans aucun sens. Sans ce garde-fou l'écran paraît figé, et le seul
+     * mécanisme qui rendait le focus à un contrôle — le masquage automatique — ne se
+     * déclenche pas non plus, chaque appui réarmant son minuteur.
+     *
+     * @param rootFocused la racine porte elle-même le focus, aucun contrôle ne l'a.
+     */
+    fun reentersOverlay(key: Key, overlayVisible: Boolean, rootFocused: Boolean): Boolean =
+        overlayVisible && rootFocused && key in DIRECTIONS
+}
+
+/**
+ * Le relâchement d'un appui long n'appartient pas à la fenêtre qui vient de s'ouvrir.
+ *
+ * Le défaut mesuré : maintenir `OK` sur une carte de « Reprendre la lecture » ouvrait bien
+ * la confirmation, et la relâcher la refermait aussitôt. `onLongClick` part au
+ * `repeatCount` 1 de `DPAD_CENTER`, touche encore enfoncée ; le dialogue s'ouvre et prend
+ * le focus de fenêtre avant l'`ACTION_UP`. `androidx.tv.material3.Surface` déclenche son
+ * `onClick` sur cet `ACTION_UP` isolé, et le bouton d'arrivée — « Annuler » — se valide
+ * seul.
+ *
+ * La règle est indépendante du dialogue : **un relâchement sans appui préalable dans la
+ * fenêtre n'est pas un clic**. Elle est ici, et non dans le composable, pour être testable
+ * sans appareil (§4).
+ */
+object TvLongPressGuard {
+
+    /** Les touches que `androidx.tv.material3.Surface` traite comme une validation. */
+    fun isConfirmKey(key: Key): Boolean =
+        key == Key.DirectionCenter || key == Key.Enter || key == Key.NumPadEnter
+
+    /**
+     * @param armed un appui a déjà été vu dans cette fenêtre.
+     * @return `true` si l'événement doit être **avalé** au lieu d'être remis au bouton.
+     */
+    fun swallows(key: Key, type: KeyEventType, armed: Boolean): Boolean =
+        isConfirmKey(key) && type == KeyEventType.KeyUp && !armed
 }
 
 /**

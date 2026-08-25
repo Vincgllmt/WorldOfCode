@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.purple.iptvplayer.core.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -50,30 +51,48 @@ class TrialRepository(
     )
 
     /**
+     * Déverrouillage local du poste propriétaire — cf. `core/build.gradle.kts`.
+     *
+     * Court-circuite les quatre lectures d'accès **et elles seules** : `TrialPolicy` reste
+     * la règle, intacte et testée, et rien d'autre dans l'application ne change de
+     * comportement. `false` dans toute build qui ne déclare pas `purple.unlock` dans son
+     * `local.properties`, donc dans toute build publiée.
+     *
+     * Il est placé ici et pas dans [TrialPolicy] à dessein : ce n'est pas une décision
+     * métier, c'est un drapeau de build. Le mettre dans la logique pure obligerait à
+     * tester une règle qui n'existe que sur une machine.
+     */
+    private val unlocked: Boolean get() = BuildConfig.OWNER_UNLOCK
+
+    /**
      * État d'accès pour l'interface : à quel titre l'utilisateur a accès, et non
      * seulement pour combien de temps. Voir [AccessState].
      */
-    suspend fun getAccessState(): AccessState = TrialPolicy.accessState(
+    suspend fun getAccessState(): AccessState {
+        if (unlocked) return AccessState.Pro
+        return TrialPolicy.accessState(
+            now = now(),
+            trialStartMs = getTrialStartMs(),
+            expiryMs = getExpiryMs(),
+            isPro = isPro(),
+        )
+    }
+
+    suspend fun hasAccess(): Boolean = unlocked || TrialPolicy.hasAccess(
         now = now(),
         trialStartMs = getTrialStartMs(),
         expiryMs = getExpiryMs(),
         isPro = isPro(),
     )
 
-    suspend fun hasAccess(): Boolean = TrialPolicy.hasAccess(
-        now = now(),
-        trialStartMs = getTrialStartMs(),
-        expiryMs = getExpiryMs(),
-        isPro = isPro(),
-    )
-
-    suspend fun isPremium(): Boolean = TrialPolicy.isPremium(
+    suspend fun isPremium(): Boolean = unlocked || TrialPolicy.isPremium(
         now = now(),
         expiryMs = getExpiryMs(),
         isPro = isPro(),
     )
 
     suspend fun isPro(): Boolean {
+        if (unlocked) return true
         val ds = context.dataStore.data.first()
         if (ds[KEY_IS_PRO] == true) return true
         return withContext(Dispatchers.IO) { securePrefs.getBoolean("is_pro_user", false) }
