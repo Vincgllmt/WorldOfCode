@@ -16,6 +16,13 @@ PRIORITIES_FILE="$PROJECT_DIR/USER_PRIORITIES.md"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 
+# Identifiants locaux, s'ils existent. `set -a` exporte tout ce qui est défini
+# dans le fichier — `glab` lit GITLAB_TOKEN et GITLAB_HOST dans l'environnement,
+# et cela prime sur sa configuration.
+if [ -f "$FACTORY_DIR/.env" ]; then
+  set -a; . "$FACTORY_DIR/.env"; set +a
+fi
+
 # --- Réglages, tous surchargeables par l'environnement ---------------------
 
 # Branche de travail. Ce n'est PAS `main` : `cluster/iptv/` est dans le
@@ -25,6 +32,10 @@ mkdir -p "$STATE_DIR" "$LOG_DIR"
 # Ne traiter que les issues portant ce label. Vide = toutes celles qui me sont
 # assignées.
 : "${FACTORY_LABEL:=}"
+# Qui doit être l'assigné des issues traitées. `@me` fonctionne avec un jeton
+# personnel ; avec un jeton de PROJET, `@me` est le bot et ne trouve rien —
+# d'où la possibilité de nommer quelqu'un.
+: "${FACTORY_ASSIGNEE:=@me}"
 # Bornes du worker éphémère. `claude` 2.1.241 n'a pas de --max-turns : la seule
 # borne disponible est murale.
 : "${FACTORY_WORKER_TIMEOUT:=3600}"
@@ -100,7 +111,25 @@ preflight() {
   command -v glab   >/dev/null 2>&1 || die "La CLI « glab » est introuvable — installer glab puis « glab auth login »."
   command -v jq     >/dev/null 2>&1 || die "« jq » est requis."
 
-  glab auth status >/dev/null 2>&1 || die "glab n'est pas authentifié — lancer « glab auth login »."
+  # Vaut aussi pour un jeton EXPIRÉ, pas seulement absent : `glab auth status`
+  # fait un vrai appel API et sort en 1 sur un 401. Le jeton OAuth posé par
+  # `glab auth login` expire — constaté après quelques heures.
+  glab auth status >/dev/null 2>&1 || \
+    die "glab n'est pas utilisable (jeton absent ou expiré) — vérifier factory/.env, ou relancer « glab auth login »."
+
+  # Avertir AVANT la panne : un jeton qui expire pendant la nuit fait échouer
+  # l'usine au moment de publier, après avoir dépensé le travail.
+  local reste
+  reste="$(glab api personal_access_tokens/self 2>/dev/null \
+    | python3 -c "
+import json,sys,datetime
+try:
+    d=json.load(sys.stdin); e=d.get('expires_at')
+    print((datetime.date.fromisoformat(e)-datetime.date.today()).days if e else 9999)
+except Exception: print(9999)" 2>/dev/null || echo 9999)"
+  if [ "${reste:-9999}" -lt 30 ]; then
+    log_warn "Le jeton GitLab expire dans $reste jour(s) — le renouveler avant qu'il ne lâche en pleine exécution."
+  fi
 
   [ -x "$NATIVE_DIR/gradlew" ] || die "gradlew introuvable dans $NATIVE_DIR. Mauvaise branche ? Le code IPTV n'existe que sur « $FACTORY_BRANCH » (CLAUDE.md §1)."
 

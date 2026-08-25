@@ -31,10 +31,11 @@ glab auth status >/dev/null 2>&1 || die "glab n'est pas authentifié — lancer 
 log_step "Synchronisation GitLab"
 
 # --- Récupération ----------------------------------------------------------
-# `--assignee=@me` : la consigne est « les issues qui me sont assignées ».
+# L'assigné est nommé (FACTORY_ASSIGNEE) plutôt que figé à `@me` : avec un
+# jeton de PROJET, `@me` désigne le bot du projet et ne trouve aucun ticket.
 # `-P 100` : une page suffit très largement ; au-delà, le problème n'est plus
 # la synchronisation mais la priorisation.
-args=(issue list --assignee=@me --opened -P 100 --output json)
+args=(issue list --assignee="$FACTORY_ASSIGNEE" --opened -P 100 --output json)
 [ -n "$FACTORY_LABEL" ] && args+=(--label "$FACTORY_LABEL")
 
 brut="$STATE_DIR/issues.json"
