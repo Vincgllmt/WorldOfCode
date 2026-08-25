@@ -185,6 +185,42 @@ condense_gradle() {
     | head -80
 }
 
+# --- Tests instrumentés : la seule preuve qui voit un écran ---------------
+#
+# Les tests JVM ne rendent aucun Compose et ne voient aucun focus (§8.14). Les
+# tests instrumentés, eux, tournent sur un vrai Android — AVD `purple_tv` pour
+# la TV, Pixel 7 branché pour le mobile.
+#
+# Règle : on ne les lance QUE si l'appareil correspondant répond, et on le DIT.
+# Sauter la vérification en silence ferait croire qu'un défaut d'UI a été
+# prouvé alors qu'aucun pixel n'a été rendu — c'est précisément le mensonge que
+# l'usine est censée rendre impossible.
+
+# Le premier appareil correspondant au motif, ou vide.
+device_matching() {
+    local motif="$1"
+    command -v adb >/dev/null 2>&1 || return 0
+    adb devices 2>/dev/null | awk '$2 == "device" {print $1}' | grep -E "$motif" | head -1
+}
+
+# Émulateur TV : nom `emulator-*`. Appareil physique : tout le reste.
+tv_device()     { device_matching '^emulator-'; }
+mobile_device() { device_matching '^[^e]|^e[^m]'; }
+
+# Lance les tests instrumentés d'un module sur un appareil donné.
+# Rend 0 si vert, 1 si rouge, 2 si aucun appareil (donc NON vérifié).
+run_instrumented() {
+    local module="$1" serial="$2" sortie="$3"
+    if [ -z "$serial" ]; then
+        log_warn "$module : aucun appareil — tests instrumentés NON exécutés."
+        return 2
+    fi
+    log "$module : tests instrumentés sur $serial…"
+    ( cd "$NATIVE_DIR" && ANDROID_SERIAL="$serial" \
+        ./gradlew --no-daemon --console=plain "$module:connectedDebugAndroidTest" ) \
+        >"$sortie" 2>&1
+}
+
 # Compte les tests exécutés, d'après les rapports XML de Gradle.
 # Sert de garde-fou anti-triche : ce nombre ne doit jamais baisser.
 count_tests() {

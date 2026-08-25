@@ -40,6 +40,10 @@ android {
         minSdk        = 23
         targetSdk     = 36
         versionCode   = 11
+        // Runner des tests instrumentés (source set androidTest). Ceux-là
+        // tournent sur l'AVD purple_tv ou sur un appareil branché : ce sont
+        // les seuls qui rendent vraiment du Compose et voient le focus.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionName   = "1.3.0"
     }
 
@@ -136,4 +140,17 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// --- Test instrumenté ---------------------------------------------------
+// `androidTestImplementation` : compilé et exécuté SUR L'APPAREIL, jamais en
+// JVM. `debugImplementation` du manifeste de test est requis par Compose pour
+// injecter l'activité hôte des tests.
+dependencies {
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

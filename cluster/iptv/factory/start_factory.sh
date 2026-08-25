@@ -238,7 +238,32 @@ traiter_tache() {
   prompt="$(rendre_prompt "$FACTORY_DIR/prompts/worker.md" \
               IID "$iid" TITRE "$titre" PROJET "$PROJECT_DIR" CORPS "$corps")"
 
-  local tentative=1 reprise="" vert=0 gradle_out="$STATE_DIR/gradle.log"
+  local tentative=1 reprise="" vert=0
+  local gradle_out="$STATE_DIR/gradle.log" instr_out="$STATE_DIR/instrumented.log"
+  ECRAN="non exécutés"
+
+  # Prépare la tentative suivante : deux reprises de session, puis une session
+  # NEUVE. Si l'agent s'est enfermé dans une impasse, lui redonner son propre
+  # contexte l'y maintient — d'où la coupure au troisième essai.
+  preparer_relance() {
+    local trace="$1"
+    if [ "$tentative" -le 3 ]; then
+      reprise="$(cat "$SESSION_FILE" 2>/dev/null || true)"
+    else
+      reprise=""
+      log_warn "Session neuve — les reprises n'ont pas abouti."
+    fi
+    prompt="$(rendre_prompt "$FACTORY_DIR/prompts/retry.md" \
+                TENTATIVE "$tentative" MAX "$FACTORY_MAX_ATTEMPTS" \
+                GRADLE "$(condense_gradle "$trace")")"
+    # Une session neuve n'a aucun contexte : il lui faut la consigne complète.
+    if [ -z "$reprise" ]; then
+      prompt="$(rendre_prompt "$FACTORY_DIR/prompts/worker.md" \
+                  IID "$iid" TITRE "$titre" PROJET "$PROJECT_DIR" CORPS "$corps")
+
+$prompt"
+    fi
+  }
 
   while [ "$tentative" -le "$FACTORY_MAX_ATTEMPTS" ]; do
     log "Tentative $tentative/$FACTORY_MAX_ATTEMPTS${reprise:+ (reprise de session)}"
@@ -251,36 +276,34 @@ traiter_tache() {
     fi
 
     # --- LE juge de paix : l'orchestrateur relance Gradle lui-même -----------
-    log "Vérification indépendante par Gradle…"
-    if run_gradle "$gradle_out"; then
-      vert=1; break
+    log "Vérification indépendante par Gradle (JVM)…"
+    if ! run_gradle "$gradle_out"; then
+      log_err "Build rouge."
+      condense_gradle "$gradle_out" | sed 's/^/    /'
+      tentative=$((tentative + 1))
+      [ "$tentative" -gt "$FACTORY_MAX_ATTEMPTS" ] && break
+      preparer_relance "$gradle_out"; continue
     fi
-    log_err "Build rouge."
-    condense_gradle "$gradle_out" | sed 's/^/    /'
+
+    # --- Seconde preuve : ce qui se voit à l'écran --------------------------
+    # Les tests JVM ne rendent aucun Compose et ne voient aucun focus (§8.14).
+    # Quand un appareil répond, on va donc chercher la preuve là où elle est.
+    # Quand il n'y en a pas, on le DIT — sauter en silence ferait croire qu'un
+    # défaut d'UI a été vérifié alors qu'aucun pixel n'a été rendu.
+    ECRAN="non exécutés (aucun appareil)"
+    local code_ecran=0
+    run_instrumented ":app-tv" "$(tv_device)" "$instr_out" || code_ecran=$?
+    case "$code_ecran" in
+      0) ECRAN="✅ app-tv vérifiée à l'écran"; vert=1; break ;;
+      2) ECRAN="⚠️ non vérifié à l'écran — aucun appareil"; vert=1; break ;;
+      *) log_err "Tests instrumentés ROUGES — le défaut se voit à l'écran."
+         condense_gradle "$instr_out" | sed 's/^/    /'
+         ECRAN="❌ app-tv rouge à l'écran" ;;
+    esac
 
     tentative=$((tentative + 1))
     [ "$tentative" -gt "$FACTORY_MAX_ATTEMPTS" ] && break
-
-    # Deux reprises de session, puis une session NEUVE : si l'agent s'est
-    # enfermé dans une impasse, lui redonner son propre contexte l'y maintient.
-    if [ "$tentative" -le 3 ]; then
-      reprise="$(cat "$SESSION_FILE" 2>/dev/null || true)"
-    else
-      reprise=""
-      log_warn "Session neuve — les reprises n'ont pas abouti."
-    fi
-
-    prompt="$(rendre_prompt "$FACTORY_DIR/prompts/retry.md" \
-                TENTATIVE "$tentative" MAX "$FACTORY_MAX_ATTEMPTS" \
-                GRADLE "$(condense_gradle "$gradle_out")")"
-    # Session neuve : elle n'a aucun contexte, il faut lui redonner la consigne
-    # complète en plus du rapport d'échec.
-    if [ -z "$reprise" ]; then
-      prompt="$(rendre_prompt "$FACTORY_DIR/prompts/worker.md" \
-                  IID "$iid" TITRE "$titre" PROJET "$PROJECT_DIR" CORPS "$corps")
-
-$prompt"
-    fi
+    preparer_relance "$instr_out"
   done
 
   fingerprint_tests > "$apres"
@@ -326,7 +349,8 @@ $(sed -n '/<<<RAPPORT/,/RAPPORT>>>/p' "$STATE_DIR/worker_report.txt" | sed '1d;$
 
 ---
 **Ticket** : #$iid — $titre
-**Vérification** : $( [ "$vert" -eq 1 ] && echo "✅ \`$FACTORY_GRADLE_TASKS\` au vert (relancé par l'orchestrateur)" || echo "❌ build rouge après $FACTORY_MAX_ATTEMPTS tentatives" )
+**Vérification (JVM)** : $( [ "$vert" -eq 1 ] && echo "✅ \`$FACTORY_GRADLE_TASKS\` au vert (relancé par l'orchestrateur)" || echo "❌ rouge après $FACTORY_MAX_ATTEMPTS tentatives" )
+**Vérification (écran)** : $ECRAN
 **Intégrité de la suite** : $(awk -F: '{s+=$2} END {print s+0}' "$avant") → $(awk -F: '{s+=$2} END {print s+0}' "$apres") @Test
 
 \`\`\`
