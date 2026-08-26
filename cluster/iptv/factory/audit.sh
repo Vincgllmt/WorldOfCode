@@ -27,6 +27,7 @@ DRY_RUN=0; CIBLES=()
 for a in "$@"; do
   case "$a" in
     --dry-run) DRY_RUN=1 ;;
+    --resume)  REPRENDRE=1 ;;
     --list)    LISTER=1 ;;
     -h|--help) sed -n '/^#  Usage :/,/^# ---/p' "$0" | sed 's/^#\s\?//; $d'; exit 0 ;;
     *)         CIBLES+=("$a") ;;
@@ -72,6 +73,11 @@ if [ "${LISTER:-0}" = 1 ]; then
   for p in "${ORDRE[@]}"; do printf '  %-22s %s\n' "$p" "${PERIMETRES[$p]}"; done
   exit 0
 fi
+if [ "${REPRENDRE:-0}" = 1 ]; then
+  [ -s "$STATE_DIR/audit-queue.txt" ] || die "Aucune file à reprendre ($STATE_DIR/audit-queue.txt vide)."
+  mapfile -t CIBLES < "$STATE_DIR/audit-queue.txt"
+  log "Reprise : ${#CIBLES[@]} périmètre(s) restant(s)."
+fi
 [ ${#CIBLES[@]} -eq 0 ] && CIBLES=("${ORDRE[@]}")
 
 acquire_lock
@@ -95,8 +101,26 @@ total_defauts=0; total_tickets=0
 # C'est ce qui a fait passer 13 périmètres à la trappe le 2026-08-25 — ils
 # auraient dû être rejoués après le réarmement du quota.
 FILE=("${CIBLES[@]}")
+QUEUE_FILE="$STATE_DIR/audit-queue.txt"
+
+# La file vit sur DISQUE, pas seulement en mémoire.
+#
+# Un audit peut s'interrompre sur une limite de session annoncée à plusieurs
+# heures. Dormir aussi longtemps dans un processus détaché est fragile — vérifié
+# le 2026-08-25 : le `nohup` n'a pas survécu à l'attente de 265 minutes, et tout
+# le travail restant a été perdu sans trace. Écrire la file permet de reprendre
+# exactement où l'on s'est arrêté, par `./audit.sh --resume`.
+# Un `--dry-run` n'écrit RIEN, file comprise : il mesure, il ne décide pas.
+# Sans cette garde, une mesure sur un seul périmètre vidait la file des neuf
+# autres en se terminant — constaté.
+sauver_file() {
+  [ "$DRY_RUN" = 1 ] && return 0
+  printf '%s\n' "${FILE[@]}" > "$QUEUE_FILE"
+}
+
 while [ ${#FILE[@]} -gt 0 ]; do
   cible="${FILE[0]}"; FILE=("${FILE[@]:1}")
+  sauver_file
   chemins="${PERIMETRES[$cible]:-}"
   [ -n "$chemins" ] || { log_warn "Périmètre inconnu : $cible"; continue; }
 
@@ -108,8 +132,35 @@ while [ ${#FILE[@]} -gt 0 ]; do
   log_step "Audit de $cible"
   log "$(find $reels -name '*.kt' 2>/dev/null | wc -l) fichier(s), $(cat $(find $reels -name '*.kt' 2>/dev/null) 2>/dev/null | wc -l) lignes"
 
+  # --- Le code EST dans le prompt ----------------------------------------
+  #
+  # Le levier de coût le plus fort, et le moins évident. Sans lui, l'agent
+  # passe l'essentiel de ses tours à CHERCHER puis LIRE les fichiers : 29, 36,
+  # puis 40 tours mesurés, chacun renvoyant tout le contexte accumulé. Or
+  # 500 lignes de Kotlin pèsent ~6 000 jetons : les donner une fois coûte moins
+  # que quarante allers-retours pour les découvrir.
+  #
+  # L'agent garde ses outils — il en aura besoin pour comparer avec l'autre UI
+  # ou vérifier un `strings.xml` — mais il n'a plus à s'en servir pour accéder
+  # au code qu'on lui demande d'auditer.
+  code="$STATE_DIR/audit-code.txt"
+  : > "$code"
+  for f in $(find $reels -name '*.kt' 2>/dev/null | sort); do
+    rel="${f#"$REPO_DIR"/}"
+    printf '\n═══ %s ═══\n' "$rel" >> "$code"
+    # Numérotées : l'agent doit citer `fichier:ligne`, il lui faut les numéros.
+    awk '{ printf "%5d  %s\n", NR, $0 }' "$f" >> "$code"
+  done
+
   portee="Le périmètre est **$cible**, soit :
-$(for c in $chemins; do echo "  - \`cluster/iptv/native/$c\`"; done)"
+$(for c in $chemins; do echo "  - \`cluster/iptv/native/$c\`"; done)
+
+Le code complet de ce périmètre est reproduit ci-dessous, **numéroté**. Tu n'as
+donc pas à le chercher ni à le lire : il est là. Garde tes outils pour ce qui
+n'y figure PAS — comparer avec l'autre UI, vérifier un \`strings.xml\`, ouvrir
+une section du journal.
+
+$(cat "$code")"
 
   prompt="$(rendre_prompt "$FACTORY_DIR/prompts/auditor.md" \
               PORTEE "$portee" PROJET "$PROJECT_DIR" EXISTANTS "$existants")"
@@ -133,9 +184,21 @@ $(for c in $chemins; do echo "  - \`cluster/iptv/native/$c\`"; done)"
   # en tête de file. Surtout pas « 0 défaut » : un quota rend un résultat vide
   # qui ressemble à un succès.
   if est_limite_quota "$sortie"; then
-    attendre_reset "$sortie"
-    FILE=("$cible" "${FILE[@]}")
-    continue
+    FILE=("$cible" "${FILE[@]}"); sauver_file
+    secondes="$(secondes_avant_reset "$sortie")"
+    log_warn "Limite de session — ${#FILE[@]} périmètre(s) restant(s), file sauvée."
+    if [ -n "$secondes" ] && [ "$secondes" -ge 1 ] 2>/dev/null; then
+      log_warn "Réarmement vers $(date -d "+$secondes seconds" '+%H:%M') — relancer alors : ./audit.sh --resume"
+      # Attendre sur place seulement si c'est court. Au-delà, on rend la main :
+      # un processus détaché qui dort des heures ne survit pas, et une file
+      # perdue en silence est pire qu'un arrêt annoncé.
+      if [ "$secondes" -le "$FACTORY_QUOTA_SLICE" ]; then
+        dormir_par_tranches "$secondes"; continue
+      fi
+    else
+      log_warn "Heure de réarmement inconnue — relancer plus tard : ./audit.sh --resume"
+    fi
+    exit 75
   fi
   if ! jq -e . "$json" >/dev/null 2>&1; then
     log_err "$cible : sortie illisible — remis en file."
@@ -218,5 +281,6 @@ PY
   done
 done
 
+[ "$DRY_RUN" = 1 ] || : > "$QUEUE_FILE"
 log_step "Audit terminé — $total_defauts défaut(s), $total_tickets ticket(s) ouvert(s)"
 [ "$DRY_RUN" = 1 ] && log_warn "--dry-run : aucun ticket n'a été créé."
