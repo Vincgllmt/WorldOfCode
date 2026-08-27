@@ -55,6 +55,7 @@ fun TvNavGraph() {
      * elle valait déjà pour les onglets, elle vaut aussi pour les destinations.
      */
     val navStateHolder = rememberSaveableStateHolder()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val creds = credRepo.load()
@@ -100,7 +101,8 @@ fun TvNavGraph() {
             onPlay     = { url, title, mediaId, type, cover, streamId -> currentScreen = TvScreen.Player(url, title, mediaId, type, cover, streamId) },
             onPurchase = { currentScreen = TvScreen.Purchase(blocking = false) },
             onSignOut  = {
-                kotlinx.coroutines.MainScope().launch {
+                navStateHolder.removeState("main")
+                scope.launch {
                     credRepo.clear()
                     currentScreen = TvScreen.Setup
                 }

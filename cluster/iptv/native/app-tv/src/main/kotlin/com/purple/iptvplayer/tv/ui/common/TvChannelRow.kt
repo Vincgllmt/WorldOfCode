@@ -45,6 +45,8 @@ fun TvChannelRow(
     /** Réordonnancement — `null` masque la commande (cf. `ChannelRow` mobile). */
     onMoveUp:   (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
+    canMoveUp:   Boolean = true,
+    canMoveDown: Boolean = true,
 ) {
     // G11 — deux arrêts de focus par ligne : la ligne, puis l'étoile. Le trajet
     // genre → chaîne coûtait 3 appuis `▶` au lieu d'un, et chaque traversée verticale
@@ -116,10 +118,10 @@ fun TvChannelRow(
         }
 
         if (onMoveUp != null) {
-            ArrowButton("▲", onMoveUp)
+            ArrowButton("▲", onMoveUp, enabled = canMoveUp)
         }
         if (onMoveDown != null) {
-            ArrowButton("▼", onMoveDown)
+            ArrowButton("▼", onMoveDown, enabled = canMoveDown)
         }
 
         Surface(
@@ -165,15 +167,20 @@ private fun Channel.initials(): String =
 /** Flèche de réordonnancement — une surface focalisable, opérable à la télécommande. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ArrowButton(glyph: String, onClick: () -> Unit) {
+private fun ArrowButton(glyph: String, onClick: () -> Unit, enabled: Boolean = true) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         shape   = ClickableSurfaceDefaults.shape(PurpleShapes.Xs),
         colors  = TvSurfaceDefaults.onAccent(contentColor = PurplePalette.Fg2),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
     ) {
         Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-            Text(glyph, color = LocalContentColor.current, fontSize = 16.sp)
+            Text(
+                glyph,
+                color = if (enabled) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.3f),
+                fontSize = 16.sp,
+            )
         }
     }
 }
