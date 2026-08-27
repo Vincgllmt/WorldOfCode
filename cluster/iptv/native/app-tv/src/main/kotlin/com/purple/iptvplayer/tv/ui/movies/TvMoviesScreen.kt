@@ -52,6 +52,8 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.GenrePolicy
+import com.purple.iptvplayer.core.MovieTitleCleaner
 import com.purple.iptvplayer.core.data.RecentItem
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
@@ -68,6 +70,7 @@ import com.purple.iptvplayer.tv.ui.common.rememberTvFocusAnchor
 import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvRowEntry
 import com.purple.iptvplayer.tv.ui.common.tvRowItem
+import com.purple.iptvplayer.tv.ui.common.TvErrorContent
 import com.purple.iptvplayer.tv.ui.common.TvRowFocus
 import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
 import com.purple.iptvplayer.tv.ui.navigation.TvLongPressGuard
@@ -193,7 +196,6 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                 detail?.let { d ->
                     dlItem?.localPath?.let {
                         onPlay("file://$it", d.name, d.id, d.cover ?: "")
-                        selectedMovieId = null; anchor.restore()
                     }
                 }
             },
@@ -204,7 +206,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
     // ── Movies list ───────────────────────────────────────────────────────────
     val allMovies = (moviesState as? ContentState.Success)?.data ?: emptyList()
     val allGroups = remember(allMovies) {
-        allMovies.mapNotNull { it.group }.distinct().sorted()
+        GenrePolicy.distinctSorted(allMovies.map { it.group })
     }
     val filtered = remember(allMovies, selectedGenre, searchQuery, movieFavorites) {
         val base = if (selectedGenre != null) allMovies.filter { it.group == selectedGenre } else allMovies
@@ -296,24 +298,17 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             is ContentState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(color = PurplePalette.Purple400)
             }
-            is ContentState.Error -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(
-                    (moviesState as ContentState.Error).reason.toDisplayString(),
-                    style = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
-                )
-            }
+            is ContentState.Error -> TvErrorContent(
+                failure = (moviesState as ContentState.Error).reason,
+            )
             else -> {
                 val isGroupedView = selectedGenre == null && searchQuery.isEmpty()
                 val grouped = remember(allMovies, movieGenreFavs) {
-                    allMovies
-                        .filter { !it.group.isNullOrBlank() }
-                        .groupBy { it.group!!.trim() }
-                        .entries
-                        .sortedWith(compareBy(
-                            { !movieGenreFavs.contains(it.key) },
-                            { it.key.lowercase() },
-                        ))
-                        .map { it.key to it.value }
+                    GenrePolicy.groupAndSort(
+                        allMovies,
+                        { it.group },
+                        movieGenreFavs,
+                    )
                 }
                 if (isGroupedView) {
                     LazyColumn(
@@ -324,7 +319,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                         if (movieRecents.isNotEmpty()) {
                             item("recents_hdr") {
                                 Text(
-                                    "REPRENDRE LA LECTURE",
+                                    stringResource(R.string.resume_playback),
                                     style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple300),
                                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp),
                                 )
@@ -703,7 +698,7 @@ internal fun TvMovieDetailPage(
                             // puce affiche déjà la date : on retire le doublon. Comparer à
                             // `detail.year` ne suffisait pas — ce champ porte la date
                             // complète (« 2024-01-15 »), jamais la seule année.
-                            detail.name.trim().replace(YEAR_SUFFIX, ""),
+                            MovieTitleCleaner.clean(detail.name),
                             style    = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -974,9 +969,9 @@ fun TvRecentCard(
                         )
                     } else {
                         val typeLabel = when (item.type) {
-                            "movie"  -> "FILMS"
-                            "series" -> "SÉRIES"
-                            else     -> "DIRECT TV"
+                            "movie"  -> stringResource(R.string.tab_movies)
+                            "series" -> stringResource(R.string.tab_series)
+                            else     -> stringResource(R.string.tab_live)
                         }
                         Box(
                             Modifier
@@ -1409,5 +1404,3 @@ fun TvMetaChip(text: String) {
     }
 }
 
-/** « … - 2024 » en fin de titre : doublon de la puce de date. */
-private val YEAR_SUFFIX = Regex("""\s*[-–]\s*(19|20)\d{2}$""")

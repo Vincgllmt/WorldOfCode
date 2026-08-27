@@ -130,4 +130,8 @@
     <!-- Sélecteur de pistes -->
     <string name="player_track_unsupported">Not supported by this device</string>
     <string name="player_track_forced">(forced)</string>
+    <string name="resume_playback">RESUME PLAYBACK</string>
+    <string name="tab_movies">MOVIES</string>
+    <string name="tab_series">SERIES</string>
+    <string name="tab_live">LIVE TV</string>
 </resources>

@@ -126,4 +126,8 @@
     <!-- Sélecteur de pistes -->
     <string name="player_track_unsupported">Non prise en charge par cet appareil</string>
     <string name="player_track_forced">(forcés)</string>
+    <string name="resume_playback">REPRENDRE LA LECTURE</string>
+    <string name="tab_movies">FILMS</string>
+    <string name="tab_series">SÉRIES</string>
+    <string name="tab_live">DIRECT TV</string>
 </resources>

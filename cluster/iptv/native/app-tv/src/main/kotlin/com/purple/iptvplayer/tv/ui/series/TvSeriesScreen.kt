@@ -55,6 +55,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.purple.iptvplayer.core.data.ProgressPolicy
+import com.purple.iptvplayer.core.GenrePolicy
 import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
@@ -74,6 +75,7 @@ import com.purple.iptvplayer.tv.ui.common.TvRowFocus
 import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
+import com.purple.iptvplayer.tv.ui.common.TvErrorContent
 import com.purple.iptvplayer.tv.ui.home.TvSearchBar
 import com.purple.iptvplayer.tv.ui.movies.TvRecentCard
 import com.purple.iptvplayer.tv.ui.movies.TvSectionHeader
@@ -182,7 +184,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
     // ── Series list ───────────────────────────────────────────────────────────
     val allSeries = (seriesState as? ContentState.Success)?.data ?: emptyList()
     val allGroups = remember(allSeries) {
-        allSeries.mapNotNull { it.group }.distinct().sorted()
+        GenrePolicy.distinctSorted(allSeries.map { it.group })
     }
     val filtered = remember(allSeries, selectedGenre, searchQuery, seriesFavorites) {
         val base = if (selectedGenre != null) allSeries.filter { it.group == selectedGenre } else allSeries
@@ -272,24 +274,17 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             is ContentState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(color = PurplePalette.Purple400)
             }
-            is ContentState.Error -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text(
-                    (seriesState as ContentState.Error).reason.toDisplayString(),
-                    style = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
-                )
-            }
+            is ContentState.Error -> TvErrorContent(
+                failure = (seriesState as ContentState.Error).reason,
+            )
             else -> {
                 val isGroupedView = selectedGenre == null && searchQuery.isEmpty()
                 val grouped = remember(allSeries, seriesGenreFavs) {
-                    allSeries
-                        .filter { !it.group.isNullOrBlank() }
-                        .groupBy { it.group!!.trim() }
-                        .entries
-                        .sortedWith(compareBy(
-                            { !seriesGenreFavs.contains(it.key) },
-                            { it.key.lowercase() },
-                        ))
-                        .map { it.key to it.value }
+                    GenrePolicy.groupAndSort(
+                        allSeries,
+                        { it.group },
+                        seriesGenreFavs,
+                    )
                 }
                 if (isGroupedView) {
                     LazyColumn(
@@ -300,7 +295,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                         if (seriesRecents.isNotEmpty()) {
                             item("recents_hdr") {
                                 Text(
-                                    "REPRENDRE LA LECTURE",
+                                    stringResource(R.string.resume_playback),
                                     style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Purple300),
                                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp),
                                 )
@@ -663,10 +658,8 @@ internal fun TvSeriesDetailPage(
                 color    = PurplePalette.Purple400,
                 modifier = Modifier.align(Alignment.Center),
             )
-            is ContentState.Error -> Text(
-                ds.reason.toDisplayString(),
-                style    = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
-                modifier = Modifier.align(Alignment.Center),
+            is ContentState.Error -> TvErrorContent(
+                failure = ds.reason,
             )
             is ContentState.Success -> {
                 val d             = ds.data
@@ -991,8 +984,8 @@ private fun TvSeasonTab(label: String, selected: Boolean, onClick: () -> Unit) {
 private fun TvSeriesActionButton(
     label:    String,
     icon:     androidx.compose.ui.graphics.vector.ImageVector,
-    enabled:  Boolean  = true,
     modifier: Modifier = Modifier,
+    enabled:  Boolean  = true,
     onClick:  () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }

@@ -33,7 +33,7 @@ object GenrePolicy {
     fun <T> groupAndSort(
         items: List<T>,
         groupOf: (T) -> String?,
-        favorites: Set<String>,
+        favorites: Collection<String>,
     ): List<Pair<String, List<T>>> =
         items
             .filter { !groupOf(it).isNullOrBlank() }
