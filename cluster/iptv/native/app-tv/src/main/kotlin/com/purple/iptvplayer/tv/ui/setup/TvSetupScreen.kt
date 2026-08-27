@@ -51,6 +51,9 @@ import com.purple.iptvplayer.tv.ui.navigation.TvFieldKeys
 import com.purple.iptvplayer.tv.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.res.pluralStringResource
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 
 @Composable
 fun TvSetupScreen(onSuccess: () -> Unit) {
@@ -69,8 +72,23 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
     var passText   by remember { mutableStateOf("") }
     var passVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state) {
-        if (state is SetupState.Success) onSuccess()
+    // TV-1 #66 : LaunchedEffect(Unit) + snapshotFlow drop(1) pour ne pas déclencher
+    // onSuccess() à la composition initiale. Le ViewModel est porté par l'Activity ;
+    // après déconnexion le state peut déjà être Success, ce qui bloquait la reconnexion.
+    val currentOnSuccess by rememberUpdatedState(onSuccess)
+    val currentState by rememberUpdatedState(state)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentState }
+            .drop(1) // ignorer l'état initial
+            .filter { it is SetupState.Success }
+            .collect { currentOnSuccess() }
+    }
+
+    // TV-1 #69 : FocusRequester sur le premier champ à l'ouverture de l'écran.
+    val firstFieldFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(150)
+        runCatching { firstFieldFocus.requestFocus() }
     }
 
     Row(
@@ -164,12 +182,14 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
                     icon  = Icons.Rounded.Link,
                     imeAction = ImeAction.Done,
                     onDone = { vm.submitM3uUrl(urlText) },
+                    rowFocusRequester = firstFieldFocus,
                 )
                 1 -> {
                     TvFormField(
                         value = hostText, onValueChange = { hostText = it },
                         label = stringResource(R.string.field_server),
                         icon  = Icons.Rounded.Dns,
+                        rowFocusRequester = firstFieldFocus,
                     )
                     Spacer(Modifier.height(14.dp))
                     TvFormField(
@@ -178,21 +198,28 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
                         icon  = Icons.Rounded.Person,
                     )
                     Spacer(Modifier.height(14.dp))
-                    TvFormField(
-                        value = passText, onValueChange = { passText = it },
-                        label = stringResource(R.string.field_password),
-                        icon  = Icons.Rounded.Lock,
-                        visualTransformation = if (passVisible) VisualTransformation.None
-                                               else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TvIconToggle(
-                                icon = if (passVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                                onClick = { passVisible = !passVisible },
-                            )
-                        },
-                        imeAction = ImeAction.Done,
-                        onDone = { vm.submitXtream(hostText, userText, passText) },
-                    )
+                    // TV-1 #67 : bouton œil extrait du champ mot de passe pour éviter
+                    // un focusable imbriqué dans un autre focusable (problème D-pad TV).
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TvFormField(
+                            value = passText, onValueChange = { passText = it },
+                            label = stringResource(R.string.field_password),
+                            icon  = Icons.Rounded.Lock,
+                            visualTransformation = if (passVisible) VisualTransformation.None
+                                                   else PasswordVisualTransformation(),
+                            imeAction = ImeAction.Done,
+                            onDone = { vm.submitXtream(hostText, userText, passText) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        TvIconToggle(
+                            icon = if (passVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            onClick = { passVisible = !passVisible },
+                        )
+                    }
                 }
             }
 
@@ -244,15 +271,17 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
             Spacer(Modifier.height(28.dp))
 
             // Connect button — D-pad focusable via Material3 Button
+            // TV-1 #68 : ne plus désactiver le bouton pendant le loading.
+            // Sur TV, enabled = false retire le focus et il ne revient pas automatiquement.
             var btnFocused by remember { mutableStateOf(false) }
             Button(
                 onClick = {
+                    if (state is SetupState.Loading) return@Button
                     when (modeIndex) {
                         0 -> vm.submitM3uUrl(urlText)
                         1 -> vm.submitXtream(hostText, userText, passText)
                     }
                 },
-                enabled  = state !is SetupState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -366,6 +395,7 @@ private fun TvFormField(
     trailingIcon: (@Composable () -> Unit)? = null,
     imeAction: ImeAction = ImeAction.Next,
     onDone: (() -> Unit)? = null,
+    rowFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
@@ -412,6 +442,10 @@ private fun TvFormField(
             // `clickable` rend focalisable ET traite `DPAD_CENTER` comme un clic : c'est
             // ce qui manquait. Ajouter `focusable()` en plus ferait deux nœuds concurrents
             // et la validation n'atteindrait pas l'`onClick` (piège relevé au §26).
+            .then(
+                if (rowFocusRequester != null) Modifier.focusRequester(rowFocusRequester)
+                else Modifier
+            )
             .clickable { editing = true }
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment     = Alignment.CenterVertically,
