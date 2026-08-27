@@ -2,7 +2,7 @@
 
 Mémoire de travail de l'agent. À maintenir à jour à chaque décision architecturale.
 
-Dernière mise à jour : 2026-08-22
+Dernière mise à jour : 2026-08-27
 
 > **Où est le détail.** Ce fichier ne garde que ce qu'il faut savoir *avant* de toucher au
 > code : où est le vrai code, les règles d'architecture, la toolchain, ce qui reste à
@@ -11,6 +11,10 @@ Dernière mise à jour : 2026-08-22
 > indexé en §9 ci-dessous. Les renvois « §N » désignent une section de ce journal.
 > Ouvrir le journal **à la section concernée** avant de retoucher un sujet qui y figure ;
 > ne pas le recharger en entier.
+>
+> **Feuille de route.** [`docs/audit.md`](docs/audit.md) — audit complet des trois
+> modules (~12 000 lignes), **100 défauts** sourcés à la ligne, triés par gravité :
+> 4 critiques, 43 majeurs, 53 mineurs. C'est la file de travail du projet.
 >
 > **Chantier en cours.** `AUDIT_TV_UX.md` (28 défauts du D-pad, relevés à l'émulateur) est
 > transformé en spécifications dans **[`docs/PLAN_CORRECTION_TV.md`](docs/PLAN_CORRECTION_TV.md)** :
@@ -138,6 +142,29 @@ Rapport HTML après échec : `core/build/reports/tests/testDebugUnitTest/index.h
 Environnement constaté : Gradle 8.9, JBR 21.0.10, Android SDK 36.1.0
 (`/home/hjouini/Android/Sdk`), `adb` présent mais **hors PATH**.
 
+### Build d'auteur : utiliser l'app passé les trois jours d'essai
+
+L'essai dure 3 jours et une build **chargée latéralement** ne peut ni acheter ni restaurer
+(§9) : passé ce délai, l'app TV se referme sur sa barrière, sans issue. La sortie est une
+build de debug déverrouillée — cf. §52 bis.
+
+```bash
+# native/local.properties (ignoré par git)
+purple.unlock=true
+
+./gradlew :app-tv:assembleDebug      # 1.3.0-debug, signée de la clé d'upload
+adb install -r app-tv/build/outputs/apk/debug/app-tv-debug.apk
+```
+
+| | |
+|---|---|
+| Portée | **debug uniquement** — la release est câblée à `OWNER_UNLOCK = false` en dur |
+| Signature | clé d'upload si `keystore.properties` existe ⇒ s'installe **par-dessus** la release sans désinstaller, données conservées |
+| Effet de bord | `core` étant partagé, la debug d'`app-mobile` est aussi déverrouillée sur cette machine |
+
+Sans rebuild, `adb shell pm clear com.purple.iptvplayer.tv` rend un essai neuf de 3 jours —
+mais efface identifiants, favoris et « Reprendre la lecture ».
+
 ### Piloter un appareil réel
 
 ```bash
@@ -192,71 +219,178 @@ echo 'cluster/iptv/native/local.properties' >> .gitignore
 
 ## 4. Stratégie de test retenue
 
-### État initial : **rien**
+### Le triptyque obligatoire
 
-Aucun source set `src/test/` ni `src/androidTest/` dans les trois modules, aucune
-dépendance de test dans `gradle/libs.versions.toml`. Seul vestige :
-`app-mobile/src/test.kt`, un `DummyTest` placé **hors de tout source set** (donc
-jamais compilé ni exécuté) — supprimé.
+**Aucun code n'est validé sans avoir passé les trois niveaux qui le concernent.**
+Un correctif de logique s'arrête au niveau 1 ; un correctif d'interface exige le
+niveau 2 ou 3. Ce qui n'a pas été vérifié doit être **dit**, jamais supposé.
 
-### Outillage retenu
+---
 
-| Outil | Rôle |
-|---|---|
-| **JUnit 4** | runner, standard AGP |
-| **kotlinx-coroutines-test** | `runTest` pour les API `suspend` |
-| **org.json:json** | implémentation réelle d'`org.json` sur le classpath de test |
+#### Niveau 1 — Logique (obligatoire, toujours)
+
+```bash
+export JAVA_HOME=<jdk-17>          # cf. §3, aucun JDK système sur « rigolo »
+cd cluster/iptv/native
+./gradlew :core:testDebugUnitTest
+./gradlew :app-tv:testDebugUnitTest    # source set créé au §43
+```
+
+C'est le juge de paix. Il est rapide (~30 s), ne demande aucun appareil, et
+couvre la couche où se trouvent la plupart des défauts.
+
+On continue d'**étendre** cette suite : chaque correctif de logique arrive avec
+le test qui échouerait sans lui. Un test qui ne peut pas échouer ne prouve rien
+(§8.3).
+
+Rapport HTML après échec : `core/build/reports/tests/testDebugUnitTest/index.html`.
+
+---
+
+#### Niveau 2 — Interface TV (émulateur)
+
+**Ce que le niveau 1 ne voit pas** : le focus D-pad, le rendu Compose, la
+navigation entre écrans. Aucun test JVM ne rend un pixel (§8.14).
+
+```bash
+export PATH="$PATH:/home/rigolo/Android/Sdk/emulator:/home/rigolo/Android/Sdk/platform-tools"
+
+# 1. Lister les AVD disponibles
+emulator -list-avds                       # → purple_tv
+
+# 2. Lancer l'émulateur TV
+emulator -avd purple_tv -gpu swiftshader_indirect -no-boot-anim -no-audio &
+
+# 3. Attendre le démarrage complet
+until [ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 5; done
+
+# 4. Installer l'app
+./gradlew :app-tv:installDebug
+
+# 5. La lancer (TV = LEANBACK_LAUNCHER, pas le launcher normal)
+adb -s emulator-5554 shell monkey -p com.purple.iptvplayer.tv \
+    -c android.intent.category.LEANBACK_LAUNCHER 1
+
+# 6. Tests instrumentés, s'il y en a pour le sujet traité
+./gradlew :app-tv:connectedDebugAndroidTest
+```
+
+⚠️ **`-gpu host` NE FONCTIONNE PAS sur cette machine**, bien que le `config.ini`
+de l'AVD porte `hw.gpu.mode=host`. Session Wayland + Intel intégré : le rendu
+matériel est refusé. L'émulateur démarre quand même, la fenêtre s'affiche, l'app
+obtient le focus — et **rien n'est dessiné**. Symptômes trompeurs : capture figée
+sur le launcher, `uiautomator` à 0 nœud, impression que l'app ne démarre pas
+alors que son processus tourne.
+
+Le diagnostic tient en une commande :
+
+```bash
+grep -i "cannot be used" <log de l'émulateur>
+# ERROR | Your GPU cannot be used for hardware rendering.
+```
+
+⚠️ Pour l'arrêter : `pkill -f "[q]emu-system"`. Sans la classe de caractères, le
+motif matche la ligne de commande du shell qui l'exécute et **tue son propre
+shell**.
+
+⚠️ `uiautomator dump` ne rend **rien d'exploitable** sur cette app : Compose
+n'expose pas d'arbre de vues classique. Pour constater l'état d'un écran, passer
+par `adb exec-out screencap -p > /tmp/ecran.png` et regarder l'image.
+
+---
+
+#### Niveau 3 — Interface mobile (appareil physique)
+
+**RÈGLE STRICTE — Claude ne lance jamais cette étape de sa propre initiative.**
+
+L'appareil est le **téléphone personnel** de l'utilisateur, pas un banc de test
+(§8.16). La procédure est donc :
+
+1. **S'ARRÊTER** et demander à l'utilisateur de brancher son Pixel 7 (ou un autre
+   appareil) en USB ;
+2. **ATTENDRE sa confirmation explicite.** Pas d'installation, pas de capture
+   d'écran, pas de `adb shell` tant qu'elle n'est pas donnée ;
+3. seulement alors :
+
+```bash
+adb devices -l                         # vérifier que l'appareil est autorisé
+./gradlew :app-mobile:installDebug
+```
+
+`app-mobile` porte `applicationIdSuffix = ".debug"` : la variante s'installe
+**à côté** de la production (`com.purple.iptvplayer.debug`), dont les données
+restent intactes. Contrepartie : Play Billing ne fonctionne pas sur cette
+variante.
+
+⚠️ Ne **jamais** installer une build **TV** sur ce téléphone, et éviter les
+captures d'écran — une capture a déjà ramené une conversation privée à l'écran
+(§52).
+
+Deux obstacles `adb` déjà rencontrés, tous deux résolus :
+
+1. `no permissions (missing udev rules)` → `sudo adb kill-server && sudo adb start-server`,
+   à lancer **par l'utilisateur** ;
+2. `unauthorized` → la boîte « Autoriser le débogage USB ? » doit être validée
+   sur le téléphone.
+
+---
+
+### Outillage
+
+| Outil | Rôle | Niveau |
+|---|---|---|
+| **JUnit 4** | runner, standard AGP | 1 |
+| **kotlinx-coroutines-test** | `runTest` pour les API `suspend` | 1 |
+| **org.json:json** | implémentation réelle d'`org.json` sur le classpath de test | 1 |
+| **compose ui-test-junit4** | rend l'arbre Compose, injecte des touches | 2 et 3 |
+| **androidx.test** + **espresso** | runner instrumenté | 2 et 3 |
 
 Plus `testOptions { unitTests { isReturnDefaultValues = true } }` dans
 `core/build.gradle.kts`.
 
-Le point sensible est `org.json` : dans un test JVM nu, `JSONArray`/`JSONObject`
-ne sont que des *stubs* d'`android.jar` qui lèvent « not mocked », ce qui rend
-`ProgressRepository` intestable. Placer l'implémentation Maven réelle sur le
-classpath de test suffit à lever le blocage — vérifié par
-`ToolchainSmokeTest.orgJsonIsAvailable`, qui existe précisément pour empêcher
-qu'on retire cette dépendance par mégarde.
+Le point sensible du niveau 1 est `org.json` : dans un test JVM nu,
+`JSONArray`/`JSONObject` ne sont que des *stubs* d'`android.jar` qui lèvent
+« not mocked ». L'implémentation Maven réelle sur le classpath de test lève le
+blocage — vérifié par `ToolchainSmokeTest.orgJsonIsAvailable`, qui existe
+précisément pour empêcher qu'on retire cette dépendance par mégarde.
 
 ### Robolectric : évalué puis écarté
 
 Robolectric était le choix initial pour obtenir `org.json` et un `Context` réels.
-Il s'est avéré **inutile** : en extrayant la logique métier en objets purs
-([TrialPolicy], [RecentItemsCodec]), plus aucun test ne touche à Android. La suite
-tourne en ~3 s au lieu de plusieurs dizaines de secondes, et on évite les
-problèmes de compatibilité de Robolectric avec `compileSdk 36` ainsi que
-l'`AndroidKeyStore` requis par `EncryptedSharedPreferences`.
+Il s'est avéré **inutile** au niveau 1 : en extrayant la logique métier en objets
+purs ([TrialPolicy], [RecentItemsCodec], [DownloadPolicy]…), plus aucun test de
+logique ne touche à Android. La suite tourne en ~30 s au lieu de plusieurs
+dizaines de secondes, et on évite les problèmes de compatibilité de Robolectric
+avec `compileSdk 36` ainsi que l'`AndroidKeyStore` requis par
+`EncryptedSharedPreferences`.
 
 ➡️ **Règle qui en découle : on ne teste pas un Repository à travers Android ; on
-extrait sa décision en objet pur et on teste celui-ci.** Robolectric n'est à
-réintroduire que si l'on doit un jour tester DataStore ou les `Flow` d'un
-Repository de bout en bout (ajouter alors Turbine et MockK).
+extrait sa décision en objet pur et on teste celui-ci.** C'est le motif de
+`TrialPolicy`, `CachePolicy`, `RecentPolicy`, `AccessState`, `VersionPolicy`,
+`TrackPolicy`, `DownloadPolicy`, `TrackListBuilder`.
 
-### Outils écartés — et pourquoi
-
-- **Espresso / `androidTest` / Maestro** : écartés pour l'instant. `adb devices`
-  ne retourne **aucun appareil** et `flutter emulators` → *No emulators available*.
-  Aucun test instrumenté ne peut s'exécuter dans cet environnement. Les rebrancher
-  le jour où un appareil ou un AVD est disponible.
-- **Compose UI Test** : reporté. Les 3 bugs critiques sont tous dans `core`
-  (logique pure), pas dans l'UI. On teste d'abord là où est le risque.
-
-➡️ **Boucle de travail = `./gradlew :core:testDebugUnitTest`** : rapide, sans
-appareil, et couvre exactement la couche où se trouvent les défauts.
+Pour l'UI, c'est l'inverse : Robolectric ne remplace pas un appareil. Les
+niveaux 2 et 3 passent par `androidTest` sur émulateur ou téléphone.
 
 ### Convention
 
-Tests dans `core/src/test/kotlin/com/purple/iptvplayer/core/…`, miroir de
-l'arborescence `main`. Un fichier `XxxTest.kt` par classe testée.
+Tests de logique dans `core/src/test/kotlin/com/purple/iptvplayer/core/…`,
+miroir de l'arborescence `main`. Un fichier `XxxTest.kt` par classe testée.
+
+Tests instrumentés dans `app-tv/src/androidTest/…` et
+`app-mobile/src/androidTest/…`. Ils décrivent le **symptôme** tel que
+l'utilisateur le vit — « l'écran ne répond à aucune touche » — et non
+l'implémentation du correctif : un test écrit à partir du code qu'il vérifie ne
+peut que le confirmer.
 
 ### Testabilité — décision architecturale
 
-`TrialRepository` lit l'heure via `System.currentTimeMillis()` en dur, ce qui rend
-la logique d'essai/abonnement **non testable de façon déterministe**. Décision :
-**injecter une source de temps** (paramètre `now: () -> Long = System::currentTimeMillis`)
-plutôt que de manipuler l'horloge système dans les tests. Même principe pour toute
-future logique dépendant du temps.
-
----
+`TrialRepository` lisait l'heure via `System.currentTimeMillis()` en dur, ce qui
+rendait la logique d'essai/abonnement **non testable de façon déterministe**.
+Décision : **injecter une source de temps** (paramètre
+`now: () -> Long = System::currentTimeMillis`) plutôt que de manipuler l'horloge
+système dans les tests. Même principe pour toute future logique dépendant du
+temps.
 
 ## 5. Défauts identifiés — index
 
@@ -289,8 +423,8 @@ Corrigés depuis : **B3** (prix des abonnements, §10), **B1** les six défauts 
 **B2** (révocation, §32), **S2/S3** (signature, §31). Restent ouverts : **S1** (TLS) et
 les trois points de facturation listés en §6.
 
-**État de la suite : 244 tests, 0 échec** — 186 dans `core`
-(`./gradlew :core:testDebugUnitTest`) + 58 dans `app-tv`
+**État de la suite : 269 tests, 0 échec** — 196 dans `core`
+(`./gradlew :core:testDebugUnitTest`) + 73 dans `app-tv`
 (`./gradlew :app-tv:testDebugUnitTest`, source set créé au §43).
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`
@@ -298,6 +432,20 @@ Contrôle des libellés avant toute publication : `python3 tools/check_strings.p
 
 ⚠️ **Avant toute vérification à l'émulateur, lire les pièges d'outillage du §44** : instantané
 d'AVD qui corrompt `screencap`, et `compileDebugKotlin UP-TO-DATE` sur une source modifiée.
+
+⚠️ **L'émulateur ne se lance QUE comme ceci** (§52 ter) — sinon il est inutilisable :
+
+```bash
+emulator -avd purple_tv -no-window -gpu swiftshader_indirect -accel on -no-boot-anim -no-audio
+```
+
+`hw.gpu.enabled` était à `no` dans le `config.ini` de l'AVD, et `-gpu host` ne l'écrase pas ;
+le GPU hôte est par ailleurs refusé sous Wayland. Démarrage : **36 s** au lieu de jamais.
+Capture noire, `uiautomator` en « null root node » et frames sautées par milliers étaient
+**tous** des symptômes de ce seul réglage — ne pas les prendre pour des pièges d'outillage.
+
+⚠️ Pour l'arrêter : `pkill -f "[q]emu-system"`. Écrit sans la classe de caractères, le motif
+matche la ligne de commande du shell qui l'exécute et **tue son propre shell**.
 
 ---
 
@@ -449,7 +597,20 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     d'effacer.** « Impossible de retirer » se lisait comme un défaut de l'interface ; la
     cause était un `while (true)` jamais annulé qui réinsérait l'entrée dix secondes plus
     tard. Devant une suppression qui « ne prend pas », chercher qui écrit encore (§49).
-16. **Play ne fait autorité que sur ce qu'il a lui-même installé.** Sur une variante à
+16. **Le Pixel 7 branché en USB est le téléphone personnel de l'utilisateur, pas un
+    appareil de test.** Y installer une build TV et la capturer a ramené une conversation
+    privée à l'écran (§52). Tout essai `app-tv` passe par l'AVD `purple_tv` (§11), ou par
+    aucun appareil — auquel cas on établit la cause par lecture et on écrit ce qui reste à
+    vérifier (§49, §52).
+17. **Un plein écran focalisable est un cul-de-sac de focus.** La recherche
+    directionnelle de Compose exige qu'un candidat **dépasse** le rectangle focalisé du
+    côté visé : quand ce rectangle est l'écran entier, aucune direction n'aboutit, dans
+    aucun sens. Devant un écran qui ne répond à rien, chercher d'abord **qui** a le focus
+    avant de soupçonner le clavier ou les touches (§52.5).
+18. **Un `verticalScroll` ne défile qu'avec le focus.** Posé sur un `Text` — jamais
+    focalisable — il est inerte à la télécommande, et le commentaire qui l'accompagne
+    ment sans que rien ne le signale (§52.3).
+19. **Play ne fait autorité que sur ce qu'il a lui-même installé.** Sur une variante à
     `applicationId` suffixé il répond « OK, liste vide » : en conclure une révocation met
     dehors un utilisateur légitime (§32). Toute observation de facturation faite hors
     d'une build installée par `com.android.vending` est ininterprétable (§9).
@@ -505,3 +666,6 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
 | 49 | **Trois défauts remontés à l'usage** : la reprise de lecture se réinsérait toute seule (boucle jamais annulée) ; le sélecteur de pistes proposait des pistes que le décodeur refuse, sans issue ; `▼` depuis un genre tombait au milieu de la rangée | on touche à `ProgressRepository`/`PlayerViewModel`, au sélecteur de pistes, ou à l'entrée d'une rangée TV |
 | 50 | **L'app mobile réorganisée autour des thèmes** : `LayoutMode` supprimé, tiroir et burger retirés ; le tiroir portait **quatre** fonctions, trois replacées, une perdue sciemment ; « Tout » → « Thèmes » dans « Ma liste » | on touche à la navigation mobile, à un mode d'affichage, ou aux favoris de thème |
 | 51 | **Release mobile 1.2.0 préparée** : la 14 était la seule publiée ; versions bumpées (mobile 15 / 1.2.0, TV 11 / 1.3.0) ; `docs/RELEASE_NOTES.md` ; la build minifiée reste non exercée | on publie une version, ou on cherche ce qui est déjà distribué |
+| 52 ter | **L'émulateur réparé** : `hw.gpu.enabled=no` dans le `config.ini` — `-gpu host` ne l'écrase pas ; lancer en `-no-window -gpu swiftshader_indirect`. Vérification à l'écran des six correctifs **interrompue, non faite** | avant toute session émulateur, ou pour reprendre la vérification du §52 |
+| 52 bis | **La barrière d'accès expiré** : le focus y était mais **invisible** (4ᵉ occurrence du §49.2) ; et une build sideloadée expirée n'a **aucune sortie** — d'où `purple.unlock`, **debug uniquement** | on touche à `TvPurchaseScreen`, à `TrialRepository`, ou on veut une build utilisable après l'essai |
+| 52 | **Six régressions de la TV 1.3.0** : le relâchement de l'appui long validait « Annuler » ; une série occupait autant de places qu'elle avait d'épisodes ; un `verticalScroll` sur un `Text` ne défile pas au D-pad ; le `Box` racine plein écran est un **cul-de-sac de focus** ; on revenait sur une fiche **vidée** | on touche à `TvConfirmDialog`, aux « Reprendre la lecture », à une fiche descriptive, au focus du lecteur, ou à `loadMovieDetail`/`loadSeriesDetail` |

@@ -1,5 +1,0 @@
-# Journaux, verrous et curseurs de l'usine : jamais versionnés.
-state/
-
-# Identifiants locaux : jamais versionnés.
-.env
