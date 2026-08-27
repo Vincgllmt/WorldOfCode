@@ -16,24 +16,38 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class BillingRepository(
-    private val context: Context,
-    private val trialRepo: TrialRepository,
-) {
+interface BillingRepository {
+    val products: StateFlow<List<ProductDetails>>
+    val purchaseResult: SharedFlow<PurchaseResult>
+    suspend fun connect(): Boolean
+    suspend fun queryProducts()
+    fun launchBillingFlow(activity: Activity, product: ProductDetails): Boolean
+    suspend fun restorePurchases(): Int
+    suspend fun syncEntitlements(): Int
+    fun release()
+
     companion object {
         const val MONTHLY_ID  = BillingProducts.MONTHLY_ID
         const val YEARLY_ID   = BillingProducts.YEARLY_ID
         const val LIFETIME_ID = BillingProducts.LIFETIME_ID
+    }
+}
+
+class BillingRepositoryImpl(
+    private val context: Context,
+    private val trialRepo: TrialRepository,
+) : BillingRepository {
+    companion object {
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _products = MutableStateFlow<List<ProductDetails>>(emptyList())
-    val products: StateFlow<List<ProductDetails>> = _products.asStateFlow()
+    override val products: StateFlow<List<ProductDetails>> = _products.asStateFlow()
 
     private val _purchaseResult = MutableSharedFlow<PurchaseResult>()
-    val purchaseResult: SharedFlow<PurchaseResult> = _purchaseResult.asSharedFlow()
+    override val purchaseResult: SharedFlow<PurchaseResult> = _purchaseResult.asSharedFlow()
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
         scope.launch {
@@ -54,7 +68,7 @@ class BillingRepository(
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
-    suspend fun connect(): Boolean = suspendCancellableCoroutine { cont ->
+    override suspend fun connect(): Boolean = suspendCancellableCoroutine { cont ->
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (cont.isActive) cont.resume(result.responseCode == BillingClient.BillingResponseCode.OK) {}
@@ -75,7 +89,7 @@ class BillingRepository(
      * produit renvoie simplement une liste vide, la double interrogation est donc
      * sans risque.
      */
-    suspend fun queryProducts() {
+    override suspend fun queryProducts() {
         if (!billingClient.isReady && !connect()) {
             _purchaseResult.emit(PurchaseResult.Error("Service de facturation indisponible."))
             return
@@ -87,7 +101,7 @@ class BillingRepository(
         for (type in listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)) {
             val params = QueryProductDetailsParams.newBuilder()
                 .setProductList(
-                    listOf(MONTHLY_ID, YEARLY_ID, LIFETIME_ID).map { id ->
+                    listOf(BillingRepository.MONTHLY_ID, BillingRepository.YEARLY_ID, BillingRepository.LIFETIME_ID).map { id ->
                         QueryProductDetailsParams.Product.newBuilder()
                             .setProductId(id)
                             .setProductType(type)
@@ -137,25 +151,30 @@ class BillingRepository(
      * bouton ne produisait strictement rien, sans message. Un abonnement exige en
      * outre un `offerToken`, qui manquait.
      */
-    fun launchBillingFlow(activity: Activity, product: ProductDetails) {
+    override fun launchBillingFlow(activity: Activity, product: ProductDetails): Boolean {
         val builder = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(product)
 
         if (product.productType == BillingClient.ProductType.SUBS) {
             val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken
             if (offerToken == null) {
                 scope.launch { _purchaseResult.emit(PurchaseResult.Error("Offre indisponible pour ${product.productId}.")) }
-                return
+                return false
             }
             builder.setOfferToken(offerToken)
         } else if (product.oneTimePurchaseOfferDetails == null) {
             scope.launch { _purchaseResult.emit(PurchaseResult.Error("Offre indisponible pour ${product.productId}.")) }
-            return
+            return false
         }
 
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(builder.build()))
             .build()
-        billingClient.launchBillingFlow(activity, params)
+        val result = billingClient.launchBillingFlow(activity, params)
+        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+            scope.launch { _purchaseResult.emit(PurchaseResult.Error(describe(result))) }
+            return false
+        }
+        return true
     }
 
     /**
@@ -164,7 +183,7 @@ class BillingRepository(
      * N'interroger que `INAPP` signifiait qu'un abonné réinstallant l'application
      * ne récupérait jamais son accès.
      */
-    suspend fun restorePurchases(): Int {
+    override suspend fun restorePurchases(): Int {
         if (!billingClient.isReady && !connect()) {
             _purchaseResult.emit(PurchaseResult.Error("Service de facturation indisponible."))
             return 0
@@ -186,7 +205,7 @@ class BillingRepository(
      *
      * @return le nombre d'achats actifs pris en compte.
      */
-    suspend fun syncEntitlements(): Int {
+    override suspend fun syncEntitlements(): Int {
         if (!billingClient.isReady && !connect()) return 0
 
         val outcomes = mutableMapOf<String, QueryOutcome>()
@@ -271,9 +290,9 @@ class BillingRepository(
 
     private suspend fun deliverProduct(productIds: List<String>) {
         when {
-            productIds.contains(MONTHLY_ID)  -> trialRepo.activateSubscription(30L * 24 * 3600 * 1000)
-            productIds.contains(YEARLY_ID)   -> trialRepo.activateSubscription(365L * 24 * 3600 * 1000)
-            productIds.contains(LIFETIME_ID) -> trialRepo.setPro()
+            productIds.contains(BillingRepository.MONTHLY_ID)  -> trialRepo.activateSubscription(30L * 24 * 3600 * 1000)
+            productIds.contains(BillingRepository.YEARLY_ID)   -> trialRepo.activateSubscription(365L * 24 * 3600 * 1000)
+            productIds.contains(BillingRepository.LIFETIME_ID) -> trialRepo.setPro()
         }
     }
 
@@ -292,7 +311,7 @@ class BillingRepository(
         return result.debugMessage.takeIf { it.isNotBlank() }?.let { "$label ($code) : $it" } ?: "$label ($code)"
     }
 
-    fun release() { scope.cancel(); billingClient.endConnection() }
+    override fun release() { scope.cancel(); billingClient.endConnection() }
 }
 
 /**

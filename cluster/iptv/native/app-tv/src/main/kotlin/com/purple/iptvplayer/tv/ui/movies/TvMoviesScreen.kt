@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.tv.ui.movies
 
+import com.purple.iptvplayer.tv.ui.common.toDisplayString
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.verticalScroll
@@ -291,7 +292,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             }
             is ContentState.Error -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Text(
-                    (moviesState as ContentState.Error).message,
+                    (moviesState as ContentState.Error).reason.toDisplayString(),
                     style = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
                 )
             }

@@ -38,11 +38,20 @@ class IptvRepository(
 
     private suspend fun doValidate(creds: Credentials): Credentials? = runCatching {
         if (!creds.isXtream) {
-            if (creds.host.startsWith("http")) {
-                val code = apiClient.head(creds.host)
-                return if (code == 200) creds else null
-            } else {
-                return if (java.io.File(creds.host).exists()) creds else null
+            when {
+                creds.host.startsWith("http") -> {
+                    val code = apiClient.head(creds.host)
+                    return if (code == 200) creds else null
+                }
+                creds.host.startsWith("content://") -> {
+                    return runCatching {
+                        context.contentResolver.openInputStream(android.net.Uri.parse(creds.host))?.use { }
+                        creds
+                    }.getOrNull()
+                }
+                else -> {
+                    return if (java.io.File(creds.host).exists()) creds else null
+                }
             }
         }
         val body = apiClient.get(apiClient.playerApiUrl(creds))
@@ -193,11 +202,14 @@ class IptvRepository(
     private suspend fun fetchM3u(c: Credentials): List<M3uItem> {
         m3uCache?.let { return it }
         val content = withContext(Dispatchers.IO) {
-            if (c.host.startsWith("http")) {
-                apiClient.getM3u(c.host)
-            } else {
-                // Read as ISO-8859-1 so decodeIfNeeded() can handle both UTF-8 and ISO-8859-1 sources
-                java.io.File(c.host).readBytes().toString(Charsets.ISO_8859_1)
+            when {
+                c.host.startsWith("http") -> apiClient.getM3u(c.host)
+                c.host.startsWith("content://") -> {
+                    context.contentResolver.openInputStream(android.net.Uri.parse(c.host))
+                        ?.use { it.readBytes() }?.toString(Charsets.ISO_8859_1)
+                        ?: throw IllegalStateException("Cannot read content URI")
+                }
+                else -> java.io.File(c.host).readBytes().toString(Charsets.ISO_8859_1)
             }
         }
         return M3uParserService.parse(content).also { m3uCache = it }

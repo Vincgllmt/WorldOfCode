@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.mobile.ui.moviedetail
 
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
+import com.purple.iptvplayer.mobile.ui.common.requireActivityViewModelStoreOwner
 import com.purple.iptvplayer.mobile.ui.theme.*
 import com.purple.iptvplayer.mobile.viewmodel.CastViewModel
 import kotlinx.coroutines.launch
@@ -50,7 +52,9 @@ fun MovieDetailScreen(
     val vm:           ContentViewModel  = koinViewModel()
     val dlVm:         DownloadViewModel = koinViewModel()
     val castVm:       CastViewModel     = koinViewModel()
-    val playerVm:     com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel()
+    val playerVm:     com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel(
+        viewModelStoreOwner = requireActivityViewModelStoreOwner()
+    )
     val progressRepo: ProgressRepository = koinInject()
     val detailState    by vm.movieDetail.collectAsState()
     val downloads      by dlVm.downloads.collectAsState()
@@ -65,7 +69,7 @@ fun MovieDetailScreen(
             CircularProgressIndicator(color = Purple)
         }
         is ContentState.Error -> Box(Modifier.fillMaxSize().background(BgHome), Alignment.Center) {
-            Text(s.message, color = ColorError)
+            Text(s.reason.toDisplayString(), color = ColorError)
         }
         is ContentState.Success -> {
             val d = s.data

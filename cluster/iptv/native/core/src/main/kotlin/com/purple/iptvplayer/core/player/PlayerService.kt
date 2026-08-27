@@ -22,6 +22,8 @@ data class PlayerState(
     /** Index de l'élément courant dans la liste de lecture. */
     val mediaItemIndex: Int = 0,
     val error: String? = null,
+    /** Raison de la dernière transition de média (Media3). 0 par défaut. */
+    val transitionReason: Int = 0,
 )
 
 enum class PlayerStatus { IDLE, BUFFERING, PLAYING, PAUSED, ENDED, ERROR }
@@ -105,10 +107,17 @@ class PlayerService(context: Context) {
                 // Même garde : `isPlaying = false` accompagne un échec et poserait PAUSED
                 // par-dessus ERROR, ce qui donnerait un lecteur « en pause » sur un flux
                 // qui n'a jamais démarré.
+                // Même protection pour ENDED : `STATE_ENDED` déclenche `isPlaying = false`,
+                // et sans ce garde le statut passerait à PAUSED au lieu de rester ENDED.
                 val incoming = if (isPlaying) PlayerStatus.PLAYING else PlayerStatus.PAUSED
+                val current = _state.value.status
                 _state.value = _state.value.copy(
-                    status = if (_state.value.status == PlayerStatus.ERROR && !isPlaying)
-                                 PlayerStatus.ERROR else incoming,
+                    status = when {
+                        isPlaying -> incoming
+                        current == PlayerStatus.ERROR -> PlayerStatus.ERROR
+                        current == PlayerStatus.ENDED -> PlayerStatus.ENDED
+                        else -> incoming
+                    },
                 )
                 if (isPlaying) startProgressPolling() else progressJob?.cancel()
             }
@@ -118,6 +127,7 @@ class PlayerService(context: Context) {
                 _state.value = _state.value.copy(
                     title = mediaItem?.mediaMetadata?.title?.toString() ?: "",
                     mediaItemIndex = player.currentMediaItemIndex,
+                    transitionReason = reason,
                 )
             }
 
@@ -292,12 +302,12 @@ class PlayerService(context: Context) {
         _state.value = PlayerState(status = PlayerStatus.BUFFERING, title = title)
     }
 
-    fun playPlaylist(items: List<Pair<String, String>>, startIndex: Int = 0) {
+    fun playPlaylist(items: List<Pair<String, String>>, startIndex: Int = 0, startPositionMs: Long = C.TIME_UNSET) {
         val mediaItems = items.map {
             val metadata = MediaMetadata.Builder().setTitle(it.second).build()
             MediaItem.Builder().setUri(it.first).setMediaId(it.first).setMediaMetadata(metadata).build()
         }
-        player.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
+        player.setMediaItems(mediaItems, startIndex, startPositionMs)
         player.prepare()
         player.playWhenReady = true
         _state.value = PlayerState(

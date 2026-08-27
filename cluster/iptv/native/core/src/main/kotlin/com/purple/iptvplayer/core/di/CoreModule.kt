@@ -17,8 +17,8 @@ val coreModule = module {
     single { CredentialsRepository(androidContext()) }
     single { CacheRepository(androidContext()) }
     single { IptvRepository(androidContext(), get(), get(), get()) }
-    single { TrialRepository(androidContext()) }
-    single { BillingRepository(androidContext(), get()) }
+    single<TrialRepository> { TrialRepositoryImpl(androidContext()) }
+    single<BillingRepository> { BillingRepositoryImpl(androidContext(), get()) }
     single { FavoritesRepository(androidContext()) }
     single { ProgressRepository(androidContext()) }
     single { SettingsRepository(androidContext()) }

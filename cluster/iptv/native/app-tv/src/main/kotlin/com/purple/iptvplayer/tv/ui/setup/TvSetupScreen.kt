@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.tv.ui.setup
 
+import com.purple.iptvplayer.tv.ui.common.toDisplayString
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -209,7 +210,7 @@ fun TvSetupScreen(onSuccess: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Rounded.ErrorOutline, null, tint = TvColorError, modifier = Modifier.size(16.dp))
-                    Text((state as SetupState.Error).message, color = TvColorError, fontSize =  14.sp)
+                    Text((state as SetupState.Error).reason.toDisplayString(), color = TvColorError, fontSize =  14.sp)
                 }
             }
 

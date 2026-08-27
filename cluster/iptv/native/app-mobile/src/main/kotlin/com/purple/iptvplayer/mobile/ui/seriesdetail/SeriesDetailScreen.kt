@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.mobile.ui.seriesdetail
 
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -47,6 +48,7 @@ import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.R
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
+import com.purple.iptvplayer.mobile.ui.common.requireActivityViewModelStoreOwner
 import com.purple.iptvplayer.mobile.ui.theme.*
 import com.purple.iptvplayer.mobile.viewmodel.CastViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -60,7 +62,9 @@ fun SeriesDetailScreen(
     val vm:     ContentViewModel  = koinViewModel()
     val dlVm:   DownloadViewModel = koinViewModel()
     val castVm: CastViewModel     = koinViewModel()
-    val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel()
+    val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel(
+        viewModelStoreOwner = requireActivityViewModelStoreOwner()
+    )
     val detailState      by vm.seriesDetail.collectAsState()
     val downloads        by dlVm.downloads.collectAsState()
     val seriesWatchlist  by vm.seriesFavorites.collectAsState()
@@ -73,7 +77,7 @@ fun SeriesDetailScreen(
             CircularProgressIndicator(color = Purple)
         }
         is ContentState.Error -> Box(Modifier.fillMaxSize().background(BgHome), Alignment.Center) {
-            Text(s.message, color = ColorError)
+            Text(s.reason.toDisplayString(), color = ColorError)
         }
         is ContentState.Success -> {
             val d          = s.data

@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.mobile.ui.home
 
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -95,7 +96,7 @@ fun HomeScreen(
             CircularProgressIndicator(color = Purple)
         }
         is ContentState.Error -> Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-            Text((channelsState as ContentState.Error).message, color = ColorError)
+            Text((channelsState as ContentState.Error).reason.toDisplayString(), color = ColorError)
         }
         else -> {
             // La liste de thèmes est l'accueil de l'onglet ; tout le reste est une liste

@@ -35,6 +35,9 @@ object EpisodeTitle {
      *
      * Ce format était réécrit à la main à **huit endroits** dans les deux UI. Il ne
      * vit plus qu'ici : lecture et écriture ne peuvent plus diverger.
+     *
+     * Le codec officiel porte désormais aussi le décodeur (§56).
      */
-    fun progressId(seriesId: Int, episodeId: Int): String = "${seriesId}_${episodeId}"
+    fun progressId(seriesId: Int, episodeId: Int): String =
+        com.purple.iptvplayer.core.EpisodeIdCodec.encode(seriesId, episodeId)
 }

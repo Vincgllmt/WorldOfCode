@@ -40,6 +40,7 @@ import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.PlayerViewModel
 import com.purple.iptvplayer.mobile.ui.common.ImmersiveFullScreen
 import com.purple.iptvplayer.mobile.ui.common.KeepScreenOn
+import com.purple.iptvplayer.mobile.ui.common.requireActivityViewModelStoreOwner
 import com.purple.iptvplayer.mobile.MainActivity
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
@@ -71,7 +72,9 @@ fun PlayerScreen(
     streamId: Int = 0,
     onBack:   () -> Unit,
 ) {
-    val vm:        PlayerViewModel  = koinViewModel()
+    val vm:        PlayerViewModel  = koinViewModel(
+        viewModelStoreOwner = requireActivityViewModelStoreOwner()
+    )
     val castVm:    CastViewModel    = koinViewModel()
     val contentVm: ContentViewModel = koinViewModel()
     val state       by vm.playerState.collectAsState()

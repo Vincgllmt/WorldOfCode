@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.tv.ui.home
 
+import com.purple.iptvplayer.tv.ui.common.toDisplayString
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -119,7 +120,7 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
             Modifier.fillMaxSize().background(PurplePalette.Bg1), Alignment.Center,
         ) {
             Text(
-                (channelsState as ContentState.Error).message,
+                (channelsState as ContentState.Error).reason.toDisplayString(),
                 style = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
             )
         }

@@ -13,11 +13,24 @@ import kotlinx.coroutines.withContext
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "trial_prefs")
 
-class TrialRepository(
+interface TrialRepository {
+    suspend fun initTrial()
+    suspend fun getRemainingDays(): Int
+    suspend fun getAccessState(): AccessState
+    suspend fun hasAccess(): Boolean
+    suspend fun isPremium(): Boolean
+    suspend fun isPro(): Boolean
+    suspend fun setPro()
+    suspend fun activateSubscription(durationMs: Long)
+    suspend fun revokeEntitlements()
+    suspend fun resetAll()
+}
+
+class TrialRepositoryImpl(
     private val context: Context,
     /** Source de temps injectable : permet de tester les règles d'accès sans toucher à l'horloge système. */
     private val now: () -> Long = System::currentTimeMillis,
-) {
+) : TrialRepository {
 
     // DataStore keys
     private val KEY_TRIAL_START = longPreferencesKey("trial_start_date")
@@ -34,7 +47,7 @@ class TrialRepository(
         )
     }
 
-    suspend fun initTrial() {
+    override suspend fun initTrial() {
         val prefs = context.dataStore.data.first()
         if (!prefs.contains(KEY_TRIAL_START)) {
             val startedAt = now()
@@ -43,7 +56,7 @@ class TrialRepository(
         }
     }
 
-    suspend fun getRemainingDays(): Int = TrialPolicy.remainingDays(
+    override suspend fun getRemainingDays(): Int = TrialPolicy.remainingDays(
         now = now(),
         trialStartMs = getTrialStartMs(),
         expiryMs = getExpiryMs(),
@@ -68,7 +81,7 @@ class TrialRepository(
      * État d'accès pour l'interface : à quel titre l'utilisateur a accès, et non
      * seulement pour combien de temps. Voir [AccessState].
      */
-    suspend fun getAccessState(): AccessState {
+    override suspend fun getAccessState(): AccessState {
         if (unlocked) return AccessState.Pro
         return TrialPolicy.accessState(
             now = now(),
@@ -78,32 +91,32 @@ class TrialRepository(
         )
     }
 
-    suspend fun hasAccess(): Boolean = unlocked || TrialPolicy.hasAccess(
+    override suspend fun hasAccess(): Boolean = unlocked || TrialPolicy.hasAccess(
         now = now(),
         trialStartMs = getTrialStartMs(),
         expiryMs = getExpiryMs(),
         isPro = isPro(),
     )
 
-    suspend fun isPremium(): Boolean = unlocked || TrialPolicy.isPremium(
+    override suspend fun isPremium(): Boolean = unlocked || TrialPolicy.isPremium(
         now = now(),
         expiryMs = getExpiryMs(),
         isPro = isPro(),
     )
 
-    suspend fun isPro(): Boolean {
+    override suspend fun isPro(): Boolean {
         if (unlocked) return true
         val ds = context.dataStore.data.first()
         if (ds[KEY_IS_PRO] == true) return true
         return withContext(Dispatchers.IO) { securePrefs.getBoolean("is_pro_user", false) }
     }
 
-    suspend fun setPro() {
+    override suspend fun setPro() {
         context.dataStore.edit { it[KEY_IS_PRO] = true }
         withContext(Dispatchers.IO) { securePrefs.edit().putBoolean("is_pro_user", true).apply() }
     }
 
-    suspend fun activateSubscription(durationMs: Long) {
+    override suspend fun activateSubscription(durationMs: Long) {
         val expiry = now() + durationMs
         context.dataStore.edit { it[KEY_EXPIRY] = expiry }
         withContext(Dispatchers.IO) { securePrefs.edit().putLong("subscription_expiry_date", expiry).apply() }
@@ -122,7 +135,7 @@ class TrialRepository(
      * rembourser pour repartir en essai. C'est le piège déjà rencontré en B1.4, où
      * `pm clear` rendait l'accès par l'essai neuf et non par la synchronisation.
      */
-    suspend fun revokeEntitlements() {
+    override suspend fun revokeEntitlements() {
         context.dataStore.edit {
             it.remove(KEY_IS_PRO)
             it.remove(KEY_EXPIRY)
@@ -135,7 +148,7 @@ class TrialRepository(
         }
     }
 
-    suspend fun resetAll() {
+    override suspend fun resetAll() {
         context.dataStore.edit { it.clear() }
         withContext(Dispatchers.IO) { securePrefs.edit().clear().apply() }
     }

@@ -91,6 +91,23 @@ object TrackPolicy {
         )
     }
 
+    /**
+     * Résolution d'un code de langue ISO en nom lisible, avec repli.
+     *
+     * La version TV ne faisait pas le repli `code.uppercase()` et ne capitalisait
+     * pas le premier caractère (§86). Une seule fonction ici garantit le même
+     * rendu sur les deux écrans.
+     */
+    fun resolveLanguageName(code: String?): String? {
+        val c = code?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return runCatching {
+            java.util.Locale(c).displayLanguage
+                .replaceFirstChar { it.uppercase() }
+                .takeIf { it.isNotBlank() && it != c }
+                ?: c.uppercase()
+        }.getOrDefault(c.uppercase())
+    }
+
     private fun fold(s: String): String = s.lowercase()
         .replace('à', 'a').replace('â', 'a').replace('ä', 'a')
         .replace('é', 'e').replace('è', 'e').replace('ê', 'e').replace('ë', 'e')

@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.tv.ui.series
 
+import com.purple.iptvplayer.tv.ui.common.toDisplayString
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -267,7 +268,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             }
             is ContentState.Error -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Text(
-                    (seriesState as ContentState.Error).message,
+                    (seriesState as ContentState.Error).reason.toDisplayString(),
                     style = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
                 )
             }
@@ -657,7 +658,7 @@ internal fun TvSeriesDetailPage(
                 modifier = Modifier.align(Alignment.Center),
             )
             is ContentState.Error -> Text(
-                ds.message,
+                ds.reason.toDisplayString(),
                 style    = LocalPurpleType.current.body.copy(color = PurplePalette.Danger),
                 modifier = Modifier.align(Alignment.Center),
             )

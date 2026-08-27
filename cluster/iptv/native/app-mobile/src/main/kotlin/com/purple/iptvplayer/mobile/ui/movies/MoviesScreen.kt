@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.mobile.ui.movies
 
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -94,7 +95,7 @@ fun MoviesScreen(
 
         when (moviesState) {
             is ContentState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = Purple) }
-            is ContentState.Error   -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text((moviesState as ContentState.Error).message, color = ColorError) }
+            is ContentState.Error   -> Box(Modifier.fillMaxSize(), Alignment.Center) { Text((moviesState as ContentState.Error).reason.toDisplayString(), color = ColorError) }
             else -> {
                 if (isGroupedView) {
                     LazyColumn(

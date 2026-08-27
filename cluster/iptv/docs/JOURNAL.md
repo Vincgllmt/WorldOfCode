@@ -4607,3 +4607,139 @@ La donnée se répare d'elle-même : la première lecture écrit `duration_<id>`
 **Rejouer un média terminé efface sa marque « vu »** dès que la boucle enregistre une
 position basse. C'était déjà le cas avant : la clé `progress_<id>` n'a jamais eu qu'une
 valeur.
+
+---
+
+## 54. Audit #97 — `PlayerViewModel` n'était pas partagé entre la fiche série et le lecteur mobile *(2026-08-27)*
+
+### Symptôme
+
+(a) Sur un épisode de série, « Réessayer » de l'écran d'erreur ne produisait rien :
+`PlayerScreen.kt:221` appelait `retry()`, mais l'instance du lecteur avait `episodes` vide
+et `currentUrl` à null, donc `retry()` sortait immédiatement.
+
+(b) En quittant le lecteur, `PlayerScreen.kt:149` appelait `stop()` sur **l'instance du
+lecteur**, dont `progressSavingJob` et `transitionJob` étaient nuls. Les jobs avaient été
+lancés par `playWithEpisodes` sur l'instance de la **fiche**, qui survivait tant que la
+fiche restait dans la pile. `playerService.stop()` remettant `mediaItemIndex` à 0, le suivi
+orphelin y lisait une transition : l'épisode quitté était marqué « vu en entier », puis
+l'épisode 1 était réinséré dans « Reprendre la lecture » toutes les 10 s.
+
+### Cause
+
+`PlayerViewModel` était déclaré `viewModel { }` dans `CoreModule.kt:33`. Dans un `NavHost`,
+`koinViewModel()` sans paramètre utilise `LocalViewModelStoreOwner.current`, qui est le
+`NavBackStackEntry` de la destination. Résultat : `series_detail` et `player` avaient chacun
+leur propre instance, alors que le code de `PlayerViewModel` (commentaire ligne 189-190)
+supposait explicitement « ce ViewModel étant porté par l'Activity ».
+
+### Correction
+
+Création d'un utilitaire `requireActivityViewModelStoreOwner()` (`ActivityOwner.kt`) qui
+remonte la chaîne des `ContextWrapper` jusqu'au `ComponentActivity`, et utilisation de
+`koinViewModel(viewModelStoreOwner = requireActivityViewModelStoreOwner())` dans les quatre
+écrans mobiles qui obtiennent un `PlayerViewModel` :
+
+- `SeriesDetailScreen.kt` — lance `playWithEpisodes` sur la fiche
+- `PlayerScreen.kt` — appelle `retry()`, `stop()`, affiche les contrôles
+- `MovieDetailScreen.kt` — cohérence (il détenait une instance inutile)
+- `MainScreen.kt` — cohérence (règles de sous-titres)
+
+### Vérification
+
+- Compilation `:app-mobile:compileDebugKotlin` ✓
+- Tests unitaires `core` (208) + `app-tv` (73) : 0 échec ✓
+- Assemblage `:app-mobile:assembleDebug` ✓
+- Installation sur le Pixel 7 (après correction des règles udev) : `adb install` réussi,
+  démarrage de `MainActivity` sans crash ✓
+
+### Piège évité
+
+**Ne pas corriger seulement `retry()`.** L'audit proposait cette piste, mais elle aurait
+laissé le symptôme (b) intact : les jobs orphelins sur l'instance de la fiche. Le partage
+d'une seule instance par l'Activity résout les deux symptômes d'un seul geste, et il
+suffit.
+
+---
+
+## 55. Lot CORE-C — `ContentViewModel` & `SetupViewModel` : garde de course et typage des erreurs *(2026-08-28)*
+
+Tickets : **#48** (`loadMovieDetail` / `loadSeriesDetail`, garde de course) et **#46**
+(textes en dur anglais dans `SetupViewModel`, strings non typées dans `ContentViewModel`).
+
+### #48 — Garde de course sur les requêtes de fiche détail
+
+**Problème.** `loadMovieDetail(id)` et `loadSeriesDetail(id)` lançaient un `viewModelScope.launch`
+sans référence : si l'utilisateur changeait de fiche avant que la réponse n'arrive, la
+réponse de la première requête écrasait la seconde, et `clearMovieDetail()` ne pouvait
+pas annuler le travail en cours.
+
+**Correction.** Un `Job` dédié par fiche (`movieDetailJob`, `seriesDetailJob`) :
+- `loadXxxDetail` appelle `detailJob?.cancel()` avant de lancer la nouvelle requête ;
+- `clearXxxDetail` annule le job et le remet à `null` ;
+- garde de course supplémentaire : si `loadedXxxDetailId` a changé entre le lancement et
+  la réponse, le bloc `fold` est sauté (`return@launch`).
+
+Cette dernière garde est redondante avec l'annulation du job (une coroutine annulée ne
+passe pas le `suspend` suivant), mais elle reste en place comme filet : une coroutine
+peut ne pas s'interrompre instantanément selon le dispatcher, et le coût est nul.
+
+### #46 — Typage des causes d'erreur, suppression des strings en dur
+
+**Problème.** `ContentState.Error` portait un `String message` (écrit en dur par
+`e.message ?: "Error"`). `SetupState.Error` portait aussi un `String` avec des phrases
+anglaises écrites dans le ViewModel. Deux défauts :
+1. **localisation** : l'UI ne pouvait pas traduire ;
+2. **décision métier dans le ViewModel** : le wording appartenait à `core` alors que
+   chaque UI (mobile / TV) a ses propres ressources et ton.
+
+**Correction.**
+
+| Enum | Valeurs | Usage |
+|---|---|---|
+| `ContentFailure` | `NETWORK`, `NOT_FOUND`, `PARSE_ERROR`, `UNKNOWN` | `ContentViewModel` |
+| `SetupFailure` | `INVALID_INPUT`, `NETWORK`, `UNKNOWN` | `SetupViewModel` (déjà créé lors des correctifs de compilation) |
+
+`ContentState.Error` devient `data class Error(val reason: ContentFailure)` ;
+`SetupState.Error` devient `data class Error(val reason: SetupFailure)`.
+
+Les helpers `Throwable.toContentFailure()` et `Throwable.toSetupFailure()` centralisent
+le mapping exception → cause typée, sans libellé. `IOException`, `UnknownHostException`,
+`SocketTimeoutException` → `NETWORK` ; `FileNotFoundException` → `NOT_FOUND` ; le reste →
+`UNKNOWN`.
+
+**Impact UI.** Les deux modules `app-mobile` et `app-tv` reçoivent un fichier
+`ErrorMapping.kt` qui traduit `ContentFailure` / `SetupFailure` en texte lisible. Les
+écrans qui affichaient `(state as Error).message` passent à
+`(state as Error).reason.toDisplayString()`. Le wording reste en anglais dans cette passe
+(le mapping est identique mobile/TV), mais il est désormais **côté UI**, donc traduisible
+sans toucher à `core`.
+
+### Fichiers touchés
+
+- `core/…/ContentViewModel.kt` — `ContentFailure`, `movieDetailJob`, `seriesDetailJob`,
+  `toContentFailure()`
+- `core/…/SetupViewModel.kt` — `SetupFailure`, `toSetupFailure()`, suppression des 4
+  strings en dur
+- `app-mobile/…/ErrorMapping.kt` — nouveau, mapping mobile
+- `app-tv/…/ErrorMapping.kt` — nouveau, mapping TV
+- 6 écrans mobile + 4 écrans TV — `(state as Error).reason.toDisplayString()`
+
+### Vérification
+
+- `:core:testDebugUnitTest` — 208 tests, 0 échec ✓
+- `:app-mobile:compileDebugKotlin` ✓
+- `:app-tv:compileDebugKotlin` ✓
+
+### Choix non trivial
+
+**Pourquoi ne pas utiliser `Result<T>` ou un `Either` ?** `ContentState<T>` est un sealed
+class déjà répandu dans les deux UI ; le changer en `Result` forcerait une réécriture de
+tous les `when (state)` des écrans. Le remplacement de `String` par `ContentFailure`
+dans le seul `Error` minimise la surface de changement.
+
+**Pourquoi deux enums distincts ?** `ContentFailure.NOT_FOUND` n'a pas de sens pour la
+configuration, et `SetupFailure.INVALID_INPUT` n'a pas de sens pour le catalogue. Même
+si les valeurs se recoupment (`NETWORK`, `UNKNOWN`), la séparation empêche qu'un écran
+de setup reçoive une cause de contenu par inadvertance, et elle documente le périmètre
+de chaque ViewModel.

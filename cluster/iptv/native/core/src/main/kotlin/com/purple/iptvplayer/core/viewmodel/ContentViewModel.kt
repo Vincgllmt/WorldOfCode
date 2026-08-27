@@ -7,13 +7,24 @@ import com.purple.iptvplayer.core.data.IptvRepository
 import com.purple.iptvplayer.core.data.ProgressRepository
 import com.purple.iptvplayer.core.data.RecentItem
 import com.purple.iptvplayer.core.model.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.IOException
+
+/** Causes d'échec de chargement de contenu que l'UI doit savoir traduire. */
+enum class ContentFailure {
+    NETWORK,
+    NOT_FOUND,
+    PARSE_ERROR,
+    UNKNOWN,
+}
 
 sealed class ContentState<out T> {
     object Loading : ContentState<Nothing>()
     data class Success<T>(val data: T) : ContentState<T>()
-    data class Error(val message: String) : ContentState<Nothing>()
+    /** @param reason cause typée, que chaque UI traduit avec ses propres ressources. */
+    data class Error(val reason: ContentFailure) : ContentState<Nothing>()
 }
 
 class ContentViewModel(
@@ -43,12 +54,11 @@ class ContentViewModel(
     fun loadChannels() {
         viewModelScope.launch {
             _channels.value = ContentState.Loading
-            try {
-                val list = iptvRepo.fetchChannels()
-                _channels.value = ContentState.Success(list)
-            } catch (e: Exception) {
-                _channels.value = ContentState.Error(e.message ?: "Error")
-            }
+            val outcome = runCatching { iptvRepo.fetchChannels() }
+            _channels.value = outcome.fold(
+                onSuccess = { ContentState.Success(it) },
+                onFailure = { ContentState.Error(it.toContentFailure()) },
+            )
         }
     }
 
@@ -79,12 +89,11 @@ class ContentViewModel(
     fun loadMovies() {
         viewModelScope.launch {
             _movies.value = ContentState.Loading
-            try {
-                val list = iptvRepo.fetchMovies()
-                _movies.value = ContentState.Success(list)
-            } catch (e: Exception) {
-                _movies.value = ContentState.Error(e.message ?: "Error")
-            }
+            val outcome = runCatching { iptvRepo.fetchMovies() }
+            _movies.value = outcome.fold(
+                onSuccess = { ContentState.Success(it) },
+                onFailure = { ContentState.Error(it.toContentFailure()) },
+            )
         }
     }
 
@@ -101,6 +110,7 @@ class ContentViewModel(
 
     /** Identifiant de la fiche déjà en mémoire, pour ne pas la recharger pour rien. */
     private var loadedMovieDetailId: Int? = null
+    private var movieDetailJob: Job? = null
 
     /**
      * ⚠️ **Ne pas repasser par `Loading` quand la fiche est déjà là.**
@@ -120,20 +130,28 @@ class ContentViewModel(
      */
     fun loadMovieDetail(id: Int) {
         if (loadedMovieDetailId == id && _movieDetail.value is ContentState.Success) return
-        viewModelScope.launch {
+        movieDetailJob?.cancel()
+        movieDetailJob = viewModelScope.launch {
             _movieDetail.value = ContentState.Loading
-            try {
-                val detail = iptvRepo.fetchMovieDetail(id)
-                _movieDetail.value = ContentState.Success(detail)
-                loadedMovieDetailId = id
-            } catch (e: Exception) {
-                _movieDetail.value = ContentState.Error(e.message ?: "Error")
-                loadedMovieDetailId = null
-            }
+            val outcome = runCatching { iptvRepo.fetchMovieDetail(id) }
+            // Garde de course : si une autre fiche a été demandée entre-temps, ignorer.
+            if (loadedMovieDetailId != null && loadedMovieDetailId != id) return@launch
+            _movieDetail.value = outcome.fold(
+                onSuccess = {
+                    loadedMovieDetailId = id
+                    ContentState.Success(it)
+                },
+                onFailure = {
+                    loadedMovieDetailId = null
+                    ContentState.Error(it.toContentFailure())
+                },
+            )
         }
     }
 
     fun clearMovieDetail() {
+        movieDetailJob?.cancel()
+        movieDetailJob = null
         _movieDetail.value = null
         loadedMovieDetailId = null
     }
@@ -152,12 +170,11 @@ class ContentViewModel(
     fun loadSeries() {
         viewModelScope.launch {
             _series.value = ContentState.Loading
-            try {
-                val list = iptvRepo.fetchSeries()
-                _series.value = ContentState.Success(list)
-            } catch (e: Exception) {
-                _series.value = ContentState.Error(e.message ?: "Error")
-            }
+            val outcome = runCatching { iptvRepo.fetchSeries() }
+            _series.value = outcome.fold(
+                onSuccess = { ContentState.Success(it) },
+                onFailure = { ContentState.Error(it.toContentFailure()) },
+            )
         }
     }
 
@@ -173,24 +190,33 @@ class ContentViewModel(
     val seriesDetail: StateFlow<ContentState<SeriesDetail>?> = _seriesDetail.asStateFlow()
 
     private var loadedSeriesDetailId: Int? = null
+    private var seriesDetailJob: Job? = null
 
     /** Même garde que [loadMovieDetail] — la fiche série revient remplie, pas vide. */
     fun loadSeriesDetail(id: Int) {
         if (loadedSeriesDetailId == id && _seriesDetail.value is ContentState.Success) return
-        viewModelScope.launch {
+        seriesDetailJob?.cancel()
+        seriesDetailJob = viewModelScope.launch {
             _seriesDetail.value = ContentState.Loading
-            try {
-                val detail = iptvRepo.fetchSeriesDetail(id)
-                _seriesDetail.value = ContentState.Success(detail)
-                loadedSeriesDetailId = id
-            } catch (e: Exception) {
-                _seriesDetail.value = ContentState.Error(e.message ?: "Error")
-                loadedSeriesDetailId = null
-            }
+            val outcome = runCatching { iptvRepo.fetchSeriesDetail(id) }
+            // Garde de course : si une autre fiche a été demandée entre-temps, ignorer.
+            if (loadedSeriesDetailId != null && loadedSeriesDetailId != id) return@launch
+            _seriesDetail.value = outcome.fold(
+                onSuccess = {
+                    loadedSeriesDetailId = id
+                    ContentState.Success(it)
+                },
+                onFailure = {
+                    loadedSeriesDetailId = null
+                    ContentState.Error(it.toContentFailure())
+                },
+            )
         }
     }
 
     fun clearSeriesDetail() {
+        seriesDetailJob?.cancel()
+        seriesDetailJob = null
         _seriesDetail.value = null
         loadedSeriesDetailId = null
     }
@@ -207,4 +233,13 @@ class ContentViewModel(
     }
 
     fun clearEpg() { _epgPrograms.value = emptyList() }
+}
+
+/** Mappe une exception vers une cause typée, sans libellé écrit en dur. */
+private fun Throwable.toContentFailure(): ContentFailure = when (this) {
+    is IOException -> ContentFailure.NETWORK
+    is java.net.UnknownHostException -> ContentFailure.NETWORK
+    is java.net.SocketTimeoutException -> ContentFailure.NETWORK
+    is java.io.FileNotFoundException -> ContentFailure.NOT_FOUND
+    else -> ContentFailure.UNKNOWN
 }

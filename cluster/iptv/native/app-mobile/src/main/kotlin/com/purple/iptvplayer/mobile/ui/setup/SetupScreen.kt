@@ -1,5 +1,6 @@
 package com.purple.iptvplayer.mobile.ui.setup
 
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
 import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -68,8 +69,14 @@ fun SetupScreen(onSuccess: () -> Unit) {
     var selectedFile by remember { mutableStateOf<String?>(null) }
     var currentLang  by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
 
-    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.path?.let { selectedFile = it }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            selectedFile = it.toString()
+        }
     }
 
     LaunchedEffect(state) {
@@ -201,7 +208,7 @@ fun SetupScreen(onSuccess: () -> Unit) {
                     selectedPath = selectedFile,
                     localLabel   = stringResource(R.string.file_local),
                     pathHint     = stringResource(R.string.file_path_hint),
-                    onPick       = { filePicker.launch("*/*") },
+                    onPick       = { filePicker.launch(arrayOf("*/*")) },
                 )
             }
 
@@ -219,7 +226,7 @@ fun SetupScreen(onSuccess: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Rounded.ErrorOutline, null, tint = ColorError, modifier = Modifier.size(18.dp))
-                    Text((state as SetupState.Error).message, color = ColorError, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text((state as SetupState.Error).reason.toDisplayString(), color = ColorError, fontSize = 13.sp, lineHeight = 19.sp)
                 }
             }
 

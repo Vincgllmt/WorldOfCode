@@ -48,12 +48,24 @@ class PlayerViewModel(
     /** Dernière durée connue, pour marquer un épisode terminé comme vu. */
     private var lastKnownDurationMs: Long = 0L
 
+    /** Logique de seek différée partagée entre [playMedia] et [playWithEpisodes]. */
+    private suspend fun performDeferredSeek(positionMs: Long) {
+        val dur = withTimeoutOrNull(3_000) {
+            playerService.state.map { it.durationMs }.first { it > 0L }
+        }
+        if (dur == null) delay(800)
+        if (!ProgressPolicy.isComplete(positionMs, dur ?: 0L)) {
+            playerService.seekTo(positionMs)
+        }
+    }
+
     fun playMedia(url: String, title: String, mediaId: String? = null, startPositionMs: Long = 0L, cover: String? = null, type: String? = null) {
         // La durée du média précédent ne dit rien de celui-ci : la garder faisait marquer
         // « terminé » un épisode dont on ne connaissait pas encore la longueur.
         lastKnownDurationMs = 0L
         episodes            = emptyList()
         episodesSeriesId    = null
+        seekJob?.cancel()
         transitionJob?.cancel()
         currentMediaId = mediaId
         currentUrl     = url
@@ -62,23 +74,9 @@ class PlayerViewModel(
         currentType    = type
         playerService.play(url, title, mediaId)
         if (startPositionMs > 0L) {
-            viewModelScope.launch {
-                // On attend la **durée** plutôt qu'un délai fixe : c'est le signal que le
-                // média est préparé, et c'est ce qui dit si la position enregistrée est un
-                // générique (#43). Un `delay(800)` ne suffisait pas — mesuré sur le
-                // téléphone, la durée n'était pas encore publiée à 800 ms sur un gros MKV :
-                // le lecteur sautait à la fin, atteignait `ENDED`, et le film se
-                // re-marquait terminé sans qu'on ait rien vu.
-                val dur = withTimeoutOrNull(3_000) {
-                    playerService.state.map { it.durationMs }.first { it > 0L }
-                }
-                // Aucune durée publiée — un direct, un flux qui n'en donne pas : ancien
-                // comportement, on laisse au lecteur le temps de bufferiser puis on saute.
-                if (dur == null) delay(800)
-                if (!ProgressPolicy.isComplete(startPositionMs, dur ?: 0L)) {
-                    playerService.seekTo(startPositionMs)
-                }
-            }
+            seekJob = viewModelScope.launch { performDeferredSeek(startPositionMs) }
+        } else {
+            seekJob = null
         }
         startProgressSaving()
         observeCompletion()
@@ -99,6 +97,7 @@ class PlayerViewModel(
         startIndex: Int,
         seriesId: Int,
         seriesCover: String? = null,
+        startPositionMs: Long = 0L,
     ) {
         this.episodes         = episodes
         this.episodesSeriesId = seriesId
@@ -108,7 +107,14 @@ class PlayerViewModel(
         applyEpisode(startIndex, seriesCover)
 
         val items = episodes.map { Pair(it.url, it.title) }
+        seekJob?.cancel()
         playerService.playPlaylist(items, startIndex)
+        seekJob = viewModelScope.launch {
+            val resumeAt = if (startPositionMs > 0L) startPositionMs else getResumePosition(currentMediaId ?: return@launch)
+            if (resumeAt > 0L) {
+                performDeferredSeek(resumeAt)
+            }
+        }
         observeEpisodeTransitions(seriesCover)
         startProgressSaving()
         observeCompletion()
@@ -144,7 +150,11 @@ class PlayerViewModel(
                 .drop(1)
                 .collect { index ->
                     if (index == episodeIndex) return@collect
-                    markPreviousEpisodeWatched()
+                    // Ne marquer « vu » que sur fin naturelle, pas sur saut manuel (#45).
+                    val reason = playerService.state.value.transitionReason
+                    if (reason == androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                        markPreviousEpisodeWatched()
+                    }
                     episodeIndex = index
                     applyEpisode(index, seriesCover)
                 }
@@ -241,6 +251,8 @@ class PlayerViewModel(
         saveProgressNow()
         progressSavingJob?.cancel()
         progressSavingJob = null
+        seekJob?.cancel()
+        seekJob = null
         // Même raison que la boucle d'enregistrement : `playerService.stop()` remet l'état
         // à neuf, donc `mediaItemIndex` à 0. Un suivi encore actif y lirait une transition
         // vers l'épisode 1 et le réinsérerait dans « Reprendre la lecture » — exactement
@@ -282,7 +294,8 @@ class PlayerViewModel(
             // Sur une série, l'écran de lecture a été ouvert avec une URL vide — la liste
             // d'épisodes est passée séparément. L'ancien « Réessayer » relançait donc
             // `playMedia("")` et ne pouvait rien produire.
-            playWithEpisodes(episodes, episodeIndex, episodesSeriesId!!, currentCover)
+            val resumeAt = playerService.state.value.positionMs
+            playWithEpisodes(episodes, episodeIndex, episodesSeriesId!!, currentCover, resumeAt)
             return
         }
         val url      = currentUrl ?: return
@@ -319,6 +332,7 @@ class PlayerViewModel(
     }
 
     private var progressSavingJob: Job? = null
+    private var seekJob: Job? = null
 
     /**
      * Une seule boucle à la fois, et arrêtée par [stop].

@@ -45,7 +45,9 @@ object M3uParserService {
                 }
             }
         }
-        return items
+        // §109 — unicité par URL : une playlist malformée ou concaténée peut
+        // contenir plusieurs fois la même entrée.
+        return items.distinctBy { it.url }
     }
 
     /**
