@@ -16,4 +16,20 @@
         <item quantity="one">%d day remaining.</item>
         <item quantity="other">%d days remaining.</item>
     </plurals>
+    <plurals name="count_results">
+        <item quantity="one">%d RESULT</item>
+        <item quantity="other">%d RESULTS</item>
+    </plurals>
+    <plurals name="count_channels">
+        <item quantity="one">%d CHANNEL</item>
+        <item quantity="other">%d CHANNELS</item>
+    </plurals>
+    <plurals name="count_titles">
+        <item quantity="one">%d TITLE</item>
+        <item quantity="other">%d TITLES</item>
+    </plurals>
+    <plurals name="count_genres">
+        <item quantity="one">%d GENRE</item>
+        <item quantity="other">%d GENRES</item>
+    </plurals>
 </resources>

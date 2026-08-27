@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -242,12 +243,17 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                     style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                 )
                 if (allSeries.isNotEmpty()) {
+                    val countLabel = when {
+                        selectedGenre != null    -> pluralStringResource(R.plurals.count_titles, filtered.size, filtered.size)
+                        searchQuery.isNotBlank() -> pluralStringResource(R.plurals.count_results, filtered.size, filtered.size)
+                        else -> {
+                            val titlesLabel = pluralStringResource(R.plurals.count_titles, allSeries.size, allSeries.size)
+                            val genresLabel = pluralStringResource(R.plurals.count_genres, allGroups.size, allGroups.size)
+                            "$titlesLabel - $genresLabel"
+                        }
+                    }
                     Text(
-                        when {
-                            selectedGenre != null    -> "${filtered.size} TITRES"
-                            searchQuery.isNotBlank() -> stringResource(R.string.count_results, filtered.size)
-                            else                     -> stringResource(R.string.count_titles, allSeries.size, allGroups.size)
-                        },
+                        countLabel,
                         style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
                         modifier = Modifier.padding(top = 4.dp),
                     )

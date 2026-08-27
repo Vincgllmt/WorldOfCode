@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -36,6 +37,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +76,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusEvent
 import kotlinx.coroutines.delay
+import com.purple.iptvplayer.core.GenrePolicy
 
 private fun cleanLabel(s: String): String =
     s.replace(Regex("[^\\p{L}\\p{N}\\s|\\-+.&'()/]+"), " ")
@@ -130,11 +133,14 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
 
             val grouped = remember(allChannels, genreFavs) {
                 allChannels
-                    .groupBy { (it.group ?: "Autres").trim() }
+                    .groupBy { GenrePolicy.key(it.group).ifEmpty { "Autres" } }
                     .entries
-                    .sortedWith(compareBy({ !genreFavs.contains(cleanLabel(it.key)) }, { cleanLabel(it.key).lowercase() }))
-                    .map { cleanLabel(it.key) to it.value }
-                    .filter { it.first.isNotBlank() }
+                    .filter { it.key.isNotBlank() }
+                    .sortedWith(compareBy(
+                        { !genreFavs.contains(it.key) },
+                        { GenrePolicy.sortKey(it.key) },
+                    ))
+                    .map { it.key to it.value }
             }
 
             val searchResults = remember(allChannels, searchQuery, channelFavs) {
@@ -156,7 +162,10 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                 ) {
                     if (selectedGroup != null) {
                         Surface(
-                            onClick  = { selectedGroup = null },
+                            onClick  = {
+                                if (searchQuery.isNotEmpty()) searchQuery = ""
+                                else selectedGroup = null
+                            },
                             shape    = ClickableSurfaceDefaults.shape(PurpleShapes.Md),
                             colors   = ClickableSurfaceDefaults.colors(
                                 containerColor        = PurplePalette.Bg2,
@@ -183,9 +192,15 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                             stringResource(R.string.nav_live),
                             style = LocalPurpleType.current.h1.copy(color = PurplePalette.Fg1),
                         )
+                        val countLabel = if (searchQuery.isNotEmpty()) {
+                            pluralStringResource(R.plurals.count_results, searchResults.size, searchResults.size)
+                        } else {
+                            val channelsLabel = pluralStringResource(R.plurals.count_channels, allChannels.size, allChannels.size)
+                            val genresLabel = pluralStringResource(R.plurals.count_genres, grouped.size, grouped.size)
+                            "$channelsLabel - $genresLabel"
+                        }
                         Text(
-                            if (searchQuery.isNotEmpty()) stringResource(R.string.count_results, searchResults.size)
-                            else stringResource(R.string.count_channels, allChannels.size, grouped.size),
+                            countLabel,
                             style    = LocalPurpleType.current.capsLabel.copy(color = PurplePalette.Fg4),
                             modifier = Modifier.padding(top = 4.dp),
                         )
@@ -245,6 +260,10 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                             (grouped.find { it.first == currentGenre }?.second ?: emptyList())
                                 .sortedByDescending { channelFavs.contains(it.name) }
                         }
+                        val channelListState = rememberLazyListState()
+                        LaunchedEffect(selectedGroup) {
+                            channelListState.scrollToItem(0)
+                        }
 
                         Row(modifier = Modifier.fillMaxSize()) {
 
@@ -276,6 +295,7 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                             }
 
                             LazyColumn(
+                                state               = channelListState,
                                 modifier            = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
@@ -381,7 +401,9 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
                 textStyle       = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg1),
                 cursorBrush     = SolidColor(PurplePalette.Purple400),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {}),
+                keyboardActions = KeyboardActions(onSearch = {
+                    focusManager.clearFocus()
+                }),
                 modifier        = Modifier
                     .fillMaxWidth()
                     .focusRequester(fieldFocus)
@@ -389,11 +411,18 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
             )
         }
         if (query.isNotEmpty()) {
-            Icon(
-                Icons.Rounded.Close, null,
-                tint     = PurplePalette.Fg4,
-                modifier = Modifier.size(14.dp).clickable { onQuery("") },
-            )
+            androidx.compose.material3.Surface(
+                onClick = { onQuery("") },
+                shape = RoundedCornerShape(4.dp),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(20.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.Close, null,
+                    tint     = PurplePalette.Fg4,
+                    modifier = Modifier.padding(3.dp),
+                )
+            }
         }
     }
 }
