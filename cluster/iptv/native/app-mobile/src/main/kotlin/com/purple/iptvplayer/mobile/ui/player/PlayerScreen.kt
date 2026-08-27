@@ -95,7 +95,7 @@ fun PlayerScreen(
     // Start playback and register cast pending with resume position in a single effect
     LaunchedEffect(url) {
         if (url.isNotEmpty()) {
-            val savedPos = if (mediaId.isNotEmpty()) vm.getSavedProgress(mediaId) else 0L
+            val savedPos = if (mediaId.isNotEmpty()) vm.getResumePosition(mediaId) else 0L
             vm.playMedia(url, title, mediaId.ifEmpty { null }, savedPos, cover, type)
             castVm.setPendingMedia(url, title, cover, savedPos, mediaId.ifEmpty { null }, type)
         }

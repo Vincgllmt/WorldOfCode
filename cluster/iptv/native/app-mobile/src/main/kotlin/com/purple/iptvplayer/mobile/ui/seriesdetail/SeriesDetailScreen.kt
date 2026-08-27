@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.data.ProgressPolicy
 import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
@@ -380,8 +381,10 @@ private fun EpisodeRow(
     }
 
     val totalDurationMs = remember(episode.duration) { episode.duration.toMillis() }
+    // Même règle de « vu jusqu'au bout » que « Reprendre la lecture » et que la fiche
+    // TV : elle vit dans core, elle n'est plus recopiée ici (#43, §8.2).
     val isWatched = remember(watchedProgress, totalDurationMs) {
-        totalDurationMs > 0 && (watchedProgress >= totalDurationMs * 0.9f)
+        ProgressPolicy.isComplete(watchedProgress, totalDurationMs)
     }
     val isPartiallyWatched = !isWatched && watchedProgress > 0L && totalDurationMs > 0L
 

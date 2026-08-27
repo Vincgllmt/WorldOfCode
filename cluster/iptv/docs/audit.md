@@ -43,7 +43,8 @@
 donnée perdue. À traiter en premier.
 
 **MAJEUR** — comportement faux dans un cas identifié, ou décision dupliquée
-entre les deux UI qui finira par diverger (motif §8.2 de `CLAUDE.md`).
+entre les deux UI qui finira par diverger (motif §8.2, aujourd'hui règle 2 de
+`docs/METHODE.md`).
 
 **MINEUR** — libellé en dur, pluriel non accordé, incohérence de présentation.
 Réel, mais ne justifie pas une correction isolée : à traiter par lots.
@@ -101,6 +102,8 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 **Cause.** établie — il n'existe aucune notion de « terminé » dans la chaîne de progression. `PlayerViewModel` n'enregistre que « position > 5 s », et personne ne consomme l'état `ENDED` que `PlayerService` publie déjà.
 
 **Piste.** faire porter par `core` une règle de fin (par ex. position au-delà d'un pourcentage de la durée ⇒ ne pas enregistrer et retirer l'entrée via `clearProgress`), et la brancher à la fois sur la boucle d'enregistrement, sur `stop()` et sur `PlayerStatus.ENDED`. La règle est une décision pure : elle doit vivre à côté de `RecentPolicy`, pas dans les deux UI.
+
+**✅ Corrigé le 2026-08-27** — `core/data/ProgressPolicy` (règle pure, seuil 0,9 — celui que les trois UI appliquaient déjà chacune de leur côté), branchée sur la boucle, `stop()`, `onCleared()`, `PlayerStatus.ENDED` et un garde de reprise dans `playMedia` ; `ProgressRepository.markCompleted` retire l'entrée sans perdre la marque « vu », `getResumePosition` rouvre au début. Vérifié à l'émulateur en différentiel build par build, et sur le Pixel 7 où la rangée réelle est passée de **15 cartes à 1**. Détail : `JOURNAL.md` §53.
 
 
 # MAJEUR

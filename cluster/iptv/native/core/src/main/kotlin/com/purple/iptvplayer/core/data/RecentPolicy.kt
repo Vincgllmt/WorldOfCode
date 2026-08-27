@@ -59,5 +59,16 @@ object RecentPolicy {
         return existing.filterNot { groupKey(it) == key }
     }
 
+    /**
+     * Ce que la vitrine a le droit de montrer : **jamais un média vu jusqu'au bout** (#43).
+     *
+     * Le filtre est posé à la lecture et non seulement à l'écriture, pour deux raisons :
+     * les entrées écrites avant que la règle n'existe portent déjà `progress == duration`
+     * et resteraient sinon en place jusqu'à leur prochaine lecture ; et une entrée terminée
+     * qui rentrerait par un autre chemin ne s'afficherait toujours pas.
+     */
+    fun visible(items: List<RecentItem>): List<RecentItem> =
+        items.filterNot { ProgressPolicy.isComplete(it.progress, it.duration) }
+
     private const val TYPE_SERIES = "series"
 }

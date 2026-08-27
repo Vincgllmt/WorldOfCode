@@ -136,7 +136,7 @@ fun TvPlayerScreen(
 
     LaunchedEffect(url) {
         if (url.isNotEmpty()) {
-            val savedPos = if (mediaId.isNotEmpty()) vm.getSavedProgress(mediaId) else 0L
+            val savedPos = if (mediaId.isNotEmpty()) vm.getResumePosition(mediaId) else 0L
             vm.playMedia(url, title, mediaId.ifEmpty { null }, savedPos, cover.ifEmpty { null }, type.ifEmpty { null })
         }
     }

@@ -121,4 +121,26 @@ class RecentPolicyTest {
 
         assertEquals(start, RecentPolicy.remove(start, "movie_9"))
     }
+
+    // ── La vitrine ne montre pas ce qui est déjà vu (#43) ─────────────────────
+
+    /**
+     * Les entrées écrites avant que la règle de fin n'existe portent `progress == duration`.
+     * Elles ne peuvent pas être retirées par une migration — la vitrine les écarte à la
+     * lecture, sinon la rangée resterait pleine de contenus déjà vus.
+     */
+    @Test
+    fun `un media vu jusqu'au bout ne s'affiche plus`() {
+        val fini    = movie("movie_7").copy(progress = 5_400_000L, duration = 5_400_000L)
+        val encours = movie("movie_8")
+
+        assertEquals(listOf("movie_8"), RecentPolicy.visible(listOf(fini, encours)).map { it.id })
+    }
+
+    @Test
+    fun `un direct reste affiche, sa duree est inconnue`() {
+        val direct = movie("chaine_1").copy(progress = 7_200_000L, duration = 0L)
+
+        assertEquals(listOf("chaine_1"), RecentPolicy.visible(listOf(direct)).map { it.id })
+    }
 }

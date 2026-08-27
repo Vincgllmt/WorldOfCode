@@ -1,6 +1,7 @@
 package com.purple.iptvplayer.core.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -15,6 +16,17 @@ class ProgressRepository(private val context: Context) {
 
     private val KEY_RECENT_JSON = stringPreferencesKey("recent_items_json")
 
+    private fun positionKey(mediaId: String) = longPreferencesKey("progress_$mediaId")
+
+    /**
+     * Durée du média, retenue à côté de sa position.
+     *
+     * Sans elle, « où reprendre ? » ne peut pas être répondu : la position seule ne dit pas
+     * si elle est proche de la fin. C'est ce qui manquait au défaut #43 — le point de
+     * reprise était relu tel quel, générique compris.
+     */
+    private fun durationKey(mediaId: String) = longPreferencesKey("duration_$mediaId")
+
     suspend fun saveProgress(
         mediaId: String,
         positionMs: Long,
@@ -24,54 +36,89 @@ class ProgressRepository(private val context: Context) {
         type: String? = null,
         durationMs: Long = 0L
     ) {
-        // Save raw progress
-        val key = longPreferencesKey("progress_$mediaId")
-        context.progressDataStore.edit { it[key] = positionMs }
+        context.progressDataStore.edit { prefs ->
+            prefs[positionKey(mediaId)] = positionMs
+            if (durationMs > 0L) prefs[durationKey(mediaId)] = durationMs
 
-        // Update recent list if metadata is provided
-        if (title != null && type != null && url != null) {
-            updateRecentList(mediaId, url, title, cover, type, positionMs, durationMs)
+            // Update recent list if metadata is provided
+            if (title != null && type != null && url != null) {
+                val item = RecentItem(
+                    mediaId, url, title, cover, type, positionMs, durationMs,
+                    System.currentTimeMillis(),
+                )
+                prefs[KEY_RECENT_JSON] =
+                    encodeRecentJson(RecentPolicy.upsert(readRecent(prefs), item))
+            }
         }
-    }
-
-    suspend fun getProgress(mediaId: String): Long {
-        val key = longPreferencesKey("progress_$mediaId")
-        return context.progressDataStore.data.first()[key] ?: 0L
-    }
-
-    suspend fun clearProgress(mediaId: String) {
-        val key = longPreferencesKey("progress_$mediaId")
-        context.progressDataStore.edit { it.remove(key) }
-        removeFromRecent(mediaId)
-    }
-
-    val recentItems: Flow<List<RecentItem>> = context.progressDataStore.data.map { prefs ->
-        val json = prefs[KEY_RECENT_JSON] ?: "[]"
-        parseRecentJson(json)
     }
 
     /**
-     * Insertion en tête, **regroupée** : cf. [RecentPolicy]. Un épisode ne s'ajoute plus à
-     * côté des autres épisodes de sa série, il les remplace.
+     * Le média a été vu jusqu'au bout : il **sort** de « Reprendre la lecture » (#43).
+     *
+     * La position est conservée, calée sur la durée : c'est elle qui porte le badge « vu »
+     * des fiches de série ([ProgressPolicy.isComplete]). L'effacer ferait réapparaître
+     * l'épisode comme non commencé. Quand la durée est inconnue — le lecteur a signalé la
+     * fin sans jamais l'avoir publiée — il n'y a rien à conserver qui puisse être relu
+     * comme « vu » : on efface, faute de quoi la position resterait un point de reprise.
+     *
+     * Tout se fait dans une seule transaction : une entrée retirée de la vitrine et une
+     * position à demi écrite sont deux moitiés du même geste.
      */
-    private suspend fun updateRecentList(
-        id: String, url: String, title: String, cover: String?, type: String, pos: Long, dur: Long
-    ) {
+    suspend fun markCompleted(mediaId: String, durationMs: Long) {
         context.progressDataStore.edit { prefs ->
-            val json = prefs[KEY_RECENT_JSON] ?: "[]"
-            val item = RecentItem(id, url, title, cover, type, pos, dur, System.currentTimeMillis())
-            val list = RecentPolicy.upsert(parseRecentJson(json), item)
-            prefs[KEY_RECENT_JSON] = encodeRecentJson(list)
+            if (durationMs > 0L) {
+                prefs[positionKey(mediaId)] = durationMs
+                prefs[durationKey(mediaId)] = durationMs
+            } else {
+                prefs.remove(positionKey(mediaId))
+                prefs.remove(durationKey(mediaId))
+            }
+            prefs[KEY_RECENT_JSON] =
+                encodeRecentJson(RecentPolicy.remove(readRecent(prefs), mediaId))
         }
     }
 
-    private suspend fun removeFromRecent(id: String) {
+    /** Position brute, telle qu'enregistrée — c'est la trace de ce qui a été vu. */
+    suspend fun getProgress(mediaId: String): Long {
+        return context.progressDataStore.data.first()[positionKey(mediaId)] ?: 0L
+    }
+
+    /**
+     * Où rouvrir ce média : 0 s'il a été vu jusqu'au bout (#43).
+     *
+     * **Seule [durationKey] fait foi ici**, et un repli sur la durée portée par l'entrée de
+     * « Reprendre la lecture » a été essayé puis retiré : mesuré sur l'appareil, cette
+     * durée-là est le nombre le moins fiable du système. Un épisode y était écrit
+     * `progress == duration == 5 317 862`, alors que le lecteur mesure **9 568 408** — la
+     * durée enregistrée était celle qu'ExoPlayer connaissait à cet instant, pas celle du
+     * média. S'y fier faisait repartir de zéro un épisode vu à 55 %.
+     *
+     * Sans durée enregistrée — toutes les positions écrites avant cette version — la
+     * position est rendue telle quelle, et c'est [PlayerViewModel.playMedia] qui tranche,
+     * une fois le flux bufferisé et la **vraie** durée connue.
+     */
+    suspend fun getResumePosition(mediaId: String): Long {
+        val prefs = context.progressDataStore.data.first()
+        val pos   = prefs[positionKey(mediaId)] ?: 0L
+        val dur   = prefs[durationKey(mediaId)] ?: 0L
+        return ProgressPolicy.resumePosition(pos, dur)
+    }
+
+    suspend fun clearProgress(mediaId: String) {
         context.progressDataStore.edit { prefs ->
-            val json = prefs[KEY_RECENT_JSON] ?: "[]"
-            val list = RecentPolicy.remove(parseRecentJson(json), id)
-            prefs[KEY_RECENT_JSON] = encodeRecentJson(list)
+            prefs.remove(positionKey(mediaId))
+            prefs.remove(durationKey(mediaId))
+            prefs[KEY_RECENT_JSON] =
+                encodeRecentJson(RecentPolicy.remove(readRecent(prefs), mediaId))
         }
     }
+
+    val recentItems: Flow<List<RecentItem>> = context.progressDataStore.data.map { prefs ->
+        RecentPolicy.visible(readRecent(prefs))
+    }
+
+    private fun readRecent(prefs: Preferences): List<RecentItem> =
+        parseRecentJson(prefs[KEY_RECENT_JSON] ?: "[]")
 
     private fun parseRecentJson(json: String): List<RecentItem> = RecentItemsCodec.parse(json)
 

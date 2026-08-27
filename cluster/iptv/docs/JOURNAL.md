@@ -10,6 +10,62 @@ numéro.
 
 ---
 
+## Index — à ouvrir à la bonne section, pas en entier
+
+| § | Sujet | À ouvrir quand… |
+|---|---|---|
+| 5 | Les 19 défauts P1–P11, S1–S3, B1–B3, en détail | on retouche `TrialRepository`, `M3uParserService`, `XtreamApiClient`, `CacheRepository`, `NavGraph` |
+| 8 | Panne fournisseur du 2026-08-18 — **l'IP du fournisseur est bloquée en Wi-Fi** | un test réseau échoue depuis le poste ⇒ passer en données mobiles ou VPN |
+| 9 | Procédure de vérification de la facturation, et pourquoi un APK signé localement ne suffit pas | on touche à Play Billing ou à une publication |
+| 10 | UX-1 — les quatre états d'accès (`Pro`/`Subscribed`/`Trial`/`Expired`) ; UX-2 — achat sur TV | on touche au bandeau premium ou au paywall |
+| 11 | Émulateur Android TV : création, lancement (`-gpu host`), pièges (`LEANBACK_LAUNCHER`, focus sans libellé) | on doit vérifier `app-tv` |
+| 12 | Migration Play Billing 7 → 8 ; pourquoi pas 9.x (`minSdk`) | on envisage `billing:9.x` |
+| 13 | Refonte de la navigation live (liste dense mobile) ; les favoris de chaînes n'étaient lus par personne | on touche à `HomeScreen` ou `LayoutMode` |
+| 14 | Favoris de chaînes sur TV — le retrait n'était pas cassé, il était introuvable | on touche à `TvMyListScreen` / `TvHomeScreen` (deux panneaux) |
+| 15 | Ordre des favoris : passage du `Set` à une liste ordonnée, migration paresseuse | on touche à `FavoritesRepository` / `FavoritesCodec` |
+| 16 | Le rail TV qui s'ouvre après une mutation de liste (`refocusAfterEdit`) | défaut de focus après retrait/déplacement |
+| 17 | Localisation : le défaut allait dans les deux sens + **contrôle de parité des `strings.xml`** | on ajoute un libellé (rejouer le script de parité) |
+| 18 | Plein écran immersif et `FLAG_KEEP_SCREEN_ON` | on touche aux écrans de lecture |
+| 19 | Paramètres TV alignés sur le mobile ; fiche film TV (piège de la largeur d'affiche) | on retouche `TvSettings` ou `TvMovieScreen` |
+| 20 | La fiche série plantait — `%d` recevant une `String` | on extrait des libellés en ressources |
+| 21 | Fiche série TV : `stripSeriesName`, densité, 37 saisons | on retouche `TvSeriesScreen` |
+| 22 | Recherche TV inatteignable au D-pad — le champ de texte consomme les directions | on touche à `TvSearchBar` |
+| 23 | Focus TV : liseré d'onglet actif indépendant du focus ; piège du `LaunchedEffect` | avant toute correction de focus |
+| 24 | Le « défaut 11 » n'existait pas ; séries à 37 saisons vérifiées | — (leçon de méthode, cf. §8.4) |
+| 25 | Fiche série : focus d'arrivée sur le premier épisode, bouton de téléchargement accessible | on redispose une fiche TV |
+| 26 | Clavier virtuel à la demande (`canFocus = editing`) | on touche à la saisie sur TV |
+| 27 | Parseurs de catalogue : la tolérance ne doit pas être uniforme (lever / dégrader / écarter) | on touche à `parseChannels`/`parseMovies`/`parseSeries` |
+| 28 | Carte EPG TV — P10/P11 n'avaient jamais été portés ; `core/epg/EpgTimeline` | on touche à l'EPG |
+| 29 | VF / VOSTFR — la première piste est une piste **forcée** ; `VersionPolicy` | on touche à la sélection de pistes |
+| 30 | Focus qui s'échappe vers le rail : garde-fou posé **côté rail** (`enter`) | défaut de focus en fin de liste |
+| 31 | Secret de signature : mot de passe changé, 3121 artefacts sortis du suivi, lint TV débloqué | on touche à la signature ou au `.gitignore` |
+| 32 | B2 — réconcilier les droits sans déconnecter les abonnés légitimes | on touche à `syncEntitlements` |
+| 33 | Quatre défauts de la fiche série mobile + télécommande de cast | on retouche la fiche série mobile ou le cast |
+| 34 | Cast : type MIME, suivi de progression depuis le récepteur | on touche à `CastRepository` |
+| 35 | `rememberSaveable` sur les écrans de recherche ; synopsis dépliable | on ajoute un état d'écran |
+| 36 | Régression du cast — le fait décisif n'avait pas été vérifié | avant de bloquer un contenu sur son format |
+| 37 | Grille irrégulière (`minLines = 2`) — défaut ancien, pas une régression | on touche aux cartes de grille |
+| 38 | Pourquoi il n'y a pas de « partie commune » d'UI entre mobile et TV | on croit pouvoir corriger les deux UI d'un geste |
+| 39 | Le sélecteur de disposition n'agissait pas sur Films et Séries | on touche à `layoutMode` |
+| 40 | Le rail TV happait le focus — un correctif du §23 devenu la cause | défaut de focus au lancement ou au changement d'onglet |
+| 41 | Première build de release TV (10 / 1.2.1) ; lien M3U pré-rempli sans le committer | on publie `app-tv` |
+| 42 | **Audit UX du D-pad : 28 défauts** → plan d'implémentation ; 3 causes racines révisées, `androidx.tv.foundation` déprécié | on corrige un défaut de `AUDIT_TV_UX.md` |
+| 43 | **Lots 0 et 1 livrés** (B1–B4) ; `TvFocusKit`, `TvNavPolicy` ; pièges `uiautomator`/`screencap` de l'émulateur | on corrige un bloquant TV ou on vérifie à l'émulateur |
+| 44 | **Lot 2 livré** (G2–G7, G9) ; **l'ordre `focusProperties`/`focusGroup` décide de tout** ; instantané d'AVD corrompu, Gradle `UP-TO-DATE` menteur | on touche au focus TV, ou avant une session émulateur |
+| 45 | **Lot 3 livré** (G1, G13, M1, M9) ; **G1 venait de `core`** — `STATE_IDLE` écrasait `ERROR`, le bloc d'erreur du **mobile** n'avait jamais marché non plus | on touche à `PlayerService`, au lecteur, ou à un état d'erreur |
+| 46 | **Lot 4 livré** (G10, M3, M6) ; **le contenu suit la clarté du fond** — le jeton sombre vaut 6,00 sur l'accent focalisé mais 3,68 sur l'accent pressé | on touche à une couleur de focus ou à une taille de police |
+| 47 | **Lot 5 livré** (G8, G11, G12, G15) ; **une boucle synchrone de `moveFocus` ne marche pas dans une liste paresseuse** ; `bounds` ne mesure pas un saut de liste | on touche à un saut de page ou au panneau des genres |
+| 48 | **Lot 6 livré** (M2, M5, M7, M8) ; `tools/check_strings.py` — parité `<plurals>` + littéraux **non accentués** ; il a trouvé **5 libellés français en dur dans `app-mobile`** | on ajoute un libellé, ou avant une publication |
+| 49 | **Trois défauts remontés à l'usage** : la reprise de lecture se réinsérait toute seule (boucle jamais annulée) ; le sélecteur de pistes proposait des pistes que le décodeur refuse, sans issue ; `▼` depuis un genre tombait au milieu de la rangée | on touche à `ProgressRepository`/`PlayerViewModel`, au sélecteur de pistes, ou à l'entrée d'une rangée TV |
+| 50 | **L'app mobile réorganisée autour des thèmes** : `LayoutMode` supprimé, tiroir et burger retirés ; le tiroir portait **quatre** fonctions, trois replacées, une perdue sciemment ; « Tout » → « Thèmes » dans « Ma liste » | on touche à la navigation mobile, à un mode d'affichage, ou aux favoris de thème |
+| 51 | **Release mobile 1.2.0 préparée** : la 14 était la seule publiée ; versions bumpées (mobile 15 / 1.2.0, TV 11 / 1.3.0) ; `docs/RELEASE_NOTES.md` ; la build minifiée reste non exercée | on publie une version, ou on cherche ce qui est déjà distribué |
+| 52 ter | **L'émulateur réparé** : `hw.gpu.enabled=no` dans le `config.ini` — `-gpu host` ne l'écrase pas ; lancer en `-no-window -gpu swiftshader_indirect`. Vérification à l'écran des six correctifs **interrompue, non faite** | avant toute session émulateur, ou pour reprendre la vérification du §52 |
+| 52 bis | **La barrière d'accès expiré** : le focus y était mais **invisible** (4ᵉ occurrence du §49.2) ; et une build sideloadée expirée n'a **aucune sortie** — d'où `purple.unlock`, **debug uniquement** | on touche à `TvPurchaseScreen`, à `TrialRepository`, ou on veut une build utilisable après l'essai |
+| 52 | **Six régressions de la TV 1.3.0** : le relâchement de l'appui long validait « Annuler » ; une série occupait autant de places qu'elle avait d'épisodes ; un `verticalScroll` sur un `Text` ne défile pas au D-pad ; le `Box` racine plein écran est un **cul-de-sac de focus** ; on revenait sur une fiche **vidée** | on touche à `TvConfirmDialog`, aux « Reprendre la lecture », à une fiche descriptive, au focus du lecteur, ou à `loadMovieDetail`/`loadSeriesDetail` |
+| 53 | **Audit #43 corrigé** — aucune notion de « fin » dans la chaîne de progression ; `ENDED` publié et lu nulle part ; la règle des 90 % existait **trois fois** dans les UI ; `core/data/ProgressPolicy` | on touche à la progression de lecture, à « Reprendre la lecture », ou on prend un défaut de `docs/audit.md` |
+
+---
+
 ## 5. Défauts identifiés et corrigés
 
 Tous identifiés par **lecture du code**, pas par reprise des notes existantes.
@@ -4088,3 +4144,466 @@ Le téléversement reste **manuel** : pas d'accès à la Play Developer API depu
 Et `versionCode` doit dépasser le publié, jamais l'égaler — Play refuse, et un APK
 sideloadé de même code s'installe sans rien annoncer, ce qui rend une vérification
 ininterprétable.
+
+---
+
+## 52. Six régressions remontées à l'usage sur la TV 1.3.0 *(2026-08-23)*
+
+Six constats de l'utilisateur sur la build 11 / 1.3.0 chargée latéralement. Comme au §49,
+aucun ne vient de `AUDIT_TV_UX.md` — et cette fois **quatre d'entre eux sont des effets de
+bord des correctifs du §43 et du §49** : un chemin ouvert par une correction que rien
+n'avait exercé ensuite.
+
+**L'émulateur a été tenté puis écarté en séance** — démarrage à plus de 1500 frames
+sautées, `uiautomator dump` en « null root node », catalogue encore en chargement après
+dix minutes. Les six causes sont donc établies **par lecture**, comme au §49 ; ce qui
+suit distingue à chaque fois ce qui est démontrable ligne à ligne de ce qui reste à
+vérifier à l'écran.
+
+> ⚠️ **Un mot sur le matériel de test.** La première tentative a installé l'APK TV sur le
+> **téléphone personnel connecté en USB** — le Pixel 7 du §3. La capture d'écran a ramené
+> une conversation privée. L'APK a été désinstallé, la capture et le fichier poussé sur
+> l'appareil supprimés. **Le Pixel 7 de cette machine n'est pas un appareil de test** :
+> tout essai TV passe par l'AVD `purple_tv`, ou par rien.
+
+### 1. La confirmation de retrait se referme quand on relâche `OK`
+
+« L'encart s'ouvre bien mais lorsque je lâche le bouton l'encart disparaît. »
+
+Ce n'est pas un défaut d'affichage, et le dialogue n'est pas en cause. `onLongClick` de
+`androidx.tv.material3.Surface` part au **`repeatCount` 1** de `DPAD_CENTER`, c'est-à-dire
+**touche encore enfoncée**. Le dialogue s'ouvre, sa fenêtre prend le focus — et c'est elle
+qui reçoit l'`ACTION_UP` du relâchement. La même `Surface` déclenche son `onClick` sur cet
+`ACTION_UP`, sans avoir jamais vu l'`ACTION_DOWN` correspondant : « Annuler », qui porte le
+focus d'arrivée voulu par le §49, se valide tout seul.
+
+Le §49 avait donc livré un geste dont le relâchement annule l'action qu'il vient de
+déclencher. La confirmation n'a jamais pu aboutir.
+
+**Règle retenue, et elle ne parle pas de dialogues** : *un relâchement sans appui préalable
+dans la fenêtre n'est pas un clic*. `TvLongPressGuard` (logique pure, 5 tests) ; le
+`onPreviewKeyEvent` du dialogue arme au premier `KeyDown` et avale tout `KeyUp` de
+validation reçu avant lui.
+
+### 2. Une série occupait autant de places qu'elle avait d'épisodes
+
+Deux défauts superposés, l'un d'accumulation, l'autre d'écriture parasite.
+
+**(a) La déduplication portait sur le mauvais identifiant.** `ProgressRepository`
+dédoublonnait sur l'identifiant **exact**, et celui d'un épisode est
+`"<seriesId>_<episodeId>"` (`EpisodeTitle.progressId`). Deux épisodes d'une même série sont
+deux identifiants distincts : ils s'empilaient tous. Une série regardée sur une soirée
+remplissait la rangée à elle seule et chassait les films.
+
+`RecentPolicy` (logique pure, 10 tests) regroupe par série et laisse tout le reste
+dédoublonné sur son identifiant — préfixer par le type aurait **séparé** des entrées qui se
+dédoublonnaient jusqu'ici. `remove` retire tout le groupe : laisser derrière soi l'entrée
+d'un épisode antérieur ferait reprendre la place au premier rafraîchissement, et la
+suppression paraîtrait sans effet — le §8.15, à nouveau.
+
+**(b) Lancer l'épisode 5 en écrivait trois.** Le maillon décisif est une ligne de
+`PlayerService.playPlaylist` : `_state.value = PlayerState(…)` remet `mediaItemIndex` à
+**0**, alors qu'on démarre à `startIndex`. Or `PlayerViewModel.observeEpisodeTransitions`
+collecte ce champ depuis un `StateFlow`, qui **rejoue sa valeur courante à la
+souscription**. Déroulé pour l'épisode 5 :
+
+| Étape | `episodeIndex` | `currentMediaId` | Écriture |
+|---|---|---|---|
+| `applyEpisode(5)` | 5 | ep5 | — |
+| `playPlaylist` pose `mediaItemIndex = 0` | 5 | ep5 | — |
+| 1ʳᵉ émission, `0 ≠ 5` | 0 | **ep1** | ep5 marqué **terminé** |
+| vrai index 5, `5 ≠ 0` | 5 | ep5 | ep1 marqué **terminé** |
+
+Deux entrées fabriquées de toutes pièces, à une durée héritée de la lecture précédente
+(`lastKnownDurationMs` n'était jamais remis à zéro), plus l'entrée légitime de la boucle
+des 10 s. Trois correctifs, tous dans `core` : `mediaItemIndex = startIndex`, `drop(1)` sur
+le flux de transitions, et remise à zéro de la durée à chaque nouvelle lecture. `stop()`
+annule aussi `transitionJob` — sans quoi le `PlayerState()` neuf de `playerService.stop()`
+se relit comme une transition vers l'épisode 1 et le réinsère, exactement le défaut que le
+§49.1 avait écrit ce `stop()` pour supprimer.
+
+### 3. Un `verticalScroll` sur un `Text` ne défile pas à la télécommande
+
+Les deux fiches posaient `Modifier.verticalScroll` sur leur synopsis. Un conteneur défilant
+ne reçoit les touches directionnelles **que s'il a le focus**, et un `Text` n'est pas
+focalisable : le synopsis était défilable à la souris et à rien d'autre. Le commentaire du
+code annonçait pourtant « défilable plutôt que tronqué ».
+
+Sur la fiche film, le compte est pire que « tronqué ». À 960 × 540 dp — un téléviseur
+1080p à densité 2 — la colonne d'info cumule environ 610 dp pour 540 disponibles, et
+`Arrangement.Center` répartit le débordement **des deux côtés** : le genre passait sous le
+bord haut, la rangée d'actions sous le bord bas.
+
+`TvScrollableBlock` porte la cible de focus, donc les touches. Deux choix qui méritent
+d'être écrits :
+
+1. **Focalisable seulement s'il déborde.** Un focalisable de plus coûte un appui (§8.10) ;
+   `canFocus` suit `maxValue > 0`, donc une fiche courte reste strictement transparente au
+   D-pad. ⚠️ `ScrollState.maxValue` vaut `Int.MAX_VALUE` **tant que la mise en page n'a pas
+   eu lieu** — le lire tel quel rendait tout bloc focalisable le temps d'une frame.
+2. **La touche est rendue en bout de course.** On défile tant qu'il reste de la matière,
+   puis `deltaFor` rend `null` et le focus part vers le voisin. Consommer les quatre
+   directions aurait enfermé le focus dans le synopsis : le défaut pire que celui corrigé
+   qu'interdit §8.14.
+
+Sur la fiche film, les boutons restent **hors** du bloc défilable : mis dedans, arriver sur
+« Lire » aurait fait sauter la vue en bas de fiche, titre compris.
+
+### 4. Le focus d'arrivée visait déjà le premier épisode — et ne pouvait pas l'atteindre
+
+Le §25 avait posé `firstDetailFocus` sur la première ligne d'épisode, avec un
+`LaunchedEffect(Unit) { try { … } catch {} }`. Cet effet part **dès que le détail est
+chargé** ; la `LazyColumn` des épisodes, elle, ne compose ses lignes qu'à la mise en page
+suivante. Le requester n'est rattaché à aucun nœud, `requestFocus()` lève, le `catch`
+avale — et Compose retombe sur le premier focalisable de l'arbre, le bouton « Ma liste ».
+**Le piège du G6, mot pour mot**, dans un code écrit avant lui.
+
+La correction est celle que le §43 avait déjà retenue deux fois : la ligne signale son
+attache (`DisposableEffect`), l'effet s'accroche à ce drapeau, et ne se rejoue jamais
+(`episodeFocusClaimed`) — le §40 interdit de reprendre le focus à l'utilisateur.
+
+Le second volet — « depuis Ma liste on arrive au milieu de la liste » — est **le §49.3
+transposé d'un axe à l'autre**. À distance horizontale égale, la recherche directionnelle
+départage par l'écart des **centres** sur l'axe vertical ; « Ma liste » est en bas d'une
+colonne de 280 dp, l'épisode « le plus proche » est donc celui du milieu. Aucun réglage de
+la liste ne corrige cela : `tvGroupEntry` impose le point d'entrée.
+
+⚠️ **Limite assumée** : une fois la liste défilée, la première ligne n'est plus composée,
+le drapeau retombe et `enter` rend `FocusRequester.Default` — donc le milieu à nouveau. La
+réclamer quand même lèverait. C'est le même arbitrage que `TvRowFocus`, avec l'autre
+priorité : ici l'utilisateur a demandé **la première**, pas la dernière visitée.
+
+### 5. Le lecteur était inerte, et la cause n'était pas dans le clavier
+
+« Impossible de naviguer sur le lecteur. »
+
+Le `Box` racine de `TvPlayerScreen` fait `fillMaxSize()` **et** `focusable()`. Quand c'est
+lui qui porte le focus, la recherche directionnelle de Compose ne peut plus rien trouver :
+`isCandidate` exige qu'un candidat **dépasse** le rectangle focalisé du côté visé —
+`focusRect.bottom < candidate.bottom` pour `▼`, et symétriquement dans les trois autres
+directions. Rien ne dépasse le plein écran. **Aucune direction n'aboutit, dans aucun sens.**
+
+Deux causes y menaient, et il fallait les deux pour que le blocage soit permanent :
+
+- un `LaunchedEffect(Unit) { delay(100); rootFocus.requestFocus() }` **en fin de
+  composable**, vestige d'avant le G13, reprenait le focus à la racine 100 ms après
+  l'entrée — soit 20 ms après que l'effet du G13 l'ait donné au bouton central. Il gagnait
+  systématiquement ;
+- le seul mécanisme qui rendait ensuite le focus à un contrôle est le masquage automatique
+  suivi d'un réaffichage. Or le §29 a mis `lastInteractionMs` dans la clé du minuteur, et
+  **chaque appui le réarme** — y compris ceux qui ne produisent rien. Plus l'utilisateur
+  insistait, moins l'overlay avait de chances de se masquer. L'écran restait figé aussi
+  longtemps qu'on appuyait.
+
+Le vestige est supprimé. Et `TvPlayerKeys.reentersOverlay` pose le filet : overlay affiché
++ racine focalisée + touche directionnelle ⇒ on rend la main aux contrôles. Il couvre aussi
+le cas résiduel où un contrôle quitte la composition — « Épisode suivant » en fin de
+saison, la barre de progression quand la durée retombe à zéro sur un flux live.
+
+### 6. On revenait bien sur la fiche — mais sur une fiche vidée
+
+C'est la contrepartie non vue d'un correctif du §43. La fiche film avait cessé de se
+refermer en lançant la lecture, précisément pour qu'on la retrouve au retour. Elle est bien
+restaurée : `selectedMovieId` / `selectedSeriesId` sont `rememberSaveable` sous le
+`SaveableStateProvider("main")` du §43, et l'onglet avec.
+
+Mais `TvMoviesScreen` / `TvSeriesScreen` portent un `LaunchedEffect(selectedMovieId)` qui
+appelle `loadMovieDetail(id)` — et cette méthode posait `ContentState.Loading`
+**inconditionnellement**. L'écran quitte la composition en partant au lecteur ; l'effet se
+rejoue au retour, et écrase la fiche déjà chargée. `ContentViewModel` est porté par
+l'Activity : la donnée était là, on la jetait pour la redemander.
+
+Le résultat à l'écran est une roue d'attente sur fond sombre — **indiscernable du lecteur
+qu'on vient de quitter** — puis la fiche, une requête réseau plus tard. Cela suffit à
+lire le retour comme « il ne s'est rien passé », et à appuyer une seconde fois : le
+`BackHandler` de la fiche referme alors la fiche, et depuis l'onglet d'accueil l'appui
+suivant quitte l'application (`TvTabBackPolicy.Action.Escape`, §43).
+
+Correctif : un garde d'identifiant dans `loadMovieDetail` / `loadSeriesDetail` — on ne
+repasse pas par `Loading` quand la fiche demandée est déjà celle qu'on tient. Garder une
+fiche ouverte n'a de valeur que si on la retrouve **remplie**.
+
+⚠️ **Ce qui reste à vérifier à l'écran.** Le compte exact d'appuis annoncé par
+l'utilisateur — « deux fois » — n'est pas mesuré. La chaîne ci-dessus l'explique sans
+supposer qu'un appui soit avalé, et le reste du chemin de `RETOUR` a été relu ligne à ligne
+sans y trouver de consommateur : `consumesToRevealOverlay` exclut `Key.Back` depuis le
+§43 ; `media3-ui` 1.4.0 ne contient aucun `OnBackInvokedCallback` (vérifié dans l'AAR) ;
+`app-tv` n'entre pas en mode immersif, contrairement au mobile (§18), donc le système ne
+prend pas d'appui pour rétablir les barres. **Le relevé qui trancherait** : `adb logcat |
+grep CoreBackPreview` en entrant dans le lecteur — une seconde ligne « Setting back
+callback » y désignerait un second consommateur. Si un appui reste avalé après ce
+correctif, c'est là qu'il faut regarder.
+
+### État
+
+**269 tests, 0 échec** — 196 dans `core`, 73 dans `app-tv`. Parité des libellés tenue
+(116/116 et 113/113 `string`, 2/2 et 7/7 `plurals`). Un littéral français en dur retiré au
+passage sur la fiche film (`"Ma liste"`), que `check_strings.py` ne voyait pas.
+
+### 52 bis. La barrière d'accès, et l'impasse qu'elle refermait *(2026-08-23)*
+
+Signalé dans la foulée : « Accès expiré sur l'app TV. J'arrive sur l'écran où il y a écrit
+*Réessayer*, *Restaurer mes achats*. Or je ne peux pas naviguer. »
+
+**Deux choses distinctes, et une seule est un défaut.**
+
+#### Le défaut : le focus y était, invisible
+
+`TvSecondaryButton` et `TvPriceCard` écrivaient `.focusable().onFocusChanged { … }`. Dans
+cet ordre, la callback n'est jamais appelée — un `FocusEventModifierNode` n'observe que les
+cibles placées **après** lui — donc `isFocused` reste faux et **aucun liseré ne s'allume**.
+Le focus d'arrivée était bien posé sur « Réessayer » par le `LaunchedEffect` de l'écran, et
+`▼` atteignait bien « Restaurer mes achats » : rien ne le montrait.
+
+**Quatrième occurrence du piège du §49.2**, après `TvTrackRow`. Il coûte plus cher ici
+qu'ailleurs : sur la barrière, ces deux boutons sont les **seuls** focalisables de l'écran,
+donc l'absence de liseré ne laisse aucun autre repère et l'écran paraît mort.
+
+#### L'angle mort : une build sideloadée expirée n'a aucune sortie
+
+L'essai dure trois jours (`TrialPolicy.TRIAL_DAYS`). Passé ce délai, la barrière propose
+« Réessayer » et « Restaurer mes achats » — et **ni l'un ni l'autre ne peut aboutir sur une
+build chargée latéralement** : Play ne fait autorité que sur ce qu'il a lui-même installé
+(§8.16, §9). Le repli du §43, écrit pour ne pas remplacer une fuite de revenu par une
+impasse, en est bien une pour l'auteur de l'application sur son propre téléviseur.
+
+Ce n'est pas un bug de la barrière : c'est qu'il n'existait aucune build **d'auteur**.
+
+**`purple.unlock`**, même dispositif que `purple.defaultM3u` (§41) : clé dans
+`local.properties` — donc dans le `.gitignore` —, faux par défaut, exposée en
+`BuildConfig.OWNER_UNLOCK`. `TrialRepository` court-circuite ses quatre lectures d'accès ;
+`TrialPolicy` n'est pas touchée et reste la règle, testée. Le drapeau est **hors** de la
+logique pure à dessein : ce n'est pas une décision métier, c'est un drapeau de build, et le
+tester reviendrait à tester une règle qui n'existe que sur une machine.
+
+⚠️ **Le drapeau n'existe qu'en debug.** Premier jet : `defaultConfig`, donc actif aussi en
+release, avec un simple avertissement Gradle pour garde-fou. C'est trop faible pour ce
+risque-là — l'APK de release est signé de la clé d'upload, donc téléversable par
+inadvertance, et un AAB déverrouillé donnerait l'application gratuitement à tout le monde.
+`buildTypes` câble donc la release à `false` **en dur**, quoi que dise `local.properties`.
+Vérifié sur les deux `BuildConfig.java` générés : `true` en debug, `false` en release.
+L'erreur n'est plus déconseillée, elle est impossible.
+
+**Et la debug est signée de la clé d'upload** (quand le keystore est présent — la machine
+« hjouini » ne l'a pas, d'où la condition). Android refuse de remplacer une application par
+une build d'une autre signature : sans cela, installer la debug par-dessus la 1.3.0
+imposerait de désinstaller, donc de perdre identifiants, favoris et « Reprendre la
+lecture » — précisément l'historique qui sert à vérifier le regroupement des séries du §52.
+`versionNameSuffix = "-debug"` pour qu'aucune capture ne laisse de doute sur ce qui tourne.
+
+⚠️ **Effet de bord assumé** : `core` étant partagé, la variante debug d'`app-mobile` est
+elle aussi déverrouillée sur cette machine. Sa release ne l'est pas.
+
+### 52 ter. Pourquoi l'émulateur était devenu inutilisable *(2026-08-23)*
+
+« Je ne sais pas pourquoi l'émulateur est très lent, avant tu pouvais tester dessus très
+bien. » Deux causes cumulées, aucune dans l'application.
+
+**1. `hw.gpu.enabled=no` dans `~/.android/avd/purple_tv.avd/config.ini`.** L'accélération
+graphique était **désactivée dans l'AVD lui-même** : tout le rendu se faisait en logiciel
+côté invité. C'est ce qui produisait les 1583 frames sautées au démarrage, la capture
+d'écran entièrement noire et le `ERROR: null root node returned by UiTestAutomationBridge`
+d'`uiautomator` — trois symptômes qui ressemblaient à des pièges d'outillage (§43, §44) et
+n'étaient qu'un rendu à genoux. Le drapeau `-gpu host` en ligne de commande **ne suffit pas
+à l'écraser**.
+
+**2. Le GPU hôte est inutilisable pour ce rendu.** Une fois `hw.gpu.enabled=yes` posé,
+l'émulateur répond `ERROR | Your GPU cannot be used for hardware rendering` — alors qu'il
+voit très bien la puce (`Found physical GPU 'Intel(R) Graphics (ADL GT2)'` par Vulkan). La
+session est en **Wayland**, le plugin Qt wayland est absent des libs livrées, et le chemin
+GL échoue. `ANDROID_EMULATOR_USE_SYSTEM_LIBS=1` et `QT_QPA_PLATFORM=xcb` n'y changent rien.
+
+**La configuration qui marche** — et qui n'a pas besoin du GPU hôte du tout :
+
+```bash
+emulator -avd purple_tv -no-window -gpu swiftshader_indirect -accel on -no-boot-anim -no-audio
+```
+
+`-no-window` supprime la fenêtre Qt, donc tout le problème de GL hôte ; `swiftshader_indirect`
+rend côté **hôte** (SIMD, multi-thread) au lieu du logiciel côté invité. KVM était disponible
+depuis le début (`emulator -accel-check` : « KVM (version 12) is installed and usable »),
+ce n'était pas la cause.
+
+| | Avant | Après |
+|---|---|---|
+| Démarrage jusqu'à `sys.boot_completed` | > 10 min, jamais abouti à un catalogue | **36 s** |
+| `screencap` | image noire, 1 seule couleur | 2,1 s, image correcte |
+| `uiautomator dump` | `null root node` | fonctionne |
+| Catalogue chargé | jamais | 11871 chaînes / 75 genres en ~20 s |
+
+Valeurs d'origine du `config.ini`, si l'on doit revenir en arrière : `hw.gpu.enabled=no`,
+`hw.gpu.mode=auto`, `hw.ramSize=2048`. Elles sont désormais `yes` / `host` / `4096`.
+
+⚠️ **Piège de commande, rencontré deux fois :** `pkill -f "emulator.*purple_tv"` et
+`pgrep -af "qemu-system"` **tuent leur propre shell**, dont la ligne de commande contient le
+motif. Écrire `pkill -f "[q]emu-system"` — la classe de caractères ne se matche pas
+elle-même.
+
+### État de la vérification à l'écran — **interrompue**
+
+Arrêtée à la demande de l'utilisateur : le catalogue du fournisseur ne peut pas être chargé
+pendant qu'il regarde un film (connexions simultanées limitées, cf. §49.2).
+
+Acquis : émulateur réparé, build d'auteur (`1.3.0-debug`, `OWNER_UNLOCK=true`) installée,
+connexion par le lien M3U pré-rempli, catalogue complet chargé. **Aucun des six correctifs
+du §52 n'a encore été vérifié à l'écran.**
+
+⚠️ **Un point à éclaircir à la reprise, et il n'est pas tranché.** Depuis la liste des
+genres de Direct TV, `◀` **ne déplaçait pas le focus vers le rail** — trois appuis, focus
+inchangé sur le premier genre (`bounds=[192,158][740,254]`). Deux lectures possibles, et
+rien ne permet encore de choisir :
+
+1. une régression réelle de l'entrée latérale dans le rail (G3, §43) ;
+2. l'émulateur qui n'a pas délivré la touche — le pas de 0,7 s entre appuis n'a pas été
+   validé sur cette machine, et aucune touche n'a encore été **prouvée** reçue par l'app.
+
+**Le contrôle qui tranche, à faire en premier :** envoyer `DPAD_DOWN` et vérifier que le
+focus descend d'un genre. S'il descend, les touches passent et `◀` est un vrai défaut ; s'il
+ne descend pas non plus, c'est la chaîne `adb input` qu'il faut régler avant toute
+conclusion. Ne pas conclure avant ce relevé — §8.4.
+
+---
+## 53. Audit #43 — un média vu jusqu'au bout ne sortait jamais de « Reprendre la lecture » *(2026-08-27)*
+
+Premier défaut pris dans [`audit.md`](audit.md), et l'un des quatre **CRITIQUES** : un film
+regardé jusqu'au générique restait indéfiniment dans la rangée, barre pleine, et le rouvrir
+depuis sa carte le replaçait à la fin. La rangée étant bornée à
+`RecentItemsCodec.MAX_ITEMS`, les contenus déjà vus chassaient ceux réellement en cours.
+
+Ce que valait le défaut en vrai, relevé sur le téléphone de l'utilisateur avant tout
+correctif : **15 entrées dans la rangée, dont 14 à 100 %**. Une seule était en cours.
+
+### La cause, et ce qu'elle disait du code
+
+Il n'existait **aucune notion de fin** dans la chaîne de progression. `saveProgressNow()`
+n'avait qu'un seuil bas — `pos > 5_000L` — et écrivait une position égale à la durée comme
+n'importe quelle autre. `PlayerService` publie pourtant `PlayerStatus.ENDED` depuis
+toujours (`PlayerService.kt:93`) : **aucun des trois modules ne le lisait**.
+
+La règle de fin, elle, existait — écrite **trois fois**, dans les deux UI :
+
+| Fichier | Écriture |
+|---|---|
+| `app-tv/.../TvSeriesScreen.kt:1060` | `totalDurationMs > 0 && watchedProgress >= totalDurationMs * 0.9f` |
+| `app-mobile/.../SeriesDetailScreen.kt:384` | la même, à l'identique |
+| `app-mobile/.../MovieDetailScreen.kt:79` | `savedPos < savedDur * 0.9f` pour « Reprendre » vs « Lire » |
+
+C'est le motif « une décision écrite deux fois » dans sa forme la plus nette : la décision
+« vu jusqu'au bout » était connue de l'**affichage** et inconnue de l'**écriture**. Les
+fiches posaient un badge « vu » sur un épisode que la vitrine continuait de proposer à la
+reprise.
+
+### Le correctif — une seule décision, dans `core`
+
+**`core/data/ProgressPolicy.kt`** (logique pure, à côté de `RecentPolicy`) :
+
+| | |
+|---|---|
+| `MIN_POSITION_MS = 5_000` | en deçà, on n'a pas « commencé » |
+| `COMPLETION_RATIO = 0.9f` | le taux déjà retenu par les trois UI — pas un quatrième nombre |
+| `isComplete(pos, dur)` | `false` si la durée est inconnue : **jamais de supposition** sur un direct |
+| `decide(pos, dur)` | `IGNORE` / `SAVE` / `COMPLETED` |
+| `resumePosition(saved, dur)` | 0 si terminé |
+
+Les trois écritures du tableau ci-dessus appellent désormais `isComplete`.
+
+**Branchements** — les trois demandés par l'audit, plus deux qu'il ne cite pas :
+
+1. la boucle des 10 s et `stop()` passent par un unique `commitProgress()`, qui applique
+   `decide` ;
+2. `onCleared()` aussi — quitter l'app sur un générique réinsérait sinon le film ;
+3. `observeCompletion()` lit `PlayerStatus.ENDED` et marque terminé sans attendre la
+   boucle. Souscrit **après** `play()`/`playPlaylist()`, qui viennent de poser `BUFFERING` :
+   la valeur rejouée par le `StateFlow` ne peut pas être un `ENDED` de la lecture
+   précédente. Annulé par `stop()`, comme la boucle et le suivi de transitions (§49.1) ;
+4. `markPreviousEpisodeWatched()` appelait `saveProgress(position = durée)` — il
+   **réinsérait** l'épisode en tête de la vitrine au moment même où il le déclarait vu. Il
+   appelle maintenant `markCompleted` ;
+5. **un garde dans `playMedia`**, décrit plus bas : c'est lui qui rattrape tout ce qui a été
+   enregistré **avant** cette version.
+
+**`ProgressRepository`** porte trois changements :
+
+- une clé `duration_<mediaId>` à côté de `progress_<mediaId>`. Sans elle, « où reprendre ? »
+  n'a pas de réponse : la position seule ne dit pas si elle est proche de la fin ;
+- `markCompleted(id, dur)` — **conserve** la position calée sur la durée (c'est elle qui
+  porte le badge « vu » des fiches) et retire l'entrée de la vitrine, dans **une seule
+  transaction** ; efface tout si la durée est inconnue, faute de quoi la position resterait
+  un point de reprise ;
+- `getResumePosition(id)`, que `PlayerViewModel.getResumePosition` expose aux deux écrans
+  de lecture à la place de `getSavedProgress`.
+
+Enfin `RecentPolicy.visible()` écarte à la **lecture** ce qui est terminé. Le filtre à
+l'écriture ne suffisait pas : les entrées écrites avant la règle portent déjà
+`progress == duration` et resteraient en place jusqu'à leur prochaine lecture. C'est ce
+filtre qui a fait tomber la rangée du téléphone de 15 cartes à 1.
+
+### Deux choses que seul l'appareil a apprises
+
+**(a) La durée enregistrée n'est pas la durée du média.** `getResumePosition` avait d'abord
+un repli : à défaut de clé `duration_<id>`, prendre la durée portée par l'entrée de
+« Reprendre la lecture ». Mesuré sur le téléphone, ce nombre-là est le **moins fiable du
+système** — un épisode y était écrit `progress == duration == 5 317 862` quand le lecteur
+mesure **9 568 408**. C'était la durée qu'ExoPlayer connaissait *à l'instant de
+l'écriture*. S'y fier faisait repartir de zéro un épisode vu à 55 %. Repli retiré : seule
+`duration_<id>` fait foi.
+
+**(b) Un délai fixe n'est pas un signal.** Restait donc tout l'historique, sans durée
+enregistrée. Le garde ajouté à `playMedia` devait trancher au moment du saut — mais écrit
+en `delay(800)` puis lecture de la durée, il marchait sur l'émulateur et **pas sur le
+téléphone** : sur un gros MKV la durée n'était pas encore publiée à 800 ms, le lecteur
+sautait à la fin, atteignait `ENDED`, et le film se re-marquait terminé sans qu'on ait rien
+vu. Il attend maintenant la **valeur** — `first { it > 0 }`, plafonnée à 3 s, repli sur
+l'ancien délai si aucune durée n'est publiée (un direct).
+
+### Vérification
+
+**Niveau 1** — `core` **208 tests** (196 + 10 sur `ProgressPolicy` + 2 sur
+`RecentPolicy.visible`), `app-tv` 73, **0 échec**.
+
+**Niveau 2 — émulateur `purple_tv`, différentiel build par build.** Un test de règle pure
+écrit en même temps que la règle ne peut pas échouer (§8.3) : la build d'avant a été
+reconstruite depuis `HEAD` dans une copie du dépôt, installée **par-dessus** la corrigée
+(même clé, données conservées), et les deux ont vu **exactement la même base** — DataStore
+semé à la main (`run-as`, cf. `ENVIRONNEMENT.md`) avec un film réel à 100 % et un film
+témoin à 30 %.
+
+| | build d'avant | build corrigée |
+|---|---|---|
+| Rangée « Reprendre la lecture » | *Monster Summer*, **barre pleine** | absent — seul le témoin à 30 % reste |
+| Ouvrir ce film | **1:38:13 / 1:38:12**, écran noir, lecture arrêtée | repart à 0 — **37 939 ms** enregistrées après 40 s |
+
+**Niveau 3 — Pixel 7, sur les données réelles de l'utilisateur.** La rangée est passée de
+**15 cartes à 1** (la seule réellement en cours, à 13 %). Les deux autres relevés portent
+sur un film, l'app mobile ne passant pas par `playMedia` pour un épisode (elle appelle
+`playWithEpisodes`, qui ne prend aucune position de départ — défaut distinct, cf. #97) :
+
+| Semé (cas hérité : aucune clé de durée) | Mesuré après 40 s de lecture |
+|---|---|
+| position à 100 % (5 892 960 ms) | **27 846 ms** — reparti du début |
+| position à 10 min (600 000 ms) | **626 935 ms** — repris là où il en était |
+| *avant le garde*, position à 100 % | *5 892 960 ms — sautait à la fin, `ENDED` immédiat* |
+
+Les données du téléphone ont été **remises à l'identique** après les essais
+(`cmp` sur le fichier DataStore).
+
+⚠️ Deux pièges d'outillage reconfirmés en séance : l'instantané d'AVD du §44 (capture de
+zéro octet, `pidof` bloqué — `-no-snapshot` rétablit tout), et **une notification privée
+qui s'invite dans une capture du téléphone**, pour la deuxième fois (§52). Sur le Pixel,
+préférer une mesure non visuelle : lire le DataStore par `run-as` dit tout ce qu'une
+capture aurait montré.
+
+### Ce que le correctif ne fait pas
+
+**Sur une série, la vitrine peut être vide quelques secondes.** Quand un épisode se termine
+et que la liste avance, l'épisode sort de la rangée et le suivant n'y entre qu'après ses
+5 premières secondes. Avant, la place restait occupée par une carte à barre pleine qui
+rouvrait sur un générique : le trou est le moindre mal.
+
+**Un flux qui ne publie jamais de durée ne peut pas être jugé.** Sans durée — ni
+enregistrée, ni mesurée par le lecteur — la position est rendue telle quelle, comme avant.
+La donnée se répare d'elle-même : la première lecture écrit `duration_<id>`.
+
+**Rejouer un média terminé efface sa marque « vu »** dès que la boucle enregistre une
+position basse. C'était déjà le cas avant : la clé `progress_<id>` n'a jamais eu qu'une
+valeur.

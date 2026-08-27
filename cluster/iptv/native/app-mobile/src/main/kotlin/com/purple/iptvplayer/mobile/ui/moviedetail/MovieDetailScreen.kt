@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.runtime.rememberCoroutineScope
+import com.purple.iptvplayer.core.data.ProgressPolicy
 import com.purple.iptvplayer.core.data.ProgressRepository
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
@@ -76,7 +77,10 @@ fun MovieDetailScreen(
             val movieRecent = remember(recentItems, d.id) { recentItems.find { it.id == "${d.id}" } }
             val savedPos  = movieRecent?.progress ?: 0L
             val savedDur  = movieRecent?.duration  ?: 0L
-            val isStarted = savedPos > 0L && (savedDur == 0L || savedPos < savedDur * 0.9f)
+            // « Commencé » = commencé et pas terminé. La fin est la décision de core (#43) :
+            // sans elle, un film vu jusqu'au générique proposait « Reprendre » vers son
+            // générique. Un média sans durée connue n'est jamais tenu pour terminé.
+            val isStarted = savedPos > 0L && !ProgressPolicy.isComplete(savedPos, savedDur)
             val watchFraction = if (savedDur > 0L) (savedPos.toFloat() / savedDur).coerceIn(0f, 1f) else 0f
 
             // Register pending cast media with resume position

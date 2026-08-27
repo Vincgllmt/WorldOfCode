@@ -52,6 +52,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.data.ProgressPolicy
 import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadStatus
@@ -1056,8 +1057,10 @@ private fun TvEpisodeRow(
         watchedProgress = progressRepo.getProgress(EpisodeTitle.progressId(seriesId, episode.id))
     }
     val totalDurationMs = remember(episode.duration) { episode.duration.toMillis() }
+    // Même règle de « vu jusqu'au bout » que « Reprendre la lecture » et que la fiche
+    // mobile : elle vit dans core, elle n'est plus recopiée ici (#43, §8.2).
     val isWatched = remember(watchedProgress, totalDurationMs) {
-        totalDurationMs > 0 && (watchedProgress >= totalDurationMs * 0.9f)
+        ProgressPolicy.isComplete(watchedProgress, totalDurationMs)
     }
 
     val (dlIcon, dlTint, dlAction) = when (dlItem?.status) {

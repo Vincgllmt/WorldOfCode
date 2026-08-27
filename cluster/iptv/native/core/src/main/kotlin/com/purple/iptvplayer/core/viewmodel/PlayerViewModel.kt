@@ -2,11 +2,13 @@ package com.purple.iptvplayer.core.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.purple.iptvplayer.core.data.ProgressPolicy
 import com.purple.iptvplayer.core.data.ProgressRepository
 import com.purple.iptvplayer.core.model.Episode
 import com.purple.iptvplayer.core.model.EpisodeTitle
 import com.purple.iptvplayer.core.player.PlayerService
 import com.purple.iptvplayer.core.player.PlayerState
+import com.purple.iptvplayer.core.player.PlayerStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,9 +16,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class PlayerViewModel(
     val playerService: PlayerService,
@@ -59,11 +63,25 @@ class PlayerViewModel(
         playerService.play(url, title, mediaId)
         if (startPositionMs > 0L) {
             viewModelScope.launch {
-                delay(800) // wait for ExoPlayer to buffer before seeking
-                playerService.seekTo(startPositionMs)
+                // On attend la **durée** plutôt qu'un délai fixe : c'est le signal que le
+                // média est préparé, et c'est ce qui dit si la position enregistrée est un
+                // générique (#43). Un `delay(800)` ne suffisait pas — mesuré sur le
+                // téléphone, la durée n'était pas encore publiée à 800 ms sur un gros MKV :
+                // le lecteur sautait à la fin, atteignait `ENDED`, et le film se
+                // re-marquait terminé sans qu'on ait rien vu.
+                val dur = withTimeoutOrNull(3_000) {
+                    playerService.state.map { it.durationMs }.first { it > 0L }
+                }
+                // Aucune durée publiée — un direct, un flux qui n'en donne pas : ancien
+                // comportement, on laisse au lecteur le temps de bufferiser puis on saute.
+                if (dur == null) delay(800)
+                if (!ProgressPolicy.isComplete(startPositionMs, dur ?: 0L)) {
+                    playerService.seekTo(startPositionMs)
+                }
             }
         }
         startProgressSaving()
+        observeCompletion()
     }
 
     /**
@@ -93,6 +111,7 @@ class PlayerViewModel(
         playerService.playPlaylist(items, startIndex)
         observeEpisodeTransitions(seriesCover)
         startProgressSaving()
+        observeCompletion()
     }
 
     private fun applyEpisode(index: Int, seriesCover: String?) {
@@ -132,26 +151,51 @@ class PlayerViewModel(
         }
     }
 
+    private var completionJob: Job? = null
+
+    /**
+     * `PlayerStatus.ENDED` — le seul signal de fin qui ne repose sur aucun seuil.
+     *
+     * `PlayerService` le publie depuis toujours (`STATE_ENDED`), et **personne ne le lisait
+     * dans aucun des trois modules** : c'est la cause de #43. La boucle des 10 s finit par
+     * voir une position au-delà du seuil de [ProgressPolicy], mais elle ne la voit qu'avec
+     * dix secondes de retard, et jamais si l'utilisateur quitte l'écran entre-temps.
+     *
+     * Souscrit **après** `play()` / `playPlaylist()`, qui viennent de poser `BUFFERING` :
+     * la valeur rejouée par ce `StateFlow` à la souscription ne peut donc pas être un
+     * `ENDED` laissé par la lecture précédente.
+     */
+    private fun observeCompletion() {
+        completionJob?.cancel()
+        completionJob = viewModelScope.launch {
+            playerService.state
+                .map { it.status }
+                .distinctUntilChanged()
+                .collect { status ->
+                    if (status != PlayerStatus.ENDED) return@collect
+                    val id  = currentMediaId ?: return@collect
+                    val dur = playerService.state.value.durationMs
+                        .takeIf { it > 0L } ?: lastKnownDurationMs
+                    progressRepo.markCompleted(id, dur)
+                }
+        }
+    }
+
     /**
      * Un épisode que la liste vient de quitter a été regardé jusqu'au bout : on le
      * marque explicitement, plutôt que d'espérer que le minuteur de 10 s ait capté une
      * position assez proche de la fin.
+     *
+     * « Marquer » ne veut pas dire « garder sous la main » : [ProgressRepository.markCompleted]
+     * conserve la position — le badge « vu » de la fiche s'y lit — mais retire l'épisode de
+     * « Reprendre la lecture ». L'ancienne écriture, un [ProgressRepository.saveProgress]
+     * de `position = durée`, l'y **réinsérait** au contraire, en tête et barre pleine (#43).
      */
     private fun markPreviousEpisodeWatched() {
         val id  = currentMediaId ?: return
         val dur = lastKnownDurationMs
         if (dur <= 0L) return
-        viewModelScope.launch {
-            progressRepo.saveProgress(
-                mediaId    = id,
-                positionMs = dur,
-                url        = currentUrl,
-                title      = currentTitle,
-                cover      = currentCover,
-                type       = currentType,
-                durationMs = dur,
-            )
-        }
+        viewModelScope.launch { progressRepo.markCompleted(id, dur) }
     }
 
     fun nextEpisode(): Boolean {
@@ -203,6 +247,11 @@ class PlayerViewModel(
         // le défaut que ce `stop()` a été écrit pour supprimer.
         transitionJob?.cancel()
         transitionJob = null
+        // Idem : `playerService.stop()` repose un `PlayerState()` neuf. Un suivi de fin
+        // encore actif y verrait passer IDLE — sans conséquence aujourd'hui — mais surtout
+        // il survivrait à l'écran, comme la boucle d'enregistrement avant lui.
+        completionJob?.cancel()
+        completionJob = null
         currentMediaId = null
         playerService.stop()
     }
@@ -293,40 +342,50 @@ class PlayerViewModel(
         val pos = playerService.currentPositionMs()
         val dur = playerService.state.value.durationMs
         if (dur > 0L) lastKnownDurationMs = dur
-        if (pos > 5_000L) {
-            viewModelScope.launch { 
-                progressRepo.saveProgress(
-                    mediaId    = id, 
-                    positionMs = pos,
-                    url        = currentUrl,
-                    title      = currentTitle,
-                    cover      = currentCover,
-                    type       = currentType,
-                    durationMs = dur
-                ) 
-            }
+        viewModelScope.launch { commitProgress(id, pos, dur) }
+    }
+
+    /**
+     * Le seul point qui écrit la progression, et il ne décide de rien : [ProgressPolicy] le
+     * fait.
+     *
+     * Avant #43, ce point n'avait qu'un seuil bas (« > 5 s ») : une position égale à la
+     * durée était enregistrée comme n'importe quelle autre, et le média fini restait dans
+     * « Reprendre la lecture », barre pleine, à rouvrir sur son générique.
+     */
+    private suspend fun commitProgress(id: String, positionMs: Long, durationMs: Long) {
+        val dur = if (durationMs > 0L) durationMs else lastKnownDurationMs
+        when (ProgressPolicy.decide(positionMs, dur)) {
+            ProgressPolicy.Decision.IGNORE    -> Unit
+            ProgressPolicy.Decision.COMPLETED -> progressRepo.markCompleted(id, dur)
+            ProgressPolicy.Decision.SAVE      -> progressRepo.saveProgress(
+                mediaId    = id,
+                positionMs = positionMs,
+                url        = currentUrl,
+                title      = currentTitle,
+                cover      = currentCover,
+                type       = currentType,
+                durationMs = dur,
+            )
         }
     }
 
-    suspend fun getSavedProgress(mediaId: String): Long = progressRepo.getProgress(mediaId)
+    /**
+     * Où rouvrir ce média — 0 s'il a été vu jusqu'au bout (#43).
+     *
+     * Les deux UI appellent ce point avant [playMedia] : la règle de reprise vit donc dans
+     * `core`, elle n'est pas à réécrire dans chacune (§8.2).
+     */
+    suspend fun getResumePosition(mediaId: String): Long = progressRepo.getResumePosition(mediaId)
 
     override fun onCleared() {
         super.onCleared()
         val id = currentMediaId ?: return
         val pos = playerService.currentPositionMs()
         val dur = playerService.state.value.durationMs
-        if (pos > 5_000L) {
-            CoroutineScope(Dispatchers.IO).launch {
-                progressRepo.saveProgress(
-                    mediaId    = id,
-                    positionMs = pos,
-                    url        = currentUrl,
-                    title      = currentTitle,
-                    cover      = currentCover,
-                    type       = currentType,
-                    durationMs = dur
-                )
-            }
-        }
+        // `viewModelScope` est déjà annulé ici : le dernier enregistrement a besoin d'une
+        // portée qui lui survive. Il passe par la même règle que les autres, sans quoi
+        // quitter l'app sur un générique réinsérerait le film dans la vitrine.
+        CoroutineScope(Dispatchers.IO).launch { commitProgress(id, pos, dur) }
     }
 }
