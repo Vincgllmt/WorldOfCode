@@ -221,9 +221,19 @@ echo 'cluster/iptv/native/local.properties' >> .gitignore
 
 ### Le triptyque obligatoire
 
-**Aucun code n'est validé sans avoir passé les trois niveaux qui le concernent.**
-Un correctif de logique s'arrête au niveau 1 ; un correctif d'interface exige le
-niveau 2 ou 3. Ce qui n'a pas été vérifié doit être **dit**, jamais supposé.
+**Un développement se valide sur les supports où il tourne, pas seulement dans
+une suite de tests.** Une modification de l'app TV se voit sur l'émulateur TV ;
+une modification de l'app mobile se voit sur le téléphone. Les tests unitaires
+prouvent la logique, ils ne prouvent rien de ce qui s'affiche.
+
+| Ce qui a changé | Niveaux à passer |
+|---|---|
+| Logique dans `core` | 1 |
+| UI de l'app TV | 1 **et 2** |
+| UI de l'app mobile | 1 **et 3** |
+| Logique partagée qui touche les deux UI | 1, **2 et 3** |
+
+Ce qui n'a pas été vérifié doit être **dit**, jamais supposé.
 
 ---
 
@@ -251,6 +261,10 @@ Rapport HTML après échec : `core/build/reports/tests/testDebugUnitTest/index.h
 
 **Ce que le niveau 1 ne voit pas** : le focus D-pad, le rendu Compose, la
 navigation entre écrans. Aucun test JVM ne rend un pixel (§8.14).
+
+➡️ **Pas besoin de demander.** L'émulateur est une machine jetable : le lancer,
+y installer l'app et la piloter ne demande aucune autorisation. Le faire de sa
+propre initiative dès qu'une modification touche `app-tv`.
 
 ```bash
 export PATH="$PATH:/home/rigolo/Android/Sdk/emulator:/home/rigolo/Android/Sdk/platform-tools"
@@ -301,30 +315,34 @@ par `adb exec-out screencap -p > /tmp/ecran.png` et regarder l'image.
 
 #### Niveau 3 — Interface mobile (appareil physique)
 
-**RÈGLE STRICTE — Claude ne lance jamais cette étape de sa propre initiative.**
+Il n'y a pas d'émulateur mobile ici : l'app mobile se valide sur le Pixel 7.
 
-L'appareil est le **téléphone personnel** de l'utilisateur, pas un banc de test
-(§8.16). La procédure est donc :
-
-1. **S'ARRÊTER** et demander à l'utilisateur de brancher son Pixel 7 (ou un autre
-   appareil) en USB ;
-2. **ATTENDRE sa confirmation explicite.** Pas d'installation, pas de capture
-   d'écran, pas de `adb shell` tant qu'elle n'est pas donnée ;
-3. seulement alors :
+**La règle tient en une question : l'appareil est-il branché ?**
 
 ```bash
-adb devices -l                         # vérifier que l'appareil est autorisé
+adb devices -l | grep -v emulator      # un appareil physique répond-il ?
+```
+
+**S'il répond** → installer et vérifier directement, sans rien demander :
+
+```bash
 ./gradlew :app-mobile:installDebug
 ```
+
+**S'il ne répond pas** → **S'ARRÊTER**, demander à l'utilisateur de brancher son
+Pixel 7 en USB, et **attendre sa confirmation** avant de reprendre. Ne pas
+contourner en se contentant du niveau 1 et en déclarant le travail vérifié : une
+modification d'UI mobile non vue sur un écran n'est pas vérifiée.
 
 `app-mobile` porte `applicationIdSuffix = ".debug"` : la variante s'installe
 **à côté** de la production (`com.purple.iptvplayer.debug`), dont les données
 restent intactes. Contrepartie : Play Billing ne fonctionne pas sur cette
 variante.
 
-⚠️ Ne **jamais** installer une build **TV** sur ce téléphone, et éviter les
-captures d'écran — une capture a déjà ramené une conversation privée à l'écran
-(§52).
+⚠️ Le téléphone est l'appareil **personnel** de l'utilisateur (§8.16). Installer
+l'app **mobile** dessus est l'usage prévu ; en revanche ne **jamais** y installer
+une build **TV**, et éviter les captures d'écran — une capture a déjà ramené une
+conversation privée à l'écran (§52). En cas de doute sur une capture, demander.
 
 Deux obstacles `adb` déjà rencontrés, tous deux résolus :
 
