@@ -106,7 +106,7 @@ Le projet a été travaillé sur **deux machines**. Ne pas confondre leurs chemi
 C'est la seule des deux qui peut produire un AAB signé (`upload-keystore.jks` présent).
 
 ```bash
-export JAVA_HOME=<scratchpad>/jdk-17.0.20+8      # cf. ci-dessous, aucun JDK système
+export JAVA_HOME=$HOME/.local/share/jdk-17       # Temurin 17, installé une fois pour toutes
 export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 ```
@@ -114,7 +114,7 @@ cd /home/rigolo/Documents/woc/cluster/iptv/native
 | Point | État sur cette machine |
 |---|---|
 | `native/local.properties` | ✅ **déjà correct** (`sdk.dir=/home/rigolo/Android/Sdk`) — rien à ajuster ; c'est la version du dépôt, la machine « hjouini » n'avait pas committé sa correction |
-| JDK | ⚠️ **absent** — seul `openjdk-17-jre-headless` est installé, **pas de `javac`**, et pas d'Android Studio. Gradle ne démarre pas. Résolu **sans sudo** en dépliant un Temurin 17 dans le scratchpad (`api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse`). ⚠️ Le scratchpad est **propre à une session** : le JDK d'une session précédente disparaît, et Gradle échoue alors sur « JAVA_HOME points to invalid directory ». Le re-déplier (≈ 185 Mo, 1 min) fait partie de la mise en route |
+| JDK | ✅ **`~/.local/share/jdk-17`** (Temurin 17.0.20.1). Le paquet système n'est qu'un JRE — **pas de `javac`** —, d'où ce dépliage sans sudo, fait une fois et **durable**. S'il disparaissait : `curl -fsSL "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse" \| tar -xz -C ~/.local/share && mv ~/.local/share/jdk-17* ~/.local/share/jdk-17` (≈ 185 Mo, 1 min). ⚠️ Ne PAS le remettre dans le scratchpad : celui-ci est propre à une session, et Gradle échoue ensuite sur « JAVA_HOME points to invalid directory » |
 | Android SDK | ✅ complet — build-tools 34/35/36.1/37, platforms 34→36.1, emulator, image `google_apis_playstore` android-37 |
 | `adb` | ✅ sur le `PATH`, aucune règle udev à corriger |
 | Appareil | ✅ **Pixel 7 (`panther`, Android 17) connecté et autorisé** |
@@ -240,7 +240,7 @@ Ce qui n'a pas été vérifié doit être **dit**, jamais supposé.
 #### Niveau 1 — Logique (obligatoire, toujours)
 
 ```bash
-export JAVA_HOME=<jdk-17>          # cf. §3, aucun JDK système sur « rigolo »
+export JAVA_HOME=$HOME/.local/share/jdk-17    # aucun JDK système, cf. §3
 cd cluster/iptv/native
 ./gradlew :core:testDebugUnitTest
 ./gradlew :app-tv:testDebugUnitTest    # source set créé au §43
