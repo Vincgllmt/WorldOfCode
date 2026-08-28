@@ -225,7 +225,22 @@ Les bornes de l'application, relevées dans l'arbre d'accessibilité :
 
 ⚠️ Ne pas confondre avec le mode immersif : `ScreenMode.kt:63` masque les barres, mais uniquement là où il est appelé (lecteur). Sur l'accueil, la barre d'état est **visible** — `visible=true` ci-dessus.
 
-**Piste.** poser la compensation une seule fois, sur la colonne racine de `MainScreen`, et retirer celle du bandeau qui ferait alors doublon. Vérifier au passage `MyListScreen.kt:129`, qui pose aussi un `statusBarsPadding()` alors qu'il est rendu sous la barre supérieure. La correction touche plusieurs écrans et demande une vérification **à l'écran** — impossible sur l'appareil personnel de l'utilisateur, où les captures sont proscrites (§52). À traiter quand un émulateur mobile sera disponible, ou avec l'utilisateur devant l'écran.
+**Piste.** poser la compensation une seule fois, sur la colonne racine de `MainScreen`, et retirer celles qui feraient alors doublon.
+
+**✅ Corrigé le 2026-08-28** — `statusBarsPadding()` posé une seule fois sur la colonne racine de `MainScreen` (:97), et retiré des **trois** endroits où il faisait désormais doublon : le bandeau d'essai (:153), le bandeau d'abonnement (:114) et `MyListScreen.kt:129`. `statusBarsPadding()` et non `systemBarsPadding()` : le bas est déjà traité par le `navigationBarsPadding()` de `BottomNav` (:491), et doubler l'aurait décollé du bord.
+
+**Vérifié sur le Pixel 7 sans aucune capture d'écran** — bornes de l'arbre d'accessibilité contre l'inset système `[0,0][1080,136]` :
+
+| | avant | après |
+|---|---|---|
+| titre « PURPLE IPTV » | `[149,39][483,109]` — dans la barre | `[149,175][483,245]` |
+| bouton Paramètres | `[944,12][1070,138]` — 124 px sur 126 dedans | `[944,148][1070,274]` |
+
+Et surtout, le geste qui était impossible : **l'appui sur le bouton ouvre le dialogue** « Paramètres & Compte », d'où « Se déconnecter ? » est atteignable en défilant. L'application mobile n'avait, jusque-là, aucun moyen de se déconnecter.
+
+**Non-régression du doublon, mesurée sur les cinq onglets** : Direct TV, Films et Séries commencent à `y=330`, « Ma liste » à `y=325` — alignés. Avant, « Ma liste » était à 325 quand les autres étaient à 194, l'écart de 131 px trahissant la double compensation. La barre du bas est inchangée (`[725,2186][788,2249]`).
+
+**Ce qui a rendu la vérification possible.** J'avais d'abord classé ce ticket « à traiter avec l'utilisateur devant l'écran », faute de pouvoir prendre des captures. C'était une erreur d'appréciation : une mise en page se mesure très bien aux **bornes** de l'arbre d'accessibilité, comme pour #R6. La contrainte « pas de captures » n'interdit pas de mesurer — elle interdit de regarder.
 
 
 

@@ -72,7 +72,7 @@ numéro.
 | 60 | **#90 corrigé** — un index d'affichage traversait la frontière UI/core et corrompait l'ordre persisté des favoris ; décision sortie en `core/data/FavoritesOrder`. Contient aussi **où vit le lien de test** et pourquoi `get.php` répond 885 | on touche aux favoris, on fait circuler un index entre UI et `core`, ou on cherche le lien M3U de test |
 | 61 | **#109** — le plantage était déjà corrigé la veille sans être marqué ; la mesure a trouvé à la place une **perte de contenu** (un flux à deux thèmes disparaissait) ; `ChannelKey` + dédoublonnage par `(url, group)`. Contient la recette pour **servir une playlist de test au téléphone** | on touche aux clés de liste, au dédoublonnage M3U, ou on veut piloter l'app avec une playlist d'essai |
 | 62 | **#98 corrigé** — lire un épisode téléchargé ouvrait une connexion distante inutile ; l'appel fautif n'avait **aucun** autre effet, `playMedia` effaçant tout ce qu'il posait. Contient la recette pour **injecter un téléchargement terminé** sans télécharger, et trois instruments dont un seul tranche | on touche à la lecture locale, ou on cherche à mesurer un effet réseau trop bref pour les compteurs |
-| 63 | **#R5 / #R6** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état (ouvert), clavier par-dessus le champ (corrigé). Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
+| 63 | **#R5 / #R6 corrigés** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état, clavier par-dessus le champ. Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
 
 ---
 
@@ -5506,9 +5506,25 @@ conclure « artefact » sans avoir mesuré la seule chose qui départage.
 une branche `when (access)` qui n'existe que pour `Subscribed`, `is AccessState.Pro -> Unit`
 ne posant rien. La mise en page n'est donc correcte que pour un abonné, par accident.
 
-**Laissé ouvert** : la correction touche plusieurs écrans, dont un `statusBarsPadding()` de
-`MyListScreen` qui ferait doublon, et elle demande une vérification **à l'écran** —
-impossible sur l'appareil personnel de l'utilisateur, où les captures sont proscrites (§52).
+**Corrigé le jour même.** `statusBarsPadding()` posé une seule fois sur la colonne racine
+de `MainScreen`, et retiré des **trois** endroits où il faisait doublon : les deux bandeaux
+de `when (access)` et `MyListScreen:129`. `statusBarsPadding()` et non `systemBarsPadding()` :
+le bas est déjà traité par le `navigationBarsPadding()` de `BottomNav`.
+
+| | avant | après |
+|---|---|---|
+| titre | `[149,39][483,109]` — dans la barre | `[149,175][483,245]` |
+| bouton Paramètres | `[944,12][1070,138]` | `[944,148][1070,274]` |
+
+Et le geste qui était impossible : **l'appui ouvre le dialogue** « Paramètres & Compte »,
+d'où « Se déconnecter ? » est atteignable. Les cinq onglets sont alignés (330, 330, 330,
+325) contre 194 vs 325 avant, ce qui mesure la disparition du doublon.
+
+**J'avais d'abord écrit qu'il fallait attendre « l'utilisateur devant l'écran », faute de
+captures.** C'était une seconde erreur d'appréciation sur le même ticket : une mise en page
+se mesure très bien aux **bornes** de l'arbre d'accessibilité, comme pour #R6 juste
+au-dessus. La contrainte du §52 interdit de *regarder* l'écran de l'utilisateur, pas de le
+*mesurer* — et je l'avais laissée m'arrêter deux fois.
 
 ### #R6 — le clavier recouvrait le champ que l'on saisit
 

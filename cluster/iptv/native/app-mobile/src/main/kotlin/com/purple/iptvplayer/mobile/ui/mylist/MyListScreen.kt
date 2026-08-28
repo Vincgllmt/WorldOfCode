@@ -126,7 +126,11 @@ fun MyListScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(BgCard)
-                .statusBarsPadding()
+                // #R5 — plus de `statusBarsPadding()` ici : cet écran est rendu **sous**
+                // la barre supérieure de `MainScreen`, qui porte désormais la
+                // compensation. Le poser une seconde fois ajoutait 136 px de vide en tête
+                // de « Ma liste » — mesuré : son titre commençait à y=325 quand les autres
+                // onglets commencent à 194.
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
         ) {
             val total = when (filter) {

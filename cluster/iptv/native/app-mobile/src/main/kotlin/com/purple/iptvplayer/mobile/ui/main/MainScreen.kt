@@ -94,7 +94,21 @@ fun MainScreen(
     var selectedGenre    by rememberSaveable { mutableStateOf<String?>(null) }
     var currentLang      by remember { mutableStateOf(LocaleHelper.getLanguage(context)) }
 
-    Column(modifier = Modifier.fillMaxSize().background(BgApp)) {
+    // #R5 — la compensation de la barre d'état se pose **ici**, une seule fois.
+    //
+    // `MainActivity:32` appelle `enableEdgeToEdge()` : l'application dessine sous les
+    // barres système. Elle ne compensait le haut que dans deux branches de `when (access)`
+    // — le bandeau d'essai et celui d'abonnement — si bien que la mise en page n'était
+    // correcte **que** pour un utilisateur en essai ou abonné. Pour `AccessState.Pro`,
+    // qui n'affiche aucun bandeau, la barre supérieure passait sous la barre d'état :
+    // mesuré, barre d'état `[0,0][1080,136]`, titre `[149,39][483,109]` entièrement
+    // dedans, bouton Paramètres `[944,12][1070,138]` à 124 px sur 126. La barre d'état
+    // captant les appuis, il n'existait aucun moyen d'ouvrir les réglages ni de se
+    // déconnecter.
+    //
+    // Le bas, lui, est déjà traité par le `navigationBarsPadding()` de `BottomNav` — d'où
+    // `statusBarsPadding()` et non `systemBarsPadding()`, qui ferait doublon en bas.
+    Column(modifier = Modifier.fillMaxSize().background(BgApp).statusBarsPadding()) {
 
         // ── Bandeau d'état (UX-1) ─────────────────────────────────────────────
         // Le bandeau violet pleine largeur est un **appel à l'action** : il n'a lieu
@@ -111,7 +125,6 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BgCard)
-                    .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -151,8 +164,7 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Purple)
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Rounded.Timer, null, tint = TextPrimary, modifier = Modifier.size(16.dp))
