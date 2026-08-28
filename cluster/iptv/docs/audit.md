@@ -145,6 +145,10 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 **Piste.** remettre l'état à `Idle` à l'entrée de l'écran plutôt que compter sur la durée de vie du ViewModel, ou ne déclencher `onSuccess()` que sur une **transition** vers `Success` observée pendant que l'écran est composé. Vérifier au passage que les autres écrans TV obtenus par `koinViewModel()` ne dépendent pas non plus d'un état supposé neuf.
 
 
+**✅ Corrigé le 2026-08-27 (`16876a8e`), vérifié à l'écran le 2026-08-28** — `LaunchedEffect(Unit)` + `snapshotFlow { … }.drop(1).filter { it is Success }` remplace `LaunchedEffect(state)`, qui déclenchait `onSuccess()` dès la composition initiale.
+
+**Mesure (T7, §56.4).** Se déconnecter depuis les paramètres, puis observer : l'écran de connexion **reste affiché 8 s**, et le premier champ y reprend le focus. Le test discrimine — la version d'avant, relue en `16876a8e^`, portait `LaunchedEffect(state) { if (state is SetupState.Success) onSuccess() }` : le `SetupViewModel` étant porté par l'Activity, l'état `Success` de la session précédente survivait et refermait l'écran à la composition.
+
 ## #43 — core/viewmodel : cesser de garder dans « Reprendre la lecture » un média lu jusqu'au bout
 
 `core/viewmodel`
@@ -759,7 +763,7 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 
 
-## #R4 — app-tv/home : le ✕ de la barre de recherche n'est atteignable par aucune touche *(OUVERT)*
+## #R4 — app-tv/home : le ✕ de la barre de recherche n'est atteignable par aucune touche
 
 `app-tv/home`
 
@@ -772,6 +776,17 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 **À noter.** TV-3 (`b0011935`) a précisément changé ce contrôle d'un `Icon(...).clickable {}` vers un `Surface(onClick = …)` — son message de commit dit « clear focusable ». L'intention était donc bien de le rendre atteignable ; la mesure montre qu'elle n'est pas atteinte, parce que le nœud reste imbriqué.
 
 **Piste.** appliquer le remède de #67 : sortir le ✕ du `Row` focalisable de la barre et le poser en frère dans un `Row` englobant. Vérifier ensuite les trois écrans qui partagent cette barre (`TvHomeScreen`, `TvMoviesScreen`, `TvSeriesScreen`). La touche `RETOUR` ne remplace pas ce bouton : mesuré, elle ne vide pas la recherche.
+
+**✅ Corrigé le 2026-08-28** — remède de #67 appliqué : le `Surface` du ✕ est sorti du `Row` cliquable et posé en frère dans un `Row` englobant, qui porte désormais le `tvGroupEntry` (G9). La barre prend `weight(1f)` ; les trois appelants passant tous `widthIn(max = 280.dp)`, l'encombrement total est inchangé. Le bouton porte son propre `onFocusChanged` pour se colorer au focus, comme l'œil de l'écran de connexion.
+
+**Vérifié à l'écran** (§59), même mesure qu'au relevé :
+
+| | `▶` depuis la barre, hors saisie |
+|---|---|
+| avant | **`None`** — zéro pixel |
+| après | **`(1312,51)-(1872,126)`** — le ✕ devient violet, la barre perd sa surbrillance |
+
+`OK` sur le bouton vide la recherche : compteur et liste des genres reviennent. Vérifié sur **Direct TV** et sur **Films** (`(1312,51)-(1872,126)` également), et le rendu contrôlé sur **Séries**. Non-régression de G9 : `▶` depuis l'étoile d'une chaîne rend toujours `None`, le focus ne saute pas dans la barre.
 
 
 ## #110 — app-mobile/catalog : brancher le titre de `ContentHeader`, ou cesser de le calculer

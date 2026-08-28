@@ -344,83 +344,110 @@ fun TvSearchBar(query: String, onQuery: (String) -> Unit, hint: String, modifier
             runCatching { fieldFocus.requestFocus() }
         }
     }
+    // #R4 — le bouton d'effacement est **hors** du `Row` cliquable de la barre.
+    //
+    // Il y était, et n'était atteignable par aucune touche : un focusable imbriqué dans
+    // un focusable ne se laisse pas trouver par la recherche directionnelle. Mesuré
+    // (§59) : en saisie, `▶` ne déplaçait que le curseur de texte ; hors saisie, il ne
+    // déplaçait rien du tout. C'est le piège de **#67**, où le bouton œil avait dû être
+    // sorti du `TvFormField` pour la même raison — et le remède est le même.
+    //
+    // Le groupe d'entrée (G9) monte donc d'un cran : il englobe la barre ET le bouton,
+    // pour que `▶` puisse passer de l'une à l'autre sans quitter le groupe.
     Row(
         modifier              = modifier
             // G9 — on n'entre dans la barre que par le HAUT. Elle est ancrée en haut à
             // droite (x ≈ 1312) alors que les résultats commencent à gauche (x = 192) :
             // `▶` sur le dernier résultat d'une ligne, faute de voisin à droite, remontait
             // s'y poser. Même raisonnement que le rail au §30, sur l'autre axe.
-            .tvGroupEntry(blocked = setOf(FocusDirection.Left, FocusDirection.Right))
-            // Un champ de texte **consomme** les touches directionnelles : une fois le
-            // curseur dans la barre de recherche, Bas ne ressortait jamais et les
-            // résultats — pourtant focalisables — étaient inatteignables à la
-            // télécommande. On intercepte donc haut/bas avant le champ.
-            //
-            // `moveFocus` renvoie `false` s'il n'y a rien dans cette direction : on
-            // laisse alors passer la touche plutôt que de l'avaler.
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (event.key) {
-                    Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
-                    Key.DirectionUp   -> focusManager.moveFocus(FocusDirection.Up)
-                    else              -> false
-                }
-            }
-            .clip(PurpleShapes.Md)
-            .background(PurplePalette.Bg2)
-            .border(
-                width = if (isFocused) 2.dp else 1.dp,
-                color = if (isFocused) PurplePalette.Purple400 else PurplePalette.Line1,
-                shape = PurpleShapes.Md,
-            )
-            // `clickable` rend déjà l'élément focalisable : ajouter `focusable()` en
-            // plus faisait deux nœuds concurrents et la validation n'atteignait pas
-            // l'`onClick`.
-            .onFocusChanged { isFocused = it.hasFocus; if (!it.hasFocus) editing = false }
-            .clickable { editing = true }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .tvGroupEntry(blocked = setOf(FocusDirection.Left, FocusDirection.Right)),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(
-            Icons.Rounded.Search, null,
-            tint     = if (isFocused) PurplePalette.Purple400 else PurplePalette.Fg4,
-            modifier = Modifier.size(16.dp),
-        )
-        Box(modifier = Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                androidx.compose.material3.Text(
-                    hint,
-                    style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg4),
+        Row(
+            modifier              = Modifier
+                .weight(1f)
+                // Un champ de texte **consomme** les touches directionnelles : une fois le
+                // curseur dans la barre de recherche, Bas ne ressortait jamais et les
+                // résultats — pourtant focalisables — étaient inatteignables à la
+                // télécommande. On intercepte donc haut/bas avant le champ.
+                //
+                // Gauche/droite restent au champ : ce sont les seules touches qui
+                // déplacent le curseur dans le texte, et les intercepter rendrait la
+                // correction d'une faute de frappe impossible (même arbitrage que
+                // `TvFieldKeys`). C'est pourquoi le bouton d'effacement doit être un
+                // **frère** de cette barre et non son enfant.
+                //
+                // `moveFocus` renvoie `false` s'il n'y a rien dans cette direction : on
+                // laisse alors passer la touche plutôt que de l'avaler.
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+                        Key.DirectionUp   -> focusManager.moveFocus(FocusDirection.Up)
+                        else              -> false
+                    }
+                }
+                .clip(PurpleShapes.Md)
+                .background(PurplePalette.Bg2)
+                .border(
+                    width = if (isFocused) 2.dp else 1.dp,
+                    color = if (isFocused) PurplePalette.Purple400 else PurplePalette.Line1,
+                    shape = PurpleShapes.Md,
+                )
+                // `clickable` rend déjà l'élément focalisable : ajouter `focusable()` en
+                // plus faisait deux nœuds concurrents et la validation n'atteignait pas
+                // l'`onClick`.
+                .onFocusChanged { isFocused = it.hasFocus; if (!it.hasFocus) editing = false }
+                .clickable { editing = true }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Rounded.Search, null,
+                tint     = if (isFocused) PurplePalette.Purple400 else PurplePalette.Fg4,
+                modifier = Modifier.size(16.dp),
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    androidx.compose.material3.Text(
+                        hint,
+                        style = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg4),
+                    )
+                }
+                BasicTextField(
+                    value           = query,
+                    onValueChange   = onQuery,
+                    singleLine      = true,
+                    textStyle       = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg1),
+                    cursorBrush     = SolidColor(PurplePalette.Purple400),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        focusManager.clearFocus()
+                    }),
+                    modifier        = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(fieldFocus)
+                        .focusProperties { canFocus = editing },
                 )
             }
-            BasicTextField(
-                value           = query,
-                onValueChange   = onQuery,
-                singleLine      = true,
-                textStyle       = LocalPurpleType.current.bodySmall.copy(color = PurplePalette.Fg1),
-                cursorBrush     = SolidColor(PurplePalette.Purple400),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {
-                    focusManager.clearFocus()
-                }),
-                modifier        = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(fieldFocus)
-                    .focusProperties { canFocus = editing },
-            )
         }
         if (query.isNotEmpty()) {
+            var clearFocused by remember { mutableStateOf(false) }
             androidx.compose.material3.Surface(
                 onClick = { onQuery("") },
-                shape = RoundedCornerShape(4.dp),
-                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(20.dp),
+                shape = RoundedCornerShape(6.dp),
+                color = if (clearFocused) PurplePalette.Purple400
+                        else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier
+                    .size(28.dp)
+                    .onFocusChanged { clearFocused = it.isFocused },
             ) {
                 Icon(
                     Icons.Rounded.Close, null,
-                    tint     = PurplePalette.Fg4,
-                    modifier = Modifier.padding(3.dp),
+                    tint     = if (clearFocused) PurplePalette.Bg1 else PurplePalette.Fg4,
+                    modifier = Modifier.padding(5.dp),
                 )
             }
         }

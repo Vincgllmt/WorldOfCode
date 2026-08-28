@@ -68,6 +68,7 @@ numéro.
 | 56 | **Campagne de vérification sur les supports des six lots des 27–28/08** — 9 scénarios passés, **2 échecs** + 1 défaut de parité : une validation refusée ouvrait le catalogue (corrigé), la fiche série TV n'a aucun focus (ouvert) ; + 5 pièges d'outillage | on livre un lot « compile ✓ tests ✓ », on prépare une campagne émulateur/Pixel, ou on reprend la fiche série TV |
 | 57 | **#R2 corrigé** — le verrou de focus de la fiche série était posé *avant* l'action qu'il garde, avec une suspension entre les deux : une annulation perdait le focus définitivement, et `tvModalTrap()` ne laisse aucun repli | on touche à un point d'entrée de focus, à `tvModalTrap`, ou à un `LaunchedEffect` qui verrouille une demande |
 | 58 | **Lot TV-2 et accessibilité de TV-3 vérifiés** — #76 correct (différentiel probant), #79 vérifié par lecture, **#77 répondu à côté** (garde de borne inerte au lieu du garde de focus) et un tiers de son symptôme démenti par la mesure ; **#R4** ouvert : le ✕ de la recherche est inatteignable | on reprend #77, on touche à la barre de recherche TV, ou on veut un exemple de différentiel de build |
+| 59 | **#R4 corrigé** — un focusable imbriqué dans un focusable n'est atteignable par aucune direction ; troisième occurrence du motif (G11, #67, #R4) | on pose une action secondaire dans une ligne ou une barre déjà focalisable |
 
 ---
 
@@ -5142,3 +5143,68 @@ La remise à zéro du défilement au changement de genre (`scrollToItem(0)`) et 
 « Retour » qui efface d'abord la recherche : ces deux comportements vivent dans des états
 d'écran que je n'ai pas su atteindre de façon fiable à la télécommande en un temps
 raisonnable. **Non testés**, et dits tels quels.
+
+---
+
+## 59. #R4 — le ✕ de la recherche TV, un focusable imbriqué dans un focusable *(2026-08-28)*
+
+Relevé au §58.4, corrigé ici. Troisième fois que ce piège se paie dans ce dépôt — après
+l'étoile de `TvChannelRow` (G11) et le bouton œil de `TvSetupScreen` (#67) — et la
+première fois qu'il est nommé comme un motif à part entière.
+
+### Le motif
+
+**Un nœud focalisable posé à l'intérieur d'un autre nœud focalisable n'est atteignable par
+aucune direction.** La recherche directionnelle s'arrête au parent, qui capture ; l'enfant
+n'est jamais visité. Le symptôme est toujours le même — un contrôle qui s'affiche, réagit
+au clic dans un émulateur piloté à la souris, et ne répond à aucune touche de la
+télécommande.
+
+Ici : `TvHomeScreen.kt:413-424` posait le `Surface(onClick)` du ✕ dans le `Row` de la
+barre, lequel est focalisable par `.clickable { editing = true }` (:381). S'y ajoutait que
+`onPreviewKeyEvent` (:361-368) n'intercepte que haut/bas — à dessein, gauche/droite
+devant rester au champ pour déplacer le curseur — si bien que `▶` partait au
+`BasicTextField` qui le consommait.
+
+Mesuré avant correction :
+
+| État | `▶` |
+|---|---|
+| en saisie | le **curseur de texte** seul — diff `(1457,72)-(1462,107)`, 5 px de large, sur 5 appuis |
+| hors saisie | **`None`** — zéro pixel |
+
+Le second est le plus parlant : hors saisie, le champ n'est plus focalisable
+(`canFocus = editing`), il n'y a donc plus rien pour consommer la touche — et pourtant
+le focus ne bouge pas. Le ✕ n'était pas dans le parcours du tout.
+
+### Correctif
+
+Celui de #67, mot pour mot : sortir le bouton du `Row` cliquable et le poser en **frère**
+dans un `Row` englobant, qui hérite du `tvGroupEntry` (G9) pour que le déplacement de la
+barre vers le bouton reste un mouvement *interne* au groupe. La barre prend `weight(1f)` ;
+les trois appelants passant tous `widthIn(max = 280.dp)`, l'encombrement total ne bouge
+pas. Le bouton porte son propre `onFocusChanged` et se colore au focus, faute de quoi il
+serait atteignable sans qu'on le voie — le défaut du §49.2, quatre fois rencontré.
+
+### Vérification
+
+| | `▶` depuis la barre, hors saisie |
+|---|---|
+| avant | `None` |
+| après | `(1312,51)-(1872,126)` — le ✕ passe au violet, la barre perd sa surbrillance |
+
+`OK` vide la recherche : le compteur repasse à « 11877 CHAÎNES - 75 GENRES » et la liste
+des genres réapparaît. Vérifié sur **Direct TV** et sur **Films** (même bbox), rendu
+contrôlé sur **Séries** — les trois écrans partagent ce composable.
+
+**Non-régression de G9** : `▶` depuis l'étoile d'une chaîne rend toujours `None`. Le
+groupe continue de refuser l'entrée par la gauche et par la droite ; seul le trajet
+interne barre → ✕ a été ouvert.
+
+### Ce qu'il faudrait en tirer
+
+Le motif mérite mieux qu'une troisième correction ponctuelle. Les trois occurrences
+partagent la même forme : une ligne ou une barre rendue focalisable par `clickable`, et une
+action secondaire posée dedans. Une aide de `TvFocusKit` — « conteneur focalisable +
+action latérale », qui impose la structure frère — éviterait la quatrième. **Non fait** :
+c'est une décision de conception d'API, pas un correctif.

@@ -173,7 +173,7 @@ revérifiés à l'écran (§56, §57).
 Le lot TV-2 et la moitié « accessibilité » de TV-3 ont été vérifiés à leur tour (§58) :
 #76 et #79 tiennent, **#77 avait été répondu à côté** — un garde de borne inerte au lieu du
 garde de focus demandé — et un **#R4** en est sorti : le ✕ de la barre de recherche TV
-n'est atteignable par aucune touche. **#R4 et le coût de 3 appuis de #77 restent ouverts.**
+n'est atteignable par aucune touche. **#R4 est corrigé à son tour (§59) ; le coût de 3 appuis de #77 reste ouvert**, c'est une décision de conception. Les six défauts CRITIQUES de l'audit sont désormais corrigés **et** vérifiés sur un support.
 
 **Reste non vérifié sur les supports** : la remise à zéro du défilement au changement de
 genre et le bouton « Retour » qui efface la recherche (TV-3), faute d'avoir su atteindre
