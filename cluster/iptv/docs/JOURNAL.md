@@ -73,6 +73,7 @@ numéro.
 | 61 | **#109** — le plantage était déjà corrigé la veille sans être marqué ; la mesure a trouvé à la place une **perte de contenu** (un flux à deux thèmes disparaissait) ; `ChannelKey` + dédoublonnage par `(url, group)`. Contient la recette pour **servir une playlist de test au téléphone** | on touche aux clés de liste, au dédoublonnage M3U, ou on veut piloter l'app avec une playlist d'essai |
 | 62 | **#98 corrigé** — lire un épisode téléchargé ouvrait une connexion distante inutile ; l'appel fautif n'avait **aucun** autre effet, `playMedia` effaçant tout ce qu'il posait. Contient la recette pour **injecter un téléchargement terminé** sans télécharger, et trois instruments dont un seul tranche | on touche à la lecture locale, ou on cherche à mesurer un effet réseau trop bref pour les compteurs |
 | 63 | **#R5 / #R6 corrigés** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état, clavier par-dessus le champ. Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
+| 64 | **#R7 corrigé** — couture de couleur sous la barre d'état (de mon fait, §63) et menu du bas détaché ; contient **comment relever une couture** (ruptures le long d'une colonne) et pourquoi j'ai failli fabriquer un émulateur pour rien | on touche à une couleur de fond, à une barre système, ou on s'apprête à construire un outil pour vérifier |
 
 ---
 
@@ -5557,3 +5558,63 @@ dernière atterrit sur le vrai bas.
 Vérifié de bout en bout, sans capture d'écran — bornes de l'arbre d'accessibilité contre
 `type=ime frame=` de `dumpsys window` : lien M3U saisi et visible pendant la frappe, appui
 direct sur le bouton, connexion établie. Aucun geste de défilement.
+
+---
+
+## 64. #R7 — la barre d'état tranchait avec l'application, le menu s'en détachait *(2026-08-28)*
+
+Deux défauts d'aspect remontés par l'utilisateur, dont **le premier était de mon fait** :
+en posant `statusBarsPadding()` sur la colonne racine au §63, j'ai fait descendre le
+contenu *et* découvert le fond de cette colonne dans la bande de la barre d'état — un fond
+qui n'avait aucune raison de ressembler à ce qui le suit.
+
+### Relever une couture de couleur
+
+Il n'y a rien à deviner : on liste les **ruptures de couleur** le long d'une colonne libre
+d'une capture. `x=20` évite l'horloge, les icônes et le contenu.
+
+| y | transition | ce que c'est |
+|---|---|---|
+| **136** | `#0C0714` → `#1F1235` | la couture, exactement au bord de la barre d'état |
+| 2179 | `#160B25` → `#301B47` | liseré du menu |
+| 2182 | → `#0C0714` | fond du menu, deux crans sous le contenu |
+| **2397** | → `#301B47` | le liseré repasse **sous la barre de navigation** |
+
+Ce dernier n'était visible sur aucune maquette : `border(…, RectangleShape)` encadre les
+**quatre** côtés, et personne ne regarde le bord bas de l'écran.
+
+### Les deux correctifs
+
+**Le haut.** Le fond de la colonne racine n'est visible que dans la bande de la barre
+d'état — tous ses enfants peignent le leur. Il suffit donc qu'il prenne la couleur de
+l'élément qui affleure : `BgCard` en temps normal, `Purple` quand le bandeau d'essai est
+là. Quatre lignes, et la barre d'état devient le prolongement de la barre supérieure.
+
+**Le bas.** `BgHome` au lieu de `BgApp` — la couleur du contenu, au lieu de deux crans plus
+sombre — et un **filet en haut seulement**, au `drawBehind`, à la place du cadre.
+
+| | avant | après |
+|---|---|---|
+| couture à y=136 | `#0C0714` → `#1F1235` | **aucune rupture** |
+| fond du menu | `#0C0714` | `#160B25`, celui du contenu |
+| ligne à y=2397 | présente | **disparue** |
+
+### Ce que cet échange a changé dans la méthode
+
+J'ai commencé par vouloir **fabriquer un émulateur mobile** — création d'AVD à la main,
+image système à télécharger — au motif qu'un problème de couleur demande de *voir*, et que
+le §52 proscrivait les captures sur l'appareil de l'utilisateur. C'était une réponse
+disproportionnée à une contrainte que je m'appliquais trop largement : une couleur se
+**mesure** dans une capture qu'on n'affiche jamais, exactement comme une mise en page se
+mesure aux bornes.
+
+L'utilisateur a tranché autrement — « tu peux dorénavant faire des captures sur mon
+appareil » — et la réserve du §52 est levée. Mais la leçon reste : **avant de construire un
+outil, vérifier que l'instrument existant ne suffit pas.** L'AVD à moitié fabriqué a été
+supprimé (son image système n'était qu'un stub non téléchargé).
+
+### Observé, non corrigé
+
+Le libellé du cinquième onglet est **tronqué** — « Téléchargeme ». Visible sur la capture
+d'avant comme sur celle d'après, donc préexistant. Le raccourcir ou réduire sa taille est
+une décision de rédaction, pas un correctif de mise en page.

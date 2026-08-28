@@ -21,6 +21,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -108,7 +110,15 @@ fun MainScreen(
     //
     // Le bas, lui, est déjà traité par le `navigationBarsPadding()` de `BottomNav` — d'où
     // `statusBarsPadding()` et non `systemBarsPadding()`, qui ferait doublon en bas.
-    Column(modifier = Modifier.fillMaxSize().background(BgApp).statusBarsPadding()) {
+    // La bande derrière la barre d'état prend la couleur de **l'élément qui la suit**,
+    // sinon elle tranche : mesuré, `#0C0714` contre `#1F1235` juste en dessous, une
+    // couture nette à y=136. Le fond de cette colonne n'est visible QUE là — tous ses
+    // enfants peignent le leur — donc le faire varier ne coûte rien ailleurs.
+    val couleurSousBarreEtat = when (access) {
+        is AccessState.Trial -> Purple   // le bandeau d'essai est violet plein
+        else                 -> BgCard   // sinon c'est la barre supérieure qui affleure
+    }
+    Column(modifier = Modifier.fillMaxSize().background(couleurSousBarreEtat).statusBarsPadding()) {
 
         // ── Bandeau d'état (UX-1) ─────────────────────────────────────────────
         // Le bandeau violet pleine largeur est un **appel à l'action** : il n'a lieu
@@ -498,8 +508,22 @@ private fun BottomNav(currentTab: Int, onTabSelect: (Int) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BgApp)
-            .border(1.dp, BorderPurple, RectangleShape)
+            // `BgHome` et non `BgApp` : le contenu au-dessus est en `#160B25`, la barre
+            // était en `#0C0714` — deux crans plus sombre, elle se détachait comme un
+            // bloc rapporté.
+            .background(BgHome)
+            // Un **filet en haut**, et rien d'autre. `border(RectangleShape)` traçait le
+            // liseré sur les quatre côtés : mesuré, une ligne `#301B47` à y=2179 **et une
+            // seconde à y=2397**, c'est-à-dire sous la barre de navigation du système, où
+            // elle n'a aucun sens. On garde la séparation, on retire l'encadrement.
+            .drawBehind {
+                drawLine(
+                    color = BorderPurple,
+                    start = Offset(0f, 0f),
+                    end   = Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            }
             .navigationBarsPadding()
             .height(60.dp),
     ) {

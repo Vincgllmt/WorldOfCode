@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **6 relevés à l'usage** (#R1 à #R6), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **7 relevés à l'usage** (#R1 à #R7), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -24,13 +24,13 @@
 | Gravité | Nombre |
 |---|---|
 | **CRITIQUE** | 6 |
-| **MAJEUR** | 45 |
+| **MAJEUR** | 46 |
 | **MINEUR** | 55 |
 
 | Périmètre | Défauts |
 |---|---|
 | `app-mobile/detail` | 11 |
-| `app-mobile/shell` | 12 |
+| `app-mobile/shell` | 13 |
 | `app-mobile/player` | 9 |
 | `app-mobile/setup` | 10 |
 | `app-tv/series` | 10 |
@@ -200,6 +200,45 @@ Le clavier commence à **y = 1352** : il recouvre 58 des 74 pixels du champ — 
 Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, appui direct sur le bouton, connexion établie (336 chaînes) — sans un seul geste de défilement.
 
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
+
+
+## #R7 — app-mobile/shell : la barre d'état tranche avec l'application, et le menu du bas s'en détache
+
+`app-mobile/shell`
+
+**Symptôme.** Remonté par l'utilisateur à l'usage : « je n'aime pas la différence de couleur entre l'appli et la barre d'état ; même la barre des menus n'est pas assez fondue avec l'appli ».
+
+**Preuve.** Mesuré sur le Pixel 7 le 2026-08-28, en relevant les ruptures de couleur le long d'une colonne libre (`x=20`) d'une capture :
+
+| y | transition | ce que c'est |
+|---|---|---|
+| **136** | `#0C0714` → `#1F1235` | couture nette barre d'état / barre supérieure |
+| 2179 | `#160B25` → `#301B47` | liseré violet au-dessus du menu |
+| 2182 | → `#0C0714` | fond du menu, **deux crans plus sombre** que le contenu |
+| **2397** | → `#301B47` | le liseré **repasse tout en bas**, sous la barre de navigation |
+
+**Cause.** établie, deux causes distinctes.
+
+1. **Le haut.** La colonne racine de `MainScreen` peint `BgApp` (`#0C0714`) et porte le `statusBarsPadding()` de **#R5** : son fond est donc visible **uniquement** dans la bande de la barre d'état, tandis que l'élément juste en dessous — `TopBar` — peint `BgCard` (`#1F1235`). Deux couleurs différentes bord à bord.
+2. **Le bas.** `BottomNav` peint `BgApp` alors que le contenu au-dessus est en `BgHome` (`#160B25`), et son `border(1.dp, BorderPurple, RectangleShape)` trace le liseré sur les **quatre** côtés — d'où la seconde ligne à y=2397, sous la barre de navigation du système, où elle n'a aucun sens.
+
+**✅ Corrigé le 2026-08-28.**
+
+1. Le fond de la colonne racine suit désormais **l'élément qui affleure sous la barre d'état** : `BgCard` en temps normal, `Purple` quand le bandeau d'essai est affiché. Ce fond n'étant visible que là — tous les enfants peignent le leur — le faire varier ne coûte rien ailleurs.
+2. `BottomNav` peint `BgHome`, la couleur du contenu, et le cadre est remplacé par un **filet en haut seulement**, tracé au `drawBehind`.
+
+**Vérifié à l'écran** (captures autorisées par l'utilisateur le 2026-08-28), mêmes relevés :
+
+| | avant | après |
+|---|---|---|
+| couture à y=136 | `#0C0714` → `#1F1235` | **aucune rupture** |
+| filet du menu | y=2179, 3 px | y=2178..2180, 2 px |
+| fond du menu | `#0C0714` | `#160B25` — celui du contenu |
+| ligne à y=2397 | présente | **disparue** |
+
+⚠️ La branche `Purple` du bandeau d'essai est posée **par construction, non mesurée** : la build d'auteur est en `AccessState.Pro` et n'affiche aucun bandeau.
+
+**Observé au passage, non corrigé** : le libellé du cinquième onglet est **tronqué** — « Téléchargeme » au lieu de « Téléchargements ». Le défaut préexiste, il est visible sur la capture d'avant comme sur celle d'après. Raccourcir le libellé ou réduire la taille est une décision de rédaction, pas un correctif de mise en page.
 
 
 ## #R5 — app-mobile/shell : la barre supérieure est dessinée sous la barre d'état, ses boutons sont hors d'atteinte

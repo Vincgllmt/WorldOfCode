@@ -144,8 +144,14 @@ lancement de l'émulateur — est dans [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEM
 - **Niveau 2 — émulateur : y aller sans demander.** C'est une machine jetable.
 - **Niveau 3 — le Pixel 7 est l'appareil *personnel* de l'utilisateur.** S'il est branché,
   installer l'app **mobile** et vérifier ; sinon **s'arrêter et le demander**. Jamais de
-  build TV dessus, et **éviter les captures d'écran** : une notification privée est déjà
-  apparue deux fois dans une capture (§52, §53).
+  build TV dessus. **Les captures d'écran y sont autorisées depuis le 2026-08-28**, sur
+  décision explicite de l'utilisateur — la réserve du §52, née d'une notification privée
+  apparue dans une capture, est levée.
+- **Mesurer plutôt que regarder, quand c'est possible.** Les bornes de `uiautomator dump`,
+  les insets de `dumpsys window` et les valeurs RVB extraites d'une capture donnent des
+  résultats chiffrés et reproductibles là où le coup d'œil donne une impression. Une
+  couture de couleur se relève en listant les ruptures le long d'une colonne (§64) ; une
+  mise en page se vérifie aux bornes (§63).
 - **Ce qui n'a pas été vérifié doit être dit, jamais supposé.**
 
 ⚠️ L'émulateur ne se lance **que** comme ceci — et `-no-snapshot` dès qu'une capture
