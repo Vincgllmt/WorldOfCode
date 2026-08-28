@@ -12,7 +12,9 @@ import org.junit.Test
  */
 class CastFormatsTest {
 
-    private val base = "http://spacep2.com/movie/USER/PASS"
+    // Les gabarits d'URL sont fictifs : un test n'a aucune raison de porter les
+    // identifiants d'un abonnement réel, et ceux-ci s'étaient retrouvés dans le dépôt.
+    private val base = "http://exemple.test/movie/u/p"
 
     @Test
     fun `le mp4 est diffusable`() {
@@ -39,7 +41,7 @@ class CastFormatsTest {
     @Test
     fun `une chaine live sans extension n est pas diffusable`() {
         // Flux MPEG-TS nu : le récepteur ne le lit pas.
-        assertFalse(CastFormats.isCastable("http://spacep2.com/USER/PASS/12345"))
+        assertFalse(CastFormats.isCastable("http://exemple.test/u/p/12345"))
     }
 
     @Test
@@ -70,6 +72,6 @@ class CastFormatsTest {
     @Test
     fun `un point dans le chemin ne fait pas passer pour une extension`() {
         // « .com » est dans l'hôte, pas dans le nom de fichier.
-        assertEquals(null, CastFormats.extensionOf("http://spacep2.com/live/u/p/9"))
+        assertEquals(null, CastFormats.extensionOf("http://exemple.test/live/u/p/9"))
     }
 }
