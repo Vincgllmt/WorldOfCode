@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import com.purple.iptvplayer.R
+import com.purple.iptvplayer.core.data.MoveDirection
 import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.model.SeriesItem
@@ -245,8 +246,13 @@ fun MyListScreen(
                             onFav   = { vm.toggleChannelFavorite(channel.name) },
                             // Les extrémités n'ont pas de voisin : le bouton correspondant
                             // est désactivé plutôt que d'échouer en silence.
-                            onMoveUp   = if (index > 0) ({ vm.moveChannelFavorite(index, index - 1) }) else null,
-                            onMoveDown = if (index < favChannels.lastIndex) ({ vm.moveChannelFavorite(index, index + 1) }) else null,
+                            //
+                            // #90 — on passe le **nom**, jamais l'index. `favChannels` est
+                            // la liste des favoris *résolus* dans le catalogue ; son index
+                            // ne désigne pas la même entrée dans la liste persistée, qui
+                            // garde aussi les orphelins.
+                            onMoveUp   = if (index > 0) ({ vm.moveChannelFavorite(channel.name, MoveDirection.UP) }) else null,
+                            onMoveDown = if (index < favChannels.lastIndex) ({ vm.moveChannelFavorite(channel.name, MoveDirection.DOWN) }) else null,
                         )
                     }
                 }

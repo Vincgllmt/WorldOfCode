@@ -26,6 +26,34 @@ cd /home/rigolo/Documents/woc/cluster/iptv/native
 | Appareil | ✅ **Pixel 7 (`panther`, Android 17) connecté et autorisé** |
 | `upload-keystore.jks` | ✅ présent en `client/android/`, **vérifié** : alias `upload`, le mot de passe de `keystore.properties` l'ouvre, `PrivateKeyEntry` valide jusqu'en 2053, SHA1 `F6:0C:72:9C:…` |
 
+#### Le lien de test de l'utilisateur — où il est, et le piège de `get.php`
+
+**`~/.purple_iptv/test_credentials`**, `chmod 600`, **hors du dépôt** : il porte des
+identifiants, on ne le committe pas et on n'en recopie pas le contenu dans un fichier
+suivi par git. Il définit `PURPLE_M3U_URL` ; `. ~/.purple_iptv/test_credentials` le charge.
+
+Le même lien vit en double dans `native/local.properties` sous `purple.defaultM3u`
+(fichier ignoré par git), d'où le pré-remplissage du champ de l'écran de connexion TV —
+saisir un lien M3U complet à la télécommande étant interminable.
+
+⚠️ **`get.php` est refusé par ce fournisseur.** Mesuré le 2026-08-28 depuis ce poste :
+`HTTP 885` avec un corps vide, avec ou sans `User-Agent` de lecteur (VLC, okhttp, Lavf).
+Inutile de chercher un contournement — l'application ne s'en sert pas :
+`Credentials.parseUrl` (`core/model/Credentials.kt:16-31`) repère `username` et `password`
+dans la chaîne de requête et rend des identifiants **`PlaylistType.XTREAM`** avec
+`host = http://spacep2.com`. Tout le catalogue passe donc par `player_api.php`.
+
+Pour contrôler l'état du compte sans lancer l'application :
+
+```bash
+. ~/.purple_iptv/test_credentials
+curl -sS "http://spacep2.com/player_api.php?username=…&password=…" | head -c 300
+```
+
+Au 2026-08-28 : `auth=1`, `status=Active`, `max_connections=1`. Cette dernière valeur
+explique les échecs de lecture simultanée : **une seule connexion à la fois**, donc ne pas
+laisser un flux ouvert sur l'émulateur pendant qu'on en lance un sur le téléphone.
+
 #### Machine « hjouini » — sans clé de signature
 
 ```bash

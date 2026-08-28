@@ -3,6 +3,7 @@ package com.purple.iptvplayer.core.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.purple.iptvplayer.core.data.FavoritesRepository
+import com.purple.iptvplayer.core.data.MoveDirection
 import com.purple.iptvplayer.core.data.IptvRepository
 import com.purple.iptvplayer.core.data.ProgressRepository
 import com.purple.iptvplayer.core.data.RecentItem
@@ -63,8 +64,20 @@ class ContentViewModel(
     }
 
     /** Déplace un favori de chaîne dans l'ordre choisi par l'utilisateur. */
-    fun moveChannelFavorite(from: Int, to: Int) {
-        viewModelScope.launch { favsRepo.moveChannel(from, to) }
+    /**
+     * Déplace un favori de chaîne d'un cran, **par son nom**.
+     *
+     * L'ensemble des favoris résolus est calculé ici et non passé par l'UI : le
+     * `ViewModel` détient déjà le catalogue *et* les favoris, c'est donc le bon endroit,
+     * et cela évite qu'un index d'affichage retraverse la frontière (#90). La décision
+     * elle-même vit dans [FavoritesOrder], testée sans Android.
+     */
+    fun moveChannelFavorite(name: String, direction: MoveDirection) {
+        viewModelScope.launch {
+            val resolus = (_channels.value as? ContentState.Success)
+                ?.data?.mapTo(mutableSetOf()) { it.name } ?: return@launch
+            favsRepo.moveChannel(name, direction, resolus)
+        }
     }
 
     fun toggleChannelFavorite(name: String) {

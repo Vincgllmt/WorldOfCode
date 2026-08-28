@@ -32,6 +32,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.data.MoveDirection
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadType
 import com.purple.iptvplayer.core.model.Movie
@@ -306,8 +307,12 @@ fun TvMyListScreen(
                             modifier = if (index == 0) Modifier.focusRequester(contentFocus) else Modifier,
                             onPlay   = { onPlayChannel(channel.url, channel.name, channel.streamId ?: 0) },
                             onFav    = { refocusAfterEdit = true; vm.toggleChannelFavorite(channel.name) },
-                            onMoveUp   = if (index > 0) ({ refocusAfterEdit = true; vm.moveChannelFavorite(index, index - 1) }) else null,
-                            onMoveDown = if (index < favChannels.lastIndex) ({ refocusAfterEdit = true; vm.moveChannelFavorite(index, index + 1) }) else null,
+                            // #90 — le **nom**, jamais l'index : `favChannels` ne contient
+                            // que les favoris résolus dans le catalogue, la liste persistée
+                            // garde aussi les orphelins. Même geste que côté mobile, et
+                            // désormais la même décision, qui vit dans `core`.
+                            onMoveUp   = if (index > 0) ({ refocusAfterEdit = true; vm.moveChannelFavorite(channel.name, MoveDirection.UP) }) else null,
+                            onMoveDown = if (index < favChannels.lastIndex) ({ refocusAfterEdit = true; vm.moveChannelFavorite(channel.name, MoveDirection.DOWN) }) else null,
                         )
                     }
                 }

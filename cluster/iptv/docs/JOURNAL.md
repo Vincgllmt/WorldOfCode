@@ -69,6 +69,7 @@ numéro.
 | 57 | **#R2 corrigé** — le verrou de focus de la fiche série était posé *avant* l'action qu'il garde, avec une suspension entre les deux : une annulation perdait le focus définitivement, et `tvModalTrap()` ne laisse aucun repli | on touche à un point d'entrée de focus, à `tvModalTrap`, ou à un `LaunchedEffect` qui verrouille une demande |
 | 58 | **Lot TV-2 et accessibilité de TV-3 vérifiés** — #76 correct (différentiel probant), #79 vérifié par lecture, **#77 répondu à côté** (garde de borne inerte au lieu du garde de focus) et un tiers de son symptôme démenti par la mesure ; **#R4** ouvert : le ✕ de la recherche est inatteignable | on reprend #77, on touche à la barre de recherche TV, ou on veut un exemple de différentiel de build |
 | 59 | **#R4 corrigé** — un focusable imbriqué dans un focusable n'est atteignable par aucune direction ; troisième occurrence du motif (G11, #67, #R4) | on pose une action secondaire dans une ligne ou une barre déjà focalisable |
+| 60 | **#90 corrigé** — un index d'affichage traversait la frontière UI/core et corrompait l'ordre persisté des favoris ; décision sortie en `core/data/FavoritesOrder`. Contient aussi **où vit le lien de test** et pourquoi `get.php` répond 885 | on touche aux favoris, on fait circuler un index entre UI et `core`, ou on cherche le lien M3U de test |
 
 ---
 
@@ -5208,3 +5209,91 @@ partagent la même forme : une ligne ou une barre rendue focalisable par `clicka
 action secondaire posée dedans. Une aide de `TvFocusKit` — « conteneur focalisable +
 action latérale », qui impose la structure frère — éviterait la quatrième. **Non fait** :
 c'est une décision de conception d'API, pas un correctif.
+
+---
+
+## 60. #90 — un index d'affichage traversait la frontière UI/core *(2026-08-28)*
+
+Premier ticket pris après la campagne de vérification. Choisi parce qu'il cumule les deux
+motifs les plus coûteux de ce dépôt : une **corruption silencieuse de données
+persistées**, et une **décision écrite deux fois, une par UI** (règle 1).
+
+### Le défaut
+
+« Ma liste » n'affiche que les favoris qu'elle a su résoudre dans le catalogue. La liste
+persistée, elle, garde aussi les **orphelins** — un favori est stocké *par nom*, et les
+correctifs P3/P7 ont changé les noms nettoyés des chaînes : tout favori posé avant eux est
+orphelin. Deux référentiels d'index coexistaient donc, et le geste de réordonnancement
+passait celui de l'affichage à du code qui l'appliquait à la liste persistée.
+
+Persistés `[A, B, C]`, `A` orphelin ⇒ l'écran montre `[B, C]`. « Descendre » sur `B`
+(index affiché 0) envoyait `move(0, 1)` et déplaçait **`A`**. L'affichage ne bougeait pas,
+l'ordre persisté était corrompu, et l'utilisateur retouchait jusqu'à obtenir n'importe
+quoi.
+
+Le chemin voisin `toggleChannelFavorite(channel.name)` passait déjà une **identité** et
+n'avait pas le défaut : c'est le déplacement qui faisait exception.
+
+### Le correctif, et pourquoi il va dans `core`
+
+La décision était écrite deux fois — `MyListScreen.kt:248-249` et
+`TvMyListScreen.kt:309-310` passaient le même index filtré. Elle est donc sortie en objet
+pur, `core/data/FavoritesOrder.kt` :
+
+```kotlin
+fun move(ids: List<String>, id: String, direction: MoveDirection, resolved: Set<String>)
+```
+
+La règle est simple : le voisin visé est le **prochain favori résolu** dans le sens
+demandé. Les orphelins traversés gardent leur place relative, et ce que l'utilisateur voit
+est bien un déplacement d'exactement un cran.
+
+Trois choix qui méritent d'être dits :
+
+1. **`ContentViewModel` calcule lui-même l'ensemble résolu**, depuis `_channels`, plutôt
+   que de le recevoir de l'UI. Il détient déjà le catalogue *et* les favoris : c'est le bon
+   endroit, et cela garantit qu'aucun index ne retraverse la frontière. L'UI ne connaît
+   plus que `(nom, sens)`.
+2. **Les trois `move*` du repository changent de signature**, pas seulement `moveChannel`.
+   `moveMovie` et `moveSeries` n'ont aucun appelant ; les laisser avec la forme fautive
+   aurait invité à réintroduire le défaut au premier branchement.
+3. **Un test fige l'ancien comportement** — `FavoritesCodec.move(ids, 0, 1)` rend
+   `[B, A, C]` sur le cas du défaut. Sans ce terme de comparaison, les six autres tests
+   décriraient le correctif sans jamais montrer ce qu'il corrige.
+
+### Vérification sur les deux supports
+
+Faite avec le **catalogue réel** (11 877 chaînes) et non un M3U synthétique, et avec un
+orphelin injecté en tête de la liste persistée — l'encodeur de `preferences_pb` utilisé
+pour l'injection a d'abord été validé par aller-retour octet à octet sur le fichier
+existant.
+
+Précondition obtenue à l'écran, sur les deux : **4 favoris persistés, « 3 titres »
+affichés**. C'est exactement le cas de l'audit, et il n'est pas atteignable autrement.
+
+| Support | Geste | Persisté après | À l'écran |
+|---|---|---|---|
+| Pixel 7 | « Descendre » sur la 1ʳᵉ visible | `[ZZZ, AFRICA, AFRICANS, ACTION]` | descend d'un cran |
+| Pixel 7 | « Monter » sur la 3ᵉ | `[ZZZ, AFRICA, ACTION, AFRICANS]` | symétrique |
+| Émulateur TV | `▼` sur la 1ʳᵉ | `[ZZZ, AFRICA, AFRICANS, ACTION]` | **identique au mobile** |
+
+L'ancien chemin aurait rendu `[AFRICANS, ZZZ, AFRICA, ACTION]` **sans changement à
+l'écran**. Les deux issues sont distinguables en une seule exécution : pas besoin de
+reconstruire la build d'avant, le résultat fautif a une signature propre. C'est le
+différentiel le moins cher de la session — quand l'ancien comportement produit une valeur
+*fausse* et pas seulement « rien », il suffit de regarder laquelle sort.
+
+### Le lien de test, et le piège de `get.php`
+
+Le catalogue réel a demandé de ranger le lien de l'utilisateur : il est désormais dans
+**`~/.purple_iptv/test_credentials`** (`chmod 600`, hors dépôt), l'emplacement que
+`CLAUDE.md` désignait déjà sans qu'il existe.
+
+⚠️ **Ne pas chercher à télécharger la playlist par `get.php`** : ce fournisseur répond
+`HTTP 885` avec un corps vide, avec ou sans `User-Agent` de lecteur. Ce n'est pas un
+incident à diagnostiquer — `Credentials.parseUrl` repère `username`/`password` dans l'URL
+et la convertit en identifiants **Xtream**, si bien que l'application n'appelle jamais
+`get.php`. Tout passe par `player_api.php`, qui répond (`auth=1`, `status=Active`,
+`max_connections=1`). Cette dernière valeur mérite d'être retenue : **une seule connexion
+à la fois**, donc ne pas laisser un flux ouvert sur l'émulateur en en lançant un sur le
+téléphone.

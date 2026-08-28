@@ -75,10 +75,21 @@ class FavoritesRepository(private val context: Context) {
     suspend fun toggleMovieGenre(genre: String)  = toggle(MOVIE_GENRES, LEGACY_MOVIE_GENRES, genre)
     suspend fun toggleSeriesGenre(genre: String) = toggle(SERIES_GENRES, LEGACY_SERIES_GENRES, genre)
 
-    /** Déplace un favori de chaîne. Les autres catégories suivront si le besoin s'en fait sentir. */
-    suspend fun moveChannel(from: Int, to: Int) = move(CHANNELS, LEGACY_CHANNELS, from, to)
-    suspend fun moveMovie(from: Int, to: Int)   = move(MOVIES, LEGACY_MOVIES, from, to)
-    suspend fun moveSeries(from: Int, to: Int)  = move(SERIES, LEGACY_SERIES, from, to)
+    /**
+     * Déplace un favori **par identité**, jamais par index d'affichage.
+     *
+     * @param resolved les favoris que l'écran a su résoudre dans le catalogue. La liste
+     *   persistée en contient d'autres — les orphelins — et c'est tout le sujet de #90 :
+     *   un index d'affichage n'y désigne pas la même entrée. Cf. [FavoritesOrder].
+     */
+    suspend fun moveChannel(name: String, direction: MoveDirection, resolved: Set<String>) =
+        move(CHANNELS, LEGACY_CHANNELS, name, direction, resolved)
+
+    suspend fun moveMovie(id: String, direction: MoveDirection, resolved: Set<String>) =
+        move(MOVIES, LEGACY_MOVIES, id, direction, resolved)
+
+    suspend fun moveSeries(id: String, direction: MoveDirection, resolved: Set<String>) =
+        move(SERIES, LEGACY_SERIES, id, direction, resolved)
 
     /** Un ajout se fait **en fin de liste** : la place d'un nouveau favori est la dernière. */
     private suspend fun toggle(
@@ -97,11 +108,13 @@ class FavoritesRepository(private val context: Context) {
     private suspend fun move(
         key: Preferences.Key<String>,
         legacy: Preferences.Key<Set<String>>,
-        from: Int,
-        to: Int,
+        id: String,
+        direction: MoveDirection,
+        resolved: Set<String>,
     ) {
         context.favDataStore.edit { prefs ->
-            prefs[key] = FavoritesCodec.encode(FavoritesCodec.move(prefs.ordered(key, legacy), from, to))
+            val ordre = FavoritesOrder.move(prefs.ordered(key, legacy), id, direction, resolved)
+            prefs[key] = FavoritesCodec.encode(ordre)
             prefs.remove(legacy)
         }
     }

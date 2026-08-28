@@ -256,6 +256,20 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 **Piste.** ne pas faire circuler un index à travers la frontière UI/core. Faire porter le déplacement par une identité (le nom du favori, plus un sens haut/bas), ou traduire l'index affiché en index persisté avant l'appel. La décision est écrite deux fois — `app-tv/src/main/kotlin/com/purple/iptvplayer/tv/ui/mylist/TvMyListScreen.kt:309-310` passe le même index filtré — donc elle doit finir dans `core`, avec le test qui va avec (règle §8.2).
 
+**✅ Corrigé le 2026-08-28** — plus aucun index ne traverse la frontière. `core/data/FavoritesOrder.kt` porte la décision : `move(ids, id, direction, resolved)` cherche le **prochain favori résolu** dans le sens demandé et délègue à `FavoritesCodec.move`. Les orphelins traversés gardent leur place ; le résultat visible est bien un déplacement d'un cran. `FavoritesRepository.moveChannel/moveMovie/moveSeries` prennent désormais `(id, direction, resolved)` — les trois, pour que la forme fautive ne survive nulle part, `moveMovie`/`moveSeries` n'ayant par ailleurs aucun appelant. `ContentViewModel.moveChannelFavorite(name, direction)` calcule lui-même l'ensemble résolu depuis `_channels` : l'UI ne connaît plus que le nom et le sens.
+
+**Sept tests** dans `FavoritesOrderTest`, dont un qui **fige l'ancien comportement** comme terme de comparaison : sur `[A, B, C]` avec `A` orphelin, `FavoritesCodec.move(ids, 0, 1)` rend `[B, A, C]` — visible inchangé.
+
+**Vérifié sur les deux supports** (§60), avec le catalogue réel de l'utilisateur (11 877 chaînes) et un orphelin injecté en tête de la liste persistée :
+
+| | Persisté avant | Geste | Persisté après | À l'écran |
+|---|---|---|---|---|
+| Pixel 7 | `[ZZZ, AFRICANS, AFRICA, ACTION]` | « Descendre » sur la 1ʳᵉ ligne visible | `[ZZZ, AFRICA, AFRICANS, ACTION]` | la ligne descend d'un cran ✓ |
+| Pixel 7 | idem | « Monter » sur la 3ᵉ | `[ZZZ, AFRICA, ACTION, AFRICANS]` | symétrique ✓ |
+| Émulateur TV | `[ZZZ, AFRICANS, AFRICA, ACTION]` | `▼` sur la 1ʳᵉ | `[ZZZ, AFRICA, AFRICANS, ACTION]` | identique au mobile ✓ |
+
+L'ancien chemin aurait rendu `[AFRICANS, ZZZ, AFRICA, ACTION]` **sans rien changer à l'écran** : les deux issues sont distinguables en une seule exécution, et c'est la bonne qui sort. Les deux UI rendent désormais le **même** ordre persisté — ce que la duplication ne garantissait pas.
+
 
 ## #91 — app-mobile/mylist : distinguer « catalogue en cours de chargement / en erreur » de « liste vide »
 

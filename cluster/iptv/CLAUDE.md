@@ -101,12 +101,12 @@ export JAVA_HOME=$HOME/.local/share/jdk-17          # aucun JDK système : le pa
 export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 
-./gradlew :core:testDebugUnitTest    # 212 tests
+./gradlew :core:testDebugUnitTest    # 219 tests
 ./gradlew :app-tv:testDebugUnitTest  #  73 tests
 ./gradlew :app-tv:assembleDebug      # ou :app-mobile:installDebug
 ```
 
-**État de la suite : 285 tests, 0 échec.** Rapport HTML après échec :
+**État de la suite : 292 tests, 0 échec.** Rapport HTML après échec :
 `core/build/reports/tests/testDebugUnitTest/index.html`.
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`.
@@ -114,9 +114,19 @@ Contrôle des libellés avant toute publication : `python3 tools/check_strings.p
 Le reste — deuxième machine, keystore, `purple.unlock`, simulation d'un essai expiré,
 lancement de l'émulateur — est dans [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md).
 
-> **Lien de test M3U** (credentials utilisateur) : `~/.purple_iptv/test_credentials`.
-> Ce fichier est **hors du repo** — jamais le committer ni l'écrire dans un fichier suivi
-> par git.
+> **Lien de test M3U** (credentials utilisateur) : **`~/.purple_iptv/test_credentials`**
+> (créé le 2026-08-28, `chmod 600`). Ce fichier est **hors du repo** — jamais le committer
+> ni recopier son contenu dans un fichier suivi par git. Il expose `PURPLE_M3U_URL` ;
+> `. ~/.purple_iptv/test_credentials` le charge dans le shell. Le même lien est la valeur
+> de `purple.defaultM3u` dans `native/local.properties` (ignoré par git), qui pré-remplit
+> le champ de l'écran de connexion TV.
+>
+> ⚠️ Ne pas essayer de télécharger la playlist par `get.php` : ce fournisseur le **refuse**
+> (HTTP 885, corps vide — mesuré, indépendamment du `User-Agent`). Ce n'est pas un
+> incident : `Credentials.parseUrl` repère `username`/`password` dans l'URL et la convertit
+> en identifiants **Xtream**, si bien que l'application n'appelle jamais `get.php` — tout
+> passe par `player_api.php`, qui répond. Détail dans
+> [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md).
 
 ---
 
