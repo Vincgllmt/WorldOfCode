@@ -67,6 +67,7 @@ numéro.
 | 55 | **Lot CORE-C** — garde de course de `ContentViewModel`, causes typées `ContentFailure`/`SetupFailure` | on touche aux états d'erreur des deux UI |
 | 56 | **Campagne de vérification sur les supports des six lots des 27–28/08** — 9 scénarios passés, **2 échecs** + 1 défaut de parité : une validation refusée ouvrait le catalogue (corrigé), la fiche série TV n'a aucun focus (ouvert) ; + 5 pièges d'outillage | on livre un lot « compile ✓ tests ✓ », on prépare une campagne émulateur/Pixel, ou on reprend la fiche série TV |
 | 57 | **#R2 corrigé** — le verrou de focus de la fiche série était posé *avant* l'action qu'il garde, avec une suspension entre les deux : une annulation perdait le focus définitivement, et `tvModalTrap()` ne laisse aucun repli | on touche à un point d'entrée de focus, à `tvModalTrap`, ou à un `LaunchedEffect` qui verrouille une demande |
+| 58 | **Lot TV-2 et accessibilité de TV-3 vérifiés** — #76 correct (différentiel probant), #79 vérifié par lecture, **#77 répondu à côté** (garde de borne inerte au lieu du garde de focus) et un tiers de son symptôme démenti par la mesure ; **#R4** ouvert : le ✕ de la recherche est inatteignable | on reprend #77, on touche à la barre de recherche TV, ou on veut un exemple de différentiel de build |
 
 ---
 
@@ -5038,3 +5039,106 @@ recréés, et le point d'entrée n'est pas rejoué. L'écran reste utilisable �
 depuis la description atteint E1, ce qui confirme au passage que `tvGroupEntry` fait bien
 son travail. Ce n'est pas clairement un défaut (revenir sur la fiche qu'on lisait se
 défend), donc pas de ticket ouvert : simplement noté.
+
+---
+
+## 58. Vérification du lot TV-2 et de la moitié « accessibilité » de TV-3 *(2026-08-28)*
+
+Ce que la campagne du §56 n'avait pas couvert : `74718098` (#76, #77, #79) et la part
+accessibilité de `b0011935`. Aucun des onze scénarios ne les touchait, et les trois
+tickets portaient la preuve « compile ✓ ».
+
+**Résultat : un correct, un vérifié par lecture, un répondu à côté, et un défaut nouveau.**
+
+### 58.1 — #76 purge du `SaveableStateHolder` : correct, et le test le prouve
+
+Protocole : laisser l'application sur un écran distinctif, se déconnecter, se reconnecter.
+
+| Build | Où l'application rouvre |
+|---|---|
+| sans `navStateHolder.removeState("main")` | **sur l'écran Paramètres** de la session précédente |
+| avec | sur « Direct TV », l'état par défaut |
+
+Le différentiel a demandé un aller-retour de build, mais il transforme « ça a l'air bon »
+en mesure : sans la purge, l'application rouvre littéralement sur le panneau de réglages
+d'un compte qui n'existe plus.
+
+Les favoris survivent dans les deux cas — données utilisateur, pas état de navigation, et
+le libellé de la confirmation l'annonce (« Toutes vos données locales seront conservées »).
+
+### 58.2 — #79 `MainScope()` : vérifié par lecture, et c'est le bon niveau
+
+`TvNavGraph.kt:58` déclare `rememberCoroutineScope()`, `onSignOut` l'utilise, plus aucun
+`MainScope()` dans le fichier. Une coroutine qui survit à sa composition **ne se voit pas
+à l'écran** : la chercher sur l'émulateur aurait été un test qui ne peut pas échouer.
+Vérifié par lecture, et écrit comme tel.
+
+Reste non fait : la seconde moitié de la piste, dédupliquer la séquence « clear + retour
+au Setup » écrite une fois par UI.
+
+### 58.3 — #77 : le lot a répondu à côté, et l'audit se trompait sur un tiers du symptôme
+
+Le message de `74718098` annonce « #77 : TvChannelRow garde de borne
+canMoveUp/canMoveDown ». Or #77 ne parle pas de bornes mais du **garde de focus** que
+porte l'étoile et pas les flèches. Deux lectures s'ajoutent :
+
+- `canMoveUp`/`canMoveDown` ne sont passés par **aucun appelant** — le motif « déclaré
+  mais jamais branché », neuvième occurrence ;
+- la borne était **déjà** traitée : `TvMyListScreen.kt:309-310` passe
+  `onMoveUp = if (index > 0) … else null`, et `TvChannelRow` n'affiche la flèche que si le
+  callback est non nul. À l'écran, la première ligne n'a effectivement pas de ▲ ni la
+  dernière de ▼ — avant comme après le lot.
+
+Le changement est donc inerte. Mesure des trois symptômes de #77, « Ma liste » filtrée sur
+les chaînes, trois favoris :
+
+| Symptôme annoncé | Mesuré |
+|---|---|
+| 3 appuis `▶` pour l'étoile au lieu d'un | **confirmé** — ligne → ▲ → ▼ → ★, contre **1** dans « Direct TV » qui n'a pas de flèches (témoin) |
+| flèches à pleine opacité, étoile effacée | **confirmé** à l'écran |
+| la descente verticale attrape la colonne des flèches | **non reproduit** — sur les deux builds, descendre depuis ▲ tombe sur la *ligne* suivante |
+
+Le troisième point était introduit dans l'audit par « **si** la recherche verticale attrape
+bien ces colonnes latérales » : c'était une hypothèse, elle est fausse. Corrigé dans
+`docs/audit.md` plutôt que laissé traîner — un audit qui garde une supposition démentie
+coûte plus cher qu'il ne rapporte.
+
+**Correctif** : garde `rowHasFocus` (alpha 0,35 + `canFocus`) sur les deux `ArrowButton`,
+avec le `hasFocus` du **groupe** et non `isFocused` — sinon la flèche quitte le parcours à
+l'instant où le focus l'atteint (§8.14). Vérifié : sur les lignes sans focus les flèches
+s'effacent comme l'étoile et sortent du parcours ; sur la ligne focalisée elles restent
+pleines.
+
+**Laissé ouvert sciemment** : le coût de 3 appuis. Les trois boutons sont côte à côte, et
+les rendre focalisables — ce qu'il faut bien pour qu'ils servent — les met dans le trajet
+horizontal. C'est une décision de conception (un mode réordonnancement explicite, par
+exemple), pas un correctif de focus, et la piste de l'audit ne la tranche pas.
+
+### 58.4 — #R4, nouveau : le ✕ de la recherche n'est atteignable par aucune touche
+
+TV-3 a changé ce contrôle d'un `Icon(...).clickable {}` en `Surface(onClick = …)` ; le
+message du commit dit « clear focusable ». L'intention est claire. Elle n'est pas atteinte.
+
+Mesuré, requête « sport » (1121 résultats) :
+
+| État | `▶` |
+|---|---|
+| en saisie | seul le **curseur de texte** bouge — diff `(1457,72)-(1462,107)`, 5 px de large, ×5 appuis |
+| hors saisie | **`None`** — zéro pixel, le focus ne bouge pas |
+
+Cause, par lecture : `TvHomeScreen.kt:413-424` pose le `Surface` du ✕ **dans** le `Row` de
+la barre, lequel est déjà focalisable (`.clickable { editing = true }`, :381). Focusable
+imbriqué dans un focusable — le piège corrigé pour **#67**, où le bouton œil avait dû être
+**sorti** du `TvFormField`. Et `onPreviewKeyEvent` (:361-368) n'intercepte que haut/bas,
+donc `▶` part au `BasicTextField` qui le consomme pour le curseur.
+
+`RETOUR` ne remplace pas ce bouton : mesuré, il ne vide pas la recherche. Ticket **#R4**
+ouvert, non corrigé — le remède touche une barre partagée par trois écrans, à revérifier
+sur les trois.
+
+### Ce qui reste non vérifié de TV-3
+
+La remise à zéro du défilement au changement de genre (`scrollToItem(0)`) et le bouton
+« Retour » qui efface d'abord la recherche : ces deux comportements vivent dans des états
+d'écran que je n'ai pas su atteindre de façon fiable à la télécommande en un temps
+raisonnable. **Non testés**, et dits tels quels.

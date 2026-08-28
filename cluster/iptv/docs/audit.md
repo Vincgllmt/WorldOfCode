@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **3 relevés à l'usage** (#R1, #R2, #R3), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **4 relevés à l'usage** (#R1 à #R4), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -25,7 +25,7 @@
 |---|---|
 | **CRITIQUE** | 6 |
 | **MAJEUR** | 43 |
-| **MINEUR** | 54 |
+| **MINEUR** | 55 |
 
 | Périmètre | Défauts |
 |---|---|
@@ -35,7 +35,7 @@
 | `app-mobile/setup` | 9 |
 | `app-tv/series` | 10 |
 | `app-mobile/downloads` | 7 |
-| `app-tv/home` | 8 |
+| `app-tv/home` | 9 |
 | `app-tv/movies` | 7 |
 | `core/viewmodel` | 8 |
 | `app-mobile/catalog` | 6 |
@@ -525,6 +525,10 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 **Piste.** sur la voie de déconnexion uniquement, retirer l'entrée `"main"` du `SaveableStateHolder` avant de basculer sur `TvScreen.Setup` — la conservation d'état doit rester acquise pour le trajet Main ↔ Player ↔ Purchase.
 
+**✅ Corrigé le 2026-08-27 (`74718098`), vérifié à l'écran le 2026-08-28** — `navStateHolder.removeState("main")` appelé dans `TvNavGraph.onSignOut`, sur la seule voie de déconnexion.
+
+**Mesure différentielle** (§58), même émulateur, même parcours : quitter l'application depuis un écran distinctif, se déconnecter, se reconnecter. **Sans** la purge, l'application rouvre **sur l'écran Paramètres** de la session précédente. **Avec**, elle rouvre sur « Direct TV », l'état par défaut. Les favoris, eux, survivent dans les deux cas — ce sont des données utilisateur, pas de l'état de navigation, et le libellé de la confirmation l'annonce.
+
 
 ## #77 — app-tv/common : retirer aussi les flèches de réordonnancement du parcours D-pad, comme l'étoile
 
@@ -537,6 +541,22 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 **Cause.** le correctif G11 (`rowHasFocus`) n'a été appliqué qu'à la surface de l'étoile ; les deux flèches, ajoutées pour la même colonne d'actions, n'ont pas été incluses.
 
 **Piste.** appliquer le même garde `rowHasFocus` (alpha + `canFocus`) aux deux `ArrowButton`, en gardant le raisonnement de :56-58 — `hasFocus` du groupe, pas `isFocused`, sinon la flèche se retire du parcours au moment où le focus l'atteint. Le nombre exact d'appuis et l'éventuelle dérive verticale vers la colonne des flèches se mesurent à l'AVD `purple_tv`.
+
+**⚠️ Le lot TV-2 (`74718098`) a répondu à côté.** Son message annonce « #77 : TvChannelRow garde de borne canMoveUp/canMoveDown » — un sujet différent. Le garde de borne est de surcroît **inerte** : `canMoveUp`/`canMoveDown` ne sont passés par **aucun appelant** (motif « déclaré mais jamais branché », règle 3), et la borne était déjà traitée en amont, `TvMyListScreen.kt:309-310` passant `onMoveUp = if (index > 0) … else null` et `TvChannelRow` n'affichant la flèche que si le callback est non nul. Le garde de focus, lui, restait entier.
+
+**Mesuré à l'émulateur le 2026-08-28** (§58), « Ma liste » filtrée sur les chaînes, trois favoris :
+
+| Symptôme | Mesure |
+|---|---|
+| coût pour atteindre l'étoile | **3 appuis `▶`** (ligne → ▲ → ▼ → ★) contre **1** dans « Direct TV », qui n'a pas de flèches — témoin |
+| opacité des flèches | **pleine sur toutes les lignes**, alors que l'étoile s'efface sur les lignes sans focus |
+| dérive verticale vers les flèches | **non reproduite** — descendre depuis ▲ tombe sur la *ligne* suivante, avant comme après correction |
+
+**✅ Corrigé le 2026-08-28** — garde `rowHasFocus` (alpha 0,35 + `canFocus`) appliqué aux deux `ArrowButton`, avec le `hasFocus` du **groupe** et non `isFocused`, comme le prescrivait la piste. Vérifié à l'écran : sur les lignes sans focus les flèches s'effacent désormais comme l'étoile et sortent du parcours ; sur la ligne focalisée elles restent pleines et utilisables.
+
+**Ce qui n'est pas corrigé, et pourquoi.** Le **coût de 3 appuis** reste : les trois boutons sont côte à côte sur la ligne focalisée, et les rendre focalisables — ce qu'il faut bien pour qu'ils servent — les met dans le trajet horizontal. La piste de l'audit ne tranche pas ce point ; il demande une décision de conception (par exemple un mode réordonnancement explicite), pas un correctif de focus. Laissé ouvert, sciemment.
+
+**Correction d'une supposition de cet audit.** Le troisième symptôme — « descendre la liste peut poser le focus sur un bouton qui **mute** l'ordre des favoris au premier `OK` » — était introduit par « si la recherche verticale attrape bien ces colonnes latérales ». Elle ne les attrape pas : mesuré sur les deux builds, la descente verticale reste sur les lignes.
 
 
 ## #70 — app-tv/purchase : ne pas écraser le succès d'une restauration par l'état Idle, la barrière ne se lève jamais
@@ -737,6 +757,21 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 **✅ Corrigé le 2026-08-28** — les quatre `<plurals>` ajoutés à `values-fr/plurals.xml` avec leurs formes françaises. `check_strings.py` : `app-tv plurals 6/6 ✓`. Vérifié à l'écran sur l'émulateur, application en français.
 
+
+
+## #R4 — app-tv/home : le ✕ de la barre de recherche n'est atteignable par aucune touche *(OUVERT)*
+
+`app-tv/home`
+
+**Symptôme.** Une recherche saisie ne peut pas être effacée par son propre bouton : le ✕ s'affiche à droite du champ mais aucune direction de la télécommande ne l'atteint. Sur TV il n'y a pas de pointeur — un contrôle non focalisable est un contrôle mort.
+
+**Preuve.** Mesuré à l'émulateur le 2026-08-28 (§58), « Direct TV », requête « sport » (1121 résultats) : en mode saisie, cinq `▶` ne déplacent que le **curseur de texte** — diff pixel `(1457,72)-(1462,107)`, soit 5 px de large. Hors mode saisie, `▶` rend `None` : **zéro pixel**, le focus ne bouge pas du tout.
+
+**Cause.** établie par lecture — `TvHomeScreen.kt:413-424` place le `Surface(onClick)` du ✕ **à l'intérieur** du `Row` de la barre de recherche, lequel est lui-même focalisable (`.clickable { editing = true }`, :381). C'est un focusable imbriqué dans un focusable : exactement le piège corrigé pour **#67** dans `TvSetupScreen`, où le bouton œil a dû être **sorti** du `TvFormField`. S'y ajoute que `onPreviewKeyEvent` (:361-368) n'intercepte que haut et bas, donc `▶` part au `BasicTextField` qui le consomme pour déplacer le curseur.
+
+**À noter.** TV-3 (`b0011935`) a précisément changé ce contrôle d'un `Icon(...).clickable {}` vers un `Surface(onClick = …)` — son message de commit dit « clear focusable ». L'intention était donc bien de le rendre atteignable ; la mesure montre qu'elle n'est pas atteinte, parce que le nœud reste imbriqué.
+
+**Piste.** appliquer le remède de #67 : sortir le ✕ du `Row` focalisable de la barre et le poser en frère dans un `Row` englobant. Vérifier ensuite les trois écrans qui partagent cette barre (`TvHomeScreen`, `TvMoviesScreen`, `TvSeriesScreen`). La touche `RETOUR` ne remplace pas ce bouton : mesuré, elle ne vide pas la recherche.
 
 
 ## #110 — app-mobile/catalog : brancher le titre de `ContentHeader`, ou cesser de le calculer
@@ -1257,6 +1292,10 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 **Cause.** divergence avec le jumeau mobile, qui fait le même geste correctement : `app-mobile/src/main/kotlin/com/purple/iptvplayer/mobile/ui/main/MainScreen.kt:240-244` utilise le `scope` remembered de l'écran. La décision « effacer les identifiants puis naviguer » est par ailleurs écrite deux fois, une par UI.
 
 **Piste.** passer par `rememberCoroutineScope()` dans `TvNavGraph`, qui annule la coroutine quand la destination quitte la composition. Occasion de remonter la séquence « clear + retour au Setup » en un seul point plutôt que de la garder dupliquée.
+
+**✅ Corrigé le 2026-08-27 (`74718098`)** — `TvNavGraph.kt:58` déclare `val scope = rememberCoroutineScope()` et `onSignOut` l'utilise ; plus aucun `MainScope()` dans le fichier.
+
+**Niveau de vérification.** Une coroutine qui survit à sa composition ne se voit pas à l'écran : ce défaut se contrôle par lecture, et c'est le bon niveau pour lui. Vérifié ainsi, pas sur l'émulateur — c'est écrit plutôt que sous-entendu. La seconde moitié de la piste — dédupliquer la séquence « clear + retour au Setup », écrite une fois par UI — **n'a pas été faite**.
 
 
 ## #80 — app-tv/common : mettre en commun KeepScreenOn, recopié mot pour mot depuis app-mobile

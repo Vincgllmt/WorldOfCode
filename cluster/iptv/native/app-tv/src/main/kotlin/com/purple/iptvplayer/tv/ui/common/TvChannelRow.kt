@@ -117,11 +117,19 @@ fun TvChannelRow(
             }
         }
 
+        // #77 — le garde G11 posé plus bas sur l'étoile n'avait jamais été étendu aux
+        // deux flèches, ajoutées après coup pour la même colonne d'actions. Mesuré à
+        // l'émulateur avant correction (§58) : atteindre l'étoile depuis la ligne coûtait
+        // **trois** appuis `▶` (ligne → ▲ → ▼ → ★) contre **un** dans « Direct TV », qui
+        // n'a pas de flèches ; et les deux flèches restaient à pleine opacité sur les
+        // lignes sans focus, alors que l'étoile s'y efface. Plus grave que l'ergonomie :
+        // une traversée verticale pouvait poser le focus sur un bouton qui **mute**
+        // l'ordre des favoris au premier `OK`.
         if (onMoveUp != null) {
-            ArrowButton("▲", onMoveUp, enabled = canMoveUp)
+            ArrowButton("▲", onMoveUp, enabled = canMoveUp, rowHasFocus = rowHasFocus)
         }
         if (onMoveDown != null) {
-            ArrowButton("▼", onMoveDown, enabled = canMoveDown)
+            ArrowButton("▼", onMoveDown, enabled = canMoveDown, rowHasFocus = rowHasFocus)
         }
 
         Surface(
@@ -167,10 +175,26 @@ private fun Channel.initials(): String =
 /** Flèche de réordonnancement — une surface focalisable, opérable à la télécommande. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ArrowButton(glyph: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun ArrowButton(
+    glyph: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    /**
+     * Même garde que l'étoile, et pour la même raison (G11) : hors de la ligne
+     * focalisée la flèche sort du parcours et s'efface.
+     *
+     * ⚠️ C'est bien le `hasFocus` du **groupe** qui est passé, jamais `isFocused` :
+     * avec ce dernier la flèche se retirerait du parcours à l'instant où le focus
+     * l'atteint, et le focus serait perdu (§8.14).
+     */
+    rowHasFocus: Boolean = true,
+) {
     Surface(
         onClick = onClick,
         enabled = enabled,
+        modifier = Modifier
+            .alpha(if (rowHasFocus) 1f else 0.35f)
+            .focusProperties { canFocus = rowHasFocus },
         shape   = ClickableSurfaceDefaults.shape(PurpleShapes.Xs),
         colors  = TvSurfaceDefaults.onAccent(contentColor = PurplePalette.Fg2),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),

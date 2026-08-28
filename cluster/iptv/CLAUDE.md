@@ -170,9 +170,14 @@ renvoi vers la section du journal qui porte le diagnostic.
 injoignable, et **#R2**, la fiche série TV sans aucun focus. Les deux sont corrigés et
 revérifiés à l'écran (§56, §57).
 
-**Ce qui reste à vérifier sur les supports** : le lot TV-2 (`74718098` — #76 purge du
-`SaveableStateHolder`, #77 bornes de `TvChannelRow`, #79) et la moitié « accessibilité »
-de TV-3 (`b0011935`). Aucun des onze scénarios de la campagne ne les touche.
+Le lot TV-2 et la moitié « accessibilité » de TV-3 ont été vérifiés à leur tour (§58) :
+#76 et #79 tiennent, **#77 avait été répondu à côté** — un garde de borne inerte au lieu du
+garde de focus demandé — et un **#R4** en est sorti : le ✕ de la barre de recherche TV
+n'est atteignable par aucune touche. **#R4 et le coût de 3 appuis de #77 restent ouverts.**
+
+**Reste non vérifié sur les supports** : la remise à zéro du défilement au changement de
+genre et le bouton « Retour » qui efface la recherche (TV-3), faute d'avoir su atteindre
+ces états de façon fiable.
 
 Ce qui ne relève pas de l'audit — facturation (trois points ouverts), TLS non validé
 (**S1**, décision produit), sauvegarde du keystore, publication de `app-mobile` 15 / 1.2.0
