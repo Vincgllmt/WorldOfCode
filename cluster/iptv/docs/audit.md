@@ -193,12 +193,23 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 **✅ Le plantage était déjà corrigé le 2026-08-27 par `14d723e6`** — `M3uParserService.kt:50` posait `items.distinctBy { it.url }`, commentaire à l'appui (« §109 »). L'entrée n'avait jamais été marquée. **Mesuré le 2026-08-28** sur le Pixel 7, playlist servie en local : trois entrées dont un doublon exact ⇒ « 2 chaînes », **zéro** occurrence de `FATAL EXCEPTION` ou de « used multiple times ». Le défaut décrit n'est plus atteignable.
 
-**⚠️ Mais ce remède coûtait du contenu.** `distinctBy` sur l'URL seule écarte aussi un flux **légitimement rangé dans deux `group-title`** — l'autre cas que le symptôme ci-dessus mentionne. Mesuré à l'écran avec une playlist listant `beIN Sports 1` dans « AAA SPORT » et « BBB FRANCE » :
+**⚠️ Mais ce remède coûtait du contenu.** `distinctBy` sur l'URL seule écarte aussi un flux **légitimement rangé dans deux `group-title`** — l'autre cas que le symptôme ci-dessus mentionne. Mesuré d'abord sur une playlist minimale, puis **rejoué sur le catalogue réel** (11 877 chaînes, 74 thèmes, servi en local par `adb reverse` faute de pouvoir passer par `get.php`) :
 
-| | AAA SPORT | BBB FRANCE | Plantage |
+| | Thème d'origine | Second thème | Plantage |
 |---|---|---|---|
-| avant | 2 chaînes | **1 chaîne** — `beIN Sports 1` perdue | 0 |
-| après | 2 chaînes | **2 chaînes** — `beIN Sports 1` et `France Info` | 0 |
+| avant | 2 chaînes | **1 chaîne** — la chaîne partagée est perdue | 0 |
+| après | 2 chaînes | **2 chaînes** | 0 |
+
+**Le plantage de #109 est bien réel — il n'est simplement plus atteignable.** Mesuré en construisant l'état intermédiaire dangereux : dédoublonnage relâché **sans** clés uniques, sur le catalogue réel, une chaîne rangée dans deux thèmes, puis une recherche qui met les deux lignes dans la même liste ⇒
+
+```
+FATAL EXCEPTION: main
+java.lang.IllegalArgumentException: Key "lrow_http://…/live/<user>/<pass>/24527.ts"
+was already used. If you are using LazyColumn/Row please make sure you provide a
+unique key for each item.
+```
+
+L'application est tuée. Avec `ChannelKey`, même scénario : **0 plantage**, et la chaîne apparaît bien dans ses deux thèmes. C'est la démonstration que les deux gestes ci-dessous ne valent qu'ensemble.
 
 **✅ Complété le 2026-08-28** — deux gestes qui ne valent qu'ensemble :
 

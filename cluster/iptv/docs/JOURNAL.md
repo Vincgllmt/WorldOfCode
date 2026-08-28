@@ -202,7 +202,8 @@ flux. Les quatre constructions d'URL de flux passent par un `streamUrl()` unique
 ⚠️ **Correction de la correction — à lire avant de retoucher à ceci.**
 La première version appliquait `URLEncoder.encode` **aussi** aux segments de chemin.
 Sur un abonnement réel dont le mot de passe contient `@`, cela réécrivait les 11 889
-URL de flux (`PASS` → `PASS%40`). Les panneaux Xtream comparent le chemin **brut** :
+URL de flux (le `@` du mot de passe devenait `%40`). Les panneaux Xtream comparent le
+chemin **brut** :
 le risque de rupture était réel, et invérifiable depuis ce poste (le fournisseur n'est
 pas joignable en TCP depuis le réseau de développement).
 
@@ -5337,6 +5338,29 @@ Un même flux dans plusieurs thèmes est un usage courant des playlists. La corr
 plantage le faisait disparaître de tous les thèmes sauf le premier — **une correction de
 plantage ne doit pas coûter du contenu**, et personne ne s'en serait aperçu : rien ne
 signale une chaîne absente.
+
+### Le plantage est réel — il n'est simplement plus atteignable
+
+Affirmer « c'était déjà corrigé » ne suffit pas : encore faut-il montrer que le défaut
+existait. Construit exprès, l'état intermédiaire **dangereux** — dédoublonnage relâché
+*sans* clés uniques — sur le **catalogue réel** de l'utilisateur (11 877 chaînes), une
+chaîne rangée dans deux thèmes, puis une recherche qui réunit les deux lignes dans la même
+liste :
+
+```
+FATAL EXCEPTION: main
+java.lang.IllegalArgumentException: Key "lrow_http://…/live/<user>/<pass>/24527.ts"
+was already used. If you are using LazyColumn/Row please make sure you provide a
+unique key for each item.
+```
+
+L'application est tuée — `topResumedActivity` repasse au launcher. Message identique, au
+mot près, à ce que l'audit avait déduit du bytecode de `runtime-saveable-android:1.10.3`
+**sans jamais l'exécuter**. Avec `ChannelKey`, même scénario : **0 plantage**, et la
+chaîne apparaît dans ses deux thèmes.
+
+C'est ce qui transforme « deux gestes qui vont bien ensemble » en **deux gestes
+indissociables**, mesure à l'appui.
 
 ### Le correctif : deux gestes qui ne valent qu'ensemble
 

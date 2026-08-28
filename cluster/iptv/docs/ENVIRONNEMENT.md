@@ -43,6 +43,27 @@ Inutile de chercher un contournement — l'application ne s'en sert pas :
 dans la chaîne de requête et rend des identifiants **`PlaylistType.XTREAM`** avec
 `host = http://spacep2.com`. Tout le catalogue passe donc par `player_api.php`.
 
+**Une playlist M3U réelle, pour exercer la voie `PlaylistType.M3U`.**
+`~/.purple_iptv/playlist_live.m3u` (`chmod 600`, ~2,3 Mo, 11 877 chaînes, 74 thèmes) est
+fabriquée depuis le compte Xtream — `get_live_categories` + `get_live_streams`, une entrée
+`#EXTINF` par flux, URL `…/live/<user>/<pass>/<stream_id>.ts`. C'est le **seul** moyen de
+faire passer de vraies données par `M3uParserService` : le lien de l'utilisateur est
+converti en Xtream par `parseUrl` et n'atteint jamais ce code. ⚠️ Chaque URL porte les
+identifiants — ce fichier ne sort pas de `~/.purple_iptv/`. La recette de régénération est
+en commentaire dans `test_credentials`.
+
+**La servir au téléphone**, bien plus rapide que de piloter le sélecteur SAF :
+
+```bash
+cd ~/.purple_iptv && python3 -m http.server 8099 --bind 127.0.0.1 &
+adb -s <serial> reverse tcp:8099 tcp:8099
+# dans l'app : http://127.0.0.1:8099/playlist_live.m3u
+```
+
+`parseUrl` la traite bien en `PlaylistType.M3U` — pas de `username`/`password` dans la
+chaîne de requête. Éditer le fichier et refaire une connexion suffit à changer de jeu
+d'essai.
+
 Pour contrôler l'état du compte sans lancer l'application :
 
 ```bash
