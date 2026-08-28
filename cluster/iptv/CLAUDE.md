@@ -166,9 +166,13 @@ renvoi vers la section du journal qui porte le diagnostic.
 ⚠️ **`✅ Corrigé` ne veut pas dire vérifié.** Une entrée dont la preuve se limite à
 « compile ✓ / tests ✓ / l'APK démarre » n'a pas été vue sur un support. La campagne du
 2026-08-28 (§56) l'a montré : sur six lots ainsi marqués, deux scénarios sur onze ont
-échoué, dont **#R1**, une régression critique qui faisait accepter n'importe quel serveur
-injoignable. **#R2 reste ouvert** — la fiche série de l'app TV ne prend aucun focus, donc
-aucun épisode n'est atteignable à la télécommande.
+échoué — **#R1**, une régression critique qui faisait accepter n'importe quel serveur
+injoignable, et **#R2**, la fiche série TV sans aucun focus. Les deux sont corrigés et
+revérifiés à l'écran (§56, §57).
+
+**Ce qui reste à vérifier sur les supports** : le lot TV-2 (`74718098` — #76 purge du
+`SaveableStateHolder`, #77 bornes de `TvChannelRow`, #79) et la moitié « accessibilité »
+de TV-3 (`b0011935`). Aucun des onze scénarios de la campagne ne les touche.
 
 Ce qui ne relève pas de l'audit — facturation (trois points ouverts), TLS non validé
 (**S1**, décision produit), sauvegarde du keystore, publication de `app-mobile` 15 / 1.2.0

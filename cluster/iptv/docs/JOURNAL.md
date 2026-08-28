@@ -66,6 +66,7 @@ numéro.
 | 54 | **Audit #97** — `PlayerViewModel` n'était pas partagé entre la fiche série et le lecteur mobile | on touche à la portée d'un `ViewModel` mobile |
 | 55 | **Lot CORE-C** — garde de course de `ContentViewModel`, causes typées `ContentFailure`/`SetupFailure` | on touche aux états d'erreur des deux UI |
 | 56 | **Campagne de vérification sur les supports des six lots des 27–28/08** — 9 scénarios passés, **2 échecs** + 1 défaut de parité : une validation refusée ouvrait le catalogue (corrigé), la fiche série TV n'a aucun focus (ouvert) ; + 5 pièges d'outillage | on livre un lot « compile ✓ tests ✓ », on prépare une campagne émulateur/Pixel, ou on reprend la fiche série TV |
+| 57 | **#R2 corrigé** — le verrou de focus de la fiche série était posé *avant* l'action qu'il garde, avec une suspension entre les deux : une annulation perdait le focus définitivement, et `tvModalTrap()` ne laisse aucun repli | on touche à un point d'entrée de focus, à `tvModalTrap`, ou à un `LaunchedEffect` qui verrouille une demande |
 
 ---
 
@@ -4927,3 +4928,113 @@ qui retombait. Corrigé (#R3) ; `check_strings.py` rend `app-tv plurals 6/6 ✓`
    (action IME) valide sans laisser la correction s'appliquer.
 5. **Le clavier virtuel de la TV avale les directions.** `RETOUR` ferme l'IME mais ne
    sort pas du champ (`editing` reste vrai) : enchaîner `RETOUR` *puis* `▼`.
+
+---
+
+## 57. #R2 — la fiche série TV sans focus : un verrou posé avant l'action qu'il garde *(2026-08-28)*
+
+Suite directe du §56.2, qui avait établi le symptôme et le périmètre sans isoler la cause.
+Instrumentation à l'émulateur, puis correctif et revérification.
+
+### Ce que la trace a montré
+
+Quatre traces posées temporairement dans `TvSeriesScreen.kt` — levée du drapeau
+`firstEpisodeReady`, entrée/sortie de l'effet de focus, résultat de `requestFocus()`,
+et `onFocusChanged` de la première ligne — plus un `DisposableEffect` témoin sur la
+branche `Success` :
+
+```
+branche Success COMPOSEE seriesId=2624 saisons=3
+1re ligne focus: isFocused=false hasFocus=false
+1re ligne composee -> ready=true
+FLAG ready -> true
+effet ENTREE ready=true claimed=false
+  avant withFrameNanos
+effet SORTIE                    ← annulé ici : « apres withFrameNanos » n'existe pas
+effet ENTREE ready=true claimed=true
+effet SORTIE                    ← le verrou déjà posé fait sauter la demande
+```
+
+Lecture :
+
+1. la branche `Success` est composée **une seule fois** — le sous-arbre n'est pas
+   reconstruit, l'hypothèse « le composable est recréé » est écartée ;
+2. la première ligne se compose et lève bien `firstEpisodeReady` ;
+3. l'effet entre, écrit `episodeFocusClaimed = true`, **puis** suspend sur
+   `withFrameNanos { }` — et il est **annulé à cet endroit** : la ligne
+   « apres withFrameNanos » n'apparaît jamais, donc `requestFocus()` n'est jamais atteint ;
+4. l'effet relance immédiatement (1 ms plus tard) et, le verrou étant déjà posé, ne fait
+   rien.
+
+Résultat net : **aucun nœud ne reçoit le focus**. Et `tvModalTrap()`, posé sur le `Box`
+racine de la fiche, rend le rail inatteignable — il n'existe donc **aucun repli**. D'où
+l'inertie totale mesurée au §56.2 : seul `RETOUR` répondait, parce qu'il passe par le
+`BackHandler` et non par le focus.
+
+### Le défaut, en une phrase
+
+**Le verrou « demande déjà faite » était posé avant l'action qu'il garde, avec une
+suspension entre les deux.** Toute annulation dans cet intervalle perd le focus
+définitivement.
+
+### Ce qui n'est pas établi
+
+**Pourquoi l'effet est annulé puis relancé alors que sa clé ne change pas** n'a pas été
+tranché. `snapshotFlow { firstEpisodeReady }` n'émet qu'une fois (`-> true`), mais il
+conflate les transitions intra-frame : un aller-retour `true → false → true` dans une
+seule *snapshot* lui serait invisible. La piste la plus plausible reste une
+composition/disposition de la première ligne par la `LazyColumn` pendant sa mesure — non
+démontrée. C'est écrit ici comme hypothèse, pas comme fait.
+
+Cela n'empêche pas de corriger : le défaut est que **la perte est irréversible**, quelle
+que soit la cause de l'annulation.
+
+### Correctif
+
+Le verrou passe de « j'ai émis la demande » à « le focus est arrivé » :
+
+```kotlin
+LaunchedEffect(firstEpisodeReady) {
+    if (firstEpisodeReady && !episodeFocusClaimed) {
+        withFrameNanos { }
+        runCatching { firstDetailFocus.requestFocus() }   // plus d'écriture avant
+    }
+}
+// …et sur la première ligne :
+.onFocusChanged { if (it.isFocused) episodeFocusClaimed = true }
+```
+
+Une annulation ne coûte plus rien : la relance de l'effet refait la demande. Et la
+protection du §40 — ne pas voler le focus à l'utilisateur — tient toujours, puisque le
+verrou est posé dès que le focus est effectivement arrivé sur la première ligne.
+
+### Vérification à l'écran
+
+Même protocole qu'au §56.2, mêmes touches, même série :
+
+| Touche | Avant (§56.2) | Après |
+|---|---|---|
+| ▼ ×3 | `None`, `None` | `(680,217,1847,581)`, `(680,217,1884,1044)`, `(680,217,1884,1044)` |
+| à l'ouverture | aucun focus | **E1 focalisé** — remplissage plein et lueur |
+
+Et le parcours complet, qui était inatteignable : ▲ vers E3, `OK`, la lecture démarre.
+
+**T2-TV sur un épisode — le scénario que le §56.5 laissait bloqué — passe désormais.**
+Épisode 3 lu 43 s, retour sur la fiche, quatre relevés sur 30 s :
+
+- md5 de `watch_progress.preferences_pb` **identique aux quatre** ;
+- `progress_2624_430470` figé à **43 567 ms**, soit 1,7 % de `duration = 2 520 288` — donc
+  **pas** marqué « vu en entier » ;
+- `recent_items_json` ne contient **que** l'épisode 3. L'épisode 1 n'apparaît jamais.
+
+La moitié « épisode » de `PlayerViewModel.stop()` — `transitionJob` et la réinsertion via
+`mediaItemIndex` — est donc vérifiée sur TV, et plus seulement sur mobile.
+
+### Observé au passage, non traité
+
+**Au retour du lecteur, le focus revient sur la zone de description**, pas sur le premier
+épisode : `TvMainScreen` quitte la composition pendant la lecture, les `remember` sont
+recréés, et le point d'entrée n'est pas rejoué. L'écran reste utilisable — un seul `▶`
+depuis la description atteint E1, ce qui confirme au passage que `tvGroupEntry` fait bien
+son travail. Ce n'est pas clairement un défaut (revenir sur la fiche qu'on lisait se
+défend), donc pas de ticket ouvert : simplement noté.

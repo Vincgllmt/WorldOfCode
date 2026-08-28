@@ -679,9 +679,22 @@ internal fun TvSeriesDetailPage(
                 // On attend donc que la ligne se compose et le dise. Une seule fois
                 // (`episodeFocusClaimed`) : rejouer la demande volerait ensuite le focus à
                 // l'utilisateur, le défaut du §40.
+                // ⚠️ **Le verrou se pose sur le focus REÇU, jamais sur la demande émise.**
+                // La version précédente écrivait `episodeFocusClaimed = true` *avant*
+                // `withFrameNanos { }`, donc avant une suspension. Mesuré à l'émulateur
+                // (§57) : l'effet est annulé pendant cette suspension et relancé aussitôt
+                // — `requestFocus()` n'était jamais atteint, et au second passage le
+                // verrou déjà posé faisait sauter la demande. La fiche restait alors
+                // **sans aucun focalisable** : `tvModalTrap()` ci-dessus rend le rail
+                // inatteignable, donc il n'existe aucun repli, et plus une seule touche
+                // ne répondait — seul RETOUR, qui passe par le `BackHandler`.
+                //
+                // En verrouillant sur `onFocusChanged` de la première ligne, une
+                // annulation ne coûte plus rien : l'effet suivant refait la demande, et
+                // la protection du §40 — ne pas voler le focus à l'utilisateur — tient
+                // toujours, puisque le verrou est posé dès que le focus est arrivé.
                 LaunchedEffect(firstEpisodeReady) {
                     if (firstEpisodeReady && !episodeFocusClaimed) {
-                        episodeFocusClaimed = true
                         withFrameNanos { }
                         runCatching { firstDetailFocus.requestFocus() }
                     }
@@ -890,7 +903,14 @@ internal fun TvSeriesDetailPage(
                                     // depuis lequel aucune direction ne menait aux
                                     // episodes.
                                     modifier         = if (isFirstEpisode)
-                                                           Modifier.focusRequester(firstDetailFocus)
+                                                           Modifier
+                                                               .focusRequester(firstDetailFocus)
+                                                               // Le verrou du point d'entrée : posé quand le
+                                                               // focus est effectivement là, pas quand on l'a
+                                                               // demandé. Cf. le commentaire de l'effet.
+                                                               .onFocusChanged {
+                                                                   if (it.isFocused) episodeFocusClaimed = true
+                                                               }
                                                        else Modifier,
                                     seriesId         = seriesId,
                                     seriesName       = d.name,

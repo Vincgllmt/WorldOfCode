@@ -73,7 +73,7 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 **✅ Corrigé le 2026-08-28** — décision extraite en objet pur `core/viewmodel/SetupOutcomePolicy.kt` (`SetupOutcome.Accepted` / `Rejected`), conformément à la règle d'architecture n°2 ; `invalidateCache()` déplacé sous la branche `Accepted`. Quatre tests dans `SetupOutcomePolicyTest`, **dont celui du `null` vérifié rouge sur l'ancien comportement** avant d'être vert sur le nouveau. Revérifié à l'écran : l'écran de configuration reste affiché avec « Could not connect to the server. Please check your credentials. », et une connexion M3U valide écrit les identifiants et ouvre les 11 877 chaînes. Diagnostic complet en **§56.1**.
 
 
-## #R2 — app-tv/series : la fiche série ne prend aucun focus, aucun épisode n'est atteignable *(OUVERT)*
+## #R2 — app-tv/series : la fiche série ne prend aucun focus, aucun épisode n'est atteignable
 
 `app-tv/series`
 
@@ -81,9 +81,13 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 **Preuve.** Mesuré au diff pixel (`ImageChops.difference(...).getbbox()`) entre captures avant/après chaque appui : `▼` ×2, `▲`, `◀`, `▶` et `OK` rendent tous `None` — **zéro pixel changé**. `RETOUR` rend `(144, 0, 1920, 1080)`, ce qui prouve que l'application traite bien les touches (aucun `Input dispatching timed out` dans `logcat`). Reproduit sur *The Walking Dead : Dead City* et *Shaka iLembe*. La grille des séries, la grille « Voir tout » d'un genre et la **fiche film** répondent normalement : le défaut est propre à la fiche série.
 
-**Cause.** à établir. Le dispositif de `TvSeriesScreen.kt:645-690, 869-895` — `firstEpisodeReady` posé par un `DisposableEffect` sur la première ligne, `LaunchedEffect(firstEpisodeReady)` réclamant `firstDetailFocus` une seule fois via `episodeFocusClaimed`, `tvGroupEntry` n'exposant la cible que si le drapeau est levé — est correct sur le papier et n'a pas pu être invalidé par lecture. `tvModalTrap()` (`TvSeriesScreen.kt:653`) rendant le rail non focalisable derrière la fiche, **si la demande de focus n'aboutit pas il ne reste aucun repli** : cela décrit exactement l'inertie observée, mais reste une hypothèse.
+**Cause.** établie par instrumentation (§57) — `episodeFocusClaimed = true` était écrit **avant** `withFrameNanos { }`, donc avant une suspension. La trace montre l'effet annulé exactement là (« apres withFrameNanos » n'est jamais journalisé), puis relancé 1 ms plus tard : le verrou déjà posé fait alors sauter la demande, et `requestFocus()` n'est **jamais** appelé. `tvModalTrap()` (`TvSeriesScreen.kt:653`) rendant le rail non focalisable derrière la fiche, il ne reste aucun repli — d'où l'inertie totale, `RETOUR` excepté puisqu'il passe par le `BackHandler`. Le verrou était donc posé **avant l'action qu'il garde**, avec une suspension entre les deux : toute annulation perdait le focus définitivement.
 
-**Piste.** instrumenter avant de corriger : `LocalFocusManager` / `onFocusChanged` tracés dans `logcat` pour savoir si `requestFocus()` aboutit, et si `firstEpisodeReady` est bien levé. Vérifier au passage l'interaction entre `tvModalTrap()` et le point d'entrée de groupe : c'est le seul écran de l'app à combiner les deux. Diagnostic et mesures en **§56.2**.
+Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne change pas. `snapshotFlow` conflate les transitions intra-frame et ne tranche pas. Sans importance pour le correctif — le défaut est l'irréversibilité de la perte.
+
+**✅ Corrigé le 2026-08-28** — le verrou passe de « la demande est émise » à « le focus est arrivé » : plus d'écriture avant la suspension, et `episodeFocusClaimed` posé par un `onFocusChanged { if (it.isFocused) … }` sur la première ligne. Une annulation ne coûte alors plus rien, la relance de l'effet refait la demande, et la protection du §40 tient toujours.
+
+**Vérifié à l'écran**, mêmes touches et même série qu'à la mesure d'origine : à l'ouverture, **E1 est focalisé** ; ▼ ×3 rendent `(680,217,1847,581)` puis `(680,217,1884,1044)` ×2 au lieu de `None` ×3 ; `OK` lance la lecture. Débloque **T2-TV sur un épisode**, laissé en suspens au §56.5 : épisode 3 lu 43 s, quatre relevés sur 30 s, md5 identique, `progress` figé à 43 567 ms (1,7 %, donc pas « vu en entier »), et seul l'épisode 3 dans les récents.
 
 
 ## #97 — app-mobile/detail : faire piloter le lecteur par la même instance de PlayerViewModel que l'écran de lecture
