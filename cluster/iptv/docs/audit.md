@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **7 relevés à l'usage** (#R1 à #R7), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **8 relevés à l'usage** (#R1 à #R8), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -24,7 +24,7 @@
 | Gravité | Nombre |
 |---|---|
 | **CRITIQUE** | 6 |
-| **MAJEUR** | 46 |
+| **MAJEUR** | 47 |
 | **MINEUR** | 55 |
 
 | Périmètre | Défauts |
@@ -37,7 +37,7 @@
 | `app-mobile/downloads` | 7 |
 | `app-tv/home` | 9 |
 | `app-tv/movies` | 7 |
-| `core/viewmodel` | 8 |
+| `core/viewmodel` | 9 |
 | `app-mobile/catalog` | 6 |
 | `app-tv/purchase` | 6 |
 | `app-tv/navigation` | 5 |
@@ -200,6 +200,19 @@ Le clavier commence à **y = 1352** : il recouvre 58 des 74 pixels du champ — 
 Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, appui direct sur le bouton, connexion établie (336 chaînes) — sans un seul geste de défilement.
 
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
+
+
+## #R8 — core/viewmodel : les messages d'échec sont écrits en anglais dans le code, hors ressources *(OUVERT)*
+
+`core/viewmodel`
+
+**Symptôme.** Application en français, « Ma liste » hors ligne affiche « **Network error. Please check your connection.** » — un message anglais au milieu d'une interface française. Idem sur les écrans Films, Séries et Direct TV des deux applications, et sur l'écran de connexion.
+
+**Preuve.** Constaté à l'écran le 2026-08-28 en vérifiant #91 (capture du Pixel 7, interface FR). `app-tv/.../ui/common/…toDisplayString()` et son jumeau mobile rendent des **littéraux Kotlin** : « Network error. Please check your connection. », « Content not found. », « An unexpected error occurred. », « Invalid input. Please check your entries. »
+
+**Cause.** établie — les causes typées `ContentFailure` / `SetupFailure` ont été introduites (`14d723e6`) avec leur traduction écrite en dur dans chaque UI, au lieu de passer par `strings.xml`. `tools/check_strings.py` ne peut pas les voir : il contrôle la parité des ressources, pas les littéraux du code.
+
+**Piste.** sortir les huit libellés en ressources, dans les deux applications, et vérifier que `check_strings.py` les couvre. Occasion de se demander si le contrôle ne devrait pas aussi signaler un littéral rendu par un `@Composable` — c'est la deuxième fois qu'un libellé échappe au contrôle en vivant dans du Kotlin.
 
 
 ## #R7 — app-mobile/shell : la barre d'état tranche avec l'application, et le menu du bas s'en détache
@@ -441,6 +454,23 @@ L'ancien chemin aurait rendu `[AFRICANS, ZZZ, AFRICA, ACTION]` **sans rien chang
 **Cause.** établie — la lecture des trois `ContentState` ne conserve que le cas `Success`, et l'état vide est déduit du résultat de cette lecture au lieu de l'état lui-même.
 
 **Piste.** faire dépendre l'écran des trois états comme le fait `HomeScreen` : chargement ⇒ indicateur, erreur ⇒ message (et non l'invitation à ajouter des favoris), succès ⇒ vide seulement si les favoris résolus sont vides. Vérifier au passage si le rechargement systématique à l'entrée de l'onglet est nécessaire, `ContentViewModel` étant partagé avec les onglets Direct TV / Films / Séries.
+
+**✅ Corrigé le 2026-08-28** — la décision est sortie en objet pur, `core/viewmodel/MyListPolicy.kt` : `panelFor(sources, resolvedIsEmpty)` rend `Loading`, `Error(reason)`, `Empty` ou `Content`. La règle tient en une phrase : **on ne dit « vide » que sur un catalogue connu.** L'ordre compte — `Loading` l'emporte sur `Error`, une source encore en route pouvant très bien aboutir.
+
+**L'app TV avait le même défaut**, que l'audit ne relevait pas : `TvMyListScreen.kt:178,192,193` lisait le catalogue exactement pareil et déduisait « vide » ligne 270. Corrigé le même jour, pour que les deux ne divergent pas (règle 1).
+
+**Six tests** dans `MyListPolicyTest`, dont un qui fige l'ancienne lecture : `(Loading as? Success)?.data ?: emptyList()` rend bien une liste vide, d'où la confusion.
+
+**Différentiel mesuré sur le Pixel 7**, même état exact des deux côtés — deux favoris en base, `cache/` vidé et vérifié vide, appareil hors ligne :
+
+| | ce qu'affiche « Ma liste / Chaînes » |
+|---|---|
+| avant | « **Votre liste est vide** » + « Ajoutez des chaînes avec l'étoile de la liste… » |
+| après | « **Network error. Please check your connection.** » |
+
+L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en l'invitant à en ajouter.
+
+⚠️ Le rechargement systématique à l'entrée de l'onglet — second point de la piste — **n'a pas été traité** : il reste, mais il ne se voit plus, l'écran affichant désormais un indicateur au lieu d'une fausse liste vide.
 
 
 ## #81 — app-mobile/player : rafraîchir le média en attente du cast quand le lecteur change d'épisode ou avance dans le film

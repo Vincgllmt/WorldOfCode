@@ -38,7 +38,10 @@ import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadType
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.model.SeriesItem
+import com.purple.iptvplayer.tv.ui.common.TvErrorContent
 import com.purple.iptvplayer.core.viewmodel.ContentState
+import com.purple.iptvplayer.core.viewmodel.MyListPanel
+import com.purple.iptvplayer.core.viewmodel.MyListPolicy
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.core.viewmodel.DownloadViewModel
 import com.purple.iptvplayer.tv.R
@@ -267,13 +270,29 @@ fun TvMyListScreen(
         }
 
         // ── Content ────────────────────────────────────────────────────────
+        // #91 — jumeau du chemin mobile, corrigé le même jour pour qu'ils ne divergent
+        // pas. L'audit ne relevait que l'écran mobile ; celui-ci lisait le catalogue
+        // exactement pareil (`as? Success ?: emptyList()`) et annonçait donc « vide »
+        // pendant un chargement comme sur une panne.
+        val sources = when (filter) {
+            ListFilter.CHANNELS -> listOf(channelsState)
+            ListFilter.MOVIES   -> listOf(moviesState)
+            ListFilter.SERIES   -> listOf(seriesState)
+        }
         val isEmpty = when (filter) {
             ListFilter.CHANNELS -> favChannels.isEmpty()
             ListFilter.MOVIES   -> watchlistMovies.isEmpty()
             ListFilter.SERIES   -> watchlistSeries.isEmpty()
         }
+        val panel = MyListPolicy.panelFor(sources, isEmpty)
 
-        if (isEmpty) {
+        if (panel is MyListPanel.Loading) {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                CircularProgressIndicator(color = PurplePalette.Purple400)
+            }
+        } else if (panel is MyListPanel.Error) {
+            TvErrorContent(failure = panel.reason)
+        } else if (panel is MyListPanel.Empty) {
             Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.BookmarkBorder, null, tint = PurplePalette.Fg4, modifier = Modifier.size(48.dp))

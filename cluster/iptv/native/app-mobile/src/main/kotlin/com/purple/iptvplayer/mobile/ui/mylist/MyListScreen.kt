@@ -33,6 +33,9 @@ import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.model.Movie
 import com.purple.iptvplayer.core.model.SeriesItem
 import com.purple.iptvplayer.core.viewmodel.ContentState
+import com.purple.iptvplayer.mobile.ui.common.toDisplayString
+import com.purple.iptvplayer.core.viewmodel.MyListPanel
+import com.purple.iptvplayer.core.viewmodel.MyListPolicy
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.mobile.ui.common.ChannelRow
 import com.purple.iptvplayer.mobile.ui.home.ThemeCard
@@ -180,14 +183,34 @@ fun MyListScreen(
         }
 
         // ── Content ──────────────────────────────────────────────────────────
+        // #91 — « vide » ne se déduit plus des listes résolues, qui valent `emptyList()`
+        // aussi bien pendant le chargement qu'en cas d'erreur. La décision vit dans
+        // `MyListPolicy` : on ne dit « vide » que sur un catalogue **connu**.
+        val sources = when (filter) {
+            ListFilter.THEMES   -> listOf(channelsState, moviesState, seriesState)
+            ListFilter.CHANNELS -> listOf(channelsState)
+            ListFilter.MOVIES   -> listOf(moviesState)
+            ListFilter.SERIES   -> listOf(seriesState)
+        }
         val isEmpty = when (filter) {
             ListFilter.THEMES   -> favThemes.isEmpty()
             ListFilter.CHANNELS -> favChannels.isEmpty()
             ListFilter.MOVIES   -> watchlistMovies.isEmpty()
             ListFilter.SERIES   -> watchlistSeries.isEmpty()
         }
+        val panel = MyListPolicy.panelFor(sources, isEmpty)
 
-        if (isEmpty) {
+        if (panel is MyListPanel.Loading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Purple)
+            }
+        } else if (panel is MyListPanel.Error) {
+            // Le message de la panne, **pas** l'invitation à ajouter des favoris : les
+            // siens sont toujours là, c'est le catalogue qui manque.
+            Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Text(panel.reason.toDisplayString(), color = ColorError)
+            }
+        } else if (panel is MyListPanel.Empty) {
             Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Icon(Icons.Rounded.BookmarkBorder, null, tint = TextSub.copy(0.4f), modifier = Modifier.size(56.dp))

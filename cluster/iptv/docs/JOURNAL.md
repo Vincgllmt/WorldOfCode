@@ -74,6 +74,7 @@ numéro.
 | 62 | **#98 corrigé** — lire un épisode téléchargé ouvrait une connexion distante inutile ; l'appel fautif n'avait **aucun** autre effet, `playMedia` effaçant tout ce qu'il posait. Contient la recette pour **injecter un téléchargement terminé** sans télécharger, et trois instruments dont un seul tranche | on touche à la lecture locale, ou on cherche à mesurer un effet réseau trop bref pour les compteurs |
 | 63 | **#R5 / #R6 corrigés** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état, clavier par-dessus le champ. Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
 | 64 | **#R7 corrigé** — couture de couleur sous la barre d'état (de mon fait, §63) et menu du bas détaché ; contient **comment relever une couture** (ruptures le long d'une colonne) et pourquoi j'ai failli fabriquer un émulateur pour rien | on touche à une couleur de fond, à une barre système, ou on s'apprête à construire un outil pour vérifier |
+| 65 | **#91 corrigé** — « Ma liste » annonçait une liste vide quand le catalogue était injoignable ; `MyListPolicy` dans `core`, TV corrigée aussi. Contient **deux erreurs de montage** qui ont failli faire conclure à un correctif inopérant, et **#R8** ouvert (messages d'échec en anglais dans une UI française) | on touche à un état vide, ou un correctif « ne prend pas » et on s'apprête à le retoucher |
 
 ---
 
@@ -5618,3 +5619,74 @@ supprimé (son image système n'était qu'un stub non téléchargé).
 Le libellé du cinquième onglet est **tronqué** — « Téléchargeme ». Visible sur la capture
 d'avant comme sur celle d'après, donc préexistant. Le raccourcir ou réduire sa taille est
 une décision de rédaction, pas un correctif de mise en page.
+
+---
+
+## 65. #91 — « Votre liste est vide » quand le catalogue était injoignable *(2026-08-28)*
+
+Défaut aperçu **en passant**, plusieurs heures avant de le corriger : en ouvrant « Ma liste »
+pendant les essais de #90, l'écran a affiché « Votre liste est vide » alors que le
+catalogue chargeait encore. C'est ce qui l'a fait choisir dans la file.
+
+### Le défaut
+
+Les deux écrans lisaient le catalogue par
+`(state as? ContentState.Success)?.data ?: emptyList()`. Cette ligne écrase `Loading`
+**et** `Error` en liste vide, et l'écran déduisait « vide » de cette lecture. D'où deux
+occasions de mentir :
+
+- **à chaque entrée dans l'onglet**, le temps du rechargement — l'onglet sort de la
+  composition, son `LaunchedEffect(Unit)` relance les chargements et `loadChannels()`
+  repasse par `Loading` ;
+- **définitivement** si le catalogue ne peut plus être chargé — cache périmé, fournisseur
+  injoignable. L'utilisateur conclut que ses favoris sont perdus.
+
+Le second est le grave. Il ne s'agit pas d'un scintillement : l'écran affirme, durablement
+et avec une invitation à l'appui, que l'utilisateur n'a rien mis de côté.
+
+### Le correctif
+
+La décision est sortie en objet pur — `core/viewmodel/MyListPolicy.kt`. Elle tient en une
+phrase : **on ne dit « vide » que sur un catalogue connu.**
+
+`Loading` l'emporte sur `Error` : une source encore en route peut aboutir, et annoncer une
+panne pendant que quelque chose charge serait prématuré.
+
+**L'app TV avait le même défaut**, aux mêmes lignes, et l'audit ne relevait que le mobile.
+Corrigé le même jour — c'est la cinquième fois de la session qu'un ticket ne nomme qu'une
+des deux copies.
+
+### Le différentiel, et pourquoi le premier essai ne valait rien
+
+Premier montage : cache vidé, hors ligne, « Ma liste » ⇒ « Votre liste est vide ». J'ai
+failli conclure que le correctif ne prenait pas. Deux erreurs de montage, pas de code :
+
+1. les `pm clear` des essais précédents avaient **effacé les favoris** — la liste était
+   réellement vide, l'écran disait vrai ;
+2. `rm -rf cache/*` lancé dans la foulée du `force-stop` courait avec l'arrêt du
+   processus : le cache disque survivait, `channelsState` restait `Success`.
+
+Le contrôle qui a tranché : ouvrir l'onglet **Direct TV**, qui affichait « AFRIQUE —
+336 chaînes » alors que l'appareil était hors ligne. Le catalogue venait donc du cache, et
+mon scénario n'exerçait pas du tout le cas visé.
+
+Refait proprement — deux favoris posés, `force-stop`, attente, purge du cache **vérifiée
+vide**, puis hors ligne :
+
+| | « Ma liste / Chaînes » |
+|---|---|
+| avant | « **Votre liste est vide** » + « Ajoutez des chaînes avec l'étoile… » |
+| après | « **Network error. Please check your connection.** » |
+
+**Leçon de montage** : avant de conclure qu'un correctif ne prend pas, vérifier que le
+scénario atteint bien l'état visé. Ici un seul coup d'œil à un autre onglet suffisait.
+
+### Trouvé en regardant la capture : #R8
+
+Le message d'erreur s'affiche **en anglais dans une interface française**. Les
+`toDisplayString()` des deux UI rendent des littéraux Kotlin, que
+`tools/check_strings.py` ne peut pas voir — il contrôle la parité des ressources, pas les
+chaînes du code. Huit libellés concernés. Ticket **#R8**, ouvert.
+
+C'est la deuxième fois qu'un libellé échappe au contrôle en vivant dans du Kotlin (cf.
+§17) : le contrôle gagnerait à signaler aussi les littéraux rendus par un `@Composable`.
