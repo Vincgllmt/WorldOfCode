@@ -71,6 +71,7 @@ numéro.
 | 59 | **#R4 corrigé** — un focusable imbriqué dans un focusable n'est atteignable par aucune direction ; troisième occurrence du motif (G11, #67, #R4) | on pose une action secondaire dans une ligne ou une barre déjà focalisable |
 | 60 | **#90 corrigé** — un index d'affichage traversait la frontière UI/core et corrompait l'ordre persisté des favoris ; décision sortie en `core/data/FavoritesOrder`. Contient aussi **où vit le lien de test** et pourquoi `get.php` répond 885 | on touche aux favoris, on fait circuler un index entre UI et `core`, ou on cherche le lien M3U de test |
 | 61 | **#109** — le plantage était déjà corrigé la veille sans être marqué ; la mesure a trouvé à la place une **perte de contenu** (un flux à deux thèmes disparaissait) ; `ChannelKey` + dédoublonnage par `(url, group)`. Contient la recette pour **servir une playlist de test au téléphone** | on touche aux clés de liste, au dédoublonnage M3U, ou on veut piloter l'app avec une playlist d'essai |
+| 62 | **#98 corrigé** — lire un épisode téléchargé ouvrait une connexion distante inutile ; l'appel fautif n'avait **aucun** autre effet, `playMedia` effaçant tout ce qu'il posait. Contient la recette pour **injecter un téléchargement terminé** sans télécharger, et trois instruments dont un seul tranche | on touche à la lecture locale, ou on cherche à mesurer un effet réseau trop bref pour les compteurs |
 
 ---
 
@@ -5403,3 +5404,65 @@ adb -s <serial> reverse tcp:8099 tcp:8099
 `parseUrl` la traite bien en `PlaylistType.M3U` — il n'y a ni `username` ni `password` dans
 la chaîne de requête. Éditer le fichier et refaire une connexion suffit à changer de jeu
 d'essai.
+
+---
+
+## 62. #98 — un appel dont le seul effet durable était le trafic qu'il gaspillait *(2026-08-28)*
+
+Lire un épisode téléchargé ouvrait d'abord une connexion au fournisseur. Le correctif est
+un **retrait**, et il a fallu chercher un instrument pour le prouver.
+
+### Ce que la lecture a établi, effet par effet
+
+`playWithEpisodes` fait deux choses : poser le contexte d'épisodes, puis
+`playerService.playPlaylist` sur les **URL distantes**. Le chemin local ne veut que la
+première — sauf que la première ne survit pas :
+
+| Ce que pose `playWithEpisodes` | Ce qu'en fait `playMedia`, appelé juste après |
+|---|---|
+| `episodes`, `episodesSeriesId` | **remis à vide / `null`** (`PlayerViewModel:66-67`) |
+| `currentMediaId`, `currentUrl`, `currentTitle`, `currentCover` (via `applyEpisode`) | reposés depuis ses propres arguments |
+| `currentType = "series"` | reposé, le type transitant par la route (`NavGraph:153`) |
+
+L'appel n'avait donc **aucun effet utile**. L'audit supposait qu'il servait à obtenir la
+file d'épisodes ; la file était effacée dans la milliseconde. Le correctif se réduit à
+supprimer deux lignes — une par UI, retirées le même jour pour qu'elles ne divergent pas.
+
+### Trois instruments essayés, un seul qui tranche
+
+1. **Erreur hors ligne** (le symptôme annoncé). *Ne discrimine pas* : la seule erreur
+   observée est `UnrecognizedInputFormatException`, venue du fichier local lui-même. La
+   tentative distante est annulée par `playMedia` avant d'avoir le temps d'échouer.
+2. **`active_cons` du fournisseur.** *Ne discrimine pas* : reste à 0 avant comme après. La
+   fenêtre est trop courte pour sa comptabilité.
+3. **Octets reçus sur `wlan0`**, appareil par ailleurs au repos, téléchargement injecté à
+   l'état `COMPLETED` et fiche déjà chargée. *Tranche.*
+
+| | essai 1 | essai 2 | essai 3 |
+|---|---|---|---|
+| avant | 3 264 o | 1 276 o | 9 864 o |
+| après | 0 o | 0 o | 56 o |
+
+Trois essais chacun, parce qu'une mesure de trafic est bruitée par nature : le `56` de
+l'essai 3 est du bruit de fond, l'écart avec les kilo-octets d'avant ne l'est pas.
+
+### Ce que je corrige dans l'audit
+
+Le symptôme annoncé — « hors ligne, la lecture part sur une erreur avant de se rattraper »
+— **n'est pas reproduit**. Ce qui est réel, c'est le trafic gaspillé, et sur un abonnement
+limité à **une connexion simultanée** — celui de l'utilisateur l'est — cette connexion
+parasite consomme la seule autorisée. Le défaut reste donc à corriger, mais pas pour la
+raison annoncée.
+
+### Note de méthode
+
+Le montage — injecter un `DownloadItem` `COMPLETED` dans
+`shared_prefs/purple_downloads.xml` (JSON Moshi, bien plus simple qu'un protobuf
+DataStore) et poser un fichier bidon dans `files/downloads/` — permet d'exercer tout le
+chemin « lecture locale » **sans télécharger un épisode d'un gigaoctet**. À réutiliser.
+
+⚠️ Et une limite de l'outillage, découverte ici : la voie M3U ne sait pas produire
+d'épisodes — `fetchSeriesDetail` rend `seasons = emptyMap()` pour une source non-Xtream
+(`IptvRepository:180`). Servir une playlist depuis le poste, la recette du §61, **ne
+permet donc pas** d'observer les requêtes d'un épisode. Il faut le vrai compte Xtream, et
+mesurer le trafic plutôt que les requêtes.

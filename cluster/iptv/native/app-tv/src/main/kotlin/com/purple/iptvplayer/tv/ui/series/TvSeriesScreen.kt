@@ -942,7 +942,11 @@ internal fun TvSeriesDetailPage(
                                     onRetryDownload  = { onRetry(dlId) },
                                     onPlayLocal      = {
                                         dlItem?.localPath?.let {
-                                            onPlayEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
+                                            // #98 — jumeau du chemin mobile : `onPlayEpisodes`
+                                            // amorçait le flux **distant** avant de basculer sur le
+                                            // fichier local, et le contexte qu'il posait était
+                                            // aussitôt effacé par `playMedia`. Retiré des deux
+                                            // côtés le même jour, pour qu'ils ne divergent pas.
                                             onPlay("file://$it", ep.title, EpisodeTitle.progressId(seriesId, ep.id), d.cover ?: "")
                                         }
                                     },

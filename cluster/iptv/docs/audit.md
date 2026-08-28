@@ -229,6 +229,21 @@ Six tests : cinq sur `ChannelKey` — dont un qui fige l'ancienne clé et montre
 
 **Cause.** établie — le chemin local réutilise l'amorce de liste distante pour obtenir la file d'épisodes.
 
+**⚠️ Précision apportée par la lecture : cette file ne survivait pas.** `playMedia`, appelé juste après par l'écran du lecteur, remet `episodes` à vide et `episodesSeriesId` à `null` (`PlayerViewModel.kt:66-67`). Et `applyEpisode` ne pose que `currentMediaId`, `currentUrl`, `currentTitle`, `currentCover` — les quatre que `playMedia` repose depuis ses propres arguments, le `type = "series"` transitant par la route (`NavGraph.kt:153`). L'appel à `playWithEpisodes` n'avait donc **aucun effet utile** : seulement l'effet néfaste. Le correctif est un retrait, pas un découpage.
+
+**✅ Corrigé le 2026-08-28** — l'appel est retiré des **deux** UI le même jour, pour qu'elles ne divergent pas : `SeriesDetailScreen.kt:350` et `TvSeriesScreen.kt:943`. Le chemin **film** n'était pas concerné : il appelait déjà `file://` directement.
+
+**Mesuré sur le Pixel 7**, catalogue Xtream réel, téléchargement d'épisode injecté à l'état `COMPLETED`, appareil par ailleurs au repos. Octets reçus sur `wlan0` pendant l'appui sur la pastille ✓ :
+
+| | essai 1 | essai 2 | essai 3 |
+|---|---|---|---|
+| avant | 3 264 o | 1 276 o | 9 864 o |
+| après | 0 o | 0 o | 56 o |
+
+La connexion parasite est donc bien ouverte, et elle disparaît. Sur un abonnement limité à **une connexion simultanée** — le cas de celui de l'utilisateur — elle consomme la seule autorisée.
+
+**⚠️ Le symptôme annoncé n'a pas été reproduit.** Hors ligne, la lecture ne « part pas sur une erreur avant de se rattraper » : la seule erreur observée venait du fichier local lui-même, la tentative distante étant annulée par `playMedia` avant d'avoir le temps d'échouer. Ni le compteur `active_cons` du fournisseur ne bouge, la fenêtre étant trop courte. Ce qui est réel et mesuré, c'est le trafic inutile — pas l'erreur visible.
+
 **Piste.** jumeau mobile du ticket #51 ; à traiter avec lui, en distinguant « constituer la file » de « lancer la lecture ».
 
 

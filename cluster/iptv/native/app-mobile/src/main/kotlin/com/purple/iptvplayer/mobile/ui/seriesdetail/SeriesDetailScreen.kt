@@ -349,7 +349,18 @@ fun SeriesDetailScreen(
                                     onRetryDownload  = { dlVm.retry(dlId) },
                                     onPlayLocal = {
                                         dlItem?.localPath?.let {
-                                            playerVm.playWithEpisodes(episodes, episodes.indexOf(ep), seriesId, d.cover)
+                                            // #98 — **pas** de `playWithEpisodes` ici. Il amorçait
+                                            // `playerService.playPlaylist` sur les URL **distantes**
+                                            // avant qu'on ne bascule sur le fichier local : deux
+                                            // lectures pour une demande, et hors ligne — le cas
+                                            // d'usage même du téléchargement — la première part en
+                                            // erreur avant que la seconde ne rattrape.
+                                            //
+                                            // Le contexte d'épisodes qu'il posait ne survivait de
+                                            // toute façon pas : `playMedia` remet `episodes` à vide
+                                            // et `episodesSeriesId` à `null` (PlayerViewModel:66-67).
+                                            // L'appel n'avait donc aucun effet utile — seulement
+                                            // l'effet néfaste.
                                             onPlayEpisode("file://$it", ep.title, EpisodeTitle.progressId(seriesId, ep.id), d.cover ?: "")
                                         }
                                     },
