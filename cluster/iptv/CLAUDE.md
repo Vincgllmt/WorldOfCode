@@ -2,7 +2,7 @@
 
 Mémoire de travail de l'agent. À maintenir à jour à chaque décision architecturale.
 
-Dernière mise à jour : 2026-08-27
+Dernière mise à jour : 2026-08-28
 
 > **Ce fichier ne garde que ce qu'il faut savoir *avant* de toucher au code.** Tout le
 > reste — le détail de l'outillage, la procédure de test, les défauts déjà corrigés, les
@@ -101,12 +101,12 @@ export JAVA_HOME=$HOME/.local/share/jdk-17          # aucun JDK système : le pa
 export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 
-./gradlew :core:testDebugUnitTest    # 208 tests
+./gradlew :core:testDebugUnitTest    # 212 tests
 ./gradlew :app-tv:testDebugUnitTest  #  73 tests
 ./gradlew :app-tv:assembleDebug      # ou :app-mobile:installDebug
 ```
 
-**État de la suite : 281 tests, 0 échec.** Rapport HTML après échec :
+**État de la suite : 285 tests, 0 échec.** Rapport HTML après échec :
 `core/build/reports/tests/testDebugUnitTest/index.html`.
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`.
@@ -159,9 +159,16 @@ Robolectric a été écarté : [`docs/TESTS.md`](docs/TESTS.md).
 ## 5. Où en est le chantier
 
 **La file de travail est [`docs/audit.md`](docs/audit.md)** : 100 défauts relevés par
-lecture systématique, sourcés `fichier:ligne`, triés en 4 critiques / 43 majeurs /
-53 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un renvoi vers la
-section du journal qui porte le diagnostic.
+lecture systématique, sourcés `fichier:ligne`, plus 2 relevés à l'usage — 6 critiques /
+43 majeurs / 53 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
+renvoi vers la section du journal qui porte le diagnostic.
+
+⚠️ **`✅ Corrigé` ne veut pas dire vérifié.** Une entrée dont la preuve se limite à
+« compile ✓ / tests ✓ / l'APK démarre » n'a pas été vue sur un support. La campagne du
+2026-08-28 (§56) l'a montré : sur six lots ainsi marqués, deux scénarios sur onze ont
+échoué, dont **#R1**, une régression critique qui faisait accepter n'importe quel serveur
+injoignable. **#R2 reste ouvert** — la fiche série de l'app TV ne prend aucun focus, donc
+aucun épisode n'est atteignable à la télécommande.
 
 Ce qui ne relève pas de l'audit — facturation (trois points ouverts), TLS non validé
 (**S1**, décision produit), sauvegarde du keystore, publication de `app-mobile` 15 / 1.2.0

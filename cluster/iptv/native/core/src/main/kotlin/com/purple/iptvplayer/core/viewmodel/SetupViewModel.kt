@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 /** Causes d'échec de configuration que l'UI doit savoir traduire. */
 enum class SetupFailure {
@@ -63,23 +62,21 @@ class SetupViewModel(
     private fun validateAndSave(creds: Credentials) {
         _state.value = SetupState.Loading
         viewModelScope.launch {
-            val outcome = runCatching { iptvRepo.validate(creds) }
-            _state.value = outcome.fold(
-                onSuccess = { validated ->
-                    validated?.let { credRepo.save(it) }
+            // La décision vit dans [SetupOutcomePolicy] : `validate` ne lève pas, elle
+            // renvoie `null` quand le serveur refuse. Ce `null` doit rester un échec —
+            // le traiter en succès ouvrait le catalogue sans identifiants (§56).
+            _state.value = when (
+                val verdict = SetupOutcomePolicy.decide(runCatching { iptvRepo.validate(creds) })
+            ) {
+                is SetupOutcome.Accepted -> {
+                    credRepo.save(verdict.credentials)
+                    // Uniquement en cas de succès : une tentative ratée n'a aucune raison
+                    // de jeter un catalogue en cache qui, lui, fonctionne.
                     iptvRepo.invalidateCache()
                     SetupState.Success
-                },
-                onFailure = { SetupState.Error(it.toSetupFailure()) },
-            )
+                }
+                is SetupOutcome.Rejected -> SetupState.Error(verdict.reason)
+            }
         }
     }
-}
-
-/** Mappe une exception vers une cause typée, sans libellé écrit en dur. */
-private fun Throwable.toSetupFailure(): SetupFailure = when (this) {
-    is IOException -> SetupFailure.NETWORK
-    is java.net.UnknownHostException -> SetupFailure.NETWORK
-    is java.net.SocketTimeoutException -> SetupFailure.NETWORK
-    else -> SetupFailure.UNKNOWN
 }

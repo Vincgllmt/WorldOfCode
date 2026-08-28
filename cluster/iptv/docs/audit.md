@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus, chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **3 relevés à l'usage** (#R1, #R2, #R3), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -11,14 +11,21 @@
 >
 > Les tickets GitLab correspondants portent le label `ai-factory`. Ce document
 > reste la référence même s'ils sont fermés.
+>
+> ⚠️ **Une entrée « ✅ Corrigé » dont la preuve se limite à « compile ✓ / tests ✓ /
+> l'APK démarre » n'est pas vérifiée** — c'est le test qui ne peut pas échouer de la
+> règle 2 de `docs/METHODE.md`. La campagne du 2026-08-28 (**§56**) a passé six lots
+> sur l'émulateur et sur le Pixel 7 : neuf scénarios passés, **deux échecs**, plus un
+> défaut de parité des libellés — dont une régression critique introduite par un lot
+> marqué « ✅ Corrigé » (#R1 ci-dessous).
 
 ## Vue d'ensemble
 
 | Gravité | Nombre |
 |---|---|
-| **CRITIQUE** | 4 |
+| **CRITIQUE** | 6 |
 | **MAJEUR** | 43 |
-| **MINEUR** | 53 |
+| **MINEUR** | 54 |
 
 | Périmètre | Défauts |
 |---|---|
@@ -26,11 +33,11 @@
 | `app-mobile/shell` | 11 |
 | `app-mobile/player` | 9 |
 | `app-mobile/setup` | 9 |
-| `app-tv/series` | 9 |
+| `app-tv/series` | 10 |
 | `app-mobile/downloads` | 7 |
-| `app-tv/home` | 7 |
+| `app-tv/home` | 8 |
 | `app-tv/movies` | 7 |
-| `core/viewmodel` | 7 |
+| `core/viewmodel` | 8 |
 | `app-mobile/catalog` | 6 |
 | `app-tv/purchase` | 6 |
 | `app-tv/navigation` | 5 |
@@ -52,6 +59,33 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 # CRITIQUE
 
+
+## #R1 — core/viewmodel : une validation refusée était rendue comme un succès *(régression de `14d723e6`)*
+
+`core/viewmodel`
+
+**Symptôme.** Un serveur inaccessible — faute de frappe dans l'adresse, service hors ligne — est **accepté**. Après le délai de connexion, l'application quitte l'écran de configuration, ouvre le catalogue et y échoue sur « An unexpected error occurred ». Aucun identifiant n'est enregistré ; au redémarrage, retour à l'écran de configuration.
+
+**Preuve.** Mesuré sur l'émulateur le 2026-08-28 avec `http://10.255.255.1:8080` : 10 s d'attente, puis l'écran d'accueil ; `run-as … ls shared_prefs/` ne rend que `purple_trial_secure.xml`, sans `purple_iptv_credentials.xml`.
+
+**Cause.** établie — `IptvRepository.validate()` ne lève jamais (`doValidate` avale tout dans `runCatching { … }.getOrNull()`) et signale l'échec par `null`. En remplaçant les `SetupState.Error(String)` par `SetupFailure` (`14d723e6`, §55), `validateAndSave` a perdu la branche `null → Error` : le `null` retombait sur `SetupState.Success`. `invalidateCache()` s'exécutait de surcroît même en échec, jetant un catalogue en cache qui fonctionnait.
+
+**✅ Corrigé le 2026-08-28** — décision extraite en objet pur `core/viewmodel/SetupOutcomePolicy.kt` (`SetupOutcome.Accepted` / `Rejected`), conformément à la règle d'architecture n°2 ; `invalidateCache()` déplacé sous la branche `Accepted`. Quatre tests dans `SetupOutcomePolicyTest`, **dont celui du `null` vérifié rouge sur l'ancien comportement** avant d'être vert sur le nouveau. Revérifié à l'écran : l'écran de configuration reste affiché avec « Could not connect to the server. Please check your credentials. », et une connexion M3U valide écrit les identifiants et ouvre les 11 877 chaînes. Diagnostic complet en **§56.1**.
+
+
+## #R2 — app-tv/series : la fiche série ne prend aucun focus, aucun épisode n'est atteignable *(OUVERT)*
+
+`app-tv/series`
+
+**Symptôme.** Sur l'émulateur, ouvrir n'importe quelle série : la fiche s'affiche correctement — saisons, « Télécharger la saison », lignes E1…E5 avec vignettes — puis **plus aucune touche ne fait quoi que ce soit**. Les séries sont inutilisables sur TV : on ne peut pas lancer un épisode.
+
+**Preuve.** Mesuré au diff pixel (`ImageChops.difference(...).getbbox()`) entre captures avant/après chaque appui : `▼` ×2, `▲`, `◀`, `▶` et `OK` rendent tous `None` — **zéro pixel changé**. `RETOUR` rend `(144, 0, 1920, 1080)`, ce qui prouve que l'application traite bien les touches (aucun `Input dispatching timed out` dans `logcat`). Reproduit sur *The Walking Dead : Dead City* et *Shaka iLembe*. La grille des séries, la grille « Voir tout » d'un genre et la **fiche film** répondent normalement : le défaut est propre à la fiche série.
+
+**Cause.** à établir. Le dispositif de `TvSeriesScreen.kt:645-690, 869-895` — `firstEpisodeReady` posé par un `DisposableEffect` sur la première ligne, `LaunchedEffect(firstEpisodeReady)` réclamant `firstDetailFocus` une seule fois via `episodeFocusClaimed`, `tvGroupEntry` n'exposant la cible que si le drapeau est levé — est correct sur le papier et n'a pas pu être invalidé par lecture. `tvModalTrap()` (`TvSeriesScreen.kt:653`) rendant le rail non focalisable derrière la fiche, **si la demande de focus n'aboutit pas il ne reste aucun repli** : cela décrit exactement l'inertie observée, mais reste une hypothèse.
+
+**Piste.** instrumenter avant de corriger : `LocalFocusManager` / `onFocusChanged` tracés dans `logcat` pour savoir si `requestFocus()` aboutit, et si `firstEpisodeReady` est bien levé. Vérifier au passage l'interaction entre `tvModalTrap()` et le point d'entrée de groupe : c'est le seul écran de l'app à combiner les deux. Diagnostic et mesures en **§56.2**.
+
+
 ## #97 — app-mobile/detail : faire piloter le lecteur par la même instance de PlayerViewModel que l'écran de lecture
 
 `app-mobile/detail`
@@ -64,7 +98,13 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 **Piste.** soit partager une seule instance entre les deux destinations (owner de l'Activity, entrée parente de navigation, ou portée Koin explicite), soit cesser de piloter le lecteur depuis la fiche et faire transiter la liste d'épisodes par la route. Corriger seulement `retry()` laisserait (b) en place.
 
-**✅ Corrigé le 2026-08-27** — `PlayerViewModel` obtenu avec `requireActivityViewModelStoreOwner()` dans `SeriesDetailScreen`, `PlayerScreen`, `MovieDetailScreen` et `MainScreen` ; une seule instance partagée par l'Activity, donc `playWithEpisodes`, `retry()`, `stop()` et les jobs de suivi (`transitionJob`, `progressSavingJob`, `completionJob`) opèrent sur le même objet. APK mobile installé sur le Pixel 7 (démarrage confirmé, pas de crash).
+**✅ Corrigé le 2026-08-27, vérifié sur le Pixel 7 le 2026-08-28** — `PlayerViewModel` obtenu avec `requireActivityViewModelStoreOwner()` dans `SeriesDetailScreen`, `PlayerScreen`, `MovieDetailScreen` et `MainScreen` ; une seule instance partagée par l'Activity, donc `playWithEpisodes`, `retry()`, `stop()` et les jobs de suivi (`transitionJob`, `progressSavingJob`, `completionJob`) opèrent sur le même objet.
+
+**Vérification à l'usage (§56.4).** Trois scénarios joués sur le Pixel 7, lus dans `logcat` et dans `files/datastore/watch_progress.preferences_pb` — sans capture d'écran.
+
+- **(a) « Réessayer ».** Wi-Fi coupé pendant le chargement d'un épisode ⇒ l'écran du lecteur affiche « Source error » + « Réessayer ». Réseau rétabli, appui : l'écran d'erreur **disparaît** et une clé `progress_26_71993 = 134594` apparaît dans le protobuf. Une tentative de chargement est donc bien partie. Avant le correctif, `retry()` sortait sans rien faire.
+- **(b) Boucle orpheline.** Épisode **3** de *The Walking Dead : Dead City* lu 72 s, retour sur la fiche, quatre relevés du protobuf à t+0/10/20/30 s : **md5 identique aux quatre**, `progress_2624_430470` figé à **72 268 ms** — soit 2,9 % de `duration_2624_430470 = 2 520 288`, donc **pas** marqué « vu en entier » — et `recent_items_json` ne contient **que** l'épisode 3. L'épisode 1 n'apparaît jamais.
+- **(c) Pas de résidu entre médias.** Film *Monster Summer* lu, retour, puis série *Shaka iLembe* E1 lue, **sans tuer l'application** : trois clés distinctes (`393458`, `4693_315251`, `2624_430470`), la série B démarre à zéro, et les trois progressions sont **figées sur 45 s** une fois hors du lecteur.
 
 
 ## #125 — app-mobile/setup : passer au chargeur de playlist l'URI du fichier choisi, pas son `path`
@@ -79,7 +119,13 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 **Piste.** conserver l'URI (`uri.toString()`), prendre `ActivityResultContracts.OpenDocument` + `takePersistableUriPermission`, et donner à `core` un chemin de lecture par `ContentResolver` pour les sources locales — la branche `File(...)` de `IptvRepository` ne sait lire qu'un chemin absolu réel. Décider dans `core` ce qui distingue « URI de contenu / chemin de fichier / URL http » plutôt que dans l'UI.
 
-**✅ Corrigé le 2026-08-27** — `SetupScreen.kt` : `ActivityResultContracts.OpenDocument` remplace `GetContent`, l'URI complète (`uri.toString()`) est conservée avec `takePersistableUriPermission`. `IptvRepository.kt` : `doValidate()` et `fetchM3u()` distinguent trois cas (`http://`, `content://`, chemin absolu) et lisent les URI locales via `context.contentResolver.openInputStream()`. APK mobile installé sur le Pixel 7 (démarrage confirmé, pas de crash).
+**✅ Corrigé le 2026-08-27, vérifié sur le Pixel 7 et sur l'émulateur le 2026-08-28** — `SetupScreen.kt` : `ActivityResultContracts.OpenDocument` remplace `GetContent`, l'URI complète (`uri.toString()`) est conservée avec `takePersistableUriPermission`. `IptvRepository.kt` : `doValidate()` et `fetchM3u()` distinguent trois cas (`http://`, `content://`, chemin absolu) et lisent les URI locales via `context.contentResolver.openInputStream()`.
+
+**Vérification à l'usage (§56.4).** Les trois branches de `doValidate()` ont été exercées séparément.
+
+- **`content://` — import (T4).** Un `.m3u` de quatre entrées poussé en `/sdcard/Download/`, choisi par le sélecteur SAF : le champ retient l'URI, et « SE CONNECTER » peuple le catalogue avec **« TEST LIVE — 2 chaînes »**, exactement les deux entrées `group-title="TEST LIVE"` du fichier écrit.
+- **`content://` — persistance (T6).** `am force-stop`, puis `cache/` vidé **et vérifié vide** (`ls` ne rend que `.` et `..`), puis relance : le catalogue revient identique, et `iptv_cache` est recréé après coup. La playlist a donc été **relue par l'URI persistée**, pas servie par le cache disque — c'est le point faible réel du `takePersistableUriPermission`, et il tient.
+- **`http://` — non-régression (T5).** Sur l'émulateur TV, connexion par le lien M3U réel : **11 877 chaînes / 75 genres**. La refonte en trois branches n'a pas cassé le cas nominal.
 
 
 ## #66 — app-tv : ne pas rouvrir l'écran de connexion sur un `SetupState.Success` hérité de la session précédente
@@ -672,6 +718,22 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 
 # MINEUR
+
+## #R3 — app-tv : quatre compteurs restaient en anglais sur une TV en français *(régression de `b0011935`)*
+
+`app-tv/home`
+
+**Symptôme.** Application en français, écran « Direct TV » : le sous-titre affiche « 11877 CHANNELS - 75 GENRES » au lieu de « CHAÎNES ». Idem pour les titres, les genres et les résultats de recherche — quatre compteurs sur les écrans Direct TV, Films, Séries et Recherche.
+
+**Preuve.** `python3 tools/check_strings.py` : « `app-tv: <plurals> 'count_channels' absent de values-fr/` », et de même pour `count_genres`, `count_results`, `count_titles`. TV-3 (`b0011935`) a ajouté ces quatre `<plurals>` dans `app-tv/src/main/res/values/plurals.xml` sans les reporter dans `values-fr/plurals.xml` ; `pluralStringResource` retombe alors sur les formes anglaises.
+
+**Mesure différentielle** (même build, même locale FR, mêmes données, §32) : avant, « 11877 CHANNELS - 75 GENRES » ; après, « 11877 CHAÎNES - 75 GENRES ». Le titre « Direct TV » est français dans les deux cas — c'est bien le pluriel seul qui retombait.
+
+**Cause.** établie — le contrôle de parité `tools/check_strings.py`, que `CLAUDE.md` §3 impose avant publication, n'a pas été passé à la livraison du lot.
+
+**✅ Corrigé le 2026-08-28** — les quatre `<plurals>` ajoutés à `values-fr/plurals.xml` avec leurs formes françaises. `check_strings.py` : `app-tv plurals 6/6 ✓`. Vérifié à l'écran sur l'émulateur, application en français.
+
+
 
 ## #110 — app-mobile/catalog : brancher le titre de `ContentHeader`, ou cesser de le calculer
 

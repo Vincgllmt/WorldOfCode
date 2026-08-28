@@ -63,6 +63,9 @@ numéro.
 | 52 bis | **La barrière d'accès expiré** : le focus y était mais **invisible** (4ᵉ occurrence du §49.2) ; et une build sideloadée expirée n'a **aucune sortie** — d'où `purple.unlock`, **debug uniquement** | on touche à `TvPurchaseScreen`, à `TrialRepository`, ou on veut une build utilisable après l'essai |
 | 52 | **Six régressions de la TV 1.3.0** : le relâchement de l'appui long validait « Annuler » ; une série occupait autant de places qu'elle avait d'épisodes ; un `verticalScroll` sur un `Text` ne défile pas au D-pad ; le `Box` racine plein écran est un **cul-de-sac de focus** ; on revenait sur une fiche **vidée** | on touche à `TvConfirmDialog`, aux « Reprendre la lecture », à une fiche descriptive, au focus du lecteur, ou à `loadMovieDetail`/`loadSeriesDetail` |
 | 53 | **Audit #43 corrigé** — aucune notion de « fin » dans la chaîne de progression ; `ENDED` publié et lu nulle part ; la règle des 90 % existait **trois fois** dans les UI ; `core/data/ProgressPolicy` | on touche à la progression de lecture, à « Reprendre la lecture », ou on prend un défaut de `docs/audit.md` |
+| 54 | **Audit #97** — `PlayerViewModel` n'était pas partagé entre la fiche série et le lecteur mobile | on touche à la portée d'un `ViewModel` mobile |
+| 55 | **Lot CORE-C** — garde de course de `ContentViewModel`, causes typées `ContentFailure`/`SetupFailure` | on touche aux états d'erreur des deux UI |
+| 56 | **Campagne de vérification sur les supports des six lots des 27–28/08** — 9 scénarios passés, **2 échecs** + 1 défaut de parité : une validation refusée ouvrait le catalogue (corrigé), la fiche série TV n'a aucun focus (ouvert) ; + 5 pièges d'outillage | on livre un lot « compile ✓ tests ✓ », on prépare une campagne émulateur/Pixel, ou on reprend la fiche série TV |
 
 ---
 
@@ -4743,3 +4746,184 @@ configuration, et `SetupFailure.INVALID_INPUT` n'a pas de sens pour le catalogue
 si les valeurs se recoupment (`NETWORK`, `UNKNOWN`), la séparation empêche qu'un écran
 de setup reçoive une cause de contenu par inadvertance, et elle documente le périmètre
 de chaque ViewModel.
+
+---
+
+## 56. Campagne de vérification sur les supports des six lots des 27–28/08 *(2026-08-28)*
+
+Six lots (`14d723e6` → `224ae5af`) portaient tous la même preuve : « compile ✓, tests
+unitaires ✓ », parfois « l'APK démarre sans crash ». C'est le test qui ne peut pas
+échouer de la règle 2. Cette section est le résultat de leur passage sur l'émulateur
+`purple_tv` et sur le Pixel 7.
+
+**Onze scénarios joués, neuf passés, deux échecs — dont un critique** — plus un
+troisième défaut sorti du contrôle de parité des libellés. Chaque scénario a
+été construit autour d'un signal qui *pouvait* rendre rouge ; quand le signal était
+visuel, il a été mesuré au pixel plutôt que jugé à l'œil.
+
+### 56.1 — CRITIQUE : une validation refusée ouvrait quand même le catalogue
+
+**Ce qu'on voit.** Onglet « Identifiants », serveur `http://10.255.255.1:8080` (IP non
+routable), un utilisateur et un mot de passe quelconques, « Connexion ». Dix secondes
+d'attente — le délai de connexion d'OkHttp — puis **l'application ouvre l'écran
+d'accueil** et y affiche « An unexpected error occurred ». Aucun bandeau d'erreur sur
+l'écran de connexion.
+
+**Mesure.** Trois signaux concordants :
+
+1. `purple_iptv_credentials.xml` **n'est pas écrit** — `run-as … ls shared_prefs/` ne
+   rend que `purple_trial_secure.xml` ;
+2. `am force-stop` puis relance ⇒ retour sur l'**écran de connexion**, ce qui prouve
+   qu'aucun identifiant valide n'a été enregistré ;
+3. le message affiché est la branche `UNKNOWN`, pas `NETWORK` : c'est
+   `IllegalStateException("No credentials configured")` levée par `fetchChannels`, pas
+   la panne réseau.
+
+**Cause.** `IptvRepository.validate()` **ne lève jamais** : `doValidate()` enveloppe
+tout dans `runCatching { … }.getOrNull()` et renvoie `null` dès que le serveur refuse ou
+ne répond pas. Un serveur injoignable arrive donc dans `SetupViewModel` en
+`Result.success(null)`, jamais en `Result.failure`.
+
+Or la vague-1 (`14d723e6`, §55) a réécrit `validateAndSave` en passant des
+`SetupState.Error(String)` aux causes typées, et **la branche du `null` a disparu dans
+l'opération** :
+
+```kotlin
+// avant 14d723e6 — correct
+val valid = runCatching { iptvRepo.validate(creds) }.getOrNull()
+if (valid != null) { credRepo.save(valid); … ; SetupState.Success }
+else _state.value = SetupState.Error("Could not connect to the server…")
+
+// après 14d723e6 — le null retombe sur Success
+outcome.fold(
+    onSuccess = { validated ->
+        validated?.let { credRepo.save(it) }   // ← sauté quand null
+        iptvRepo.invalidateCache()             // ← exécuté même en échec
+        SetupState.Success                     // ← rendu quand même
+    },
+    onFailure = { SetupState.Error(it.toSetupFailure()) },
+)
+```
+
+Second effet, plus discret : `invalidateCache()` s'exécutait **aussi sur l'échec**. Une
+tentative de connexion ratée jetait un catalogue en cache qui, lui, fonctionnait.
+
+**Pourquoi les 281 tests ne l'ont pas vu.** Aucun ne portait sur `SetupViewModel` :
+c'est un `ViewModel` qui tient deux Repositories Android, donc intestable au niveau 1 en
+l'état. Le défaut vivait exactement dans l'angle mort.
+
+**Correctif.** La décision est sortie en objet pur, comme le veut la règle
+d'architecture n°2 — `core/viewmodel/SetupOutcomePolicy.kt`, `SetupOutcome.Accepted` /
+`Rejected` — et `SetupViewModel` ne fait plus qu'agir sur le verdict. `invalidateCache()`
+est passé sous la branche `Accepted`. Quatre tests dans
+`SetupOutcomePolicyTest` ; **celui du `null` a été vérifié rouge sur l'ancien
+comportement** avant d'être vérifié vert sur le nouveau.
+
+**Revérifié à l'écran** : même scénario, l'écran de connexion reste affiché et porte
+« Could not connect to the server. Please check your credentials. » ; et une connexion
+M3U valide écrit `purple_iptv_credentials.xml` et ouvre les 11 877 chaînes.
+
+### 56.2 — La fiche série TV n'a aucun focus : aucun épisode n'est atteignable
+
+**Ce qu'on voit.** Sur l'émulateur, ouvrir n'importe quelle série depuis l'onglet
+« Séries » : la fiche s'affiche correctement — saisons, « Télécharger la saison »,
+lignes E1…E5 avec vignettes. Puis **plus rien ne répond**.
+
+**Mesure — le diff pixel, pas l'œil.** Captures avant/après chaque appui,
+`ImageChops.difference(...).getbbox()` :
+
+| Touche | Zone modifiée |
+|---|---|
+| ▼ (×2) | `None` |
+| ▲ | `None` |
+| ◀ | `None` |
+| ▶ | `None` |
+| OK | `None` |
+| **RETOUR** | **`(144, 0, 1920, 1080)`** |
+
+Zéro pixel changé sur les cinq premières ; RETOUR, lui, repeint toute la zone de contenu.
+**Contrôle** : l'application n'est donc ni figée ni en ANR (aucune trace
+`Input dispatching timed out` dans `logcat`) — elle traite bien les touches. Le focus
+n'est simplement **nulle part**.
+
+Reproduit sur deux séries (*The Walking Dead : Dead City*, *Shaka iLembe*). La grille des
+séries, la grille « Voir tout » d'un genre et la **fiche film** répondent normalement au
+D-pad : le défaut est propre à la fiche série.
+
+**Ce qui est établi et ce qui ne l'est pas.** Établi : le symptôme, sa reproductibilité,
+son périmètre. La cause n'a pas été isolée. Le dispositif de `TvSeriesScreen.kt` — un
+drapeau `firstEpisodeReady` posé par un `DisposableEffect` sur la première ligne, un
+`LaunchedEffect` qui réclame `firstDetailFocus` une seule fois via `episodeFocusClaimed`,
+et `tvGroupEntry` qui n'expose la cible que si le drapeau est levé — est correct sur le
+papier. `tvModalTrap()` rend par ailleurs le rail non focalisable derrière la fiche : si
+la demande de focus n'aboutit pas, **il ne reste aucun repli**, ce qui décrit exactement
+l'inertie observée. À instruire avant de corriger.
+
+### 56.3 — Un troisième défaut, trouvé par le contrôle de parité
+
+`python3 tools/check_strings.py` — que `CLAUDE.md` §3 impose avant toute publication —
+était rouge : quatre `<plurals>` (`count_channels`, `count_genres`, `count_results`,
+`count_titles`) ajoutés par TV-3 (`b0011935`, le lot « pluralisation ») dans
+`values/plurals.xml` n'avaient jamais été reportés dans `values-fr/`. Sur une TV en
+français, `pluralStringResource` retombait sur l'anglais.
+
+**Mesuré des deux côtés** (§32), même build, même locale FR, mêmes données :
+
+| | Sous-titre de « Direct TV » |
+|---|---|
+| avant | `11877 CHANNELS - 75 GENRES` |
+| après | `11877 CHAÎNES - 75 GENRES` |
+
+Le titre « Direct TV » est français dans les deux captures : c'est bien le pluriel seul
+qui retombait. Corrigé (#R3) ; `check_strings.py` rend `app-tv plurals 6/6 ✓`.
+
+### 56.4 — Les neuf scénarios passés, et leur signal
+
+| # | Support | Signal retenu — il pouvait échouer | Verdict |
+|---|---|---|---|
+| T5 | émulateur | branche `http://` de `doValidate()` refondue : 11 877 chaînes / 75 genres chargées | ✓ |
+| T7 (#66) | émulateur | après déconnexion, l'écran de connexion **reste** 8 s ; l'ancien code (`LaunchedEffect(state)`, relu en `16876a8e^`) le refermait à la composition | ✓ |
+| T8-a (#69) | émulateur | à l'ouverture, **un seul** `DPAD_CENTER`, sans navigation : `mInputShown` passe `false → true` — le champ URL avait donc le focus | ✓ |
+| T8-b (#67) | émulateur | ▶ puis OK depuis le champ : `••••` → `MotDePasse42`, icône basculée. Avant, l'œil était `trailingIcon` **dans** le focusable du champ | ✓ |
+| T8-c (#68) | émulateur | pendant les 10 s de `Loading`, le fond du bouton reste `(198,154,255)` = `TvPurpleGlow` focalisé, jamais la teinte désactivée | ✓ |
+| T9 (#46) | émulateur | DNS privé strict irrésolvable : Films **et** Séries affichent « Network error. Please check your connection. » — branche `NETWORK` de l'enum, pas une chaîne vide | ✓ |
+| T1 (#97-a) | Pixel 7 | Wi-Fi coupé ⇒ « Source error » + « Réessayer » ; réseau rendu, appui ⇒ l'écran d'erreur disparaît **et** une clé `progress_26_71993 = 134594` apparaît. Avant : `retry()` sortait sans rien faire | ✓ |
+| T2 (#97-b) | Pixel 7 | épisode 3 lu 72 s, sortie, 4 relevés sur 30 s : md5 **identique**, `progress_2624_430470` figé à 72 268 ms (2,9 % — donc pas « vu en entier »), et `recent_items_json` ne contient **que** l'épisode 3 | ✓ |
+| T3 | Pixel 7 | film A puis série B sans tuer l'app : trois clés distinctes, B démarre à zéro, et les trois progressions sont figées 45 s hors lecteur | ✓ |
+| T4 (#125) | Pixel 7 | `.m3u` poussé, sélectionné par le sélecteur SAF : « TEST LIVE — 2 chaînes », exactement le fichier écrit | ✓ |
+| T6 (#125) | Pixel 7 | `force-stop`, **`cache/` vidé et vérifié vide**, relance : le catalogue revient ⇒ relu par l'URI `content://` persistée, pas par le cache | ✓ |
+
+### 56.5 — Ce qui n'a pas pu être vérifié
+
+- **T2-TV sur un épisode** : bloqué par 56.2. Le même scénario joué sur un **film** est
+  passé (md5 et mtime figés 40 s après la sortie), ce qui exerce la boucle de
+  `PlayerViewModel.stop()` mais **pas** la partie propre aux épisodes — `transitionJob`
+  et la réinsertion de l'épisode 1 via `mediaItemIndex`. Cette moitié reste non vérifiée
+  sur TV. Elle l'est en revanche sur mobile (T2).
+- **Le dialogue de paramètres mobile** : le bouton de la barre supérieure est dessiné
+  sous la barre d'état (l'app est en edge-to-edge) et n'a pas pu être atteint par
+  `input tap`. Le bouton Cast voisin ne répond pas davantage au même endroit : c'est
+  probablement un artefact du pilotage, **pas** un défaut constaté. Non testé.
+
+### Pièges d'outillage rencontrés — à relire avant la prochaine campagne
+
+1. **Le cache de configuration de Gradle garde le JDK de la session qui l'a créé.**
+   `:core:testDebugUnitTest` échouait sur
+   `/home/rigolo/.local/share/purple-factory/jdk-17/bin/java` — un chemin de l'usine
+   locale, disparu — alors que `JAVA_HOME` était correct. `rm -rf .gradle/configuration-cache`.
+2. **Le mode avion ne coupe pas le réseau.** Ni sur l'émulateur (l'ethernet `eth0`
+   survit), ni sur le Pixel (Android conserve le Wi-Fi). `airplane_mode_on = 1` et
+   `ping` répond quand même. Sur l'émulateur, passer par
+   `settings put global private_dns_mode hostname` + un hôte irrésolvable ; sur le
+   téléphone, `svc wifi disable` — **et le rétablir dans le même bloc de commandes**.
+3. **`uiautomator dump` fonctionne sur le Compose de l'app mobile.** Contrairement à ce
+   que dit `docs/TESTS.md` pour la TV, l'arbre d'accessibilité du Pixel rend tous les
+   textes avec leurs bornes : cela permet de piloter l'app **sans une seule capture
+   d'écran**, ce qui est exactement ce qu'il faut sur l'appareil personnel (§52, §53).
+   Sur l'écran de lecture il ne rend qu'un `SurfaceView` — ce qui est en soi le signal
+   « la vidéo est là ».
+4. **Gboard corrompt une URL saisie par `input text`.** `output=ts` est devenu
+   `output=t-shir` à la validation par un tap. Taper puis envoyer `KEYCODE_ENTER`
+   (action IME) valide sans laisser la correction s'appliquer.
+5. **Le clavier virtuel de la TV avale les directions.** `RETOUR` ferme l'IME mais ne
+   sort pas du champ (`editing` reste vrai) : enchaîner `RETOUR` *puis* `▼`.
