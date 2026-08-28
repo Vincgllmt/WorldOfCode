@@ -44,6 +44,7 @@ import com.purple.iptvplayer.core.viewmodel.TrialViewModel
 import com.purple.iptvplayer.mobile.ui.common.PremiumBadge
 import com.purple.iptvplayer.mobile.ui.cast.CastButton
 import com.purple.iptvplayer.mobile.ui.cast.CastRemoteSheet
+import com.purple.iptvplayer.mobile.ui.common.requireActivityViewModelStoreOwner
 import com.purple.iptvplayer.mobile.ui.downloads.DownloadsScreen
 import com.purple.iptvplayer.mobile.ui.home.HomeScreen
 import com.purple.iptvplayer.mobile.ui.movies.MoviesScreen
@@ -72,7 +73,9 @@ fun MainScreen(
 
     val trialVm:   TrialViewModel   = koinViewModel()
     val castVm:    CastViewModel    = koinViewModel()
-    val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel()
+    val playerVm: com.purple.iptvplayer.core.viewmodel.PlayerViewModel = koinViewModel(
+        viewModelStoreOwner = requireActivityViewModelStoreOwner()
+    )
     val credRepo:  CredentialsRepository = koinInject()
 
     val remainingDays by trialVm.remainingDays.collectAsState()

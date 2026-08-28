@@ -64,6 +64,8 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 
 **Piste.** soit partager une seule instance entre les deux destinations (owner de l'Activity, entrée parente de navigation, ou portée Koin explicite), soit cesser de piloter le lecteur depuis la fiche et faire transiter la liste d'épisodes par la route. Corriger seulement `retry()` laisserait (b) en place.
 
+**✅ Corrigé le 2026-08-27** — `PlayerViewModel` obtenu avec `requireActivityViewModelStoreOwner()` dans `SeriesDetailScreen`, `PlayerScreen`, `MovieDetailScreen` et `MainScreen` ; une seule instance partagée par l'Activity, donc `playWithEpisodes`, `retry()`, `stop()` et les jobs de suivi (`transitionJob`, `progressSavingJob`, `completionJob`) opèrent sur le même objet. APK mobile installé sur le Pixel 7 (démarrage confirmé, pas de crash).
+
 
 ## #125 — app-mobile/setup : passer au chargeur de playlist l'URI du fichier choisi, pas son `path`
 
@@ -76,6 +78,8 @@ Réel, mais ne justifie pas une correction isolée : à traiter par lots.
 **Cause.** le `path` d'une URI de fournisseur de documents (`/document/primary:Download/ma-liste.m3u`, `/msf:1000000123`) n'est pas un chemin de système de fichiers ; `File(...).exists()` rend toujours `false`. S'ajoute que `GetContent()` n'accorde qu'une permission de lecture temporaire alors que le chemin est persisté par `credRepo.save()` : même un chemin correct ne survivrait pas au redémarrage.
 
 **Piste.** conserver l'URI (`uri.toString()`), prendre `ActivityResultContracts.OpenDocument` + `takePersistableUriPermission`, et donner à `core` un chemin de lecture par `ContentResolver` pour les sources locales — la branche `File(...)` de `IptvRepository` ne sait lire qu'un chemin absolu réel. Décider dans `core` ce qui distingue « URI de contenu / chemin de fichier / URL http » plutôt que dans l'UI.
+
+**✅ Corrigé le 2026-08-27** — `SetupScreen.kt` : `ActivityResultContracts.OpenDocument` remplace `GetContent`, l'URI complète (`uri.toString()`) est conservée avec `takePersistableUriPermission`. `IptvRepository.kt` : `doValidate()` et `fetchM3u()` distinguent trois cas (`http://`, `content://`, chemin absolu) et lisent les URI locales via `context.contentResolver.openInputStream()`. APK mobile installé sur le Pixel 7 (démarrage confirmé, pas de crash).
 
 
 ## #66 — app-tv : ne pas rouvrir l'écran de connexion sur un `SetupState.Success` hérité de la session précédente

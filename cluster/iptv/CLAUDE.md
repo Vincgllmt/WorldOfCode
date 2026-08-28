@@ -114,6 +114,10 @@ Contrôle des libellés avant toute publication : `python3 tools/check_strings.p
 Le reste — deuxième machine, keystore, `purple.unlock`, simulation d'un essai expiré,
 lancement de l'émulateur — est dans [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md).
 
+> **Lien de test M3U** (credentials utilisateur) : `~/.purple_iptv/test_credentials`.
+> Ce fichier est **hors du repo** — jamais le committer ni l'écrire dans un fichier suivi
+> par git.
+
 ---
 
 ## 4. Valider sur les supports, pas seulement dans la suite
