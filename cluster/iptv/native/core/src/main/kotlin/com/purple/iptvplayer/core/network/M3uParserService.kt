@@ -45,9 +45,19 @@ object M3uParserService {
                 }
             }
         }
-        // §109 — unicité par URL : une playlist malformée ou concaténée peut
-        // contenir plusieurs fois la même entrée.
-        return items.distinctBy { it.url }
+        // #109 — unicité par (URL, thème), et non par URL seule.
+        //
+        // Le but reste d'écarter les vrais doublons d'une playlist malformée ou
+        // concaténée. Mais un même flux **légitimement rangé dans deux `group-title`**
+        // est un usage courant, et dédoublonner sur l'URL seule le faisait disparaître
+        // de tous les thèmes sauf le premier — mesuré à l'écran (§61) : une playlist
+        // listant `beIN Sports 1` dans « SPORT » et « FRANCE » n'affichait la chaîne
+        // que dans « SPORT ». Une correction de plantage ne doit pas coûter du contenu.
+        //
+        // Ce qui rend ce relâchement sûr : les listes paresseuses ne prennent plus
+        // l'URL comme clé mais `ChannelKey`, unique par construction. Sans cela, deux
+        // lignes de même URL relèveraient de nouveau le `require` de Compose.
+        return items.distinctBy { it.url to it.group }
     }
 
     /**

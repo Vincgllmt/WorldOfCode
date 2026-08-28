@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import com.purple.iptvplayer.R
+import com.purple.iptvplayer.core.model.ChannelKey
 import com.purple.iptvplayer.core.data.MoveDirection
 import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.model.Movie
@@ -238,7 +239,7 @@ fun MyListScreen(
                 }
                 // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
                 if (filter == ListFilter.CHANNELS) {
-                    itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { _, c -> "c_" + c.url }) { index, channel ->
+                    itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { i, c -> ChannelKey.of("c", i, c) }) { index, channel ->
                         ChannelRow(
                             channel = channel,
                             isFav   = true,

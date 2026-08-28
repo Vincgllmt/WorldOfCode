@@ -60,6 +60,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.model.ChannelKey
 import com.purple.iptvplayer.core.model.Channel
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
@@ -225,7 +226,7 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                         contentPadding      = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        itemsIndexed(searchResults, key = { _, c -> c.url }) { index, channel ->
+                        itemsIndexed(searchResults, key = { i, c -> ChannelKey.of("res", i, c) }) { index, channel ->
                             if (index == 0) {
                                 DisposableEffect(Unit) {
                                     firstResultReady = true
@@ -304,7 +305,7 @@ fun TvHomeScreen(onPlay: (url: String, title: String, streamId: Int) -> Unit) {
                                 contentPadding      = PaddingValues(start = 12.dp, end = 24.dp, bottom = 24.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                items(shown, key = { it.url }) { channel ->
+                                itemsIndexed(shown, key = { i, c -> ChannelKey.of("ch", i, c) }) { _, channel ->
                                     TvChannelRow(
                                         channel = channel,
                                         isFav   = channelFavs.contains(channel.name),

@@ -139,4 +139,31 @@ class M3uParserServiceTest {
 
         assertEquals(listOf("TF1", "France 2"), M3uParserService.parse(m3u).map { it.name })
     }
+    /**
+     * #109 — le doublon exact part, mais un même flux rangé dans deux thèmes reste.
+     *
+     * Mesuré à l'écran avant correction (§61) : avec `distinctBy { it.url }`, une
+     * playlist listant le même flux dans « AAA SPORT » et « BBB FRANCE » n'affichait
+     * que `2 chaînes` puis `1 chaîne` — la seconde occurrence était perdue.
+     */
+    @Test
+    fun `doublon exact ecarte, meme flux dans deux themes conserve`() {
+        val m3u = """
+            #EXTM3U
+            #EXTINF:-1 group-title="SPORT",beIN 1
+            http://x/bein1.ts
+            #EXTINF:-1 group-title="SPORT",beIN 1
+            http://x/bein1.ts
+            #EXTINF:-1 group-title="FRANCE",beIN 1
+            http://x/bein1.ts
+        """.trimIndent()
+
+        val items = M3uParserService.parse(m3u)
+
+        assertEquals(2, items.size)
+        assertEquals(listOf("SPORT", "FRANCE"), items.map { it.group })
+        // La clé de liste, elle, doit rester unique — c'est ce qui rend le doublon
+        // de thème inoffensif côté Compose.
+        assertEquals(2, items.map { it.url to it.group }.distinct().size)
+    }
 }

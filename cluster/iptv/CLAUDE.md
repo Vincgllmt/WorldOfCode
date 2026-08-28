@@ -101,12 +101,12 @@ export JAVA_HOME=$HOME/.local/share/jdk-17          # aucun JDK système : le pa
 export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 
-./gradlew :core:testDebugUnitTest    # 219 tests
+./gradlew :core:testDebugUnitTest    # 225 tests
 ./gradlew :app-tv:testDebugUnitTest  #  73 tests
 ./gradlew :app-tv:assembleDebug      # ou :app-mobile:installDebug
 ```
 
-**État de la suite : 292 tests, 0 échec.** Rapport HTML après échec :
+**État de la suite : 298 tests, 0 échec.** Rapport HTML après échec :
 `core/build/reports/tests/testDebugUnitTest/index.html`.
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`.

@@ -70,6 +70,7 @@ numéro.
 | 58 | **Lot TV-2 et accessibilité de TV-3 vérifiés** — #76 correct (différentiel probant), #79 vérifié par lecture, **#77 répondu à côté** (garde de borne inerte au lieu du garde de focus) et un tiers de son symptôme démenti par la mesure ; **#R4** ouvert : le ✕ de la recherche est inatteignable | on reprend #77, on touche à la barre de recherche TV, ou on veut un exemple de différentiel de build |
 | 59 | **#R4 corrigé** — un focusable imbriqué dans un focusable n'est atteignable par aucune direction ; troisième occurrence du motif (G11, #67, #R4) | on pose une action secondaire dans une ligne ou une barre déjà focalisable |
 | 60 | **#90 corrigé** — un index d'affichage traversait la frontière UI/core et corrompait l'ordre persisté des favoris ; décision sortie en `core/data/FavoritesOrder`. Contient aussi **où vit le lien de test** et pourquoi `get.php` répond 885 | on touche aux favoris, on fait circuler un index entre UI et `core`, ou on cherche le lien M3U de test |
+| 61 | **#109** — le plantage était déjà corrigé la veille sans être marqué ; la mesure a trouvé à la place une **perte de contenu** (un flux à deux thèmes disparaissait) ; `ChannelKey` + dédoublonnage par `(url, group)`. Contient la recette pour **servir une playlist de test au téléphone** | on touche aux clés de liste, au dédoublonnage M3U, ou on veut piloter l'app avec une playlist d'essai |
 
 ---
 
@@ -5297,3 +5298,84 @@ et la convertit en identifiants **Xtream**, si bien que l'application n'appelle 
 `max_connections=1`). Cette dernière valeur mérite d'être retenue : **une seule connexion
 à la fois**, donc ne pas laisser un flux ouvert sur l'émulateur en en lançant un sur le
 téléphone.
+
+---
+
+## 61. #109 — le plantage n'existait plus, mais son remède coûtait du contenu *(2026-08-28)*
+
+Ticket pris pour un **plantage** — la gravité la plus haute de la file. La mesure a montré
+autre chose, et c'est l'intérêt de la mesure.
+
+### Ce que l'audit décrivait, et ce qui est réellement arrivé
+
+#109 annonçait : sur une source M3U listant deux fois le même flux, l'onglet Direct TV
+**plante** dès que les deux lignes sont composées, parce que `HomeScreen.kt:203` prenait
+`"lrow_" + it.url` comme clé de `LazyColumn` et que Compose exige des clés uniques.
+
+Reproduction sur le Pixel 7, playlist servie depuis le poste par `adb reverse` — un
+détour qui vaut d'être noté : le lien de l'utilisateur ne convient pas ici, `parseUrl` le
+convertit en identifiants Xtream et la voie Xtream dérive ses URL de `stream_id`, donc
+unique par construction. Il faut une vraie source M3U pour atteindre ce code.
+
+Résultat : **pas de plantage**, et « 2 chaînes » pour trois entrées dont un doublon exact.
+`M3uParserService.kt:50` portait déjà `items.distinctBy { it.url }`, avec le commentaire
+« §109 » — ajouté par **`14d723e6`**, l'un des six lots de la campagne. Le défaut était
+corrigé depuis la veille ; l'entrée d'audit n'avait simplement jamais été marquée.
+
+### Le défaut que la mesure a trouvé à la place
+
+L'audit prévenait, dans le même symptôme, qu'un flux peut être « rangé dans deux
+`group-title` ». `distinctBy` sur l'URL **seule** écarte aussi ce cas-là. Mesuré, playlist
+listant `beIN Sports 1` dans « AAA SPORT » puis dans « BBB FRANCE » :
+
+| | AAA SPORT | BBB FRANCE | `FATAL EXCEPTION` |
+|---|---|---|---|
+| avant | 2 chaînes | **1 chaîne** — `beIN Sports 1` absente | 0 |
+| après | 2 chaînes | **2 chaînes** | 0 |
+
+Un même flux dans plusieurs thèmes est un usage courant des playlists. La correction du
+plantage le faisait disparaître de tous les thèmes sauf le premier — **une correction de
+plantage ne doit pas coûter du contenu**, et personne ne s'en serait aperçu : rien ne
+signale une chaîne absente.
+
+### Le correctif : deux gestes qui ne valent qu'ensemble
+
+1. **`M3uParserService` dédoublonne par `(url, group)`.** Le doublon exact part toujours ;
+   le flux à deux thèmes reste.
+2. **Les listes paresseuses prennent `core/model/ChannelKey`, pas l'URL.** La clé se
+   compose d'une portée, du rang et de l'URL : unique par construction, quoi que le
+   fournisseur envoie.
+
+Le second n'est pas décoratif : c'est lui qui rend le premier sûr. Relâcher le
+dédoublonnage sans clés uniques ferait revenir exactement le plantage de #109.
+
+**Cinq sites d'appel, dans les deux UI** — `HomeScreen:203`, `MyListScreen:241`,
+`TvMyListScreen:304`, `TvHomeScreen:228` et `:307`. L'audit n'en relevait qu'un. Encore la
+règle 1 : la même décision recopiée, et une seule copie vue.
+
+### Ce que j'ai failli faire, et pourquoi je ne l'ai pas fait
+
+Après avoir constaté que le plantage n'était plus atteignable, la tentation était de
+garder `ChannelKey` seul, « par sécurité ». C'est précisément ce que la règle 5 interdit :
+**ne pas durcir un comportement qui marche quand on ne peut pas le vérifier en conditions
+réelles** — et une clé au rang perd l'identité des éléments entre deux recompositions, donc
+ce durcissement a un coût.
+
+Ce qui l'a rendu légitime, c'est le défaut trouvé ensuite : `ChannelKey` n'est plus une
+précaution, c'est la condition qui permet de rendre à l'utilisateur une chaîne qu'il
+perdait. Un durcissement se justifie par le défaut qu'il débloque, pas par le confort.
+
+### Outillage — servir une playlist de test au téléphone
+
+Le sélecteur SAF coûte cher à piloter. Beaucoup plus rapide, et sans toucher aux fichiers
+de l'appareil :
+
+```bash
+cd <dossier>; python3 -m http.server 8099 --bind 127.0.0.1 &
+adb -s <serial> reverse tcp:8099 tcp:8099
+# puis, dans l'app : http://127.0.0.1:8099/ma-playlist.m3u
+```
+
+`parseUrl` la traite bien en `PlaylistType.M3U` — il n'y a ni `username` ni `password` dans
+la chaîne de requête. Éditer le fichier et refaire une connexion suffit à changer de jeu
+d'essai.

@@ -191,6 +191,22 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 **Piste.** une clé qui ne dépend pas d'une donnée fournisseur — soit dédoublonner à la construction dans `core` (ce qui règle aussi le cas d'un favori posé sur un doublon), soit composer la clé avec le thème et le rang. Ne pas se contenter d'ajouter le nom : deux doublons exacts partagent aussi le nom.
 
+**✅ Le plantage était déjà corrigé le 2026-08-27 par `14d723e6`** — `M3uParserService.kt:50` posait `items.distinctBy { it.url }`, commentaire à l'appui (« §109 »). L'entrée n'avait jamais été marquée. **Mesuré le 2026-08-28** sur le Pixel 7, playlist servie en local : trois entrées dont un doublon exact ⇒ « 2 chaînes », **zéro** occurrence de `FATAL EXCEPTION` ou de « used multiple times ». Le défaut décrit n'est plus atteignable.
+
+**⚠️ Mais ce remède coûtait du contenu.** `distinctBy` sur l'URL seule écarte aussi un flux **légitimement rangé dans deux `group-title`** — l'autre cas que le symptôme ci-dessus mentionne. Mesuré à l'écran avec une playlist listant `beIN Sports 1` dans « AAA SPORT » et « BBB FRANCE » :
+
+| | AAA SPORT | BBB FRANCE | Plantage |
+|---|---|---|---|
+| avant | 2 chaînes | **1 chaîne** — `beIN Sports 1` perdue | 0 |
+| après | 2 chaînes | **2 chaînes** — `beIN Sports 1` et `France Info` | 0 |
+
+**✅ Complété le 2026-08-28** — deux gestes qui ne valent qu'ensemble :
+
+1. `M3uParserService` dédoublonne désormais par **`(url, group)`** : le doublon exact part toujours, le flux à deux thèmes reste.
+2. Les listes paresseuses ne prennent plus l'URL comme clé mais **`core/model/ChannelKey`**, unique par construction — c'est ce qui rend le relâchement du point 1 sans risque. Appliqué aux **cinq** sites concernés, dans les deux UI : `HomeScreen:203`, `MyListScreen:241`, `TvMyListScreen:304`, `TvHomeScreen:228` et `:307`. L'audit n'en relevait qu'un ; les quatre autres portaient le même motif (règle 1).
+
+Six tests : cinq sur `ChannelKey` — dont un qui fige l'ancienne clé et montre qu'elle collait — et un sur le parseur, qui vérifie que le doublon exact part et que les deux thèmes restent.
+
 
 ## #98 — app-mobile/detail : ne pas lancer le flux distant d'un épisode que l'on va lire depuis le disque
 

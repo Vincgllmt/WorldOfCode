@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.model.ChannelKey
 import com.purple.iptvplayer.core.viewmodel.ContentState
 import com.purple.iptvplayer.core.viewmodel.ContentViewModel
 import com.purple.iptvplayer.mobile.ui.common.ChannelRow
@@ -200,7 +202,10 @@ fun HomeScreen(
                                     onClick    = { onSelectGenre(if (selectedGenre == genre) null else genre) },
                                 )
                             }
-                            items(channels, key = { "lrow_" + it.url }) { channel ->
+                            // #109 — l'URL n'est pas unique sur une source M3U, et les
+                            // sections de thèmes vivent dans UNE SEULE LazyColumn : la
+                            // portée porte donc le thème. Cf. `ChannelKey`.
+                            itemsIndexed(channels, key = { i, c -> ChannelKey.of("lrow_$genre", i, c) }) { _, channel ->
                                 ChannelRow(
                                     channel = channel,
                                     isFav   = favorites.contains(channel.name),

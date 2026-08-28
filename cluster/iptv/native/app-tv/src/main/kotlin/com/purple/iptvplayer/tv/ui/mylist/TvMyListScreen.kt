@@ -32,6 +32,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.purple.iptvplayer.core.model.ChannelKey
 import com.purple.iptvplayer.core.data.MoveDirection
 import com.purple.iptvplayer.core.model.DownloadItem
 import com.purple.iptvplayer.core.model.DownloadType
@@ -301,7 +302,7 @@ fun TvMyListScreen(
             ) {
                 // Pleine largeur : une chaîne est une ligne, pas une affiche 2:3.
                 if (filter == ListFilter.CHANNELS) {
-                    itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { _, c -> "c_" + c.url }) { index, channel ->
+                    itemsIndexed(favChannels, span = { _, _ -> GridItemSpan(maxLineSpan) }, key = { i, c -> ChannelKey.of("c", i, c) }) { index, channel ->
                         TvChannelRow(
                             channel  = channel,
                             modifier = if (index == 0) Modifier.focusRequester(contentFocus) else Modifier,
