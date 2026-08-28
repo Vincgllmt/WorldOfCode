@@ -52,6 +52,7 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.res.pluralStringResource
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun SetupScreen(onSuccess: () -> Unit) {
     val vm: SetupViewModel = koinViewModel()
     val trialVm: TrialViewModel = koinViewModel()
@@ -89,11 +90,40 @@ fun SetupScreen(onSuccess: () -> Unit) {
             .background(BgHome)
             .systemBarsPadding(),
     ) {
+        // #R6 — le clavier recouvrait le champ que l'on saisit.
+        //
+        // Deux gestes, et le second est celui qui compte.
+        //
+        // 1. `imePadding()` réduit la zone visible à ce que le clavier laisse. Sans lui,
+        //    `enableEdgeToEdge()` (MainActivity:32) désactive le redimensionnement de la
+        //    fenêtre et le clavier se pose par-dessus : mesuré, clavier à y=1352, champ à
+        //    1336..1410, soit 78 % du champ masqué et le bouton entièrement.
+        //    ⚠️ L'ordre compte : avant `verticalScroll`, sinon le rembourrage s'applique
+        //    au contenu défilant et la zone visible ne se réduit pas.
+        //
+        // 2. **Faire remonter le formulaire.** `imePadding()` seul ne suffit pas : Compose
+        //    amène le champ focalisé dans la zone visible du **strict minimum**, si bien
+        //    que son bord bas se retrouve collé au clavier et que le bouton reste hors
+        //    écran — il fallait faire défiler à la main pour valider. On amène donc la
+        //    **fin** du formulaire, champ et bouton compris.
+        //
+        //    L'effet se relance à chaque changement de `maxValue` : l'inset du clavier
+        //    grandit pendant son animation d'entrée, donc la première valeur lue est
+        //    périmée. En suivant `maxValue`, la dernière exécution atterrit sur le vrai
+        //    bas. Se relancer annule l'animation précédente, ce qui est exactement ce
+        //    qu'on veut.
+        val scrollState = rememberScrollState()
+        val imeVisible  = WindowInsets.isImeVisible
+        LaunchedEffect(imeVisible, scrollState.maxValue) {
+            if (imeVisible) scrollState.animateScrollTo(scrollState.maxValue)
+        }
+
         // Scrollable content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

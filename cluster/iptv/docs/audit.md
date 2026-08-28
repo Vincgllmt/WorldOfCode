@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **4 relevés à l'usage** (#R1 à #R4), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **6 relevés à l'usage** (#R1 à #R6), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -24,15 +24,15 @@
 | Gravité | Nombre |
 |---|---|
 | **CRITIQUE** | 6 |
-| **MAJEUR** | 43 |
+| **MAJEUR** | 45 |
 | **MINEUR** | 55 |
 
 | Périmètre | Défauts |
 |---|---|
 | `app-mobile/detail` | 11 |
-| `app-mobile/shell` | 11 |
+| `app-mobile/shell` | 12 |
 | `app-mobile/player` | 9 |
-| `app-mobile/setup` | 9 |
+| `app-mobile/setup` | 10 |
 | `app-tv/series` | 10 |
 | `app-mobile/downloads` | 7 |
 | `app-tv/home` | 9 |
@@ -165,6 +165,69 @@ Ce qui n'est pas établi : *pourquoi* l'effet est annulé alors que sa clé ne c
 
 
 # MAJEUR
+
+## #R6 — app-mobile/setup : le clavier recouvre le champ que l'on est en train de saisir
+
+`app-mobile/setup`
+
+**Symptôme.** Sur l'écran de connexion, toucher le champ ouvre le clavier — qui vient se poser **par-dessus ce même champ**. On saisit son lien M3U ou ses identifiants sans voir ce qu'on tape. Le bouton « SE CONNECTER » est lui aussi entièrement masqué.
+
+**Preuve.** Mesuré sur le Pixel 7 le 2026-08-28, arbre d'accessibilité et fenêtre de l'IME :
+
+| | Bornes |
+|---|---|
+| champ « Lien M3U / M3U8 » | `[190,1336][975,1410]` |
+| clavier | `type=ime frame=[0,1352][1080,2400]` |
+| bouton « SE CONNECTER » | `[353,1771][727,1844]` |
+
+Le clavier commence à **y = 1352** : il recouvre 58 des 74 pixels du champ — **78 %** — et la totalité du bouton. Surtout, les bornes du champ sont **identiques avant et après** l'ouverture du clavier : la mise en page ne bouge pas d'un pixel, donc aucun inset n'est consommé.
+
+**Cause.** établie — `MainActivity.kt:32` appelle `enableEdgeToEdge()`, ce qui désactive le redimensionnement automatique de la fenêtre ; à charge de la mise en page de consommer l'inset du clavier. Or **`imePadding()` n'est utilisé nulle part dans `app-mobile`**. `SetupScreen.kt:90` pose bien un `systemBarsPadding()` — la barre d'état est donc gérée là, contrairement à **#R5** — mais rien pour le clavier, et le `verticalScroll` de :96 ne défile pas tout seul jusqu'au champ focalisé.
+
+**✅ Corrigé le 2026-08-28, en deux gestes dont le second est celui qui compte.**
+
+1. `imePadding()` sur la colonne défilante — avant `verticalScroll`, sinon le rembourrage s'applique au contenu et la zone visible ne se réduit pas.
+2. **Faire remonter le formulaire à l'ouverture du clavier.** `imePadding()` seul ne suffisait pas : Compose amène le champ focalisé dans la zone visible du **strict minimum**, si bien que son bord bas se retrouvait collé au clavier et que le bouton restait hors écran — il fallait faire défiler à la main pour valider. Un `LaunchedEffect(imeVisible, scrollState.maxValue)` amène désormais la **fin** du formulaire, champ et bouton compris. Il suit `maxValue` parce que l'inset grandit pendant l'animation d'entrée du clavier : la première valeur lue est périmée, la dernière exécution atterrit sur le vrai bas.
+
+**Mesuré sur le Pixel 7**, appui sur le champ, sans aucune autre action :
+
+| | champ | bouton « SE CONNECTER » | clavier |
+|---|---|---|---|
+| avant correction | `1336..1410` — 78 % masqué | `1771..1844` — masqué | 1352 |
+| avec `imePadding()` seul | `1278..1352` — bord collé au clavier | **hors écran**, défilement manuel requis | 1352 |
+| **avec le défilement automatique** | **`723..797`** | **`1158..1231`** — 121 px au-dessus du clavier | 1352 |
+
+Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, appui direct sur le bouton, connexion établie (336 chaînes) — sans un seul geste de défilement.
+
+Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
+
+
+## #R5 — app-mobile/shell : la barre supérieure est dessinée sous la barre d'état, ses boutons sont hors d'atteinte
+
+`app-mobile/shell`
+
+**Symptôme.** Sur l'accueil, le titre « PURPLE IPTV » et les boutons Cast et Paramètres sont dessinés **derrière** la barre d'état du système. Le bouton Paramètres est de fait inutilisable : la barre d'état capte les appuis dans sa zone, et il n'en dépasse que de deux pixels. Il n'existe donc aucun moyen d'ouvrir les réglages ni de se déconnecter depuis l'application mobile.
+
+**Preuve.** Mesuré sur le Pixel 7 le 2026-08-28. La barre d'état du système :
+
+```
+InsetsSource type=statusBars frame=[0,0][1080,136] visible=true
+```
+
+Les bornes de l'application, relevées dans l'arbre d'accessibilité :
+
+| Élément | Bornes | Dans la bande 0–136 ? |
+|---|---|---|
+| titre « PURPLE IPTV » | `[149,39][483,109]` | **entièrement** |
+| bouton Paramètres | `[944,12][1070,138]` | 124 px sur 126 |
+
+**Cause.** établie — `MainActivity.kt:32` appelle `enableEdgeToEdge()`, donc l'application dessine sous les barres système, mais **rien ne compense l'encoche au-dessus de la barre supérieure**. `MainScreen.kt:114` porte bien un `statusBarsPadding()`, mais sur le **bandeau d'abonnement**, une branche `when (access)` qui n'existe que pour `AccessState.Subscribed` : `is AccessState.Pro -> Unit` (:106) ne pose rien. La mise en page n'est donc correcte que pour un abonné, par accident.
+
+⚠️ Ne pas confondre avec le mode immersif : `ScreenMode.kt:63` masque les barres, mais uniquement là où il est appelé (lecteur). Sur l'accueil, la barre d'état est **visible** — `visible=true` ci-dessus.
+
+**Piste.** poser la compensation une seule fois, sur la colonne racine de `MainScreen`, et retirer celle du bandeau qui ferait alors doublon. Vérifier au passage `MyListScreen.kt:129`, qui pose aussi un `statusBarsPadding()` alors qu'il est rendu sous la barre supérieure. La correction touche plusieurs écrans et demande une vérification **à l'écran** — impossible sur l'appareil personnel de l'utilisateur, où les captures sont proscrites (§52). À traiter quand un émulateur mobile sera disponible, ou avec l'utilisateur devant l'écran.
+
+
 
 ## #108 — app-mobile/home : regrouper les thèmes d'une seule façon, la vue thèmes et la liste de chaînes n'utilisent pas la même clé
 

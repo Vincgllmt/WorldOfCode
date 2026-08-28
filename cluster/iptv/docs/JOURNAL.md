@@ -72,6 +72,7 @@ numéro.
 | 60 | **#90 corrigé** — un index d'affichage traversait la frontière UI/core et corrompait l'ordre persisté des favoris ; décision sortie en `core/data/FavoritesOrder`. Contient aussi **où vit le lien de test** et pourquoi `get.php` répond 885 | on touche aux favoris, on fait circuler un index entre UI et `core`, ou on cherche le lien M3U de test |
 | 61 | **#109** — le plantage était déjà corrigé la veille sans être marqué ; la mesure a trouvé à la place une **perte de contenu** (un flux à deux thèmes disparaissait) ; `ChannelKey` + dédoublonnage par `(url, group)`. Contient la recette pour **servir une playlist de test au téléphone** | on touche aux clés de liste, au dédoublonnage M3U, ou on veut piloter l'app avec une playlist d'essai |
 | 62 | **#98 corrigé** — lire un épisode téléchargé ouvrait une connexion distante inutile ; l'appel fautif n'avait **aucun** autre effet, `playMedia` effaçant tout ce qu'il posait. Contient la recette pour **injecter un téléchargement terminé** sans télécharger, et trois instruments dont un seul tranche | on touche à la lecture locale, ou on cherche à mesurer un effet réseau trop bref pour les compteurs |
+| 63 | **#R5 / #R6** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état (ouvert), clavier par-dessus le champ (corrigé). Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
 
 ---
 
@@ -4909,8 +4910,11 @@ qui retombait. Corrigé (#R3) ; `check_strings.py` rend `app-tv plurals 6/6 ✓`
   sur TV. Elle l'est en revanche sur mobile (T2).
 - **Le dialogue de paramètres mobile** : le bouton de la barre supérieure est dessiné
   sous la barre d'état (l'app est en edge-to-edge) et n'a pas pu être atteint par
-  `input tap`. Le bouton Cast voisin ne répond pas davantage au même endroit : c'est
-  probablement un artefact du pilotage, **pas** un défaut constaté. Non testé.
+  `input tap`. ~~Le bouton Cast voisin ne répond pas davantage au même endroit : c'est
+  probablement un artefact du pilotage, **pas** un défaut constaté.~~
+  ⚠️ **Conclusion démentie le 2026-08-28 — voir §63.** C'était bien un défaut : la barre
+  d'état occupe `[0,0][1080,136]` et le bouton `[944,12][1070,138]` est dedans à 124 px
+  sur 126. Le voisin ne répondait pas **pour la même raison**. Ticket **#R5**.
 
 ### Pièges d'outillage rencontrés — à relire avant la prochaine campagne
 
@@ -5466,3 +5470,74 @@ d'épisodes — `fetchSeriesDetail` rend `seasons = emptyMap()` pour une source 
 (`IptvRepository:180`). Servir une playlist depuis le poste, la recette du §61, **ne
 permet donc pas** d'observer les requêtes d'un épisode. Il faut le vrai compte Xtream, et
 mesurer le trafic plutôt que les requêtes.
+
+---
+
+## 63. #R5 et #R6 — l'application entre en edge-to-edge sans jamais consommer les insets *(2026-08-28)*
+
+Deux défauts remontés par l'utilisateur à l'usage, une seule racine.
+
+`MainActivity.kt:32` appelle `enableEdgeToEdge()`. L'application dessine donc **sous** les
+barres système et sous le clavier, et il lui revient d'en compenser l'encombrement. Elle
+ne le fait qu'à trois endroits — `MyListScreen:129`, `MovieDetailScreen:116`,
+`CastRemoteSheet:205` — et **`imePadding()` n'apparaissait nulle part**.
+
+⚠️ À ne pas confondre avec le mode immersif : `ScreenMode.kt:63` masque bien les barres,
+mais seulement là où il est appelé (le lecteur). Sur l'accueil, la barre d'état est
+**visible** — `visible=true` dans `dumpsys`. L'application ne la cache pas ; elle dessine
+dessous.
+
+### #R5 — la barre supérieure passe sous la barre d'état
+
+Barre d'état : `frame=[0,0][1080,136]`. Titre « PURPLE IPTV » : `[149,39][483,109]`,
+**entièrement dedans**. Bouton Paramètres : `[944,12][1070,138]`, 124 px sur 126 dedans.
+La barre d'état captant les appuis dans sa zone, le bouton est **inutilisable** : il n'y a
+aucun moyen d'ouvrir les réglages ni de se déconnecter depuis l'application mobile.
+
+**Correction d'une conclusion que j'avais tirée trop vite.** Au §58.5 j'avais écrit que ce
+bouton inatteignable était « probablement un artefact du pilotage, **pas** un défaut
+constaté », au motif que le bouton Cast voisin ne répondait pas davantage. C'était faux :
+le voisin ne répondait pas **pour la même raison**, et deux contrôles également enterrés
+sous la barre d'état ne font pas un artefact — ils font deux fois le même défaut. La
+mesure manquante tenait en une commande, `dumpsys window | grep statusBars`. Ne pas
+conclure « artefact » sans avoir mesuré la seule chose qui départage.
+
+`MainScreen:114` pose bien un `statusBarsPadding()`, mais sur le **bandeau d'abonnement** —
+une branche `when (access)` qui n'existe que pour `Subscribed`, `is AccessState.Pro -> Unit`
+ne posant rien. La mise en page n'est donc correcte que pour un abonné, par accident.
+
+**Laissé ouvert** : la correction touche plusieurs écrans, dont un `statusBarsPadding()` de
+`MyListScreen` qui ferait doublon, et elle demande une vérification **à l'écran** —
+impossible sur l'appareil personnel de l'utilisateur, où les captures sont proscrites (§52).
+
+### #R6 — le clavier recouvrait le champ que l'on saisit
+
+Corrigé, et l'intérêt est dans le **deuxième** geste.
+
+`imePadding()` suffit à réduire la zone visible, mais pas à rendre l'écran utilisable :
+Compose amène le champ focalisé dans la zone visible du **strict minimum**. Résultat, le
+bord bas du champ vient se coller au clavier et le bouton reste hors écran — il fallait
+faire défiler à la main pour valider. C'est l'utilisateur qui l'a relevé : « il faut qu'en
+cliquant sur la case, tout se monte ».
+
+| | champ | bouton | clavier |
+|---|---|---|---|
+| avant | `1336..1410` — 78 % masqué | `1771..1844` — masqué | 1352 |
+| `imePadding()` seul | `1278..1352` — collé | **hors écran** | 1352 |
+| + défilement automatique | **`723..797`** | **`1158..1231`** | 1352 |
+
+Trois options avaient été pesées : garder `imePadding()` seul (rejeté, c'est l'état du
+milieu) ; **épingler le bouton** au-dessus du clavier dans une barre fixe — le plus robuste,
+mais cela détache l'action primaire du flux et change le dessin de l'écran, une décision de
+conception ; **faire remonter la fin du formulaire**, retenue parce qu'elle reproduit
+exactement l'état que l'utilisateur atteignait à la main.
+
+Détail qui compte : l'effet est déclenché par `LaunchedEffect(imeVisible, scrollState.maxValue)`
+et **suit `maxValue`**. L'inset du clavier grandit pendant son animation d'entrée : la
+première valeur lue est périmée, et se contenter de `imeVisible` ferait défiler vers un bas
+qui n'existe pas encore. En suivant `maxValue`, chaque relance annule la précédente et la
+dernière atterrit sur le vrai bas.
+
+Vérifié de bout en bout, sans capture d'écran — bornes de l'arbre d'accessibilité contre
+`type=ime frame=` de `dumpsys window` : lien M3U saisi et visible pendant la frappe, appui
+direct sur le bouton, connexion établie. Aucun geste de défilement.
