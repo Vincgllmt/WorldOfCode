@@ -130,4 +130,13 @@
     <string name="player_track_unsupported">Not supported by this device</string>
     <string name="player_track_forced">(forced)</string>
     <string name="player_error">Playback failed.</string>
+
+    <!-- #R8 — causes d'échec typées. Elles vivaient en littéraux Kotlin dans
+         ErrorMapping.kt, invisibles pour tools/check_strings.py. -->
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_not_found">Content not found.</string>
+    <string name="error_parse">Failed to parse response.</string>
+    <string name="error_unknown">An unexpected error occurred.</string>
+    <string name="setup_error_invalid">Invalid input. Please check your entries.</string>
+    <string name="setup_error_network">Could not connect to the server. Please check your credentials.</string>
 </resources>

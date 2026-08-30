@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **8 relevés à l'usage** (#R1 à #R8), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **9 relevés à l'usage** (#R1 à #R9), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -202,7 +202,38 @@ Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, app
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
 
 
-## #R8 — core/viewmodel : les messages d'échec sont écrits en anglais dans le code, hors ressources *(OUVERT)*
+## #R9 — des libellés français codés en dur dans `core`, et des libellés anglais dans les deux UI *(OUVERT)*
+
+`core/data`, `app-mobile/ui`, `app-tv/ui`
+
+**Symptôme.** Le miroir de **#R8**, trouvé par la passe de contrôle que #R8 a fait ajouter.
+Trois familles, toutes rendues à l'écran sans passer par `strings.xml` :
+
+1. **`core` parle français.** `BillingRepository.kt:303-309` construit sept messages d'échec
+   de facturation en **français littéral** — « Facturation indisponible sur cet appareil »,
+   « Service Play déconnecté », « Produit déjà possédé »… Dans une interface anglaise, ils
+   s'afficheront en français. C'est exactement #R8 retourné, et en plus **c'est `core` qui
+   décide du libellé**, ce que la règle d'architecture 1 réserve à l'UI.
+2. **L'UI mobile parle français en dur.** `HomeScreen.kt:338-341` étiquette les vignettes
+   « Films » / « Séries » / « Direct TV » en littéraux — le défaut du §45 à l'identique.
+3. **Deux badges commerciaux en anglais** dans une interface française :
+   `TvPurchaseScreen.kt:192-193` et `PurchaseScreen.kt:159` — « SAVE 58% », « BEST DEAL ».
+
+**Preuve.** `python3 tools/check_strings.py`, passe « Libellés rendus depuis le code »,
+2026-08-30. Quinze relevés, dont quatre légitimes (« PURPLE IPTV » deux fois, « LIVE » deux
+fois — marque et badge technique).
+
+**Cause.** établie pour (1) : `BillingRepository` traduit un code de retour Play en message
+lisible, donc dans `core`, alors que `core` ne devrait connaître que la **cause**. Le motif
+correct existe déjà à côté : `ContentFailure` / `SetupFailure` + `toDisplayString()` dans
+chaque UI (cf. #R8).
+
+**Piste.** pour (1), remplacer les sept messages par une cause typée `BillingFailure` et la
+traduire dans les deux UI, comme #R8 ; pour (2) et (3), sortir les libellés en ressources.
+Décider au passage si « LIVE » doit rester tel quel en français.
+
+
+## #R8 — core/viewmodel : les messages d'échec sont écrits en anglais dans le code, hors ressources
 
 `core/viewmodel`
 
@@ -212,7 +243,37 @@ Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en
 
 **Cause.** établie — les causes typées `ContentFailure` / `SetupFailure` ont été introduites (`14d723e6`) avec leur traduction écrite en dur dans chaque UI, au lieu de passer par `strings.xml`. `tools/check_strings.py` ne peut pas les voir : il contrôle la parité des ressources, pas les littéraux du code.
 
-**Piste.** sortir les huit libellés en ressources, dans les deux applications, et vérifier que `check_strings.py` les couvre. Occasion de se demander si le contrôle ne devrait pas aussi signaler un littéral rendu par un `@Composable` — c'est la deuxième fois qu'un libellé échappe au contrôle en vivant dans du Kotlin.
+**✅ Corrigé le 2026-08-30.** Les huit armes sortent en ressources — **six clés**, `UNKNOWN`
+étant partagé entre les deux causes. `toDisplayString()` devient `@Composable` et rend un
+`stringResource`, dans les deux applications ; les vingt-cinq appels sont déjà en contexte
+composable, le compilateur l'a confirmé.
+
+`tools/check_strings.py` gagne une **quatrième passe** — « libellés rendus depuis le code » —
+qui ferme les deux formes par lesquelles le défaut est passé : le littéral en argument
+positionnel (`Text("…")`) et l'arme de `when` (`NETWORK -> "…"`). Les trois passes existantes
+ne regardaient que les paramètres **nommés** (`label = "…"`) et étaient aveugles aux deux.
+
+**Vérifié à l'écran**, émulateur `purple_tv`, catalogue vidé et proxy système pointé sur
+`127.0.0.1:1` pour forcer l'échec réseau :
+
+| support | chemin | affiché |
+|---|---|---|
+| app-tv, langue **fr** | `ContentFailure.NETWORK` | « **Erreur réseau. Vérifiez votre connexion.** » |
+| app-tv, langue **en** | même écran, même données | « **Network error. Please check your connection.** » |
+| app-mobile, langue **fr** | `SetupFailure.INVALID_INPUT` | « **Saisie invalide. Vérifiez vos informations.** » |
+
+Les deux premières lignes sont le **signal discriminant** : avant le correctif le message
+était anglais dans les *deux* langues, puisqu'il ne venait pas des ressources. Le fait qu'il
+suive maintenant la langue de l'application prouve qu'il en vient.
+
+La passe elle-même a été mesurée sur les deux termes : rejouée sur les `ErrorMapping.kt` de
+`HEAD`, elle relève **14 occurrences** (8 armes × 2 UI, `UNKNOWN` compté deux fois) ; sur
+l'arbre corrigé, **aucune**.
+
+⚠️ **Reste à vérifier sur le Pixel 7** (niveau 3) : l'appareil n'était pas branché. La
+mesure ci-dessus a été faite sur l'émulateur, où l'APK mobile a été installé pour l'occasion
+puis désinstallé. Les armes `NOT_FOUND`, `PARSE_ERROR` et `SetupFailure.NETWORK` n'ont pas
+été atteintes une à une — même mécanisme, même passe de contrôle.
 
 
 ## #R7 — app-mobile/shell : la barre d'état tranche avec l'application, et le menu du bas s'en détache

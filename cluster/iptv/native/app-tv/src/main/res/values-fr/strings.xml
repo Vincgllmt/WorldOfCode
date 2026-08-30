@@ -130,4 +130,13 @@
     <string name="tab_movies">FILMS</string>
     <string name="tab_series">SÉRIES</string>
     <string name="tab_live">DIRECT TV</string>
+
+    <!-- #R8 — causes d'échec typées. Elles vivaient en littéraux Kotlin dans
+         ErrorMapping.kt, invisibles pour tools/check_strings.py. -->
+    <string name="error_network">Erreur réseau. Vérifiez votre connexion.</string>
+    <string name="error_not_found">Contenu introuvable.</string>
+    <string name="error_parse">Réponse du serveur illisible.</string>
+    <string name="error_unknown">Une erreur inattendue s’est produite.</string>
+    <string name="setup_error_invalid">Saisie invalide. Vérifiez vos informations.</string>
+    <string name="setup_error_network">Connexion au serveur impossible. Vérifiez vos identifiants.</string>
 </resources>

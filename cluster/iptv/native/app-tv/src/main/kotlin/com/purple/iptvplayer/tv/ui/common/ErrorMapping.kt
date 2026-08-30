@@ -1,20 +1,36 @@
 package com.purple.iptvplayer.tv.ui.common
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.purple.iptvplayer.core.viewmodel.ContentFailure
 import com.purple.iptvplayer.core.viewmodel.SetupFailure
+import com.purple.iptvplayer.tv.R
 
-/** Traduit une cause typée en texte lisible pour l'UI TV.
- *  Remplace les libellés écrits en dur qui vivaient dans le ViewModel.
- *  L'UI conserve la responsabilité du wording. */
-fun ContentFailure.toDisplayString(): String = when (this) {
-    ContentFailure.NETWORK      -> "Network error. Please check your connection."
-    ContentFailure.NOT_FOUND    -> "Content not found."
-    ContentFailure.PARSE_ERROR  -> "Failed to parse response."
-    ContentFailure.UNKNOWN      -> "An unexpected error occurred."
-}
+/**
+ * Traduit une cause typée en texte lisible. L'UI garde la responsabilité du libellé —
+ * `core` ne connaît que la cause.
+ *
+ * ⚠️ **`@Composable` et `stringResource`, pas un littéral** (#R8). Ces libellés étaient
+ * écrits en dur en anglais dans ce fichier, et s'affichaient tels quels au milieu d'une
+ * interface française : « Network error. Please check your connection. » sous un titre
+ * « Ma liste ». `tools/check_strings.py` ne pouvait pas le voir, puisqu'il contrôle la
+ * parité des **ressources** et non les chaînes du code.
+ */
+@Composable
+fun ContentFailure.toDisplayString(): String = stringResource(
+    when (this) {
+        ContentFailure.NETWORK     -> R.string.error_network
+        ContentFailure.NOT_FOUND   -> R.string.error_not_found
+        ContentFailure.PARSE_ERROR -> R.string.error_parse
+        ContentFailure.UNKNOWN     -> R.string.error_unknown
+    }
+)
 
-fun SetupFailure.toDisplayString(): String = when (this) {
-    SetupFailure.INVALID_INPUT -> "Invalid input. Please check your entries."
-    SetupFailure.NETWORK       -> "Could not connect to the server. Please check your credentials."
-    SetupFailure.UNKNOWN       -> "An unexpected error occurred."
-}
+@Composable
+fun SetupFailure.toDisplayString(): String = stringResource(
+    when (this) {
+        SetupFailure.INVALID_INPUT -> R.string.setup_error_invalid
+        SetupFailure.NETWORK       -> R.string.setup_error_network
+        SetupFailure.UNKNOWN       -> R.string.error_unknown
+    }
+)

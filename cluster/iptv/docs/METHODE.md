@@ -104,3 +104,12 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     un épisode vu à 55 %. Avant d'appuyer une décision sur un nombre persisté, se demander
     qui l'a écrit, et quand (§53).
 
+
+23. **Un contrôle automatique ne trouve que la forme qu'on lui a décrite.** `check_strings.py`
+    n'a rien vu de huit messages anglais affichés dans une interface française : il cherchait
+    des paramètres **nommés** (`label = "…"`), et le défaut vivait en argument positionnel
+    (`Text("…")`) et en arme de `when`. Deuxième récidive après §17 et §45. Devant un défaut
+    qu'un contrôle existant aurait dû attraper, la question n'est pas « pourquoi ne l'a-t-il
+    pas vu » mais **« quelle forme ne sait-il pas décrire »** — et l'élargir se paie tout de
+    suite : la passe ajoutée a immédiatement sorti #R9, le même défaut en miroir dans `core`
+    (§66).

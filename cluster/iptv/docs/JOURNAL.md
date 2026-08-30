@@ -75,6 +75,7 @@ numéro.
 | 63 | **#R5 / #R6 corrigés** — `enableEdgeToEdge()` sans consommer les insets : barre supérieure sous la barre d'état, clavier par-dessus le champ. Contient pourquoi `imePadding()` **seul** ne suffit pas, et une conclusion du §58.5 démentie | on touche à une mise en page mobile, à un champ de saisie, ou on veut un exemple de conclusion trop vite tirée |
 | 64 | **#R7 corrigé** — couture de couleur sous la barre d'état (de mon fait, §63) et menu du bas détaché ; contient **comment relever une couture** (ruptures le long d'une colonne) et pourquoi j'ai failli fabriquer un émulateur pour rien | on touche à une couleur de fond, à une barre système, ou on s'apprête à construire un outil pour vérifier |
 | 65 | **#91 corrigé** — « Ma liste » annonçait une liste vide quand le catalogue était injoignable ; `MyListPolicy` dans `core`, TV corrigée aussi. Contient **deux erreurs de montage** qui ont failli faire conclure à un correctif inopérant, et **#R8** ouvert (messages d'échec en anglais dans une UI française) | on touche à un état vide, ou un correctif « ne prend pas » et on s'apprête à le retoucher |
+| 66 | **#R8 corrigé** — huit messages d'échec en anglais dans une interface française ; ils vivaient en littéraux Kotlin, hors ressources. Contient la **quatrième passe** de `check_strings.py` (littéraux rendus depuis le code), la manière de **forcer un échec réseau sans root** (proxy système), et **#R9** ouvert — le miroir : `core` qui écrit des libellés en français | on ajoute un libellé, on doit provoquer une panne réseau sur un appareil, ou `check_strings.py` signale un littéral |
 
 ---
 
@@ -5690,3 +5691,112 @@ chaînes du code. Huit libellés concernés. Ticket **#R8**, ouvert.
 
 C'est la deuxième fois qu'un libellé échappe au contrôle en vivant dans du Kotlin (cf.
 §17) : le contrôle gagnerait à signaler aussi les littéraux rendus par un `@Composable`.
+
+
+---
+
+## 66. #R8 — huit messages d'échec en anglais au milieu d'une interface française *(2026-08-30)*
+
+Relevé en §65 en regardant une capture prise pour tout autre chose. L'application est en
+français, le catalogue est injoignable, et l'écran affiche « **Network error. Please check
+your connection.** »
+
+### Ce qui n'allait pas
+
+Les causes typées `ContentFailure` / `SetupFailure` avaient été introduites proprement —
+`core` ne connaît que la cause, l'UI garde le libellé. Mais le libellé avait été écrit **en
+dur dans le Kotlin de chaque UI** au lieu d'aller dans `strings.xml` :
+
+```kotlin
+fun ContentFailure.toDisplayString(): String = when (this) {
+    ContentFailure.NETWORK -> "Network error. Please check your connection."
+    …
+```
+
+Huit armes, deux fichiers jumeaux, aucune traduction possible. Le contrôle de libellés ne
+pouvait pas les voir : il vérifie la **parité des ressources**, et ces chaînes n'étaient pas
+des ressources.
+
+### La correction
+
+Six clés (`UNKNOWN` est partagé par les deux causes), déclarées dans les quatre
+`strings.xml`, et `toDisplayString()` qui devient `@Composable` pour rendre un
+`stringResource`. Les vingt-cinq appels étaient déjà en contexte composable — le
+compilateur l'a confirmé sans une seule retouche d'appelant.
+
+### Le vrai sujet : le contrôle était aveugle par construction
+
+C'était la **deuxième fois** qu'un libellé échappait au contrôle en vivant dans du Kotlin
+(§17, §45). La raison est structurelle : les trois passes de `check_strings.py` ne
+cherchaient que des paramètres **nommés** —
+
+```python
+LABEL_PARAMS = ("label", "name", "title", "text", "hint", "message")
+pattern = rf'\b({"|".join(LABEL_PARAMS)})\s*=\s*"([^"$]{{3,}})"'
+```
+
+— alors que les deux formes qui livrent réellement le défaut n'en portent aucun :
+`Text("Network error…")`, en argument **positionnel**, et l'arme de `when`
+`NETWORK -> "Network error…"`. D'où une quatrième passe, « libellés rendus depuis le
+code », qui vise ces deux formes.
+
+**Mesurée sur les deux termes**, ce qui est le seul moyen de savoir qu'elle peut échouer :
+rejouée sur les `ErrorMapping.kt` de `HEAD` (reconstitués dans un arbre jetable par
+`git show`, sans toucher au dépôt), elle relève **14 occurrences** ; sur l'arbre corrigé,
+**aucune**.
+
+Elle a rapporté davantage que ce qu'on lui demandait : quinze relevés sur l'arbre corrigé,
+dont onze réels — c'est **#R9**, le miroir exact de #R8. `BillingRepository` construit sept
+messages de facturation **en français** dans `core`, et `HomeScreen` étiquette « Films » /
+« Séries » / « Direct TV » en littéraux. Un contrôle qui ne trouve que ce qu'on lui a
+demandé de chercher n'a pas été assez ouvert.
+
+### Provoquer une panne réseau sur un appareil non rooté
+
+L'émulateur Android TV est une image de production : `adb root` est refusé, donc ni
+`iptables` ni `ifconfig`. Et le mode avion **ne coupe pas** la route NAT de l'émulateur —
+mesuré, `ping 8.8.8.8` répond encore avec `airplane_mode_on = 1`.
+
+Ce qui marche, sans root :
+
+```bash
+adb shell settings put global http_proxy 127.0.0.1:1   # toute requête HTTP est refusée
+adb shell settings delete global http_proxy            # à ne pas oublier
+```
+
+Deuxième piège, celui du §65 : **le cache sert le catalogue** et l'écran d'erreur n'apparaît
+jamais. Il faut vider le cache seul, sans toucher aux identifiants — `pm clear` les
+emporterait :
+
+```bash
+adb shell "run-as <pkg> sh -c 'rm -rf /data/data/<pkg>/cache/*'"
+```
+
+### Ce qui a été vu à l'écran
+
+| support | chemin | affiché |
+|---|---|---|
+| app-tv, langue **fr** | `ContentFailure.NETWORK` | « **Erreur réseau. Vérifiez votre connexion.** » |
+| app-tv, langue **en** | même écran, mêmes données | « **Network error. Please check your connection.** » |
+| app-mobile, langue **fr** | `SetupFailure.INVALID_INPUT` | « **Saisie invalide. Vérifiez vos informations.** » |
+
+Les deux premières lignes portent tout le poids de la preuve. « Le message est en français »
+ne discrimine rien — un littéral français aurait donné le même résultat. **Le message qui
+suit la langue de l'application**, lui, ne peut venir que des ressources. Avant le
+correctif, il était anglais dans les deux langues.
+
+La langue se force sans passer par l'interface, `LocaleHelper` lisant une préférence :
+
+```bash
+adb shell "run-as <pkg> sed -i 's|>fr<|>en<|' /data/data/<pkg>/shared_prefs/purple_locale.xml"
+```
+
+⚠️ `sed 's/…/…/'` avec des `/` dans le motif casse ; et écrire ce XML par `printf` à travers
+`adb shell` double les apostrophes. Passer par `adb push` + `cat | run-as sh -c 'cat > …'`.
+
+### Reste à vérifier
+
+Le **Pixel 7 n'était pas branché** : le niveau 3 n'a pas été fait. L'APK mobile a été
+installé sur l'émulateur TV pour l'occasion — ce qui a permis de mesurer la moitié
+`SetupFailure` que l'app TV n'exerçait pas — puis désinstallé. Les armes `NOT_FOUND`,
+`PARSE_ERROR` et `SetupFailure.NETWORK` n'ont pas été atteintes une à une.
