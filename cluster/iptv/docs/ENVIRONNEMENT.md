@@ -171,3 +171,32 @@ echo 'cluster/iptv/native/local.properties' >> .gitignore
 ```
 
 ---
+
+---
+
+## Servir un catalogue à l'émulateur, sans le fournisseur
+
+L'IP du fournisseur est bloquée depuis ce poste en Wi-Fi (§8), ce qui interdit tout
+scénario ayant besoin d'un catalogue — et donc tout ce qui passe par la lecture d'un média,
+barrière d'achat comprise.
+
+```bash
+mkdir -p /tmp/srv && cat > /tmp/srv/list.m3u <<'EOF'
+#EXTM3U
+#EXTINF:-1 tvg-name="Canal Test 1" group-title="DEMO",Canal Test 1
+http://127.0.0.1:8099/flux1.ts
+EOF
+cd /tmp/srv && python3 -m http.server 8099 --bind 127.0.0.1 &
+adb reverse tcp:8099 tcp:8099      # 127.0.0.1:8099 du device → hôte
+adb reverse --remove tcp:8099      # à ne pas oublier
+```
+
+⚠️ **Mesuré le 2026-08-30 : le serveur reçoit bien le `GET`, mais l'application refuse le
+lien** (« Connexion au serveur impossible »). `IptvRepository.doValidate` valide un M3U par
+un `apiClient.head(host)` exigeant `200`, et le journal du serveur ne montre **aucun
+HEAD** — alors qu'un `curl -I` répond `200`. Écart non élucidé ; la recette est notée telle
+quelle, avec sa limite (§68).
+
+⚠️ `pgrep -f "http.server"` **matche votre propre ligne de commande** et fait croire que le
+serveur tourne encore. Même piège que `pkill -f "[q]emu-system"` : utiliser la classe de
+caractères, ou tuer par PID relevé avec `pgrep -af`.

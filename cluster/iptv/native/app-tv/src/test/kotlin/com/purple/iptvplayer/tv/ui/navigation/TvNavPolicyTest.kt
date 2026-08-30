@@ -134,9 +134,27 @@ class TvNavPolicyTest {
 
     @Test
     fun `avec des offres la barriere expose une carte par offre`() {
-        assertEquals(3, TvPurchaseAccess.focusableCount(blocking = true, offerCount = 3, loading = false))
+        // 3 cartes + « Restaurer mes achats », désormais rendu dans les deux branches (#71).
+        assertEquals(4, TvPurchaseAccess.focusableCount(blocking = true, offerCount = 3, loading = false))
         // Hors barrière, « Plus tard » s'ajoute.
-        assertEquals(4, TvPurchaseAccess.focusableCount(blocking = false, offerCount = 3, loading = false))
+        assertEquals(5, TvPurchaseAccess.focusableCount(blocking = false, offerCount = 3, loading = false))
+    }
+
+    /**
+     * #71 — la restauration doit être atteignable **quel que soit** l'état des offres.
+     *
+     * Le test qui manquait : l'ancien décompte était juste pour la branche « pas d'offre »
+     * et passait donc, tout en encodant la règle fausse. Comparer les deux branches à
+     * offre près est le signal discriminant.
+     */
+    @Test
+    fun `restaurer ses achats reste atteignable avec ou sans offre`() {
+        for (blocking in listOf(true, false)) {
+            val sansOffre = TvPurchaseAccess.focusableCount(blocking, offerCount = 0, loading = false)
+            val avecOffres = TvPurchaseAccess.focusableCount(blocking, offerCount = 3, loading = false)
+            // Sans offre : « Réessayer » + « Restaurer ». Avec offres : 3 cartes + « Restaurer ».
+            assertEquals("blocking=$blocking", sansOffre - 1 + 3, avecOffres)
+        }
     }
 
     /** Aucun état durable ne doit tomber à zéro focalisable, barrière ou non. */

@@ -212,13 +212,19 @@ object TvPurchaseAccess {
      */
     fun focusableCount(blocking: Boolean, offerCount: Int, loading: Boolean): Int {
         val dismiss = if (allowsDismiss(blocking)) 1 else 0
+        // « Restaurer mes achats » est rendu par l'écran dès qu'il ne charge plus, quelle
+        // que soit la branche (#71). Il n'était offert qu'en l'absence d'offre, c'est-à-dire
+        // au moment où la facturation est en panne et où il a le moins de chances
+        // d'aboutir ; dans le cas nominal, un abonné dont le droit n'avait pas été
+        // resynchronisé n'avait d'autre choix que de repayer.
+        val restore = if (loading) 0 else 1
         return when {
             // Le chargement est transitoire : un compteur à zéro y est acceptable.
             loading        -> dismiss
-            offerCount > 0 -> dismiss + offerCount
+            offerCount > 0 -> dismiss + offerCount + restore
             // Repli obligatoire : « Réessayer » + « Restaurer mes achats ». C'est lui qui
             // garantit l'invariant testé par `une barriere sans offre reste manipulable`.
-            else           -> dismiss + 2
+            else           -> dismiss + 1 + restore
         }
     }
 }

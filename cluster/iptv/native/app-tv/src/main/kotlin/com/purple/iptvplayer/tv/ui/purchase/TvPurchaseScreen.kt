@@ -59,8 +59,19 @@ fun TvPurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
     val loading  = state is PurchaseScreenState.Loading
     val entryFocus = remember { FocusRequester() }
 
-    LaunchedEffect(state) {
-        if (state is PurchaseScreenState.PurchaseSuccess) onSuccess()
+    // #72 — `TvNavGraph` est un `when (screen)` sans back-stack : le `ViewModelStoreOwner`
+    // est l'Activity, donc ce ViewModel **survit** à la fermeture de l'écran. Un
+    // `PurchaseSuccess` hérité d'un achat précédent refermait l'écran dès la première
+    // composition : le badge du rail paraissait inerte et un abonné mensuel ne pouvait
+    // plus passer à l'offre à vie. On consomme l'état terminal, puis seulement on arme
+    // la sortie — `armed` garantit qu'aucune valeur héritée ne peut la déclencher.
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        vm.resetState()
+        armed = true
+    }
+    LaunchedEffect(state, armed) {
+        if (armed && state is PurchaseScreenState.PurchaseSuccess) onSuccess()
     }
 
     // Le focus d'arrivée va à l'ACTION, jamais à la sortie. Sur la barrière c'est vital :
@@ -112,12 +123,8 @@ fun TvPurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     // Repli obligatoire : sans lui, une barrière sans offre n'aurait plus
                     // aucun focalisable. Cf. TvPurchaseAccess.focusableCount.
                     products.isEmpty() -> {
-                        // Toujours la cause typée : le champ `message` qui passait devant
-                        // portait du français fabriqué dans `core` (#R9, §67).
-                        val err = state as? PurchaseScreenState.PurchaseError
                         Text(
-                            err?.reason?.let { stringResource(it.labelRes()) }
-                                ?: stringResource(R.string.purchase_none),
+                            stringResource(R.string.purchase_none),
                             color = TvTextSub, textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(8.dp))
@@ -126,10 +133,6 @@ fun TvPurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                             onClick   = { vm.loadProducts() },
                             emphasise = true,
                             modifier  = Modifier.focusRequester(entryFocus),
-                        )
-                        TvSecondaryButton(
-                            label   = stringResource(R.string.action_restore),
-                            onClick = { vm.restorePurchases() },
                         )
                     }
 
@@ -141,6 +144,28 @@ fun TvPurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                             modifier  = if (index == 0) Modifier.focusRequester(entryFocus) else Modifier,
                         )
                     }
+                }
+
+                // #73 — l'échec appartient à l'ÉCRAN, pas à la branche « pas d'offre ».
+                // Câblé là où il avait été motivé, il était invisible dans le cas
+                // nominal : l'utilisateur choisissait une formule, voyait le voile
+                // « Paiement en cours… » disparaître, et rien d'autre.
+                if (!loading) {
+                    (state as? PurchaseScreenState.PurchaseError)?.let { err ->
+                        Text(
+                            stringResource(err.reason.labelRes()),
+                            color = TvColorError, textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    // #71 — la restauration n'était offerte que lorsque la facturation
+                    // était en panne, c'est-à-dire quand elle avait le moins de chances
+                    // d'aboutir. Un abonné dont le droit n'a pas été resynchronisé (§32)
+                    // n'avait, dans le cas nominal, que le choix de repayer.
+                    TvSecondaryButton(
+                        label   = stringResource(R.string.action_restore),
+                        onClick = { vm.restorePurchases() },
+                    )
                 }
             }
         }

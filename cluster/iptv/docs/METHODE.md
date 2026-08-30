@@ -113,3 +113,10 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     pas vu » mais **« quelle forme ne sait-il pas décrire »** — et l'élargir se paie tout de
     suite : la passe ajoutée a immédiatement sorti #R9, le même défaut en miroir dans `core`
     (§66).
+
+24. **Avant de photographier un écran, se demander ce qu'il pré-remplit.** L'écran de
+    connexion TV affiche `purple.defaultM3u` de `local.properties` — les identifiants réels
+    de l'utilisateur, en clair, dans toute capture. Découper le champ hors de l'image, ou
+    remplacer le lien avant de capturer. Même leçon que le §52 (notification privée) par un
+    autre chemin : ce qui est dangereux dans une capture n'est pas toujours ce qu'on est
+    venu regarder (§68).

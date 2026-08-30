@@ -77,6 +77,7 @@ numéro.
 | 65 | **#91 corrigé** — « Ma liste » annonçait une liste vide quand le catalogue était injoignable ; `MyListPolicy` dans `core`, TV corrigée aussi. Contient **deux erreurs de montage** qui ont failli faire conclure à un correctif inopérant, et **#R8** ouvert (messages d'échec en anglais dans une UI française) | on touche à un état vide, ou un correctif « ne prend pas » et on s'apprête à le retoucher |
 | 66 | **#R8 corrigé** — huit messages d'échec en anglais dans une interface française ; ils vivaient en littéraux Kotlin, hors ressources. Contient la **quatrième passe** de `check_strings.py` (littéraux rendus depuis le code), la manière de **forcer un échec réseau sans root** (proxy système), et **#R9** ouvert — le miroir : `core` qui écrit des libellés en français | on ajoute un libellé, on doit provoquer une panne réseau sur un appareil, ou `check_strings.py` signale un littéral |
 | 67 | **#R9 (1) et (2) corrigés** — `core` fabriquait sept messages de facturation **en français** ; et surtout `PurchaseError.message`, documenté « déjà localisé par Play », **passait devant** la cause typée et rendait trois ressources traduites quasi inatteignables. Contient `BillingPolicy` (table de codes Play en objet pur) et pourquoi l'écran d'achat n'a pas pu être atteint sur l'émulateur | on touche à la facturation, à `PurchaseScreenState`, ou on lit un champ documenté « déjà localisé » |
+| 68 | **#70 à #73 corrigés** — l'écran d'achat TV : un succès de restauration écrasé par `Idle` (barrière sans issue), « Restaurer » offert seulement quand la facturation est en panne, un succès hérité qui refermait l'écran, un échec invisible dès qu'il y a des offres. Contient **comment servir un catalogue local** à l'émulateur (`adb reverse` + `http.server`) et ce que cette voie n'a pas permis de faire | on touche à `TvPurchaseScreen`, à un `LaunchedEffect(state)`, ou on a besoin d'un catalogue sur l'émulateur |
 
 ---
 
@@ -5883,3 +5884,100 @@ cette machine. À reprendre sur une build installée depuis Play.
 Les badges « SAVE 58% » et « BEST DEAL », relevés par la même passe, appartiennent à
 **#129** et **#130**, ouverts avant celle-ci. Les corriger ici aurait fait le travail deux
 fois et brouillé la trace.
+
+
+---
+
+## 68. #70 à #73 — l'écran d'achat TV, quatre défauts et une seule structure *(2026-08-30)*
+
+Quatre entrées de l'audit, un seul écran, et surtout **deux causes** qui se répètent. Les
+traiter séparément aurait fait toucher le même fichier quatre fois.
+
+### Cause 1 — ce qui appartient à l'écran était câblé dans une branche (#71, #73)
+
+`TvPurchaseScreen` choisit entre trois rendus : chargement, « pas d'offre », cartes
+d'offres. Deux éléments qui n'ont rien à voir avec ce choix vivaient dans la branche
+« pas d'offre » :
+
+| élément | où il était | ce que ça coûtait |
+|---|---|---|
+| « Restaurer mes achats » | branche `products.isEmpty()` | offert **uniquement quand la facturation est en panne**, c'est-à-dire au moment où il a le moins de chances d'aboutir. Dans le cas nominal, un abonné dont le droit n'avait pas été resynchronisé (§32) n'avait d'autre choix que **de repayer**. |
+| le message d'échec | idem | invisible dès qu'il y a des offres : l'utilisateur choisit une formule, voit le voile « Paiement en cours… » disparaître, et **rien**. |
+
+Le motif est identique dans les deux cas, et il est instructif : chacun avait été écrit là
+**où il avait été motivé** — le bouton comme filet anti-écran-mort, le message pour le cas
+« aucune offre » du §43 — et avait hérité de la condition d'affichage de son motif plutôt
+que de la sienne. Ce n'est pas un oubli, c'est un raisonnement local qu'on n'a pas relu de
+plus haut.
+
+Les deux remontent au niveau de l'écran. `TvPurchaseAccess.focusableCount` encodait
+l'ancienne règle : mis à jour, sinon il aurait continué à passer **tout en étant faux**.
+
+### Cause 2 — un état terminal qui survit à son écran (#70, #72)
+
+**#70.** `restorePurchases()` finissait par `_state.value = when { … else -> Idle }`. Or
+une restauration qui aboutit fait émettre `PurchaseResult.Success` par
+`syncEntitlements()`, que le collecteur traduit en `PurchaseSuccess` — **le seul état qui
+referme la barrière**. L'écriture d'`Idle` l'écrasait : l'accès était rendu côté
+`TrialRepository`, et l'abonné restait devant la barrière sans aucune sortie, à devoir
+tuer l'application.
+
+Et l'issue était **intermittente** : si une recomposition tombait entre les deux écritures,
+`onSuccess()` partait et tout allait bien. C'est-à-dire le défaut qu'un essai manuel
+déclare corrigé une fois sur deux.
+
+La correction n'est pas « écrire autre chose » mais **ne rien écrire** — et c'est
+précisément ce qu'un objet pur permet de nommer :
+
+```kotlin
+RestorePolicy.Decision.RESTORED -> Unit
+```
+
+Le test qui compte n'est pas la table : c'est celui qui distingue `getOrNull() == null`
+(l'appel a levé) de `== 0` (le compte ne possède rien). Décider sur le seul `== 0` faisait
+tomber un échec dans la branche « succès ».
+
+**#72.** `TvNavGraph` est un `when (screen)` sans back-stack : le `ViewModelStoreOwner` est
+l'Activity, donc `PurchaseViewModel` **survit** à la fermeture de l'écran. Un
+`PurchaseSuccess` hérité d'un achat précédent refermait l'écran dès la première
+composition — le badge du rail paraissait inerte, et un abonné mensuel ne pouvait plus
+passer à l'offre à vie. `resetState()` existait depuis toujours et n'était appelé par
+personne : la neuvième occurrence du motif « déclaré mais jamais branché ».
+
+⚠️ **L'appeler ne suffit pas.** `LaunchedEffect(state)` lit la valeur **capturée à la
+composition** : la remise à zéro a beau s'exécuter avant, l'effet part quand même sur
+l'état hérité. D'où un drapeau `armed`, posé après la remise à zéro, qui rend une valeur
+héritée structurellement incapable de déclencher la sortie.
+
+### Servir un catalogue local à l'émulateur
+
+Pour atteindre l'écran d'achat il faut une barrière, donc une lecture, donc un catalogue —
+et l'IP du fournisseur est bloquée depuis ce poste (§8). La voie qui marche :
+
+```bash
+python3 -m http.server 8099 --bind 127.0.0.1   # un .m3u de deux chaînes suffit
+adb reverse tcp:8099 tcp:8099                  # 127.0.0.1:8099 du device → hôte
+```
+
+Le serveur **a bien été appelé** (`GET /list.m3u 200`). L'application a pourtant répondu
+« Connexion au serveur impossible ». `IptvRepository.doValidate` valide un M3U par un
+`apiClient.head(host)` en exigeant `200` ; or le journal du serveur ne montre **aucun
+HEAD**, alors qu'un `curl -I` sur la même URL répond `200`. Il y a là un écart entre ce que
+le code dit faire et ce qui part sur le réseau — **non élucidé, hors périmètre de ce lot**,
+mais c'est une piste sérieuse pour qui reprendra la validation M3U.
+
+### Ce qui reste non vu
+
+L'écran d'achat n'a **pas** été atteint : troisième mur d'affilée après #R9. Le lot est
+vérifié au niveau 1 — 315 tests, dont six écrits pour ce lot et choisis pour pouvoir
+échouer — et pas à l'écran.
+
+Un gain incident, tout de même : l'écran de connexion TV a affiché « **Connexion au serveur
+impossible. Vérifiez vos identifiants.** », soit `setup_error_network`, l'une des six
+ressources de **#R8** que §66 notait « non atteinte ». Elle l'est.
+
+⚠️ **Incident de confidentialité, deuxième forme.** L'écran de connexion TV **pré-remplit**
+le champ avec `purple.defaultM3u` de `local.properties`, qui contient les identifiants
+réels de l'utilisateur : la capture les montrait en clair. Fichier supprimé aussitôt. Ce
+n'est pas le §52 (une notification privée) mais la même leçon sur un autre chemin : **sur
+cet écran, découper le champ hors de la capture ou remplacer le lien avant de photographier.**

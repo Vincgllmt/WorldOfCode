@@ -875,6 +875,12 @@ L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en
 
 **Piste.** faire de la restauration réussie un état **terminal** au lieu d'un retour numérique écrasé — soit ne pas réécrire `_state` quand le collecteur a déjà posé `PurchaseSuccess`, soit renvoyer le `productId` restauré et poser `PurchaseSuccess` explicitement. À distinguer du ticket #47, qui traite l'absence de tout résultat ; ici le résultat arrive et est détruit.
 
+**✅ Corrigé le 2026-08-30 (§68).** La décision sort en objet pur — `RestorePolicy` — et
+elle nomme explicitement le cas qui manquait : **RESTORED = ne rien écrire**. Le succès est
+déjà en route par le collecteur ; toute écriture au retour de l'appel, fût-ce `Idle`,
+l'écrase. Cinq tests, dont un qui distingue `getOrNull() == null` (l'appel a levé) de
+`== 0` (le compte ne possède rien) — c'est le piège qui faisait tomber un échec dans la
+branche « succès ».
 
 ## #71 — app-tv/purchase : offrir « Restaurer mes achats » aussi quand les offres se chargent, pas seulement quand elles échouent
 
@@ -888,6 +894,11 @@ L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en
 
 **Piste.** sortir « Restaurer mes achats » du `when` et le rendre dans les deux branches (sous les cartes sur la branche nominale). Vérifier au passage `TvPurchaseAccess.focusableCount` (TvNavPolicy.kt:213-223), dont le décompte encode l'ancienne règle et cesserait d'être vrai. Note : `app-mobile` n'expose ce bouton **nulle part** — même défaut, en pire.
 
+**✅ Corrigé le 2026-08-30 (§68).** « Restaurer mes achats » est rendu par l'écran dès
+qu'il ne charge plus, dans les deux branches. `TvPurchaseAccess.focusableCount` est mis à
+jour — il encodait l'ancienne règle et serait devenu faux — et un test compare désormais
+les deux branches à offre près, ce que l'ancien décompte ne pouvait pas faire.
+`app-mobile` n'expose toujours ce bouton nulle part : c'est **#127**, laissé ouvert.
 
 ## #72 — app-tv/purchase : réinitialiser l'état d'achat à l'entrée, sinon l'écran se referme aussitôt sur un succès hérité
 
@@ -901,6 +912,11 @@ L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en
 
 **Piste.** consommer l'état terminal — remettre à `Idle` à l'entrée de l'écran, ou n'agir que sur une transition vers `PurchaseSuccess` plutôt que sur sa valeur. Un `LaunchedEffect(Unit) { vm.resetState() }` naïf entrerait en course avec le collecteur d'achats : à traiter côté ViewModel.
 
+**✅ Corrigé le 2026-08-30 (§68).** `resetState()` existait et n'était appelé par personne ;
+il l'est à l'entrée de l'écran. Un simple appel n'aurait pas suffi : le `LaunchedEffect`
+qui surveille l'état lit la valeur capturée à la composition, donc l'état hérité serait
+quand même parti. La sortie est **armée** après la remise à zéro, ce qui rend une valeur
+héritée structurellement incapable de la déclencher.
 
 ## #73 — app-tv/purchase : afficher l'échec d'un achat, aujourd'hui invisible dès que des offres sont présentes
 
@@ -914,6 +930,13 @@ L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en
 
 **Piste.** sortir le rendu de `PurchaseError` du `when` sur les offres et le placer au niveau de l'écran (bandeau ou texte sous les cartes), en gardant l'ordre `message` (Play, localisé) puis `reason.labelRes()` déjà écrit en :117-120.
 
+**✅ Corrigé le 2026-08-30 (§68).** Le rendu de l'échec sort du `when` sur les offres et
+passe au niveau de l'écran.
+
+⚠️ **La piste ci-dessus est périmée sur un point** : elle demandait de garder l'ordre
+`message` puis `reason.labelRes()`. Le champ `message` a été **supprimé** entre-temps par
+**#R9** (§67) — il ne portait pas un texte « déjà localisé par Play » mais du français
+fabriqué dans `core`, et il masquait la cause typée. Seule la cause est rendue.
 
 ## #74 — app-tv/purchase : sortir en ressources les libellés de formule, restés en anglais alors que le mobile les a déjà traduits
 

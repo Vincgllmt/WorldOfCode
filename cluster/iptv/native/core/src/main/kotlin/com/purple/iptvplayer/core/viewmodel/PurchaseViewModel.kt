@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
 import com.purple.iptvplayer.core.data.BillingRepository
 import com.purple.iptvplayer.core.data.PurchaseFailure
+import com.purple.iptvplayer.core.data.RestorePolicy
 import com.purple.iptvplayer.core.data.PurchaseResult
 import com.purple.iptvplayer.core.data.TrialRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,10 +96,16 @@ class PurchaseViewModel(
         _remainingDays.value = trialRepo.getRemainingDays()
         // Une restauration qui ne trouve rien doit le dire : rester silencieuse
         // laissait croire à un échec de l'application.
-        _state.value = when {
-            outcome.isFailure     -> PurchaseScreenState.PurchaseError(PurchaseFailure.RESTORE_FAILED)
-            outcome.getOrNull() == 0 -> PurchaseScreenState.PurchaseError(PurchaseFailure.NOTHING_TO_RESTORE)
-            else                  -> PurchaseScreenState.Idle
+        when (RestorePolicy.decide(outcome.isFailure, outcome.getOrNull())) {
+            RestorePolicy.Decision.FAILED ->
+                _state.value = PurchaseScreenState.PurchaseError(PurchaseFailure.RESTORE_FAILED)
+            RestorePolicy.Decision.NOTHING_TO_RESTORE ->
+                _state.value = PurchaseScreenState.PurchaseError(PurchaseFailure.NOTHING_TO_RESTORE)
+            // #70 : surtout ne rien écrire. `syncEntitlements()` a déjà émis
+            // `PurchaseResult.Success`, que le collecteur traduit en `PurchaseSuccess` —
+            // le seul état qui referme la barrière. Le `Idle` qui était posé ici écrasait
+            // ce succès et enfermait l'abonné devant la barrière.
+            RestorePolicy.Decision.RESTORED -> Unit
         }
     }
 
