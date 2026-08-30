@@ -14,7 +14,7 @@ Dernière mise à jour : 2026-08-28
 > | **Que corriger ensuite** — 100 défauts sourcés à la ligne, triés par gravité | [`docs/audit.md`](docs/audit.md) |
 > | **Builder, installer, piloter un appareil** — JDK, SDK, `adb`, émulateur, build d'auteur | [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md) |
 > | **Comment valider** — les trois niveaux en détail, l'outillage, les conventions | [`docs/TESTS.md`](docs/TESTS.md) |
-> | **Ce qu'un geste a déjà coûté** — 24 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
+> | **Ce qu'un geste a déjà coûté** — 26 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
 > | **Le diagnostic d'un sujet déjà traité** — mesures, traces, corrections de correction | [`docs/JOURNAL.md`](docs/JOURNAL.md) (index en tête) |
 > | **Facturation, sécurité, publication, dette** | [`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) |
 > | **Les 28 défauts du D-pad, en spécifications** | [`docs/PLAN_CORRECTION_TV.md`](docs/PLAN_CORRECTION_TV.md) |
@@ -175,7 +175,7 @@ Robolectric a été écarté : [`docs/TESTS.md`](docs/TESTS.md).
 ## 5. Où en est le chantier
 
 **La file de travail est [`docs/audit.md`](docs/audit.md)** : 100 défauts relevés par
-lecture systématique, sourcés `fichier:ligne`, plus 9 relevés à l'usage (#R1 à #R9) — 6 critiques /
+lecture systématique, sourcés `fichier:ligne`, plus 11 relevés à l'usage (#R1 à #R11) — 6 critiques /
 43 majeurs / 53 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
 renvoi vers la section du journal qui porte le diagnostic.
 
@@ -216,7 +216,7 @@ et de `app-tv` (jamais publiée), dette connue — est dans
 
 ## 6. Les cinq pièges qui ont coûté le plus cher
 
-Les 24 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
+Les 26 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
 paient à chaque fois qu'on les oublie.
 
 1. **Une décision écrite deux fois, une par UI, finit toujours par diverger** — seule une

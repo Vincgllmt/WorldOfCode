@@ -120,3 +120,15 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     remplacer le lien avant de capturer. Même leçon que le §52 (notification privée) par un
     autre chemin : ce qui est dangereux dans une capture n'est pas toujours ce qu'on est
     venu regarder (§68).
+
+25. **Un garde qui décide de deux choses doit être testé sur les deux.** `TvLongPressGuard`
+    décidait *quand avaler* un relâchement **et** *quand armer* la fenêtre. Trois tests
+    couvraient la première, aucun la seconde — et c'est la seconde qui était fausse : elle
+    armait sur les répétitions de la touche encore enfoncée. Un garde testé là où il est
+    juste n'est pas testé. Devant un `onPreviewKeyEvent`, énumérer les décisions avant
+    d'écrire les cas (§69).
+
+26. **Lire la sortie entière de l'outil qu'on vient de lancer.** `aapt2 dump badging`
+    annonçait `banner='res/FL.xml'` — une bannière de lanceur qui est un XML et non une
+    image est déjà l'anomalie. Je lisais cette ligne pour la version et la signature ; le
+    défaut y était écrit et l'utilisateur l'a trouvé avant moi (§69).

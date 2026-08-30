@@ -157,7 +157,29 @@ object TvLongPressGuard {
         key == Key.DirectionCenter || key == Key.Enter || key == Key.NumPadEnter
 
     /**
-     * @param armed un appui a déjà été vu dans cette fenêtre.
+     * Cet appui arme-t-il la fenêtre — c'est-à-dire : est-ce un appui **neuf** ?
+     *
+     * ⚠️ **C'est la moitié qui manquait**, et le défaut a resurgi à l'usage : « retirer un
+     * contenu de *Reprendre la lecture* ne fonctionne pas bien ». La touche `OK` est
+     * **encore enfoncée** quand le dialogue s'ouvre — `onLongClick` part au `repeatCount`
+     * 1 — et ses **répétitions automatiques** (`repeatCount` 2, 3, 4…) sont alors délivrées
+     * au dialogue. En armant sur n'importe quel appui, on armait sur ces répétitions-là,
+     * qui appartiennent pourtant à la pression *précédente* : le relâchement n'était donc
+     * plus avalé, et « Annuler » se validait seul.
+     *
+     * Le garde ne marchait que si l'utilisateur relâchait avant la première répétition —
+     * d'où un défaut **intermittent**, qui « fonctionne mal » au lieu de ne pas marcher.
+     *
+     * Un appui neuf porte `repeatCount == 0`. C'est le seul qui appartienne à cette
+     * fenêtre.
+     *
+     * @param repeatCount `KeyEvent.getRepeatCount()` de l'événement natif.
+     */
+    fun arms(key: Key, type: KeyEventType, repeatCount: Int): Boolean =
+        isConfirmKey(key) && type == KeyEventType.KeyDown && repeatCount == 0
+
+    /**
+     * @param armed un appui **neuf** a déjà été vu dans cette fenêtre — cf. [arms].
      * @return `true` si l'événement doit être **avalé** au lieu d'être remis au bouton.
      */
     fun swallows(key: Key, type: KeyEventType, armed: Boolean): Boolean =

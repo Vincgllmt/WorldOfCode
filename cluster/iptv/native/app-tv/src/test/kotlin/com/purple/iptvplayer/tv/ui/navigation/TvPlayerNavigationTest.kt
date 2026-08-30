@@ -110,6 +110,59 @@ class TvPlayerNavigationTest {
         assertFalse(TvLongPressGuard.isConfirmKey(Key.DirectionDown))
     }
 
+    // ── Retirer de « Reprendre la lecture » : la répétition n'est pas un appui ──────
+
+    /**
+     * Rejoue la séquence réelle d'un appui long sur la télécommande.
+     *
+     * Le défaut signalé à l'usage : « retirer un contenu de *Reprendre la lecture* ne
+     * fonctionne pas bien ». La touche `OK` est encore enfoncée quand le dialogue s'ouvre
+     * (`onLongClick` part au `repeatCount` 1) ; ses **répétitions automatiques** sont donc
+     * délivrées au dialogue. Le garde armait sur n'importe quel appui, donc sur
+     * celles-là — et le relâchement n'était plus avalé : « Annuler » se validait seul.
+     *
+     * Ce test est le signal discriminant que les précédents n'avaient pas : ils ne
+     * vérifiaient que `swallows`, jamais **quand** on arme.
+     */
+    @Test
+    fun `une repetition de la pression tenue n arme pas le dialogue`() {
+        var armed = false
+
+        // Répétitions de l'appui qui a ouvert le dialogue : elles arrivent ici, mais
+        // appartiennent à la pression précédente.
+        for (repeat in 2..6) {
+            if (TvLongPressGuard.arms(Key.DirectionCenter, KeyEventType.KeyDown, repeat)) armed = true
+        }
+        assertFalse("une répétition ne doit pas armer", armed)
+
+        // Le relâchement de cette même pression doit donc être avalé.
+        assertTrue(
+            "le relâchement de l'appui long doit être avalé",
+            TvLongPressGuard.swallows(Key.DirectionCenter, KeyEventType.KeyUp, armed),
+        )
+    }
+
+    /** Un appui délibéré dans le dialogue, lui, arme — sinon plus rien ne se valide. */
+    @Test
+    fun `un appui neuf arme le dialogue et laisse passer son relachement`() {
+        var armed = false
+        if (TvLongPressGuard.arms(Key.DirectionCenter, KeyEventType.KeyDown, 0)) armed = true
+
+        assertTrue("un appui neuf doit armer", armed)
+        assertFalse(
+            "le relâchement d'un appui neuf doit atteindre le bouton",
+            TvLongPressGuard.swallows(Key.DirectionCenter, KeyEventType.KeyUp, armed),
+        )
+    }
+
+    @Test
+    fun `seules les touches de validation arment`() {
+        assertFalse(TvLongPressGuard.arms(Key.DirectionDown, KeyEventType.KeyDown, 0))
+        assertFalse(TvLongPressGuard.arms(Key.Back, KeyEventType.KeyDown, 0))
+        // Un relâchement n'arme jamais : c'est l'appui qui arme.
+        assertFalse(TvLongPressGuard.arms(Key.DirectionCenter, KeyEventType.KeyUp, 0))
+    }
+
     // ── Un synopsis défile, puis rend la touche ──────────────────────────────
 
     @Test

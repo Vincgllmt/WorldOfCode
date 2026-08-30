@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **9 relevés à l'usage** (#R1 à #R9), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **11 relevés à l'usage** (#R1 à #R11), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -200,6 +200,61 @@ Le clavier commence à **y = 1352** : il recouvre 58 des 74 pixels du champ — 
 Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, appui direct sur le bouton, connexion établie (336 chaînes) — sans un seul geste de défilement.
 
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
+
+
+## #R11 — app-tv : le garde d'appui long s'arme sur les répétitions de la pression qui l'a ouvert
+
+`app-tv/movies`
+
+**Symptôme.** Remonté par l'utilisateur : « la fonctionnalité pour retirer du contenu de
+*Reprendre la lecture* ne fonctionne pas bien ». C'est la **deuxième** remontée sur ce
+geste : la première, « l'encart s'ouvre bien mais lorsque je lâche le bouton il
+disparaît », avait reçu un correctif — `TvLongPressGuard` — qui ne couvrait qu'une partie
+du problème.
+
+**Preuve.** `TvNavPolicy.kt:163` (`swallows`) et `TvMoviesScreen.kt:1043` : le dialogue
+armait `enterArmed` sur **tout** `KeyDown` de la touche de validation. Or `onLongClick`
+part au `repeatCount` **1**, touche encore enfoncée : les répétitions automatiques
+suivantes (`repeatCount` 2, 3, 4…) sont délivrées **au dialogue**, qui a pris le focus de
+fenêtre. Elles armaient donc le garde ; le relâchement n'était plus avalé, et « Annuler »,
+qui porte le focus d'arrivée, se validait seul.
+
+**Cause.** établie — le garde décidait *quand avaler*, jamais *quand armer*. Les trois
+tests existants (`TvPlayerNavigationTest`) ne vérifiaient que `swallows` : la moitié
+fausse n'était couverte par rien. Le défaut n'apparaissait que si l'utilisateur tenait la
+touche au-delà de la première répétition, d'où un comportement **intermittent** — « ne
+fonctionne pas bien » plutôt que « ne marche pas ».
+
+**✅ Corrigé le 2026-08-30 (§69).** `TvLongPressGuard.arms(key, type, repeatCount)` : seul
+un appui **neuf** (`repeatCount == 0`) arme la fenêtre, une répétition appartenant à la
+pression précédente. Trois tests ajoutés, dont un qui rejoue la séquence réelle de touches
+et **échoue sous l'ancienne règle** — mesuré dans les deux sens.
+
+⚠️ Vérifié au niveau 1 seulement : la rangée « Reprendre la lecture » n'est rendue que dans
+la branche succès de l'écran, et le catalogue ne charge pas depuis ce poste (§8).
+
+
+## #R10 — app-tv : la bannière du lanceur Android TV est un aplat noir
+
+`app-tv/res`
+
+**Symptôme.** Remonté par l'utilisateur après installation sur son téléviseur : « il n'y a
+pas de logo sur l'application […] dans le menu le rectangle est noir ». Le lanceur Android
+TV n'affiche pas l'icône mais une **bannière** 320×180 dp ; sans elle, la tuile est vide.
+
+**Preuve.** `app-tv/src/main/res/drawable/tv_banner.xml` — le fichier entier valait
+`<shape><solid android:color="#0C0714"/></shape>`, c'est-à-dire `BgApp`, le fond quasi noir
+de l'application. Un gabarit jamais remplacé. Le manifeste le déclarait pourtant
+correctement (`android:banner`), ce qui rendait le défaut invisible à toute vérification
+portant sur la déclaration plutôt que sur l'image.
+
+**Cause.** établie — bannière de remplissage posée pour satisfaire `android:banner`, jamais
+reprise. `aapt2 dump badging` l'annonçait sans que personne ne l'ouvre.
+
+**✅ Corrigé le 2026-08-30 (§69).** Bannière 640×360 (320×180 dp en xhdpi) composée du logo
+de l'application sur son dégradé violet, avec le nom et « PREMIUM ». Le gabarit XML est
+supprimé pour qu'aucune densité ne retombe dessus. **Vérifié à l'écran** sur le lanceur de
+l'émulateur : la tuile affiche le logo et le nom.
 
 
 ## #R9 — des libellés français codés en dur dans `core`, et des libellés anglais dans les deux UI *(partiellement corrigé)*

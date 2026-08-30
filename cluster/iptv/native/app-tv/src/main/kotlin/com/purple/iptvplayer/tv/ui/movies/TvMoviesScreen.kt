@@ -1039,11 +1039,14 @@ fun TvConfirmDialog(
                 .widthIn(max = 460.dp)
                 .onPreviewKeyEvent { event ->
                     if (!TvLongPressGuard.isConfirmKey(event.key)) return@onPreviewKeyEvent false
-                    when {
-                        event.type == KeyEventType.KeyDown -> { enterArmed = true; false }
-                        event.type == KeyEventType.KeyUp && !enterArmed -> true
-                        else -> false
+                    // Seul un appui NEUF arme (`repeatCount == 0`). Les répétitions
+                    // automatiques qui arrivent ici appartiennent à la pression encore
+                    // tenue qui vient d'ouvrir ce dialogue : les compter armait le garde
+                    // et laissait « Annuler » se valider au relâchement.
+                    if (TvLongPressGuard.arms(event.key, event.type, event.nativeKeyEvent.repeatCount)) {
+                        enterArmed = true
                     }
+                    TvLongPressGuard.swallows(event.key, event.type, enterArmed)
                 }
                 .clip(PurpleShapes.Lg)
                 .background(PurplePalette.Bg2)

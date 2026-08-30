@@ -78,6 +78,7 @@ numéro.
 | 66 | **#R8 corrigé** — huit messages d'échec en anglais dans une interface française ; ils vivaient en littéraux Kotlin, hors ressources. Contient la **quatrième passe** de `check_strings.py` (littéraux rendus depuis le code), la manière de **forcer un échec réseau sans root** (proxy système), et **#R9** ouvert — le miroir : `core` qui écrit des libellés en français | on ajoute un libellé, on doit provoquer une panne réseau sur un appareil, ou `check_strings.py` signale un littéral |
 | 67 | **#R9 (1) et (2) corrigés** — `core` fabriquait sept messages de facturation **en français** ; et surtout `PurchaseError.message`, documenté « déjà localisé par Play », **passait devant** la cause typée et rendait trois ressources traduites quasi inatteignables. Contient `BillingPolicy` (table de codes Play en objet pur) et pourquoi l'écran d'achat n'a pas pu être atteint sur l'émulateur | on touche à la facturation, à `PurchaseScreenState`, ou on lit un champ documenté « déjà localisé » |
 | 68 | **#70 à #73 corrigés** — l'écran d'achat TV : un succès de restauration écrasé par `Idle` (barrière sans issue), « Restaurer » offert seulement quand la facturation est en panne, un succès hérité qui refermait l'écran, un échec invisible dès qu'il y a des offres. Contient **comment servir un catalogue local** à l'émulateur (`adb reverse` + `http.server`) et ce que cette voie n'a pas permis de faire | on touche à `TvPurchaseScreen`, à un `LaunchedEffect(state)`, ou on a besoin d'un catalogue sur l'émulateur |
+| 69 | **#R10 et #R11 corrigés** — la bannière du lanceur Android TV était un aplat noir ; et le garde d'appui long s'armait sur les **répétitions** de la pression qui venait de l'ouvrir, si bien que « Annuler » se validait seul. Contient pourquoi un correctif déjà écrit pour ce geste ne suffisait pas, et comment fabriquer une bannière TV | on touche à un appui long, à un `onPreviewKeyEvent`, ou à une ressource du lanceur |
 
 ---
 
@@ -5981,3 +5982,91 @@ le champ avec `purple.defaultM3u` de `local.properties`, qui contient les identi
 réels de l'utilisateur : la capture les montrait en clair. Fichier supprimé aussitôt. Ce
 n'est pas le §52 (une notification privée) mais la même leçon sur un autre chemin : **sur
 cet écran, découper le champ hors de la capture ou remplacer le lien avant de photographier.**
+
+
+---
+
+## 69. #R10 et #R11 — deux défauts vus par l'utilisateur, pas par moi *(2026-08-30)*
+
+Les deux ont été signalés après installation sur le téléviseur, et aucun des deux n'était
+dans `audit.md`. Ils ont ceci de commun que **la déclaration était juste et le contenu
+faux** — le genre de défaut qu'aucune relecture de code ne trouve.
+
+### #R10 — la bannière du lanceur
+
+Le manifeste déclarait correctement `android:banner="@drawable/tv_banner"`. Le fichier
+pointé valait, en entier :
+
+```xml
+<shape><solid android:color="#0C0714"/></shape>
+```
+
+`#0C0714`, c'est `BgApp`. La bannière était donc, littéralement, un rectangle de la couleur
+du fond de l'application — invisible sur le fond noir du lanceur. Un gabarit posé pour
+satisfaire l'attribut, jamais repris.
+
+Ce qui m'a échappé : `aapt2 dump badging` me l'avait **écrit** quelques minutes plus tôt,
+quand je vérifiais la signature de l'APK — `banner='res/FL.xml'`. Une bannière qui est un
+`.xml` et non une image est déjà l'anomalie ; je lisais la ligne pour la version et la
+signature, et je n'ai pas vu le reste.
+
+Remplacée par une image 640×360 (320×180 dp en xhdpi) composée du logo sur le dégradé
+violet de l'application. Le gabarit XML est **supprimé** plutôt que laissé en repli :
+laissé dans `drawable/`, il serait resté le choix des densités non xhdpi, et le rectangle
+noir aurait survécu là. Vérifié à l'écran sur le lanceur de l'émulateur.
+
+### #R11 — un correctif à moitié, sur un geste déjà signalé une fois
+
+Retirer une entrée de « Reprendre la lecture » se fait, sur TV, par un **appui long** sur
+la carte, qui ouvre une confirmation. L'utilisateur avait déjà signalé une fois que
+« l'encart s'ouvre bien mais lorsque je lâche le bouton il disparaît », et un garde avait
+été écrit — `TvLongPressGuard`. Il le re-signale : « ne fonctionne pas bien ».
+
+Le garde répondait à la bonne question, mais à une seule :
+
+```kotlin
+event.type == KeyEventType.KeyDown -> { enterArmed = true; false }   // ← n'importe quel appui
+event.type == KeyEventType.KeyUp && !enterArmed -> true
+```
+
+La séquence réelle sur une télécommande :
+
+| événement | où il arrive | effet |
+|---|---|---|
+| `DOWN` repeat 0 | la carte | rien |
+| `DOWN` repeat 1 | la carte | `onLongClick` → **le dialogue s'ouvre** et prend le focus de fenêtre |
+| `DOWN` repeat 2, 3, 4… | **le dialogue** | armaient le garde — alors qu'ils appartiennent à la pression précédente |
+| `UP` | le dialogue | n'est plus avalé → « Annuler » se valide seul |
+
+Le garde ne tenait donc que si l'utilisateur relâchait **avant la première répétition**.
+D'où un défaut intermittent, qui « fonctionne mal » au lieu de ne pas marcher — et qui a
+pu passer pour corrigé.
+
+La correction tient en une condition : seul un appui **neuf** arme.
+
+```kotlin
+fun arms(key: Key, type: KeyEventType, repeatCount: Int): Boolean =
+    isConfirmKey(key) && type == KeyEventType.KeyDown && repeatCount == 0
+```
+
+**La leçon est dans les tests, pas dans le code.** Trois tests existaient sur ce garde ;
+tous portaient sur `swallows`, c'est-à-dire sur *quand avaler*. Aucun ne portait sur *quand
+armer* — et c'est exactement la moitié qui était fausse. Un garde à deux décisions dont une
+seule est testée n'est pas testé : il est testé là où il est juste.
+
+Le nouveau test rejoue la séquence de touches ci-dessus et a été **mesuré dans les deux
+sens** : rétabli l'ancienne règle d'armement, il échoue (`une répétition ne doit pas
+armer`) ; avec la nouvelle, il passe.
+
+⚠️ **Niveau 1 seulement.** La rangée « Reprendre la lecture » n'est rendue que dans la
+branche succès de l'écran Films — sans catalogue, elle n'existe pas — et le catalogue ne
+charge pas depuis ce poste (§8). J'ai tenté la voie du catalogue local (§68) : elle échoue
+toujours au même endroit. C'est l'utilisateur qui confirmera sur son téléviseur.
+
+### Ce que ces deux défauts ont en commun
+
+Aucun des deux n'est sorti d'une relecture de code, et les deux étaient **visibles dans une
+sortie d'outil que j'avais sous les yeux** : `banner='res/FL.xml'` pour l'un, et pour
+l'autre un garde dont la moitié n'avait aucun test. Le rappel est simple : lire la sortie
+entière de l'outil qu'on vient de lancer, et se demander, devant un garde, **s'il décide
+d'une chose ou de deux**.
