@@ -58,7 +58,7 @@ class BillingRepositoryImpl(
                 // un message d'échec à qui refermait simplement la feuille de paiement.
                 result.responseCode == BillingClient.BillingResponseCode.USER_CANCELED ->
                     _purchaseResult.emit(PurchaseResult.Cancelled)
-                else -> _purchaseResult.emit(PurchaseResult.Error(describe(result)))
+                else -> _purchaseResult.emit(PurchaseResult.Error(BillingPolicy.failureFor(result.responseCode)))
             }
         }
     }
@@ -91,12 +91,12 @@ class BillingRepositoryImpl(
      */
     override suspend fun queryProducts() {
         if (!billingClient.isReady && !connect()) {
-            _purchaseResult.emit(PurchaseResult.Error("Service de facturation indisponible."))
+            _purchaseResult.emit(PurchaseResult.Error(PurchaseFailure.SERVICE_UNAVAILABLE))
             return
         }
 
         val found     = mutableListOf<ProductDetails>()
-        val failures  = mutableListOf<String>()
+        val failures  = mutableListOf<Int>()
 
         for (type in listOf(BillingClient.ProductType.INAPP, BillingClient.ProductType.SUBS)) {
             val params = QueryProductDetailsParams.newBuilder()
@@ -113,7 +113,7 @@ class BillingRepositoryImpl(
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 found += productDetailsList
             } else {
-                failures += "$type: ${describe(billingResult)}"
+                failures += billingResult.responseCode
             }
         }
 
@@ -123,7 +123,7 @@ class BillingRepositoryImpl(
         // disponible » aussi bien quand la Play Console est mal configurée que quand le
         // service est en panne, sans moyen de distinguer les deux.
         if (found.isEmpty() && failures.isNotEmpty()) {
-            _purchaseResult.emit(PurchaseResult.Error(failures.joinToString(" | ")))
+            _purchaseResult.emit(PurchaseResult.Error(BillingPolicy.failureFor(failures.first())))
         }
     }
 
@@ -157,12 +157,12 @@ class BillingRepositoryImpl(
         if (product.productType == BillingClient.ProductType.SUBS) {
             val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken
             if (offerToken == null) {
-                scope.launch { _purchaseResult.emit(PurchaseResult.Error("Offre indisponible pour ${product.productId}.")) }
+                scope.launch { _purchaseResult.emit(PurchaseResult.Error(PurchaseFailure.OFFER_UNAVAILABLE)) }
                 return false
             }
             builder.setOfferToken(offerToken)
         } else if (product.oneTimePurchaseOfferDetails == null) {
-            scope.launch { _purchaseResult.emit(PurchaseResult.Error("Offre indisponible pour ${product.productId}.")) }
+            scope.launch { _purchaseResult.emit(PurchaseResult.Error(PurchaseFailure.OFFER_UNAVAILABLE)) }
             return false
         }
 
@@ -171,7 +171,7 @@ class BillingRepositoryImpl(
             .build()
         val result = billingClient.launchBillingFlow(activity, params)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            scope.launch { _purchaseResult.emit(PurchaseResult.Error(describe(result))) }
+            scope.launch { _purchaseResult.emit(PurchaseResult.Error(BillingPolicy.failureFor(result.responseCode))) }
             return false
         }
         return true
@@ -185,7 +185,7 @@ class BillingRepositoryImpl(
      */
     override suspend fun restorePurchases(): Int {
         if (!billingClient.isReady && !connect()) {
-            _purchaseResult.emit(PurchaseResult.Error("Service de facturation indisponible."))
+            _purchaseResult.emit(PurchaseResult.Error(PurchaseFailure.SERVICE_UNAVAILABLE))
             return 0
         }
         return syncEntitlements()
@@ -296,21 +296,6 @@ class BillingRepositoryImpl(
         }
     }
 
-    /** Message exploitable : `debugMessage` est souvent vide et n'est pas destiné à l'utilisateur. */
-    private fun describe(result: BillingResult): String {
-        val code = result.responseCode
-        val label = when (code) {
-            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE  -> "Facturation indisponible sur cet appareil"
-            BillingClient.BillingResponseCode.SERVICE_DISCONNECTED -> "Service Play déconnecté"
-            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE  -> "Service Play indisponible"
-            BillingClient.BillingResponseCode.ITEM_UNAVAILABLE     -> "Produit introuvable dans la Play Console"
-            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED   -> "Produit déjà possédé"
-            BillingClient.BillingResponseCode.DEVELOPER_ERROR      -> "Configuration de facturation invalide"
-            else -> "Erreur de facturation"
-        }
-        return result.debugMessage.takeIf { it.isNotBlank() }?.let { "$label ($code) : $it" } ?: "$label ($code)"
-    }
-
     override fun release() { scope.cancel(); billingClient.endConnection() }
 }
 
@@ -353,7 +338,11 @@ private suspend fun BillingClient.acknowledgePurchaseSuspend(
 
 sealed class PurchaseResult {
     data class Success(val productId: String) : PurchaseResult()
-    data class Error(val message: String) : PurchaseResult()
+    /**
+     * Échec d'achat. **Une cause typée, jamais un libellé** : ce type traversait
+     * auparavant une `String` construite en français dans `core` (#R9).
+     */
+    data class Error(val reason: PurchaseFailure) : PurchaseResult()
     /** Feuille de paiement refermée par l'utilisateur — pas un échec. */
     object Cancelled : PurchaseResult()
 }

@@ -335,11 +335,16 @@ fun RecentItemCard(
             }
 
             Column {
-                val typeLabel = when (item.type) {
-                    "movie"  -> "Films"
-                    "series" -> "Séries"
-                    else     -> "Direct TV"
-                }
+                // #R9 : ces trois libellés étaient des littéraux français — ils
+                // seraient restés en français dans l'interface anglaise. Les clés de
+                // navigation portent déjà le même vocabulaire.
+                val typeLabel = stringResource(
+                    when (item.type) {
+                        "movie"  -> R.string.nav_movies
+                        "series" -> R.string.nav_series
+                        else     -> R.string.nav_live
+                    }
+                )
                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(Purple.copy(alpha = 0.4f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                     Text(typeLabel, color = Color.White.copy(0.9f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }

@@ -16,6 +16,12 @@ ici.
 - [ ] Décider si l'on monte en `billing:9.x` — exige `minSdk 23` côté mobile (`app-mobile`
       est en 21, `app-tv` déjà en 23). La 8.0.0 en place satisfait l'échéance Play du
       31 août 2026 ; la prochaine migration sera exigée vers mi-2027. Cf. §12.
+- [ ] **#R9 non vu à l'écran** *(2026-08-30, §67)* — les causes d'échec de facturation sont
+      typées et traduites, mais l'écran d'achat n'a pas pu être atteint : l'émulateur AOSP
+      TV n'a pas de Play Services (l'échec voulu s'y produirait), seulement la barrière ne
+      s'ouvre qu'à la lecture et le catalogue ne charge pas d'ici (§8). Même blocage que
+      **B1.5** ci-dessous ; à reprendre dans la même session, sur une build installée
+      depuis Play.
 - [ ] **B1.5 non observé** : impossible de provoquer un échec de facturation, Play Billing
       sert son cache local. À retenter autrement. Cf. §9.
 - [ ] `deliverProduct()` code 30 et 365 jours en dur ; l'échéance réelle exige la Play
@@ -35,6 +41,25 @@ ici.
 - [ ] Trancher le sort du parc TV resté sur l'ancienne fiche `com.purple.iptvplayer`
       (build Flutter) : il ne recevra plus aucune mise à jour et ne migrera pas seul vers
       `com.purple.iptvplayer.tv`. Cf. §9.
+
+#### À vérifier sur le Pixel 7 (niveau 3 non fait)
+
+> Ces points sont **corrigés et vérifiés au niveau 1**, et pour certains au niveau 2 sur
+> l'émulateur ; il leur manque le passage sur le téléphone, qui exige que l'utilisateur
+> le branche. Les reprendre **ensemble** au prochain branchement — c'est une seule session
+> d'install + scénarios, pas une par défaut.
+
+- [ ] **#R8** — messages d'échec traduits *(2026-08-30, §66)*. Vérifié sur l'émulateur pour
+      `app-tv` (`ContentFailure.NETWORK`, en fr **et** en en) et pour `app-mobile`
+      (`SetupFailure.INVALID_INPUT`), l'APK mobile ayant été installé sur l'émulateur TV
+      pour l'occasion. **Sur le Pixel, rien.** Scénario : vider le cache
+      (`run-as … rm -rf cache/*`), `settings put global http_proxy 127.0.0.1:1`, ouvrir
+      Films ou Séries → attendre « Erreur réseau. Vérifiez votre connexion. » Ne pas
+      oublier `settings delete global http_proxy`.
+- [ ] **#R8, armes non atteintes** — `NOT_FOUND`, `PARSE_ERROR` et `SetupFailure.NETWORK`
+      n'ont été exercées sur aucun support. Même mécanisme que les trois armes vues, même
+      passe de contrôle ; à confirmer si l'occasion se présente, sans construire un
+      montage exprès.
 
 #### Couverture
 

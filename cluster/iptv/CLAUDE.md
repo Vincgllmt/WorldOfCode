@@ -201,7 +201,11 @@ du §52 porte sur le regard, pas sur la mesure.
 
 **Reste non vérifié sur les supports** : la remise à zéro du défilement au changement de
 genre et le bouton « Retour » qui efface la recherche (TV-3), faute d'avoir su atteindre
-ces états de façon fiable.
+ces états de façon fiable. Et, depuis le 2026-08-30, **#R8 sur le Pixel 7** — corrigé et vu
+à l'écran sur l'émulateur seulement, le téléphone n'étant pas branché. La liste des points
+qui attendent un branchement est tenue dans
+[`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) (« À vérifier sur le Pixel 7 ») : **les
+reprendre en une seule fois**, pas un par un.
 
 Ce qui ne relève pas de l'audit — facturation (trois points ouverts), TLS non validé
 (**S1**, décision produit), sauvegarde du keystore, publication de `app-mobile` 15 / 1.2.0

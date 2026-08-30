@@ -76,6 +76,7 @@ numéro.
 | 64 | **#R7 corrigé** — couture de couleur sous la barre d'état (de mon fait, §63) et menu du bas détaché ; contient **comment relever une couture** (ruptures le long d'une colonne) et pourquoi j'ai failli fabriquer un émulateur pour rien | on touche à une couleur de fond, à une barre système, ou on s'apprête à construire un outil pour vérifier |
 | 65 | **#91 corrigé** — « Ma liste » annonçait une liste vide quand le catalogue était injoignable ; `MyListPolicy` dans `core`, TV corrigée aussi. Contient **deux erreurs de montage** qui ont failli faire conclure à un correctif inopérant, et **#R8** ouvert (messages d'échec en anglais dans une UI française) | on touche à un état vide, ou un correctif « ne prend pas » et on s'apprête à le retoucher |
 | 66 | **#R8 corrigé** — huit messages d'échec en anglais dans une interface française ; ils vivaient en littéraux Kotlin, hors ressources. Contient la **quatrième passe** de `check_strings.py` (littéraux rendus depuis le code), la manière de **forcer un échec réseau sans root** (proxy système), et **#R9** ouvert — le miroir : `core` qui écrit des libellés en français | on ajoute un libellé, on doit provoquer une panne réseau sur un appareil, ou `check_strings.py` signale un littéral |
+| 67 | **#R9 (1) et (2) corrigés** — `core` fabriquait sept messages de facturation **en français** ; et surtout `PurchaseError.message`, documenté « déjà localisé par Play », **passait devant** la cause typée et rendait trois ressources traduites quasi inatteignables. Contient `BillingPolicy` (table de codes Play en objet pur) et pourquoi l'écran d'achat n'a pas pu être atteint sur l'émulateur | on touche à la facturation, à `PurchaseScreenState`, ou on lit un champ documenté « déjà localisé » |
 
 ---
 
@@ -5800,3 +5801,85 @@ Le **Pixel 7 n'était pas branché** : le niveau 3 n'a pas été fait. L'APK mob
 installé sur l'émulateur TV pour l'occasion — ce qui a permis de mesurer la moitié
 `SetupFailure` que l'app TV n'exerçait pas — puis désinstallé. Les armes `NOT_FOUND`,
 `PARSE_ERROR` et `SetupFailure.NETWORK` n'ont pas été atteintes une à une.
+
+
+---
+
+## 67. #R9 — `core` écrivait les messages de facturation, et le mauvais champ gagnait *(2026-08-30)*
+
+Ouvert par la passe ajoutée en §66, le lendemain de #R8 : le même défaut, en miroir.
+`BillingRepository.describe()` traduisait un code de retour Play en **phrase française**,
+dans `core`, module partagé par les deux applications — « Service Play indisponible »
+s'afficherait tel quel dans l'interface anglaise.
+
+### Ce que la lecture a trouvé de pire que le libellé
+
+`PurchaseScreenState.PurchaseError` portait deux champs, et l'UI les lisait dans cet ordre :
+
+```kotlin
+err?.message                                   // ← gagne presque toujours
+    ?: err?.reason?.let { stringResource(it.labelRes()) }
+    ?: stringResource(R.string.purchase_none)
+```
+
+La documentation du champ justifiait cette priorité : « message fourni par Play Billing —
+**déjà dans la langue de l'appareil**, donc rendu tel quel ». La prémisse était fausse des
+deux côtés :
+
+| ce qui alimentait `message` | ce que c'était vraiment |
+|---|---|
+| `describe(result)` sur un échec d'achat | préfixe **français** + code + `debugMessage`, ce dernier documenté dans le même fichier comme « **n'est pas destiné à l'utilisateur** » |
+| `it.message` sur un échec de chargement d'offres | le message brut de l'exception |
+
+Conséquence, et c'est le vrai coût : les trois ressources traduites qui existaient déjà —
+`purchase_err_offers`, `_restore`, `_nothing` — **n'étaient presque jamais affichées**,
+puisque `message` était renseigné dans quasiment tous les cas. Quelqu'un avait fait le
+travail de traduction ; un `?:` mal placé le rendait mort. C'est le motif « déclaré mais
+jamais branché » du projet, sous une forme nouvelle : **branché, mais court-circuité**.
+
+Le champ est retiré. Il ne reste que la cause.
+
+### La correction, au motif déjà en place
+
+Le projet avait déjà le bon patron deux dossiers plus loin : `toContentFailure()` — la
+couche basse remonte un échec brut, la couche haute le range dans une cause typée, l'UI
+choisit les mots. Appliqué ici :
+
+- `PurchaseResult.Error` porte une `PurchaseFailure`, plus une `String` ;
+- la table des codes Play sort dans **`BillingPolicy`**, objet pur, testable sans Android —
+  c'est précisément ce que la règle 2 demande, et ce que `describe()` empêchait ;
+- l'énumération déménage dans `core/data`, à côté de qui la produit ; `core/viewmodel` et
+  les UI la consomment. Une seule ligne d'import change côté écran ;
+- huit causes nouvelles, traduites dans les deux `strings.xml` d'`app-tv` — parité
+  134/134.
+
+Le `when` sur l'énumération étant **exhaustif sans `else`**, le compilateur garantit
+désormais qu'aucune cause ne peut être ajoutée sans être traduite. C'est le garde-fou le
+moins cher du lot : il ne coûte rien et il ne peut pas être oublié.
+
+Les tests de `BillingPolicy` sont écrits pour pouvoir échouer : au-delà de la table, l'un
+vérifie que **deux codes distincts ne donnent pas la même cause** (une table qui
+retournerait partout `UNKNOWN` passerait le premier test et pas celui-là), un autre que
+tout code inconnu retombe sur `UNKNOWN` sans lever, un dernier qu'aucune cause de
+facturation n'est inatteignable.
+
+### Ce qui n'a pas pu être vu
+
+**L'écran d'achat n'a pas été atteint.** L'ironie est complète : l'émulateur AOSP TV n'a
+pas de Play Services, donc la facturation y échoue *par construction* — c'est exactement
+l'état recherché. Mais la barrière ne s'ouvre qu'à la **lecture d'un média**, et le
+catalogue ne charge pas depuis ce poste (IP du fournisseur bloquée en Wi-Fi, §8). Un essai
+expiré a bien été simulé (`mkprefs.py 10`, fichier écrit et relu, `purple_trial_secure.xml`
+supprimé) : l'état est pris en compte, mais l'écran d'accueil ne le montre pas — ce qui est
+conforme à **#115**, un accès non résolu ne devant pas être traité comme expiré.
+
+Cela rejoint **#B1.5**, déjà consigné : un échec de facturation ne se provoque pas sur
+cette machine. À reprendre sur une build installée depuis Play.
+
+`app-mobile` n'affiche toujours aucun échec d'achat : c'est **#126**, laissé ouvert.
+
+### Ce que je n'ai pas fait exprès
+
+Les badges « SAVE 58% » et « BEST DEAL », relevés par la même passe, appartiennent à
+**#129** et **#130**, ouverts avant celle-ci. Les corriger ici aurait fait le travail deux
+fois et brouillé la trace.

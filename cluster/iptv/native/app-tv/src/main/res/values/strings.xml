@@ -143,4 +143,15 @@
     <string name="error_unknown">An unexpected error occurred.</string>
     <string name="setup_error_invalid">Invalid input. Please check your entries.</string>
     <string name="setup_error_network">Could not connect to the server. Please check your credentials.</string>
+
+    <!-- #R9 — causes d'échec de facturation. Elles vivaient en phrases françaises
+         dans core/data/BillingRepository.kt, affichées telles quelles en anglais. -->
+    <string name="purchase_err_billing_unavailable">Billing is not available on this device.</string>
+    <string name="purchase_err_service_disconnected">Google Play service disconnected. Please try again.</string>
+    <string name="purchase_err_service_unavailable">Google Play service unavailable. Please try again later.</string>
+    <string name="purchase_err_item_unavailable">This plan is not available right now.</string>
+    <string name="purchase_err_item_owned">You already own this plan. Use “Restore purchases”.</string>
+    <string name="purchase_err_developer">Invalid billing configuration. Please contact support.</string>
+    <string name="purchase_err_offer_missing">No offer available for this plan.</string>
+    <string name="purchase_err_unknown">The purchase did not go through. Please try again.</string>
 </resources>

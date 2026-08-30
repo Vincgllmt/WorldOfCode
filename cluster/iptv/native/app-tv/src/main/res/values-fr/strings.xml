@@ -139,4 +139,15 @@
     <string name="error_unknown">Une erreur inattendue s’est produite.</string>
     <string name="setup_error_invalid">Saisie invalide. Vérifiez vos informations.</string>
     <string name="setup_error_network">Connexion au serveur impossible. Vérifiez vos identifiants.</string>
+
+    <!-- #R9 — causes d'échec de facturation. Elles vivaient en phrases françaises
+         dans core/data/BillingRepository.kt, affichées telles quelles en anglais. -->
+    <string name="purchase_err_billing_unavailable">La facturation n’est pas disponible sur cet appareil.</string>
+    <string name="purchase_err_service_disconnected">Service Google Play déconnecté. Réessayez.</string>
+    <string name="purchase_err_service_unavailable">Service Google Play indisponible. Réessayez plus tard.</string>
+    <string name="purchase_err_item_unavailable">Cette formule n’est pas disponible pour le moment.</string>
+    <string name="purchase_err_item_owned">Vous possédez déjà cette formule. Utilisez « Restaurer mes achats ».</string>
+    <string name="purchase_err_developer">Configuration de facturation invalide. Contactez le support.</string>
+    <string name="purchase_err_offer_missing">Aucune offre disponible pour cette formule.</string>
+    <string name="purchase_err_unknown">L’achat n’a pas abouti. Réessayez.</string>
 </resources>

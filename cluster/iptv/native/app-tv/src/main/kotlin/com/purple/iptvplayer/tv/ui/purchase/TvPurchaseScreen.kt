@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.ProductDetails
 import com.purple.iptvplayer.core.data.OfferPrice
 import com.purple.iptvplayer.core.data.BillingRepository
-import com.purple.iptvplayer.core.viewmodel.PurchaseFailure
+import com.purple.iptvplayer.core.data.PurchaseFailure
 import com.purple.iptvplayer.core.viewmodel.PurchaseScreenState
 import com.purple.iptvplayer.core.viewmodel.PurchaseViewModel
 import com.purple.iptvplayer.tv.R
@@ -112,11 +112,11 @@ fun TvPurchaseScreen(onBack: (() -> Unit)?, onSuccess: () -> Unit) {
                     // Repli obligatoire : sans lui, une barrière sans offre n'aurait plus
                     // aucun focalisable. Cf. TvPurchaseAccess.focusableCount.
                     products.isEmpty() -> {
-                        // Le message de Play est déjà localisé ; la cause typée, non.
+                        // Toujours la cause typée : le champ `message` qui passait devant
+                        // portait du français fabriqué dans `core` (#R9, §67).
                         val err = state as? PurchaseScreenState.PurchaseError
                         Text(
-                            err?.message
-                                ?: err?.reason?.let { stringResource(it.labelRes()) }
+                            err?.reason?.let { stringResource(it.labelRes()) }
                                 ?: stringResource(R.string.purchase_none),
                             color = TvTextSub, textAlign = TextAlign.Center,
                         )
@@ -318,7 +318,15 @@ private fun TvSecondaryButton(
  * libellés français en dur (§43).
  */
 private fun PurchaseFailure.labelRes(): Int = when (this) {
-    PurchaseFailure.OFFERS_UNAVAILABLE -> R.string.purchase_err_offers
-    PurchaseFailure.RESTORE_FAILED     -> R.string.purchase_err_restore
-    PurchaseFailure.NOTHING_TO_RESTORE -> R.string.purchase_err_nothing
+    PurchaseFailure.OFFERS_UNAVAILABLE   -> R.string.purchase_err_offers
+    PurchaseFailure.RESTORE_FAILED       -> R.string.purchase_err_restore
+    PurchaseFailure.NOTHING_TO_RESTORE   -> R.string.purchase_err_nothing
+    PurchaseFailure.BILLING_UNAVAILABLE  -> R.string.purchase_err_billing_unavailable
+    PurchaseFailure.SERVICE_DISCONNECTED -> R.string.purchase_err_service_disconnected
+    PurchaseFailure.SERVICE_UNAVAILABLE  -> R.string.purchase_err_service_unavailable
+    PurchaseFailure.ITEM_UNAVAILABLE     -> R.string.purchase_err_item_unavailable
+    PurchaseFailure.ITEM_ALREADY_OWNED   -> R.string.purchase_err_item_owned
+    PurchaseFailure.DEVELOPER_ERROR      -> R.string.purchase_err_developer
+    PurchaseFailure.OFFER_UNAVAILABLE    -> R.string.purchase_err_offer_missing
+    PurchaseFailure.UNKNOWN              -> R.string.purchase_err_unknown
 }

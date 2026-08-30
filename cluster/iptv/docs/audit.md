@@ -202,7 +202,7 @@ Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, app
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
 
 
-## #R9 — des libellés français codés en dur dans `core`, et des libellés anglais dans les deux UI *(OUVERT)*
+## #R9 — des libellés français codés en dur dans `core`, et des libellés anglais dans les deux UI *(partiellement corrigé)*
 
 `core/data`, `app-mobile/ui`, `app-tv/ui`
 
@@ -228,9 +228,45 @@ lisible, donc dans `core`, alors que `core` ne devrait connaître que la **cause
 correct existe déjà à côté : `ContentFailure` / `SetupFailure` + `toDisplayString()` dans
 chaque UI (cf. #R8).
 
-**Piste.** pour (1), remplacer les sept messages par une cause typée `BillingFailure` et la
-traduire dans les deux UI, comme #R8 ; pour (2) et (3), sortir les libellés en ressources.
-Décider au passage si « LIVE » doit rester tel quel en français.
+**✅ (1) et (2) corrigés le 2026-08-30 (§67).** (3) est laissé à **#129** et **#130**, qui
+le portaient déjà — ne pas le traiter deux fois.
+
+En ouvrant (1) j'ai trouvé plus grave que le libellé. `PurchaseScreenState.PurchaseError`
+portait **deux** champs, `reason` typé et `message` libre, et l'UI rendait
+`err?.message ?: err?.reason?.let { … }` — le message **passait devant** la cause. Sa
+documentation le disait « fourni par Play Billing, déjà dans la langue de l'appareil » ;
+c'était faux des deux côtés :
+
+- pour un échec d'achat, il recevait la sortie de `BillingRepository.describe()`, soit le
+  préfixe **français** suivi du code et du `debugMessage` (anglais, technique, et
+  documenté comme « pas destiné à l'utilisateur ») ;
+- pour un échec de chargement d'offres, il recevait `it.message`, le message brut de
+  l'exception.
+
+Conséquence : les trois ressources traduites qui existaient déjà
+(`purchase_err_offers`, `_restore`, `_nothing`) **n'étaient presque jamais affichées** —
+`message` était renseigné dans quasiment tous les cas. Le champ est retiré ; il ne reste
+que la cause typée.
+
+Le correctif suit le motif du projet, celui de `toContentFailure()` : `core/data` n'émet
+plus que des causes, et la table de codes Play sort en objet pur — `BillingPolicy` — donc
+testable sans Android (5 tests, dont un qui échouerait si deux codes se confondaient, et
+un garde-fou « toute cause est atteignable par un code »). Les huit nouvelles causes sont
+traduites dans les deux `strings.xml` d'`app-tv` : parité 134/134.
+
+Pour (2), `HomeScreen` réutilise `nav_movies` / `nav_series` / `nav_live` plutôt que de
+nouvelles clés. ⚠️ Deux de ces trois clés portent encore une valeur **française dans le
+fichier par défaut** — c'est **#122**, ouvert, et le corriger là le corrigera ici aussi.
+
+⚠️ **Non vérifié à l'écran.** L'écran d'achat n'a pas pu être atteint : sur l'émulateur
+AOSP TV il n'y a pas de Play Services (ce qui provoquerait justement l'échec voulu), mais
+la barrière ne s'ouvre qu'à la lecture d'un média, et le catalogue ne charge pas depuis ce
+poste (IP du fournisseur bloquée en Wi-Fi, §8). Un essai expiré a bien été simulé
+(`mkprefs.py`) sans ouvrir la barrière. Cela rejoint **#B1.5**, déjà consigné : un échec de
+facturation ne se provoque pas sur cette machine. À reprendre sur une build installée
+depuis Play.
+
+`app-mobile` n'affiche toujours aucun échec d'achat — c'est **#126**, inchangé.
 
 
 ## #R8 — core/viewmodel : les messages d'échec sont écrits en anglais dans le code, hors ressources
@@ -993,7 +1029,20 @@ L'utilisateur avait deux favoris, et l'application lui affirmait le contraire en
 
 **Cause.** établie — c'est le défaut déjà corrigé pour l'achat, non appliqué aux deux autres `ViewModel`. Le remède existe dans le même paquet : PurchaseViewModel.kt:16-46 remplace le message par une cause typée (`PurchaseFailure`) que chaque UI traduit, avec en commentaire l'avertissement explicite « Ne jamais y mettre un libellé écrit en dur » — resté sans effet sur ses voisins.
 
-**Piste.** transposer le motif `PurchaseFailure` à `SetupState.Error` et à `ContentState.Error` : une cause typée dans `core`, la traduction dans les `strings.xml` de chaque UI, le message brut du serveur réservé aux cas où il vient déjà localisé. `tools/check_strings.py` ne voit pas ces littéraux, ils sont hors des modules applicatifs.
+**✅ Corrigé** — en deux temps, et le second n'a été fait qu'aujourd'hui.
+
+1. `14d723e6` transpose le motif `PurchaseFailure` : `SetupViewModel` n'a plus une seule
+   phrase anglaise, et `ContentViewModel` ne transporte plus `e.message` mais une cause
+   typée (`it.toContentFailure()`, cinq points). La moitié `core` du défaut est close.
+2. Mais la traduction avait alors été écrite **en littéraux Kotlin dans chaque UI**, pas
+   dans les `strings.xml` — l'application restait anglophone à l'écran, ce qui est le
+   symptôme d'origine. C'est **#R8**, corrigé le 2026-08-30 (§66).
+
+Vérifié le 2026-08-30 : `SetupViewModel` ne porte aucun littéral d'interface,
+`ContentViewModel` ne construit que des causes typées, et les six libellés sont dans les
+quatre `strings.xml`. La dernière phrase de la piste est désormais fausse dans les faits :
+`check_strings.py` a gagné une passe qui **voit** ce genre de littéral, y compris dans
+`core` — c'est elle qui a ouvert **#R9**.
 
 
 ## #47 — core/viewmodel : donner une sortie à l'écran d'achat quand aucun résultat de facturation n'arrive

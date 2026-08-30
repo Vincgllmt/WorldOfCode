@@ -5,22 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
 import com.purple.iptvplayer.core.data.BillingRepository
+import com.purple.iptvplayer.core.data.PurchaseFailure
 import com.purple.iptvplayer.core.data.PurchaseResult
 import com.purple.iptvplayer.core.data.TrialRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-/** Causes d'échec que l'UI doit savoir traduire. Cf. [PurchaseScreenState.PurchaseError]. */
-enum class PurchaseFailure {
-    /** La Play Console ne renvoie aucune offre, ou le service est indisponible. */
-    OFFERS_UNAVAILABLE,
-    /** La restauration a levé. */
-    RESTORE_FAILED,
-    /** La restauration a abouti mais ce compte Google ne possède aucun achat. */
-    NOTHING_TO_RESTORE,
-}
 
 sealed class PurchaseScreenState {
     object Loading    : PurchaseScreenState()
@@ -36,14 +27,16 @@ sealed class PurchaseScreenState {
      * dans l'interface anglaise de l'app TV (observé §43). C'est le défaut M1 transposé
      * dans `core`, où il touche les deux UI au lieu d'une.
      *
+     * Il portait aussi un second champ `message`, présenté comme « déjà localisé par Play
+     * Billing » et **prioritaire** sur la cause typée. La prémisse était fausse : ce champ
+     * recevait soit le préfixe français fabriqué par `BillingRepository.describe()`, soit
+     * le `message` d'une exception — technique et anglais. Comme il passait devant
+     * [reason], les ressources traduites n'étaient presque jamais affichées. Champ retiré
+     * (#R9, §67).
+     *
      * @param reason cause **typée**, que chaque UI traduit avec ses propres ressources.
-     * @param message message fourni par Play Billing — déjà dans la langue de l'appareil,
-     *   donc rendu tel quel. Prioritaire sur [reason] quand il est présent.
      */
-    data class PurchaseError(
-        val reason: PurchaseFailure? = null,
-        val message: String? = null,
-    ) : PurchaseScreenState()
+    data class PurchaseError(val reason: PurchaseFailure) : PurchaseScreenState()
 }
 
 class PurchaseViewModel(
@@ -86,7 +79,7 @@ class PurchaseViewModel(
         }
         _state.value = outcome.fold(
             onSuccess = { PurchaseScreenState.Idle },
-            onFailure = { PurchaseScreenState.PurchaseError(PurchaseFailure.OFFERS_UNAVAILABLE, it.message) },
+            onFailure = { PurchaseScreenState.PurchaseError(PurchaseFailure.OFFERS_UNAVAILABLE) },
         )
     }
 
@@ -120,8 +113,8 @@ class PurchaseViewModel(
                     _state.value = PurchaseScreenState.PurchaseSuccess(result.productId)
                 }
                 is PurchaseResult.Error -> {
-                    // Message de Play Billing : déjà localisé par le service, rendu tel quel.
-                    _state.value = PurchaseScreenState.PurchaseError(message = result.message)
+                    // Cause typée : c'est l'UI qui choisit la langue, pas `core`.
+                    _state.value = PurchaseScreenState.PurchaseError(result.reason)
                 }
                 // Refermer la feuille de paiement ramène simplement à l'écran, sans message d'échec.
                 PurchaseResult.Cancelled -> {
