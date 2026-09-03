@@ -79,6 +79,7 @@ numéro.
 | 67 | **#R9 (1) et (2) corrigés** — `core` fabriquait sept messages de facturation **en français** ; et surtout `PurchaseError.message`, documenté « déjà localisé par Play », **passait devant** la cause typée et rendait trois ressources traduites quasi inatteignables. Contient `BillingPolicy` (table de codes Play en objet pur) et pourquoi l'écran d'achat n'a pas pu être atteint sur l'émulateur | on touche à la facturation, à `PurchaseScreenState`, ou on lit un champ documenté « déjà localisé » |
 | 68 | **#70 à #73 corrigés** — l'écran d'achat TV : un succès de restauration écrasé par `Idle` (barrière sans issue), « Restaurer » offert seulement quand la facturation est en panne, un succès hérité qui refermait l'écran, un échec invisible dès qu'il y a des offres. Contient **comment servir un catalogue local** à l'émulateur (`adb reverse` + `http.server`) et ce que cette voie n'a pas permis de faire | on touche à `TvPurchaseScreen`, à un `LaunchedEffect(state)`, ou on a besoin d'un catalogue sur l'émulateur |
 | 69 | **#R10 et #R11 corrigés** — la bannière du lanceur Android TV était un aplat noir ; et le garde d'appui long s'armait sur les **répétitions** de la pression qui venait de l'ouvrir, si bien que « Annuler » se validait seul. Contient pourquoi un correctif déjà écrit pour ce geste ne suffisait pas, et comment fabriquer une bannière TV | on touche à un appui long, à un `onPreviewKeyEvent`, ou à une ressource du lanceur |
+| 70 | **Campagne niveau 3 sur le Pixel 7** : #R8 vérifié par une paire discriminante fr/en obtenue **sans toucher au système** ; le retrait de « Reprendre la lecture » mesuré sur les deux chemins ; `settings delete global http_proxy` **ne suffit pas** à défaire le proxy | on vérifie sur le Pixel, on coupe le réseau d'un appareil, ou on touche au retrait de la reprise |
 
 ---
 
@@ -6070,3 +6071,113 @@ sortie d'outil que j'avais sous les yeux** : `banner='res/FL.xml'` pour l'un, et
 l'autre un garde dont la moitié n'avait aucun test. Le rappel est simple : lire la sortie
 entière de l'outil qu'on vient de lancer, et se demander, devant un garde, **s'il décide
 d'une chose ou de deux**.
+
+
+## 70. Campagne niveau 3 sur le Pixel 7 — #R8 vérifié, et le retrait de la reprise mesuré *(2026-09-03)*
+
+Le téléphone étant branché, la liste « À vérifier sur le Pixel 7 » de
+`docs/RESTE_A_FAIRE.md` a été reprise **en une seule session**, comme elle le demandait,
+et le geste que l'utilisateur avait signalé — retirer un contenu de « Reprendre la
+lecture » — a été mesuré sur le support mobile.
+
+### 70.1 #R8 — la paire discriminante sans toucher au système
+
+Voir un message français sur un téléphone français ne prouve rien : c'est exactement le
+test qui ne peut pas échouer (règle 2). Le terme discriminant est le rendu **anglais** du
+même chemin de code.
+
+Changer la langue du système sur l'appareil *personnel* de l'utilisateur n'était pas
+souhaitable. Ce n'était pas nécessaire : l'app porte sa propre langue —
+`LocaleHelper` (`app-mobile/util/LocaleHelper.kt`) lit la clé `language` du
+`SharedPreferences` **`purple_locale`**, et retombe sur la locale système seulement si le
+fichier est absent. Il l'était. Il a suffi de l'écrire, puis de le supprimer :
+
+```bash
+adb shell "run-as com.purple.iptvplayer.debug sh -c 'cat /data/local/tmp/pl.xml > shared_prefs/purple_locale.xml'"
+# … puis, pour revenir à l'état d'origine :
+adb shell "run-as com.purple.iptvplayer.debug rm -f shared_prefs/purple_locale.xml"
+```
+
+Scénario, cache du catalogue vidé et réseau coupé au proxy, onglet **Films** :
+
+| Langue de l'app | Rendu mesuré |
+|---|---|
+| fr (défaut système) | « Erreur réseau. Vérifiez votre connexion. » |
+| en (`purple_locale`) | « Network error. Please check your connection. » |
+
+Le libellé **suit la langue de l'app**, et l'onglet du bas bascule avec lui
+(`Films`/`Séries` → `Films`/`Series`). Avant #R8, la même situation affichait un littéral
+anglais dans les deux cas. **#R8 est vérifié au niveau 3.**
+
+### 70.2 Le retrait de « Reprendre la lecture » sur mobile — les deux chemins tiennent
+
+L'app portait trois entrées réelles. Les deux chemins ont été exercés, en relisant à
+chaque fois le `DataStore` — la mesure, pas l'impression :
+
+- **✕ sur la carte** → `recent_items_json` passe de **3 à 2** entrées, la carte disparaît
+  de la rangée dans la seconde.
+- **Appui long → feuille « Supprimer de la liste »** → passe de **1 à 0**, et la section
+  entière disparaît, titre compris.
+- `clearProgress` retire bien, dans la **même transaction**, `progress_<id>`,
+  `duration_<id>` et l'entrée de la vitrine. Les positions des *autres* épisodes de la
+  série restent — c'est voulu (badge « vu », #43).
+
+**Le défaut du §49 ne se reproduit pas.** Séquence jouée : lecture réelle d'un épisode
+pendant 25 s (la boucle d'enregistrement a bien écrit — l'entrée du groupe série a été
+remplacée par l'épisode en cours), retour, puis **30 s d'attente** sans rien toucher :
+aucune réinsertion. `PlayerViewModel.stop()` coupe la boucle et efface `currentMediaId`,
+et `onCleared` sort alors immédiatement.
+
+Au passage, un comportement correct qui *ressemble* à un défaut : en quittant le lecteur,
+l'épisode a disparu de la rangée **tout seul**. Il était près de sa fin, `ProgressPolicy`
+a répondu `COMPLETED`, `markCompleted` l'a sorti de la vitrine (#43). Ce n'est pas une
+suppression ratée, c'est la règle « vu jusqu'au bout » qui s'applique.
+
+### 70.3 Ce qui, lui, ne va pas : #R12
+
+Un seul ✕ est atteignable, celui de la carte la plus à gauche. Mesuré :
+
+```
+carte 1   [42,576][620,904]     ✕ carte 1  [496,574][622,700]  = 126×126 px = 48 dp
+carte 2   [652,576][1080,904]   ✕ carte 2  — aucun nœud
+```
+
+La cible tactile est bonne : `IconButton` reçoit `.size(22.dp)`, mais
+`minimumInteractiveComponentSize()` la ramène à 48 dp — 22 dp n'est que la taille
+*dessinée*. C'est l'**emplacement** qui est en cause : cartes de 220 dp espacées de 12 dp
+sur un écran de 411 dp, la carte 2 va de 248 à 468 dp et son ✕ tombe vers 445 dp, hors
+écran. Reporté en **#R12**, ouvert — c'est une décision de conception, pas un correctif
+évident.
+
+### 70.4 Deux pièges d'outillage, payés dans cette session
+
+**`settings delete global http_proxy` ne défait pas le proxy.** Après la commande
+documentée, l'app affichait toujours « Erreur réseau » et le téléphone était **resté
+proxifié** :
+
+```
+http_proxy               = null      ← la clé documentée, bien effacée
+global_http_proxy_host   = 127.0.0.1 ← toujours là
+global_http_proxy_port   = 1         ← toujours là
+```
+
+Le proxy ne tombe qu'en effaçant aussi ces deux clés, puis en posant `:0` avant de
+supprimer `http_proxy`. Sans la relecture, l'appareil *personnel* de l'utilisateur serait
+resté sans réseau HTTP — d'où la règle 27.
+
+**Le `>` d'une redirection sous `run-as` est exécuté par le mauvais shell.** Écrit ainsi,
+`adb shell run-as pkg sh -c "cat src > dst"`, la redirection est faite côté hôte par
+l'utilisateur `shell`, qui n'a pas les droits : « Permission denied », alors même que
+`run-as` les aurait. La forme qui marche met **toute** la commande entre guillemets :
+
+```bash
+adb shell "run-as pkg sh -c 'cat /data/local/tmp/f > files/datastore/f'"
+```
+
+### 70.5 L'appareil a été rendu tel qu'il était
+
+Instantané binaire de `watch_progress.preferences_pb` pris **avant** toute manipulation,
+réécrit à la fin : les trois entrées d'origine sont revenues, positions comprises. Proxy
+supprimé et relu, `purple_locale.xml` supprimé, identifiants et essai jamais touchés.
+Contrôle final à l'écran : interface en français, catalogue chargé, rangée « Reprendre la
+lecture » à trois entrées.

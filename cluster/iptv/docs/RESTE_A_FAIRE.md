@@ -42,24 +42,35 @@ ici.
       (build Flutter) : il ne recevra plus aucune mise à jour et ne migrera pas seul vers
       `com.purple.iptvplayer.tv`. Cf. §9.
 
-#### À vérifier sur le Pixel 7 (niveau 3 non fait)
+#### À vérifier sur le Pixel 7 (niveau 3)
 
 > Ces points sont **corrigés et vérifiés au niveau 1**, et pour certains au niveau 2 sur
 > l'émulateur ; il leur manque le passage sur le téléphone, qui exige que l'utilisateur
 > le branche. Les reprendre **ensemble** au prochain branchement — c'est une seule session
 > d'install + scénarios, pas une par défaut.
+>
+> **Campagne du 2026-09-03 (§70) : la liste a été reprise, le téléphone étant branché.**
+> #R8 est vérifié ; il ne reste que les armes jamais atteintes, qui n'appellent pas de
+> montage exprès.
 
-- [ ] **#R8** — messages d'échec traduits *(2026-08-30, §66)*. Vérifié sur l'émulateur pour
-      `app-tv` (`ContentFailure.NETWORK`, en fr **et** en en) et pour `app-mobile`
-      (`SetupFailure.INVALID_INPUT`), l'APK mobile ayant été installé sur l'émulateur TV
-      pour l'occasion. **Sur le Pixel, rien.** Scénario : vider le cache
-      (`run-as … rm -rf cache/*`), `settings put global http_proxy 127.0.0.1:1`, ouvrir
-      Films ou Séries → attendre « Erreur réseau. Vérifiez votre connexion. » Ne pas
-      oublier `settings delete global http_proxy`.
+- [x] **#R8** — messages d'échec traduits *(2026-08-30, §66)*. ✅ **Vérifié au niveau 3 sur
+      le Pixel 7 le 2026-09-03 (§70)**, par une paire discriminante : même chemin de code,
+      « Erreur réseau. Vérifiez votre connexion. » en fr et « Network error. Please check
+      your connection. » en en. La langue de l'app se bascule **sans toucher au système**,
+      en écrivant `shared_prefs/purple_locale.xml` (clé `language`) puis en le supprimant.
+      ⚠️ `settings delete global http_proxy` **ne défait pas le proxy** : effacer aussi
+      `global_http_proxy_host` et `global_http_proxy_port`, puis relire (§70.4).
 - [ ] **#R8, armes non atteintes** — `NOT_FOUND`, `PARSE_ERROR` et `SetupFailure.NETWORK`
       n'ont été exercées sur aucun support. Même mécanisme que les trois armes vues, même
       passe de contrôle ; à confirmer si l'occasion se présente, sans construire un
       montage exprès.
+- [x] **Retrait de « Reprendre la lecture » sur mobile** — ✅ vérifié au niveau 3 le
+      2026-09-03 (§70) : le ✕ et la feuille d'appui long fonctionnent tous les deux, et la
+      boucle de fond du §49 ne réinsère plus rien (25 s de lecture, retour, 30 s d'attente).
+      A produit **#R12** (le ✕ des cartes non visibles entièrement est hors écran), ouvert.
+- [ ] **#R11 sur un vrai téléviseur** — le garde d'appui long TV n'est vérifié qu'au
+      niveau 1 ; le geste mobile équivalent, lui, est vérifié (§70.2). Attend la
+      confirmation de l'utilisateur avec l'APK livré.
 
 #### Couverture
 

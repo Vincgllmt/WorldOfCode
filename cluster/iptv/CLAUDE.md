@@ -14,7 +14,7 @@ Dernière mise à jour : 2026-08-28
 > | **Que corriger ensuite** — 100 défauts sourcés à la ligne, triés par gravité | [`docs/audit.md`](docs/audit.md) |
 > | **Builder, installer, piloter un appareil** — JDK, SDK, `adb`, émulateur, build d'auteur | [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md) |
 > | **Comment valider** — les trois niveaux en détail, l'outillage, les conventions | [`docs/TESTS.md`](docs/TESTS.md) |
-> | **Ce qu'un geste a déjà coûté** — 26 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
+> | **Ce qu'un geste a déjà coûté** — 28 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
 > | **Le diagnostic d'un sujet déjà traité** — mesures, traces, corrections de correction | [`docs/JOURNAL.md`](docs/JOURNAL.md) (index en tête) |
 > | **Facturation, sécurité, publication, dette** | [`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) |
 > | **Les 28 défauts du D-pad, en spécifications** | [`docs/PLAN_CORRECTION_TV.md`](docs/PLAN_CORRECTION_TV.md) |
@@ -101,12 +101,12 @@ export JAVA_HOME=$HOME/.local/share/jdk-17          # aucun JDK système : le pa
 export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 
-./gradlew :core:testDebugUnitTest    # 231 tests
-./gradlew :app-tv:testDebugUnitTest  #  73 tests
+./gradlew :core:testDebugUnitTest    # 241 tests
+./gradlew :app-tv:testDebugUnitTest  #  77 tests
 ./gradlew :app-tv:assembleDebug      # ou :app-mobile:installDebug
 ```
 
-**État de la suite : 304 tests, 0 échec.** Rapport HTML après échec :
+**État de la suite : 318 tests, 0 échec.** Rapport HTML après échec :
 `core/build/reports/tests/testDebugUnitTest/index.html`.
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`.
@@ -175,8 +175,8 @@ Robolectric a été écarté : [`docs/TESTS.md`](docs/TESTS.md).
 ## 5. Où en est le chantier
 
 **La file de travail est [`docs/audit.md`](docs/audit.md)** : 100 défauts relevés par
-lecture systématique, sourcés `fichier:ligne`, plus 11 relevés à l'usage (#R1 à #R11) — 6 critiques /
-43 majeurs / 53 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
+lecture systématique, sourcés `fichier:ligne`, plus 12 relevés à l'usage (#R1 à #R12) — 6 critiques /
+43 majeurs / 54 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
 renvoi vers la section du journal qui porte le diagnostic.
 
 ⚠️ **`✅ Corrigé` ne veut pas dire vérifié.** Une entrée dont la preuve se limite à
@@ -201,11 +201,21 @@ du §52 porte sur le regard, pas sur la mesure.
 
 **Reste non vérifié sur les supports** : la remise à zéro du défilement au changement de
 genre et le bouton « Retour » qui efface la recherche (TV-3), faute d'avoir su atteindre
-ces états de façon fiable. Et, depuis le 2026-08-30, **#R8 sur le Pixel 7** — corrigé et vu
-à l'écran sur l'émulateur seulement, le téléphone n'étant pas branché. La liste des points
-qui attendent un branchement est tenue dans
-[`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) (« À vérifier sur le Pixel 7 ») : **les
-reprendre en une seule fois**, pas un par un.
+ces états de façon fiable. Et **#R11 sur un vrai téléviseur**, qui attend la confirmation
+de l'utilisateur — son équivalent mobile, lui, est vérifié (§70.2).
+
+Le **2026-09-03**, le téléphone étant branché, la liste « À vérifier sur le Pixel 7 » a été
+reprise en une seule session (§70) : **#R8 est vérifié au niveau 3**, par une paire
+discriminante fr/en obtenue **sans toucher aux réglages du système** — l'app porte sa
+propre langue dans `shared_prefs/purple_locale.xml`. La même session a mesuré le retrait de
+« Reprendre la lecture » sur mobile (les deux chemins tiennent) et en a sorti **#R12**.
+La liste des points qui attendent encore un branchement reste tenue dans
+[`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) : **les reprendre en une seule fois**.
+
+⚠️ Couper le réseau d'un appareil par `settings put global http_proxy` se **défait mal** :
+`settings delete global http_proxy` laisse `global_http_proxy_host`/`_port` en place et
+l'appareil reste proxifié. Sur le téléphone de l'utilisateur, relire la valeur avant de
+partir (§70.4, règle 27).
 
 Ce qui ne relève pas de l'audit — facturation (trois points ouverts), TLS non validé
 (**S1**, décision produit), sauvegarde du keystore, publication de `app-mobile` 15 / 1.2.0
@@ -216,7 +226,7 @@ et de `app-tv` (jamais publiée), dette connue — est dans
 
 ## 6. Les cinq pièges qui ont coûté le plus cher
 
-Les 26 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
+Les 28 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
 paient à chaque fois qu'on les oublie.
 
 1. **Une décision écrite deux fois, une par UI, finit toujours par diverger** — seule une

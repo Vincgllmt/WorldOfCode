@@ -132,3 +132,19 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     annonçait `banner='res/FL.xml'` — une bannière de lanceur qui est un XML et non une
     image est déjà l'anomalie. Je lisais cette ligne pour la version et la signature ; le
     défaut y était écrit et l'utilisateur l'a trouvé avant moi (§69).
+
+27. **Un réglage d'appareil modifié pour un test se défait en le *relisant*, pas en lançant
+    la commande inverse.** `settings put global http_proxy 127.0.0.1:1` coupe le réseau ;
+    `settings delete global http_proxy` **ne le rétablit pas** — il laisse
+    `global_http_proxy_host` et `global_http_proxy_port` en place, et l'appareil reste
+    proxifié. Sur l'émulateur c'est sans conséquence ; sur le téléphone *personnel* de
+    l'utilisateur, cela l'aurait laissé sans réseau HTTP après mon départ. Toute
+    modification faite sur un appareil qui n'est pas jetable se termine par une relecture
+    de la valeur, et par un contrôle applicatif que l'état d'origine est bien revenu (§70).
+
+28. **La langue d'une app ne se vérifie pas en changeant celle du système.** `app-mobile`
+    porte la sienne dans `shared_prefs/purple_locale.xml` (`LocaleHelper`, clé `language`),
+    et retombe sur le système seulement si le fichier est absent. Écrire ce fichier, puis
+    le supprimer, donne la paire discriminante fr/en sans rien changer sur l'appareil.
+    Chercher d'abord si l'app tient elle-même le réglage qu'on s'apprêtait à modifier
+    globalement (§70.1).

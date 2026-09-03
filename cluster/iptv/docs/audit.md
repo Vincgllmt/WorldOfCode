@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **11 relevés à l'usage** (#R1 à #R11), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **12 relevés à l'usage** (#R1 à #R12), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -202,6 +202,34 @@ Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, app
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
 
 
+## #R12 — app-mobile : le ✕ de « Reprendre la lecture » n'est atteignable que sur la carte la plus à gauche
+
+`app-mobile/home`
+
+**Symptôme.** Sur la rangée « Reprendre la lecture », une seule carte porte un ✕
+cliquable : la première. Pour retirer n'importe quelle autre entrée, il faut d'abord faire
+défiler la rangée jusqu'à ramener la carte visée vers la gauche.
+
+**Preuve — mesurée sur le Pixel 7 (2026-09-03, §70).** Carte de 220 dp, écart de 12 dp,
+marge de 16 dp, écran de 411 dp : la carte 1 occupe 16→236 dp, la carte 2 248→468 dp. Le ✕
+est posé en haut à droite de sa carte, soit ~445 dp pour la carte 2 — **hors de l'écran**.
+L'arbre d'accessibilité le confirme : la carte 2 (`[652,576][1080,904]`) est bien présente
+et cliquable, mais **aucun nœud ✕ ne lui correspond**, alors que celui de la carte 1 est
+mesuré à `[496,574][622,700]`, soit 126×126 px = **48 dp**. La cible tactile est donc
+correcte — `IconButton` reçoit `.size(22.dp)`, mais `minimumInteractiveComponentSize()`
+la ramène à 48 dp, et 22 dp n'est que la taille *dessinée*. C'est son **emplacement** qui
+est en cause, pas sa taille.
+
+**Ce n'est pas bloquant** : l'appui long ouvre une feuille « Supprimer de la liste » qui,
+elle, fonctionne sur n'importe quelle carte (vérifiée §70). Mais cette feuille n'a
+**aucune affordance** — rien à l'écran n'indique qu'elle existe.
+
+**Ouvert — décision de conception.** Trois issues, aucune évidente : réduire la largeur des
+cartes pour qu'une deuxième tienne entière, déplacer le ✕ vers un bord toujours visible, ou
+assumer la feuille d'appui long en lui donnant un indice visuel. À trancher avec
+l'utilisateur, comme le coût de 3 appuis de #77. Gravité **mineure**.
+
+
 ## #R11 — app-tv : le garde d'appui long s'arme sur les répétitions de la pression qui l'a ouvert
 
 `app-tv/movies`
@@ -231,7 +259,10 @@ pression précédente. Trois tests ajoutés, dont un qui rejoue la séquence ré
 et **échoue sous l'ancienne règle** — mesuré dans les deux sens.
 
 ⚠️ Vérifié au niveau 1 seulement : la rangée « Reprendre la lecture » n'est rendue que dans
-la branche succès de l'écran, et le catalogue ne charge pas depuis ce poste (§8).
+la branche succès de l'écran, et le catalogue ne charge pas depuis ce poste (§8). Le geste
+**mobile** équivalent, lui, a été vérifié au niveau 3 le 2026-09-03 (§70) et fonctionne par
+ses deux chemins — le défaut est bien propre à l'app TV. Reste la confirmation de
+l'utilisateur sur son téléviseur.
 
 
 ## #R10 — app-tv : la bannière du lanceur Android TV est un aplat noir
