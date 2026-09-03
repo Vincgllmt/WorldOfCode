@@ -218,7 +218,7 @@ export default function ArenaPage() {
                     <BadgeMedal
                       slug={challenge.slug}
                       name={badge?.name ?? challenge.title}
-                      icon={badge?.icon}
+                      icon={badge?.icon ?? challenge.badgeIcon}
                       earned={earned}
                       size={84}
                     />

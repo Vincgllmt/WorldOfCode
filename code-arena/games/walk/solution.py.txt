@@ -1,0 +1,8 @@
+# La Promenade du Cameleon - solution de reference (Python)
+#
+# On lit la distance, puis on ecrit autant de lignes AVANCE.
+
+n = int(input())
+
+for i in range(n):
+    print("AVANCE")

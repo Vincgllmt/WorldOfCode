@@ -8,6 +8,8 @@ export interface ArenaChallenge {
   languages: string[]
   maxScore: number
   image?: string | null
+  /** Icône de la médaille du défi (badge « first_solve »), connue même non débloquée. */
+  badgeIcon?: string | null
   successRate: number
   solved: boolean
 }
