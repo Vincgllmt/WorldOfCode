@@ -80,6 +80,7 @@ numéro.
 | 68 | **#70 à #73 corrigés** — l'écran d'achat TV : un succès de restauration écrasé par `Idle` (barrière sans issue), « Restaurer » offert seulement quand la facturation est en panne, un succès hérité qui refermait l'écran, un échec invisible dès qu'il y a des offres. Contient **comment servir un catalogue local** à l'émulateur (`adb reverse` + `http.server`) et ce que cette voie n'a pas permis de faire | on touche à `TvPurchaseScreen`, à un `LaunchedEffect(state)`, ou on a besoin d'un catalogue sur l'émulateur |
 | 69 | **#R10 et #R11 corrigés** — la bannière du lanceur Android TV était un aplat noir ; et le garde d'appui long s'armait sur les **répétitions** de la pression qui venait de l'ouvrir, si bien que « Annuler » se validait seul. Contient pourquoi un correctif déjà écrit pour ce geste ne suffisait pas, et comment fabriquer une bannière TV | on touche à un appui long, à un `onPreviewKeyEvent`, ou à une ressource du lanceur |
 | 70 | **Campagne niveau 3 sur le Pixel 7** : #R8 vérifié par une paire discriminante fr/en obtenue **sans toucher au système** ; le retrait de « Reprendre la lecture » mesuré sur les deux chemins ; `settings delete global http_proxy` **ne suffit pas** à défaire le proxy | on vérifie sur le Pixel, on coupe le réseau d'un appareil, ou on touche au retrait de la reprise |
+| 71 | **L'app TV vérifiable à l'émulateur** : un proxy résiduel de l'AVD faisait échouer *toutes* les requêtes (la « panne fournisseur » du §8 n'expliquait pas tout) ; `tools/fake_xtream.py` rend la branche succès ; l'appui long de « Reprendre la lecture » **tient**, et le focus perdu après suppression est corrigé (#R13) | on vérifie un écran TV qui exige un catalogue, ou on touche au retrait de la reprise |
 
 ---
 
@@ -6181,3 +6182,100 @@ réécrit à la fin : les trois entrées d'origine sont revenues, positions comp
 supprimé et relu, `purple_locale.xml` supprimé, identifiants et essai jamais touchés.
 Contrôle final à l'écran : interface en français, catalogue chargé, rangée « Reprendre la
 lecture » à trois entrées.
+
+
+## 71. L'app TV enfin vérifiable à l'émulateur — et le focus perdu après une suppression *(2026-09-03)*
+
+Troisième remontée de l'utilisateur sur le même geste : « lorsque je maintiens OK, l'encart
+apparaît. Mais lorsque je la relâche, l'encart disparaît. » C'est le symptôme d'**avant**
+#R11 (§69). Il fallait donc le rejouer sur un support, ce que deux obstacles avaient
+empêché jusqu'ici — la rangée « Reprendre la lecture » ne vit que dans la branche succès de
+l'écran, et le catalogue « ne chargeait pas depuis ce poste ».
+
+### 71.1 Le vrai motif du catalogue qui ne charge pas : un proxy oublié dans l'AVD
+
+Un panneau Xtream minimal a été écrit (`tools/fake_xtream.py`) pour servir le catalogue
+depuis la machine. L'app a répondu **« Could not connect to the server »** — et le serveur
+n'avait vu **aucune requête**. Les deux seules lignes de son journal étaient mes propres
+`curl` de contrôle : de quoi croire, à tort, que l'app parlait bien au serveur.
+
+Mesure :
+
+```
+adb shell settings get global http_proxy              → null
+adb shell settings get global global_http_proxy_host  → 127.0.0.1   ← resté là
+adb shell settings get global global_http_proxy_port  → 1
+```
+
+C'est le proxy posé lors d'une session précédente pour simuler une coupure réseau, et
+« défait » par le `settings delete global http_proxy` documenté — qui **ne défait rien**
+(règle 27, trouvée le matin même sur le Pixel, §70.4). L'AVD ayant été relancé
+`-no-snapshot` mais avec son `userdata`, le réglage a survécu à tous les redémarrages.
+`ping` répondait, ce qui écartait à tort la piste réseau : le proxy ne gêne que le trafic
+HTTP des applications.
+
+⚠️ **Conséquence sur le §8.** L'affirmation « l'IP du fournisseur est bloquée depuis ce
+poste » a pu servir à expliquer des échecs qui venaient de ce proxy. Le blocage du
+fournisseur reste vrai sur le Wi-Fi (le téléphone, lui, charge en 4G, §70), mais il
+n'expliquait pas l'émulateur. **Toute conclusion de type « le catalogue ne peut pas charger
+ici » est à reprendre en vérifiant d'abord les trois clés de proxy.**
+
+Proxy purgé, l'app se connecte, `get_live_categories` / `get_live_streams` arrivent au
+serveur, et **les écrans Films et Séries se rendent enfin en entier**. La rangée est
+peuplée par `tools/mkprefs.py recents 4` écrit dans le `DataStore` du paquet TV.
+
+### 71.2 Le geste signalé : il tient
+
+Le relâchement de l'appui long ne referme plus la confirmation. Vérifié à l'écran, **trois
+fois de suite**, puis une quatrième sur la build finale : le dialogue « Remove from Continue
+watching? » est toujours là 2,5 s après le relâchement. La suppression va au bout — 4
+entrées → 3 dans `recent_items_json`, et la carte quitte la rangée.
+
+Le correctif #R11 est donc **confirmé sur un support**. Ce que l'utilisateur décrit
+correspond à une build antérieure au 2026-08-30.
+
+⚠️ **Ce qui n'a pas pu être rejoué** : l'appui *long et maintenu*, celui qui produit les
+répétitions automatiques `repeatCount` 2, 3, 4… `input keyevent --longpress` envoie
+`repeatCount` 0 puis 1 puis le relâchement — soit exactement la séquence minimale. Injecter
+une touche **tenue** demanderait `sendevent` (refusé sans root sur cette image) ou la
+console de l'émulateur, dont le périphérique virtuel n'accepte ni `KEY_ENTER`, ni
+`KEY_CENTER`, ni `KEY_SELECT`, ni le code brut `353` de `DPAD_CENTER` — seules les flèches
+passent. La moitié « répétitions » reste donc couverte par les tests unitaires seuls.
+
+### 71.3 #R13 — la suppression rendait la télécommande inerte
+
+Le vrai défaut était juste après. **Une fois la suppression confirmée, plus rien n'a le
+focus.** Mesuré : six appuis directionnels d'affilée (bas, droite, haut, gauche, bas,
+droite) sans le moindre changement à l'écran. Sur un téléviseur, l'application paraît figée ;
+la seule issue est de quitter l'écran. Le cas vaut dans les deux configurations — qu'il
+reste des cartes ou que la dernière retirée fasse disparaître toute la section.
+
+La cause est simple : la carte qui portait le focus est détruite par sa propre suppression,
+et rien ne reprend le focus derrière elle.
+
+**Correctif.** `TvRowFocus.scheduleRestore(key)` note la carte qui s'en va ;
+`TvRowRemovalFocus`, posé **au niveau de l'écran** — donc survivant à la carte — attend que
+le retrait soit réellement composé, puis rend le focus au point d'entrée de l'écran. Le
+`TvRecentCard` étant partagé par Films et Séries, la demande est écrite **une fois**.
+
+Le focus est rendu au point d'entrée de l'écran, et non à la rangée. Ce n'est pas un choix
+d'ergonomie mais un constat : réclamer le requester d'une carte **encore composée** de la
+rangée aboutit lui aussi à la première affiche du catalogue. Vérifié en journalisant l'état
+interne — `attached=[803, 801]`, clé retenue `801`, `requestFocus` → `Success` — et l'
+`onFocusChanged` qui suit annonce l'élément **101**, une affiche de genre. Essayé ensuite
+avec `803`, dont la composition n'avait pas bougé : même résultat. Les deux voies donnent le
+même écran ; celle qui est retenue est déterministe et se raconte. Les journaux de
+diagnostic ont été retirés.
+
+**Vérifié à l'écran, les deux cas** : après une suppression laissant des cartes, comme après
+celle qui vide la rangée, deux appuis « droite » déplacent le focus. Avant le correctif, six
+appuis ne faisaient rien.
+
+### 71.4 Ce que cette session laisse derrière elle
+
+`tools/fake_xtream.py` lève le blocage qui revenait à chaque campagne TV : les écrans qui
+n'existent que catalogue chargé — rangée de reprise, écran d'achat (#R9, B1.5) — sont
+désormais atteignables à l'émulateur. La build de vérification se fait avec
+`purple.defaultM3u` **temporairement** pointé sur le panneau local, et `local.properties`
+est restauré aussitôt : l'APK de test ne contient alors aucun identifiant réel (contrôlé,
+`0 occurrence` dans les `classes*.dex`).

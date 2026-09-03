@@ -2,7 +2,7 @@
 
 > Relevé le 27/08/2026 par lecture systématique du code,
 > périmètre par périmètre : `core`, `app-tv` et `app-mobile`, soit ~12 000 lignes
-> de Kotlin. **100 défauts** retenus par lecture, plus **12 relevés à l'usage** (#R1 à #R12), chacun sourcé à la ligne.
+> de Kotlin. **100 défauts** retenus par lecture, plus **13 relevés à l'usage** (#R1 à #R13), chacun sourcé à la ligne.
 >
 > Chaque entrée porte une **preuve** (`fichier:ligne`) et, quand elle a pu être
 > établie, une **cause racine**. Là où la cause n'a pas pu être tranchée par
@@ -202,6 +202,33 @@ Vérifié de bout en bout : lien M3U saisi et **visible pendant la frappe**, app
 Correction indépendante de **#R5** et vérifiable **sans capture d'écran**, en comparant les bornes de l'arbre d'accessibilité à celles de la fenêtre de l'IME.
 
 
+## #R13 — app-tv : supprimer une entrée de « Reprendre la lecture » rend la télécommande inerte
+
+`app-tv/movies` · `app-tv/series` · `app-tv/common`
+
+**Symptôme.** La suppression aboutit — la carte disparaît, la donnée est écrite — mais
+**plus rien n'a le focus ensuite**. Sur un téléviseur, l'application paraît figée : aucune
+direction ne répond, la seule issue est de quitter l'écran.
+
+**Preuve — mesurée à l'émulateur (2026-09-03, §71.3).** Après confirmation, **six** appuis
+directionnels d'affilée (bas, droite, haut, gauche, bas, droite) ne changent rien à l'écran.
+Le cas vaut dans les deux configurations : qu'il reste des cartes dans la rangée, ou que la
+dernière retirée fasse disparaître toute la section.
+
+**Cause.** établie — la carte qui portait le focus est détruite par sa propre suppression, et
+rien ne reprend le focus derrière elle. C'est le pendant TV du geste mobile, qui, lui, ne
+souffre pas du problème : le focus n'y existe pas (§70.2).
+
+**✅ Corrigé le 2026-09-03 (§71.3).** `TvRowFocus.scheduleRestore(key)` note la carte qui
+s'en va ; `TvRowRemovalFocus`, posé **au niveau de l'écran** — donc survivant à la carte —
+attend que le retrait soit composé puis rend le focus au point d'entrée de l'écran. Écrit
+**une seule fois** : `TvRecentCard` est partagé par Films et Séries. 5 tests ajoutés sur la
+partie décidable sans Android (quand le retrait est « consommé »).
+
+**Vérifié à l'écran**, les deux cas : après le correctif, deux appuis « droite » déplacent le
+focus là où six ne faisaient rien. Gravité **majeure**.
+
+
 ## #R12 — app-mobile : le ✕ de « Reprendre la lecture » n'est atteignable que sur la carte la plus à gauche
 
 `app-mobile/home`
@@ -258,11 +285,13 @@ un appui **neuf** (`repeatCount == 0`) arme la fenêtre, une répétition appart
 pression précédente. Trois tests ajoutés, dont un qui rejoue la séquence réelle de touches
 et **échoue sous l'ancienne règle** — mesuré dans les deux sens.
 
-⚠️ Vérifié au niveau 1 seulement : la rangée « Reprendre la lecture » n'est rendue que dans
-la branche succès de l'écran, et le catalogue ne charge pas depuis ce poste (§8). Le geste
-**mobile** équivalent, lui, a été vérifié au niveau 3 le 2026-09-03 (§70) et fonctionne par
-ses deux chemins — le défaut est bien propre à l'app TV. Reste la confirmation de
-l'utilisateur sur son téléviseur.
+✅ **Vérifié à l'écran le 2026-09-03 (§71.2)**, l'émulateur ayant enfin pu charger un
+catalogue (`tools/fake_xtream.py`) : le relâchement ne referme plus la confirmation —
+constaté **trois fois de suite**, puis sur la build finale — et la suppression va au bout.
+Le geste **mobile** équivalent est vérifié au niveau 3 (§70.2). ⚠️ Reste hors de portée
+l'appui *maintenu* (répétitions `repeatCount` ≥ 2) : aucune injection de touche tenue n'est
+possible sur cette image (ni `sendevent` sans root, ni la console de l'émulateur). Cette
+moitié-là n'est couverte que par les tests unitaires.
 
 
 ## #R10 — app-tv : la bannière du lanceur Android TV est un aplat noir

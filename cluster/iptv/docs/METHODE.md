@@ -148,3 +148,23 @@ Chacune vient d'une erreur réellement commise, référencée dans le journal. L
     le supprimer, donne la paire discriminante fr/en sans rien changer sur l'appareil.
     Chercher d'abord si l'app tient elle-même le réglage qu'on s'apprêtait à modifier
     globalement (§70.1).
+
+29. **Un journal de serveur vide ne se distingue pas d'un journal qu'on n'a pas lu.** Le
+    panneau de test montrait deux requêtes en `200` : j'y ai lu « l'app parle au serveur »,
+    alors que ces deux lignes étaient mes propres `curl` de contrôle. L'app, elle, n'avait
+    **rien** émis. Vider le journal (`: > log`) juste avant le geste que l'on mesure, sinon
+    on lit ses propres traces (§71.1).
+
+30. **Un réglage d'appareil survit à tout, y compris à ce qu'on croit être une remise à
+    zéro.** Un `global_http_proxy_host` posé lors d'une session précédente est resté dans
+    l'AVD à travers des dizaines de relancements, et faisait échouer *toute* requête HTTP —
+    pendant que `ping` répondait, ce qui écartait la piste réseau. Il a servi de preuve
+    involontaire à « le catalogue ne peut pas charger depuis ce poste ». Devant une panne
+    réseau applicative alors que l'ICMP passe, lire les **trois** clés de proxy avant
+    d'accuser le réseau (§71.1, et la règle 27 qui l'a créé).
+
+31. **Une explication déjà écrite est la plus difficile à remettre en cause.** « L'IP du
+    fournisseur est bloquée depuis ce poste » (§8) était vraie, et a servi pendant des
+    semaines à expliquer des échecs qu'elle ne causait pas. Une cause connue n'est pas une
+    cause démontrée pour le cas qu'on a sous les yeux : ce qui la confirme ici, c'est une
+    mesure d'ici (§71.1).

@@ -14,7 +14,7 @@ Dernière mise à jour : 2026-08-28
 > | **Que corriger ensuite** — 100 défauts sourcés à la ligne, triés par gravité | [`docs/audit.md`](docs/audit.md) |
 > | **Builder, installer, piloter un appareil** — JDK, SDK, `adb`, émulateur, build d'auteur | [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEMENT.md) |
 > | **Comment valider** — les trois niveaux en détail, l'outillage, les conventions | [`docs/TESTS.md`](docs/TESTS.md) |
-> | **Ce qu'un geste a déjà coûté** — 28 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
+> | **Ce qu'un geste a déjà coûté** — 31 règles, chacune tirée d'une vraie erreur | [`docs/METHODE.md`](docs/METHODE.md) |
 > | **Le diagnostic d'un sujet déjà traité** — mesures, traces, corrections de correction | [`docs/JOURNAL.md`](docs/JOURNAL.md) (index en tête) |
 > | **Facturation, sécurité, publication, dette** | [`docs/RESTE_A_FAIRE.md`](docs/RESTE_A_FAIRE.md) |
 > | **Les 28 défauts du D-pad, en spécifications** | [`docs/PLAN_CORRECTION_TV.md`](docs/PLAN_CORRECTION_TV.md) |
@@ -102,11 +102,11 @@ export PATH="$JAVA_HOME/bin:$PATH:/home/rigolo/Android/Sdk/platform-tools"
 cd /home/rigolo/Documents/woc/cluster/iptv/native
 
 ./gradlew :core:testDebugUnitTest    # 241 tests
-./gradlew :app-tv:testDebugUnitTest  #  77 tests
+./gradlew :app-tv:testDebugUnitTest  #  82 tests
 ./gradlew :app-tv:assembleDebug      # ou :app-mobile:installDebug
 ```
 
-**État de la suite : 318 tests, 0 échec.** Rapport HTML après échec :
+**État de la suite : 323 tests, 0 échec.** Rapport HTML après échec :
 `core/build/reports/tests/testDebugUnitTest/index.html`.
 
 Contrôle des libellés avant toute publication : `python3 tools/check_strings.py`.
@@ -154,6 +154,19 @@ lancement de l'émulateur — est dans [`docs/ENVIRONNEMENT.md`](docs/ENVIRONNEM
   mise en page se vérifie aux bornes (§63).
 - **Ce qui n'a pas été vérifié doit être dit, jamais supposé.**
 
+⚠️ **Avant toute session émulateur, vérifier qu'aucun proxy ne traîne dans l'AVD** : un
+`global_http_proxy_host` posé lors d'une session précédente survit à tous les redémarrages
+et fait échouer *toute* requête HTTP de l'app, `ping` continuant de répondre. C'est ce qui a
+longtemps fait croire que le catalogue ne pouvait pas charger ici (§71.1) :
+
+```bash
+adb shell settings get global global_http_proxy_host   # doit être vide
+```
+
+Pour vérifier un écran TV qui n'existe qu'une fois le catalogue chargé — rangée « Reprendre
+la lecture », écran d'achat — lancer `python3 tools/fake_xtream.py` et connecter l'app à
+`http://10.0.2.2:8099/get.php?username=demo&password=demo` (§71.4).
+
 ⚠️ L'émulateur ne se lance **que** comme ceci — et `-no-snapshot` dès qu'une capture
 revient vide ou noire (l'instantané d'AVD corrompt `screencap`, §44, §53) :
 
@@ -175,8 +188,8 @@ Robolectric a été écarté : [`docs/TESTS.md`](docs/TESTS.md).
 ## 5. Où en est le chantier
 
 **La file de travail est [`docs/audit.md`](docs/audit.md)** : 100 défauts relevés par
-lecture systématique, sourcés `fichier:ligne`, plus 12 relevés à l'usage (#R1 à #R12) — 6 critiques /
-43 majeurs / 54 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
+lecture systématique, sourcés `fichier:ligne`, plus 13 relevés à l'usage (#R1 à #R13) — 6 critiques /
+44 majeurs / 54 mineurs. Chaque entrée corrigée y est marquée « ✅ Corrigé », avec un
 renvoi vers la section du journal qui porte le diagnostic.
 
 ⚠️ **`✅ Corrigé` ne veut pas dire vérifié.** Une entrée dont la preuve se limite à
@@ -201,8 +214,9 @@ du §52 porte sur le regard, pas sur la mesure.
 
 **Reste non vérifié sur les supports** : la remise à zéro du défilement au changement de
 genre et le bouton « Retour » qui efface la recherche (TV-3), faute d'avoir su atteindre
-ces états de façon fiable. Et **#R11 sur un vrai téléviseur**, qui attend la confirmation
-de l'utilisateur — son équivalent mobile, lui, est vérifié (§70.2).
+ces états de façon fiable. **#R11 est vérifié à l'écran depuis le 2026-09-03** (§71.2) ;
+seule la variante « touche maintenue » (répétitions ≥ 2) reste hors de portée de l'outillage
+d'injection, et n'est couverte que par les tests unitaires.
 
 Le **2026-09-03**, le téléphone étant branché, la liste « À vérifier sur le Pixel 7 » a été
 reprise en une seule session (§70) : **#R8 est vérifié au niveau 3**, par une paire
@@ -226,7 +240,7 @@ et de `app-tv` (jamais publiée), dette connue — est dans
 
 ## 6. Les cinq pièges qui ont coûté le plus cher
 
-Les 28 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
+Les 31 règles complètes sont dans [`docs/METHODE.md`](docs/METHODE.md) ; celles-ci se
 paient à chaque fois qu'on les oublie.
 
 1. **Une décision écrite deux fois, une par UI, finit toujours par diverger** — seule une

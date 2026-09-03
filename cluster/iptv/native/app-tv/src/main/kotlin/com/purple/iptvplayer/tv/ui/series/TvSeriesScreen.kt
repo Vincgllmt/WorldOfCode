@@ -72,6 +72,7 @@ import com.purple.iptvplayer.tv.ui.common.rememberTvRowFocus
 import com.purple.iptvplayer.tv.ui.common.tvRowEntry
 import com.purple.iptvplayer.tv.ui.common.tvRowItem
 import com.purple.iptvplayer.tv.ui.common.TvRowFocus
+import com.purple.iptvplayer.tv.ui.common.TvRowRemovalFocus
 import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
 import com.purple.iptvplayer.tv.ui.common.tvModalTrap
@@ -139,6 +140,10 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
             runCatching { firstCardFocus.requestFocus() }
         }
     }
+
+    // Retirer une entrée de « Reprendre la lecture » emportait le focus avec la carte
+    // détruite — cf. §71.
+    TvRowRemovalFocus(recentsRow, firstCardFocus, firstCardReady)
 
 
     LaunchedEffect(Unit) { vm.loadSeries() }
@@ -323,6 +328,7 @@ fun TvSeriesScreen(onPlay: (url: String, title: String, mediaId: String, cover: 
                                                 selectedSeriesId = sid
                                             },
                                             onRemove = { vm.clearRecentItem(itm.id) },
+                                            row      = recentsRow,
                                             modifier = Modifier.tvRowItem(
                                                 row     = recentsRow,
                                                 key     = itm.id,

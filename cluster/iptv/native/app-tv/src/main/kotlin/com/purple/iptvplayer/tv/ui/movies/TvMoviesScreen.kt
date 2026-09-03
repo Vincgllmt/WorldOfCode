@@ -72,6 +72,7 @@ import com.purple.iptvplayer.tv.ui.common.tvRowEntry
 import com.purple.iptvplayer.tv.ui.common.tvRowItem
 import com.purple.iptvplayer.tv.ui.common.TvErrorContent
 import com.purple.iptvplayer.tv.ui.common.TvRowFocus
+import com.purple.iptvplayer.tv.ui.common.TvRowRemovalFocus
 import com.purple.iptvplayer.tv.ui.common.TvScrollableBlock
 import com.purple.iptvplayer.tv.ui.navigation.TvLongPressGuard
 import com.purple.iptvplayer.tv.ui.common.tvGroupEntry
@@ -144,6 +145,10 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
             runCatching { firstCardFocus.requestFocus() }
         }
     }
+
+    // Retirer une entrée de « Reprendre la lecture » emportait le focus avec la carte
+    // détruite — cf. §71.
+    TvRowRemovalFocus(recentsRow, firstCardFocus, firstCardReady)
 
 
     LaunchedEffect(Unit) { vm.loadMovies() }
@@ -344,6 +349,7 @@ fun TvMoviesScreen(onPlay: (url: String, title: String, id: Int, cover: String) 
                                             item    = itm,
                                             onPlay  = { onPlay(itm.url, itm.title, itm.id.toIntOrNull() ?: 0, itm.cover ?: "") },
                                             onRemove = { vm.clearRecentItem(itm.id) },
+                                            row      = recentsRow,
                                             modifier = Modifier.tvRowItem(
                                                 row     = recentsRow,
                                                 key     = itm.id,
@@ -884,6 +890,7 @@ fun TvRecentCard(
     item: RecentItem,
     onPlay: () -> Unit,
     onRemove: () -> Unit,
+    row: TvRowFocus,
     modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -896,7 +903,10 @@ fun TvRecentCard(
             message    = item.title,
             confirm    = stringResource(R.string.action_remove),
             cancel     = stringResource(R.string.action_cancel),
-            onConfirm  = { confirming = false; onRemove() },
+            // La carte qui portait le focus est sur le point d'être détruite : sans
+            // cette demande, plus rien n'est focalisé et la télécommande devient inerte
+            // (§71). `TvRowRemovalFocus`, posé au niveau de l'écran, survivra à la carte.
+            onConfirm  = { confirming = false; row.scheduleRestore(item.id); onRemove() },
             onDismiss  = { confirming = false },
         )
     }

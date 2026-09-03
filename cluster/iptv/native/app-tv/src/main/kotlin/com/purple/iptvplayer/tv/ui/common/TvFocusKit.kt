@@ -25,6 +25,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 
 /**
@@ -369,6 +370,33 @@ class TvRowFocus {
     internal fun onFocused(key: Any) { lastFocused = key }
 
     /**
+     * Un élément vient d'être **retiré** de la rangée : le focus part avec lui.
+     *
+     * Mesuré (§71) : supprimer une carte de « Reprendre la lecture » détruit le nœud
+     * focalisé, et plus rien n'est focalisé ensuite — aucune direction ne rattrape le
+     * focus, la télécommande devient inerte jusqu'à ce qu'on quitte l'écran. Le cas vaut
+     * que la rangée survive ou qu'elle disparaisse entièrement.
+     *
+     * On note donc la clé qui s'en va, et [TvRowRemovalFocus] rendra le focus **une fois
+     * le retrait réellement composé** — pas avant, sinon on refocaliserait la carte qui
+     * est sur le point de disparaître.
+     */
+    var restoreTick by mutableStateOf(0)
+        private set
+
+    private var removedKey: Any? = null
+
+    fun scheduleRestore(key: Any) {
+        removedKey = key
+        restoreTick++
+    }
+
+    /** Le retrait est-il consommé par la composition ? */
+    internal fun removalSettled(): Boolean = removedKey?.let { it !in attached } ?: true
+
+    internal fun clearRemoval() { removedKey = null }
+
+    /**
      * Cible d'entrée, ou `null` quand aucune n'est composée — `enter` retombe alors sur
      * `FocusRequester.Default` plutôt que sur un requester détaché.
      */
@@ -380,6 +408,45 @@ class TvRowFocus {
 
 @Composable
 fun rememberTvRowFocus(): TvRowFocus = remember { TvRowFocus() }
+
+/**
+ * Rend le focus après le retrait d'un élément de [row] — à poser **au niveau de l'écran**,
+ * jamais dans un élément de liste paresseuse, qui serait détruit avec le focus.
+ *
+ * Le défaut (§71) : supprimer une carte de « Reprendre la lecture » détruit le nœud
+ * focalisé et **plus rien n'est focalisé ensuite**. Aucune direction ne rattrape le focus —
+ * mesuré : six appuis directionnels de suite sans effet, la télécommande reste inerte
+ * jusqu'à ce qu'on quitte l'écran. Le cas vaut que la rangée survive ou qu'elle disparaisse
+ * entièrement, la dernière entrée retirée emportant toute la section.
+ *
+ * Le focus est rendu au **point d'entrée de l'écran** plutôt qu'à la rangée. Ce n'est pas
+ * un choix d'ergonomie mais un constat de mesure : réclamer le requester d'une carte encore
+ * composée de la rangée aboutit, lui aussi, à la première affiche du catalogue — vérifié
+ * avec deux cartes différentes, dont une dont la composition n'avait pas bougé. Les deux
+ * voies donnent donc le même écran ; celle-ci est déterministe et se raconte.
+ *
+ * @param fallbackReady `false` tant que [fallback] n'est pas attaché : réclamer un
+ *   requester détaché lève `IllegalStateException` (piège G6).
+ */
+@Composable
+fun TvRowRemovalFocus(
+    row: TvRowFocus,
+    fallback: FocusRequester,
+    fallbackReady: Boolean,
+) {
+    LaunchedEffect(row.restoreTick) {
+        if (row.restoreTick == 0) return@LaunchedEffect
+        // Le retrait passe par DataStore puis un Flow : il n'est pas composé au retour de
+        // `onRemove()`. On attend qu'il le soit, sans bloquer indéfiniment si la carte
+        // reste (suppression refusée, écran quitté entre-temps).
+        withTimeoutOrNull(1_000) {
+            while (!row.removalSettled()) withFrameNanos { }
+        }
+        withFrameNanos { }
+        if (fallbackReady) runCatching { fallback.requestFocus() }
+        row.clearRemoval()
+    }
+}
 
 /** À poser sur la `LazyRow`. */
 fun Modifier.tvRowEntry(row: TvRowFocus): Modifier = tvGroupEntry(target = { row.entry() })

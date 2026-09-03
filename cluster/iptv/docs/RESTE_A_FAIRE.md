@@ -68,9 +68,13 @@ ici.
       2026-09-03 (§70) : le ✕ et la feuille d'appui long fonctionnent tous les deux, et la
       boucle de fond du §49 ne réinsère plus rien (25 s de lecture, retour, 30 s d'attente).
       A produit **#R12** (le ✕ des cartes non visibles entièrement est hors écran), ouvert.
-- [ ] **#R11 sur un vrai téléviseur** — le garde d'appui long TV n'est vérifié qu'au
-      niveau 1 ; le geste mobile équivalent, lui, est vérifié (§70.2). Attend la
-      confirmation de l'utilisateur avec l'APK livré.
+- [x] **#R11** — ✅ vérifié à l'écran le 2026-09-03 à l'émulateur (§71.2), le catalogue
+      pouvant enfin être servi localement (`tools/fake_xtream.py`). A produit **#R13**, la
+      télécommande inerte après une suppression, corrigé et vérifié dans la foulée.
+- [ ] **Appui long *maintenu* sur TV** — la variante à répétitions (`repeatCount` ≥ 2) n'a
+      pu être injectée sur aucun support : pas de `sendevent` sans root, et la console de
+      l'émulateur n'accepte aucune touche centrale. Couverte par les tests unitaires seuls.
+      À confirmer par l'utilisateur sur son téléviseur, ou par un test instrumenté.
 
 #### Couverture
 

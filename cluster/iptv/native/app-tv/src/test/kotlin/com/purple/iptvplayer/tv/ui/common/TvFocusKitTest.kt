@@ -327,4 +327,63 @@ class TvGenrePreviewTest {
         assertTrue("doit couvrir au moins deux appuis répétés", TvGenrePreview.FOLLOW_DELAY_MS >= 200)
         assertTrue("au-delà de 400 ms le décalage se voit", TvGenrePreview.FOLLOW_DELAY_MS <= 400)
     }
+
+    // ── Retrait d'un élément : rendre le focus (§71) ─────────────────────────
+    //
+    // Le retrait d'une carte de « Reprendre la lecture » détruit le nœud focalisé et le
+    // focus n'est plus nulle part — la télécommande devient inerte. `TvRowRemovalFocus`
+    // rend le focus, mais seulement **une fois le retrait composé** : la partie testable
+    // ici est ce « une fois », car refocaliser trop tôt viserait la carte mourante.
+
+    @Test
+    fun `sans retrait en cours, il n'y a rien a attendre`() {
+        val row = TvRowFocus()
+        assertTrue(row.removalSettled())
+    }
+
+    @Test
+    fun `un retrait n'est pas consomme tant que la carte est composee`() {
+        val row = TvRowFocus()
+        row.onAttached("a", isFirst = true)
+        row.onAttached("b", isFirst = false)
+
+        row.scheduleRestore("a")
+        assertFalse("la carte retirée est encore composée", row.removalSettled())
+
+        row.onDetached("a")
+        assertTrue("la carte a quitté la composition", row.removalSettled())
+    }
+
+    @Test
+    fun `le depart d'une AUTRE carte ne consomme pas le retrait`() {
+        val row = TvRowFocus()
+        row.onAttached("a", isFirst = true)
+        row.onAttached("b", isFirst = false)
+
+        row.scheduleRestore("a")
+        row.onDetached("b")
+
+        assertFalse("seul le départ de « a » compte", row.removalSettled())
+    }
+
+    @Test
+    fun `chaque retrait arme une nouvelle restauration`() {
+        val row = TvRowFocus()
+        assertEquals(0, row.restoreTick)
+        row.scheduleRestore("a")
+        assertEquals(1, row.restoreTick)
+        row.scheduleRestore("b")
+        assertEquals(2, row.restoreTick)
+    }
+
+    @Test
+    fun `clearRemoval libere l'attente`() {
+        val row = TvRowFocus()
+        row.onAttached("a", isFirst = true)
+        row.scheduleRestore("a")
+        assertFalse(row.removalSettled())
+
+        row.clearRemoval()
+        assertTrue("plus aucun retrait en attente", row.removalSettled())
+    }
 }
