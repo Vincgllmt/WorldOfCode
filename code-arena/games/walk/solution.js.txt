@@ -1,0 +1,9 @@
+// La Promenade du Cameleon - solution de reference (JavaScript)
+//
+// On lit la distance, puis on ecrit autant de lignes AVANCE.
+
+const n = parseInt(require('fs').readFileSync(0, 'utf8'), 10)
+
+for (let i = 1; i <= n; i++) {
+  console.log('AVANCE')
+}

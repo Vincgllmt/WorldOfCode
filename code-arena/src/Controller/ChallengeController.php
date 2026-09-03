@@ -42,6 +42,8 @@ final class ChallengeController extends AbstractController
             [$user->getId()],
         );
 
+        $badgeIcons = self::badgeIconsByChallenge($connection);
+
         $data = array_map(static fn (Challenge $c): array => [
             'id' => $c->getId(),
             'slug' => $c->getSlug(),
@@ -50,6 +52,7 @@ final class ChallengeController extends AbstractController
             'languages' => $c->getLanguages(),
             'maxScore' => $c->getMaxScore(),
             'image' => $c->getImage(),
+            'badgeIcon' => $badgeIcons[$c->getId()] ?? null,
             'successRate' => (int) round((float) ($rates[$c->getId()] ?? 0)),
             'solved' => in_array($c->getId(), $solvedIds, true),
         ], $em->getRepository(Challenge::class)->findBy([], ['id' => 'ASC']));
@@ -58,7 +61,7 @@ final class ChallengeController extends AbstractController
     }
 
     #[Route('/{slug}', name: 'arena_challenges_detail', methods: ['GET'])]
-    public function detail(string $slug, EntityManagerInterface $em): JsonResponse
+    public function detail(string $slug, EntityManagerInterface $em, Connection $connection): JsonResponse
     {
         $challenge = $em->getRepository(Challenge::class)->findOneBy(['slug' => $slug]);
         if (null === $challenge) {
@@ -85,7 +88,33 @@ final class ChallengeController extends AbstractController
             'languages' => $challenge->getLanguages(),
             'maxScore' => $challenge->getMaxScore(),
             'image' => $challenge->getImage(),
+            'badgeIcon' => self::badgeIconsByChallenge($connection)[$challenge->getId()] ?? null,
             'publicTests' => $publicTests,
         ]);
+    }
+
+    /**
+     * Icône de médaille par défi : celle du badge « first_solve » en priorité, sinon
+     * la première renseignée. Sert à afficher la bonne médaille même quand le joueur
+     * n'a pas encore débloqué le badge (emplacement verrouillé de « Mes badges »).
+     *
+     * @return array<int, string> challenge_id => chemin d'icône
+     */
+    private static function badgeIconsByChallenge(Connection $connection): array
+    {
+        $rows = $connection->fetchAllAssociative(
+            'SELECT challenge_id, icon, code FROM badge WHERE icon IS NOT NULL ORDER BY id ASC',
+        );
+
+        $icons = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['challenge_id'];
+            // Premier arrivé gagne, sauf si « first_solve » se présente ensuite.
+            if (!isset($icons[$id]) || 'first_solve' === $row['code']) {
+                $icons[$id] = (string) $row['icon'];
+            }
+        }
+
+        return $icons;
     }
 }
