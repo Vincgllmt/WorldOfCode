@@ -45,7 +45,7 @@ class StripeConnectServiceTest extends TestCase
     }
 
     // ======================================================================
-    //  createConnectedAccount() — appel API Stripe (v2 core accounts)
+    //  createConnectedAccount() — appel API Stripe (compte Express)
     // ======================================================================
 
     public function testCreateConnectedAccountReturnsStripeAccountId(): void
@@ -84,22 +84,14 @@ class StripeConnectServiceTest extends TestCase
     }
 
     // ======================================================================
-    //  isTransfersEnabled() — appel API Stripe (v2 core accounts, retrieve)
+    //  isTransfersEnabled() — appel API Stripe (accounts retrieve)
     // ======================================================================
 
     public function testIsTransfersEnabledReturnsTrueWhenCapabilityIsActive(): void
     {
         $fakeAccount = json_encode([
-            'id'            => 'acct_arthur_morgan_test',
-            'configuration' => [
-                'recipient' => [
-                    'capabilities' => [
-                        'stripe_balance' => [
-                            'stripe_transfers' => ['status' => 'active'],
-                        ],
-                    ],
-                ],
-            ],
+            'id'           => 'acct_arthur_morgan_test',
+            'capabilities' => ['transfers' => 'active'],
         ]);
 
         $httpClient = $this->createMock(\Stripe\HttpClient\ClientInterface::class);
@@ -112,16 +104,8 @@ class StripeConnectServiceTest extends TestCase
     public function testIsTransfersEnabledReturnsFalseWhenCapabilityIsNotActive(): void
     {
         $fakeAccount = json_encode([
-            'id'            => 'acct_dutch_van_der_linde',
-            'configuration' => [
-                'recipient' => [
-                    'capabilities' => [
-                        'stripe_balance' => [
-                            'stripe_transfers' => ['status' => 'pending'],
-                        ],
-                    ],
-                ],
-            ],
+            'id'           => 'acct_dutch_van_der_linde',
+            'capabilities' => ['transfers' => 'pending'],
         ]);
 
         $httpClient = $this->createMock(\Stripe\HttpClient\ClientInterface::class);
