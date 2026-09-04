@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CalendarClock, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { socket } from '@/lib/socket'
 import { useAuth } from '@/hooks/useAuth'
@@ -62,6 +62,12 @@ export default function CounterProposalModal({ conversationId, sessionId, onClos
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const pendingCleanup = useRef<(() => void) | null>(null)
+
+  // Évite de laisser un listener 'ack' et un timer derrière soi si la modale
+  // est fermée pendant l'envoi.
+  useEffect(() => () => pendingCleanup.current?.(), [])
 
   const canSend = !!selectedDay && !!selectedTime && !sending
   const calendarDays = getCalendarDays(viewYear, viewMonth)
@@ -91,11 +97,49 @@ export default function CounterProposalModal({ conversationId, sessionId, onClos
       note: note.trim() || null,
     })
 
+    if (!socket.connected && !user) {
+      setError("Connexion à la messagerie indisponible. Réessayez dans un instant.")
+      return
+    }
+
+    setSending(true)
+    setError(null)
+
+    const tempId = Date.now().toString()
+
+    // On attend l'accusé de réception : sans ça, un échec côté serveur
+    // (insert refusé, participant invalide…) fermait la modale sans rien envoyer.
+    const onAck = (ack: { temp_id?: string; error?: string }) => {
+      if (ack?.temp_id !== tempId) return
+      cleanup()
+      setSending(false)
+      if (ack.error) {
+        setError("L'envoi de la contre-proposition a échoué. Réessayez.")
+        return
+      }
+      onClose()
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup()
+      setSending(false)
+      setError("Aucune réponse de la messagerie. Réessayez.")
+    }, 8000)
+
+    const cleanup = () => {
+      clearTimeout(timeout)
+      socket.off('ack', onAck)
+      pendingCleanup.current = null
+    }
+
+    pendingCleanup.current = cleanup
+    socket.on('ack', onAck)
+
     const emit = () => {
       socket.emit('join_conversation', { conversation_id: conversationId })
       socket.emit('send_message', {
         conversation_id: conversationId,
-        temp_id: Date.now().toString(),
+        temp_id: tempId,
         body,
         type: 'session_counter_proposal',
       })
@@ -103,15 +147,12 @@ export default function CounterProposalModal({ conversationId, sessionId, onClos
 
     if (socket.connected) {
       emit()
-      onClose()
-    } else if (user) {
+    } else {
       // Reconnexion nécessaire — on a besoin du token
-      socket.auth = { token: user.token as string, userId: user.id }
+      socket.auth = { token: user!.token as string, userId: user!.id }
       socket.once('connect', emit)
       socket.connect()
-      onClose()
     }
-    // Si ni connecté ni user disponible : ne rien faire (état sending reste faux)
   }
 
   return (
@@ -240,6 +281,12 @@ export default function CounterProposalModal({ conversationId, sessionId, onClos
             </>
           )}
 
+          {error && (
+            <p role="alert" className="text-sm text-destructive bg-destructive/10 rounded-lg py-2 px-3">
+              {error}
+            </p>
+          )}
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -255,7 +302,7 @@ export default function CounterProposalModal({ conversationId, sessionId, onClos
               disabled={!canSend}
               className="flex-1 bg-amber-500 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50 hover:bg-amber-500/90 transition-colors"
             >
-              Envoyer ma contre-proposition
+              {sending ? 'Envoi…' : 'Envoyer ma contre-proposition'}
             </button>
           </div>
         </div>
