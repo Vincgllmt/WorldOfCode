@@ -27,7 +27,7 @@ class Message
     #[ORM\Column(type: "text")]
     public string $body;
 
-    #[ORM\Column(type: "string", length: 16, options: ["default" => "text"])]
+    #[ORM\Column(type: "string", length: 32, options: ["default" => "text"])]
     public string $type = 'text'; // 'text' | 'image' | 'file' | ...
 
     #[ORM\Column(name: "created_at", type: "datetime_immutable")]

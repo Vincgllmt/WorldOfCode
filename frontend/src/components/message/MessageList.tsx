@@ -87,32 +87,79 @@ function parseSessionProposal(body: string): SessionProposalPayload | null {
     return null
 }
 
+/**
+ * Une session ne porte qu'UNE date confirmée. Une carte ne doit donc se marquer
+ * « Confirmé » que si c'est bien SA date qui a été retenue : sans cette
+ * comparaison, la première proposition venue s'affichait comme confirmée dès
+ * que la session avait une date, quelle qu'elle soit.
+ */
+function isConfirmedDate(scheduledAt: string | null | undefined, proposedAt: string): boolean {
+    if (!scheduledAt) return false
+    const scheduled = new Date(scheduledAt).getTime()
+    const proposed = new Date(proposedAt).getTime()
+    return Number.isFinite(scheduled) && Number.isFinite(proposed) && scheduled === proposed
+}
+
+/**
+ * Date retenue pour la session, partagée par toutes les cartes de proposition.
+ * Se rafraîchit sur l'évènement `session:scheduled`, émis localement à la
+ * confirmation et par useNotifications quand c'est l'autre partie qui confirme.
+ */
+function useSessionScheduledAt(sessionId: number): string | null {
+    const [scheduledAt, setScheduledAt] = useState<string | null>(null)
+
+    const refresh = useCallback(() => {
+        getSession(sessionId)
+            .then(s => setScheduledAt(s.scheduledAt))
+            .catch(() => { /* session inaccessible : on laisse les boutons */ })
+    }, [sessionId])
+
+    useEffect(() => { refresh() }, [refresh])
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ sessionId: number }>).detail
+            if (detail?.sessionId === sessionId) refresh()
+        }
+        window.addEventListener('session:scheduled', handler)
+        return () => window.removeEventListener('session:scheduled', handler)
+    }, [sessionId, refresh])
+
+    return scheduledAt
+}
+
+function notifySessionScheduled(sessionId: number) {
+    window.dispatchEvent(new CustomEvent('session:scheduled', { detail: { sessionId } }))
+}
+
 function SessionProposalCard({
     payload,
     isMe,
     createdAt,
     conversationId,
+    isLatestProposal,
 }: {
     payload: SessionProposalPayload
     isMe: boolean
     createdAt: string
     conversationId?: string
+    isLatestProposal: boolean
 }) {
-    const [accepted, setAccepted] = useState(false)
     const [loading, setLoading] = useState(false)
     const [showCounterModal, setShowCounterModal] = useState(false)
 
-    useEffect(() => {
-        getSession(payload.sessionId)
-            .then(s => { if (s.scheduledAt) setAccepted(true) })
-            .catch(() => { /* session inaccessible, on laisse le bouton */ })
-    }, [payload.sessionId])
+    const scheduledAt = useSessionScheduledAt(payload.sessionId)
+    const accepted = isConfirmedDate(scheduledAt, payload.proposedAt)
+    // Plus d'action possible dès qu'une date est retenue ou qu'une proposition
+    // plus récente a pris le relais.
+    const obsolete = !accepted && (!!scheduledAt || !isLatestProposal)
+    const canAct = !isMe && !obsolete
 
     const handleAccept = async () => {
         setLoading(true)
         try {
             await confirmSessionSchedule(payload.sessionId, payload.proposedAt)
-            setAccepted(true)
+            notifySessionScheduled(payload.sessionId)
         } catch {
             // silently ignore, button stays available
         } finally {
@@ -134,40 +181,42 @@ function SessionProposalCard({
                 {payload.note && (
                     <p className="text-xs text-muted-foreground">{payload.note}</p>
                 )}
-                {!isMe && (
-                    accepted ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CalendarCheck className="h-3.5 w-3.5" />
-                            Confirmé
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
+                {accepted ? (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        Confirmé
+                    </div>
+                ) : obsolete ? (
+                    <p className="text-xs text-muted-foreground">
+                        {scheduledAt ? "Une autre date a été retenue." : "Une proposition plus récente a été envoyée."}
+                    </p>
+                ) : canAct ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleAccept}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                        >
+                            {loading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <CalendarCheck className="h-3 w-3" />
+                            )}
+                            Accepter
+                        </button>
+                        {conversationId && (
                             <button
                                 type="button"
-                                onClick={handleAccept}
+                                onClick={() => setShowCounterModal(true)}
                                 disabled={loading}
-                                className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                                className="flex items-center gap-1.5 text-xs font-medium border border-amber-500/60 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-lg hover:bg-amber-500/10 transition-colors disabled:opacity-60"
                             >
-                                {loading ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                    <CalendarCheck className="h-3 w-3" />
-                                )}
-                                Accepter
+                                Autre date ?
                             </button>
-                            {conversationId && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCounterModal(true)}
-                                    disabled={loading}
-                                    className="flex items-center gap-1.5 text-xs font-medium border border-amber-500/60 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-lg hover:bg-amber-500/10 transition-colors disabled:opacity-60"
-                                >
-                                    Autre date ?
-                                </button>
-                            )}
-                        </div>
-                    )
-                )}
+                        )}
+                    </div>
+                ) : null}
                 <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
             </div>
         </div>
@@ -344,28 +393,28 @@ function CounterProposalCard({
     createdAt,
     conversationId,
     otherUsername,
+    isLatestProposal,
 }: {
     payload: SessionProposalPayload
     isMe: boolean
     createdAt: string
     conversationId?: string
     otherUsername?: string
+    isLatestProposal: boolean
 }) {
-    const [confirmed, setConfirmed] = useState(false)
     const [loading, setLoading] = useState(false)
     const [showReProposalModal, setShowReProposalModal] = useState(false)
 
-    useEffect(() => {
-        getSession(payload.sessionId)
-            .then(s => { if (s.scheduledAt) setConfirmed(true) })
-            .catch(() => {})
-    }, [payload.sessionId])
+    const scheduledAt = useSessionScheduledAt(payload.sessionId)
+    const confirmed = isConfirmedDate(scheduledAt, payload.proposedAt)
+    const obsolete = !confirmed && (!!scheduledAt || !isLatestProposal)
+    const canAct = !isMe && !obsolete
 
     const handleConfirm = async () => {
         setLoading(true)
         try {
             await confirmSessionSchedule(payload.sessionId, payload.proposedAt)
-            setConfirmed(true)
+            notifySessionScheduled(payload.sessionId)
         } catch {
             // silently ignore
         } finally {
@@ -387,40 +436,42 @@ function CounterProposalCard({
                 {payload.note && (
                     <p className="text-xs text-muted-foreground">{payload.note}</p>
                 )}
-                {!isMe && (
-                    confirmed ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CalendarCheck className="h-3.5 w-3.5" />
-                            Confirmé
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
+                {confirmed ? (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        Confirmé
+                    </div>
+                ) : obsolete ? (
+                    <p className="text-xs text-muted-foreground">
+                        {scheduledAt ? "Une autre date a été retenue." : "Une proposition plus récente a été envoyée."}
+                    </p>
+                ) : canAct ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleConfirm}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-500/90 transition-colors disabled:opacity-60"
+                        >
+                            {loading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <CalendarCheck className="h-3 w-3" />
+                            )}
+                            Confirmer
+                        </button>
+                        {conversationId && (
                             <button
                                 type="button"
-                                onClick={handleConfirm}
+                                onClick={() => setShowReProposalModal(true)}
                                 disabled={loading}
-                                className="flex items-center gap-1.5 text-xs font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-500/90 transition-colors disabled:opacity-60"
+                                className="flex items-center gap-1.5 text-xs font-medium border border-primary/60 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-60"
                             >
-                                {loading ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                    <CalendarCheck className="h-3 w-3" />
-                                )}
-                                Confirmer
+                                Autre date ?
                             </button>
-                            {conversationId && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowReProposalModal(true)}
-                                    disabled={loading}
-                                    className="flex items-center gap-1.5 text-xs font-medium border border-primary/60 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-60"
-                                >
-                                    Autre date ?
-                                </button>
-                            )}
-                        </div>
-                    )
-                )}
+                        )}
+                    </div>
+                ) : null}
                 <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
             </div>
         </div>
@@ -565,6 +616,18 @@ export function MessageList({
             router.push(href)
         }
     }, [router])
+
+    // Une conversation peut porter plusieurs sessions : on repère la dernière
+    // proposition de chacune pour n'autoriser les actions que sur celle-là.
+    const lastProposalIndexBySession = useMemo(() => {
+        const map = new Map<number, number>()
+        messages?.forEach((m, i) => {
+            if (m.type !== 'session_proposal' && m.type !== 'session_counter_proposal') return
+            const parsed = parseSessionProposal(m.body)
+            if (parsed) map.set(parsed.sessionId, i)
+        })
+        return map
+    }, [messages])
 
     const virtualizer = useVirtualizer({
         count: messages?.length ?? 0,
@@ -711,6 +774,7 @@ export function MessageList({
                                     createdAt={m.createdAt}
                                     conversationId={conversationId}
                                     otherUsername={otherUsername}
+                                    isLatestProposal={lastProposalIndexBySession.get(sessionProposalData.sessionId) === virtualRow.index}
                                 />
                             ) : isSessionProposal && sessionProposalData ? (
                                 <SessionProposalCard
@@ -718,6 +782,7 @@ export function MessageList({
                                     isMe={isMe}
                                     createdAt={m.createdAt}
                                     conversationId={conversationId}
+                                    isLatestProposal={lastProposalIndexBySession.get(sessionProposalData.sessionId) === virtualRow.index}
                                 />
                             ) : isCallMessage ? (
                                 <div className="flex justify-center pt-2 pb-1">

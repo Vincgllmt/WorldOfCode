@@ -99,6 +99,14 @@ export const useNotificationRealtime = () => {
                     detail: { sessionId: notification.relatedEntityId },
                 }))
             }
+
+            // L'autre partie a retenu une date : les cartes de proposition
+            // ouvertes doivent perdre leurs boutons sans attendre un refresh.
+            if (notification.type === 'mentoring_session_scheduled' && notification.relatedEntityId) {
+                window.dispatchEvent(new CustomEvent('session:scheduled', {
+                    detail: { sessionId: notification.relatedEntityId },
+                }))
+            }
         }
 
         socket.on('new_notification', onNewNotification)
