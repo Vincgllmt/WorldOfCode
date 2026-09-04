@@ -291,6 +291,12 @@ class MentorProfileController extends AbstractController
             'averageRating'    => $profile->getAverageRating(),
             'reliabilityRate'  => $profile->getReliabilityRate(),
             'totalSessions'    => $profile->getTotalSessions(),
+            // Statut Stripe Connect : sert au cockpit à afficher la section « Recevoir des dons ».
+            // Détails d'onboarding via GET /api/stripe/connect/status.
+            'stripe'           => [
+                'onboarded'        => $profile->getStripeAccountId() !== null,
+                'transfersEnabled' => $profile->isStripeTransfersEnabled(),
+            ],
             'createdAt'        => $profile->getCreatedAt()->format('c'),
         ];
     }

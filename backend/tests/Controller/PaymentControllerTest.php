@@ -3,10 +3,15 @@
 namespace App\Tests\Controller;
 
 use App\Controller\PaymentController;
+use App\Entity\MentoringSession;
 use App\Entity\MentorProfile;
 use App\Entity\User;
+use App\Enum\MentoringSessionStatus;
+use App\Enum\SessionFormat;
 use App\Enum\UserRole;
+use App\Repository\MentoringSessionRepository;
 use App\Repository\MentorProfileRepository;
+use App\Repository\PaymentRepository;
 use App\Repository\UserRepository;
 use App\Service\StripeConnectService;
 use App\Service\StripeService;
@@ -58,6 +63,23 @@ class PaymentControllerTest extends TestCase
         return $profile;
     }
 
+    private function buildSession(
+        int $id,
+        MentorProfile $mentor,
+        User $junior,
+        MentoringSessionStatus $status = MentoringSessionStatus::COMPLETED,
+    ): MentoringSession {
+        $session = new MentoringSession();
+        (new \ReflectionProperty(MentoringSession::class, 'id'))->setValue($session, $id);
+        $session->setMentor($mentor)
+            ->setJunior($junior)
+            ->setFormat(SessionFormat::TEXT)
+            ->setStatus($status);
+        $session->onCreate();
+
+        return $session;
+    }
+
     private function makeContainer(User $currentUser, bool $isGranted = true): ContainerInterface
     {
         $token = $this->createMock(TokenInterface::class);
@@ -90,6 +112,8 @@ class PaymentControllerTest extends TestCase
         ?StripeConnectService $connectService = null,
         ?UserRepository $userRepository = null,
         ?MentorProfileRepository $mentorProfileRepo = null,
+        ?MentoringSessionRepository $sessionRepo = null,
+        ?PaymentRepository $paymentRepo = null,
         bool $isGranted = true,
     ): PaymentController {
         $controller = new PaymentController(
@@ -97,6 +121,8 @@ class PaymentControllerTest extends TestCase
             $connectService    ?? $this->createMock(StripeConnectService::class),
             $userRepository    ?? $this->createMock(UserRepository::class),
             $mentorProfileRepo ?? $this->createMock(MentorProfileRepository::class),
+            $sessionRepo       ?? $this->createMock(MentoringSessionRepository::class),
+            $paymentRepo       ?? $this->createMock(PaymentRepository::class),
         );
 
         $controller->setContainer($this->makeContainer($currentUser, $isGranted));
@@ -163,7 +189,7 @@ class PaymentControllerTest extends TestCase
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->expects($this->once())
             ->method('createPaymentIntent')
-            ->with($harry, $kim, 5000, 'eur', 'acct_kim_connect', 700)
+            ->with($harry, $kim, 5000, 'eur', 'acct_kim_connect', 700, null)
             ->willReturn($this->makeFakeIntent());
 
         $userRepo = $this->createMock(UserRepository::class);
@@ -188,7 +214,7 @@ class PaymentControllerTest extends TestCase
         $stripeService = $this->createMock(StripeService::class);
         $stripeService->expects($this->once())
             ->method('createPaymentIntent')
-            ->with($harry, $kim, 5000, 'eur', $this->anything(), $this->anything())
+            ->with($harry, $kim, 5000, 'eur', $this->anything(), $this->anything(), null)
             ->willReturn($this->makeFakeIntent());
 
         $userRepo = $this->createMock(UserRepository::class);
@@ -346,6 +372,205 @@ class PaymentControllerTest extends TestCase
 
         $this->assertSame(400, $response->getStatusCode());
         $this->assertArrayHasKey('error', json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    // ======================================================================
+    //  createIntent() — flux session_id (don de fin de session)
+    // ======================================================================
+
+    public function testCreateIntentWithSessionIdDerivesMentorFromSession(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $session = $this->buildSession(7, $profile, $harry);
+
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('calculateApplicationFee')->willReturn(700);
+
+        $stripeService = $this->createMock(StripeService::class);
+        $stripeService->expects($this->once())
+            ->method('createPaymentIntent')
+            ->with($harry, $kim, 5000, 'eur', 'acct_kim123', 700, $session)
+            ->willReturn($this->makeFakeIntent());
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->with(7)->willReturn($session);
+
+        $response = $this->makeController($harry, $stripeService, $connectService, null, $mentorRepo, $sessionRepo)
+            ->createIntent($this->makeRequest(['session_id' => 7, 'amount' => 5000]));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function testCreateIntentWithSessionIdReturns404WhenSessionNotFound(): void
+    {
+        $harry  = $this->buildUser(1);
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn(null);
+
+        $response = $this->makeController($harry, $stripe, null, null, null, $sessionRepo)
+            ->createIntent($this->makeRequest(['session_id' => 999, 'amount' => 5000]));
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testCreateIntentWithSessionIdReturns403WhenPayerIsNotTheJunior(): void
+    {
+        $harry       = $this->buildUser(1);
+        $someoneElse = $this->buildUser(3, 'Someone');
+        $kim         = $this->buildUser(2, 'KimKitsuragi');
+        $profile     = $this->buildOnboardedMentorProfile($kim);
+        $session     = $this->buildSession(7, $profile, $someoneElse);
+
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $response = $this->makeController($harry, $stripe, null, null, null, $sessionRepo)
+            ->createIntent($this->makeRequest(['session_id' => 7, 'amount' => 5000]));
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testCreateIntentWithSessionIdReturns400WhenSessionNotCompleted(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $session = $this->buildSession(7, $profile, $harry, MentoringSessionStatus::IN_PROGRESS);
+
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $response = $this->makeController($harry, $stripe, null, null, null, $sessionRepo)
+            ->createIntent($this->makeRequest(['session_id' => 7, 'amount' => 5000]));
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateIntentWithSessionIdReturns400WhenMentorNotReady(): void
+    {
+        $harry = $this->buildUser(1);
+        $kim   = $this->buildUser(2, 'KimKitsuragi');
+
+        $profile = new MentorProfile();
+        $profile->setUser($kim)->setStripeAccountId('acct_pending')->setStripeTransfersEnabled(false);
+        $session = $this->buildSession(7, $profile, $harry);
+
+        $stripe = $this->createMock(StripeService::class);
+        $stripe->expects($this->never())->method('createPaymentIntent');
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $response = $this->makeController($harry, $stripe, null, null, $mentorRepo, $sessionRepo)
+            ->createIntent($this->makeRequest(['session_id' => 7, 'amount' => 5000]));
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // ======================================================================
+    //  getSessionDonationStatus()
+    // ======================================================================
+
+    public function testSessionDonationStatusReturnsMentorReadyAndLatestPayment(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $session = $this->buildSession(7, $profile, $harry);
+
+        $payment = new \App\Entity\Payment();
+        $payment->setPayer($harry)->setMentor($kim)->setAmount(2000)->setCurrency('eur')
+            ->setStripePaymentIntentId('pi_1')->setSession($session)->setStatus(\App\Enum\PaymentStatus::SUCCEEDED);
+        $payment->onCreate();
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->method('findLatestForSession')->with($session)->willReturn($payment);
+
+        $response = $this->makeController($harry, null, null, null, $mentorRepo, $sessionRepo, $paymentRepo)
+            ->getSessionDonationStatus(7);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['mentorReady']);
+        $this->assertSame('succeeded', $payload['payment']['status']);
+        $this->assertSame(2000, $payload['payment']['amount']);
+    }
+
+    public function testSessionDonationStatusReturnsNullPaymentWhenNone(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $session = $this->buildSession(7, $profile, $harry);
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->method('findLatestForSession')->willReturn(null);
+
+        $response = $this->makeController($harry, null, null, null, $mentorRepo, $sessionRepo, $paymentRepo)
+            ->getSessionDonationStatus(7);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertNull($payload['payment']);
+    }
+
+    public function testSessionDonationStatusReturns404WhenSessionNotFound(): void
+    {
+        $harry = $this->buildUser(1);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn(null);
+
+        $response = $this->makeController($harry, null, null, null, null, $sessionRepo)
+            ->getSessionDonationStatus(999);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testSessionDonationStatusReturns403WhenUserIsNotParticipant(): void
+    {
+        $harry   = $this->buildUser(1);
+        $kim     = $this->buildUser(2, 'KimKitsuragi');
+        $intruder = $this->buildUser(9, 'Intruder');
+        $profile = $this->buildOnboardedMentorProfile($kim);
+        $session = $this->buildSession(7, $profile, $harry);
+
+        $sessionRepo = $this->createMock(MentoringSessionRepository::class);
+        $sessionRepo->method('find')->willReturn($session);
+
+        $response = $this->makeController($intruder, null, null, null, null, $sessionRepo)
+            ->getSessionDonationStatus(7);
+
+        $this->assertSame(403, $response->getStatusCode());
     }
 
     // ======================================================================

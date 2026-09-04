@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search, X } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { createMentorProfile } from '@/lib/api/mentoring/profile'
+import { startStripeOnboarding } from '@/lib/api/stripe'
 interface TechGroup { id: number; name: string }
 
 const SUGGESTIONS_COUNT = 8
@@ -29,6 +30,7 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
   const [teachingStyle, setTeachingStyle] = useState('')
   const [maxActiveMentees, setMaxActiveMentees] = useState(3)
   const [mentorBio, setMentorBio] = useState('')
+  const [wantsDonations, setWantsDonations] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,6 +78,22 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
     setSpecialtiesError(null)
     setError(null)
     setLoading(true)
+
+    // Après création du profil : soit on redirige vers l'onboarding bancaire Stripe
+    // (formulaire hébergé où le mentor saisit ses coordonnées), soit on rejoint le cockpit.
+    const finish = async () => {
+      if (!wantsDonations) {
+        onSuccess()
+        return
+      }
+      try {
+        window.location.href = await startStripeOnboarding()
+      } catch {
+        // L'onboarding pourra être relancé depuis le cockpit (section « Recevoir des dons »).
+        onSuccess()
+      }
+    }
+
     try {
       await createMentorProfile({
         specialties: selectedSkills,
@@ -83,11 +101,11 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
         maxActiveMentees,
         mentorBio: mentorBio || undefined,
       })
-      onSuccess()
+      await finish()
     } catch (err: unknown) {
       const status = (err as { status?: number }).status
       if (status === 409) {
-        onSuccess()
+        await finish()
         return
       }
       const message = err instanceof Error ? err.message : 'Une erreur est survenue'
@@ -233,6 +251,25 @@ export default function MentorOnboardingForm({ onSuccess }: Props) {
           placeholder="Décrivez votre approche du mentorat..."
           className="w-full rounded-md border border-border bg-background px-3 py-2"
         />
+      </div>
+
+      {/* Dons (optionnel) */}
+      <div className="rounded-lg border border-border p-3">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={wantsDonations}
+            onChange={e => setWantsDonations(e.target.checked)}
+            className="mt-0.5 accent-primary"
+          />
+          <span className="text-sm">
+            Je souhaite pouvoir recevoir des dons de mes mentorés
+            <span className="block text-xs text-muted-foreground mt-0.5">
+              Optionnel. Vous serez redirigé vers Stripe pour renseigner vos coordonnées bancaires.
+              Modifiable à tout moment depuis votre cockpit.
+            </span>
+          </span>
+        </label>
       </div>
 
       {error && (

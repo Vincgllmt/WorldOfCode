@@ -223,12 +223,19 @@ class StripeConnectControllerTest extends TestCase
     public function testStatusReturnsTrueWhenTransfersAreEnabled(): void
     {
         $joker   = $this->buildUser(1);
-        $profile = $this->buildMentorProfile($joker, 'acct_joker_complete', true);
+        $profile = $this->buildMentorProfile($joker, 'acct_joker_complete', false);
+
+        // Vérification live : Stripe confirme que les virements sont actifs.
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('isTransfersEnabled')->with('acct_joker_complete')->willReturn(true);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())->method('flush');
 
         $repo = $this->createMock(MentorProfileRepository::class);
         $repo->method('findOneBy')->willReturn($profile);
 
-        $response = $this->makeController($joker, null, $repo)->status();
+        $response = $this->makeController($joker, $connectService, $repo, $em)->status();
 
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
@@ -243,10 +250,13 @@ class StripeConnectControllerTest extends TestCase
         // compte créé mais KYC non terminé
         $profile = $this->buildMentorProfile($joker, 'acct_pending_kyc', false);
 
+        $connectService = $this->createMock(StripeConnectService::class);
+        $connectService->method('isTransfersEnabled')->willReturn(false);
+
         $repo = $this->createMock(MentorProfileRepository::class);
         $repo->method('findOneBy')->willReturn($profile);
 
-        $response = $this->makeController($joker, null, $repo)->status();
+        $response = $this->makeController($joker, $connectService, $repo)->status();
 
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('acct_pending_kyc', $payload['stripe_account_id']);

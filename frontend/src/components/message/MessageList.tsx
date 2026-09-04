@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useMemo, useCallback, useState } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Message } from "@/interfaces/message"
-import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star, XCircle } from "lucide-react"
+import { Send, Phone, PhoneMissed, X, Download, FileArchive, CalendarCheck, Loader2, Star, XCircle, Heart } from "lucide-react"
 import { sanitizeHtml } from "@/lib/sanitizeHtml"
 import { confirmSessionSchedule, getSession } from "@/lib/api/mentoring/sessions"
 import { confirmSessionAppointment, refuseSessionAppointment, getSessionAppointment } from "@/lib/api/mentoring/appointments"
 import { getSessionRatings } from "@/lib/api/mentoring/ratings"
+import { getSessionDonationStatus, type DonationStatusResponse } from "@/lib/api/payment"
 import RatingModal from "@/components/mentoring/session/RatingModal"
+import DonationModal from "@/components/mentoring/session/DonationModal"
 import CounterProposalModal from "@/components/mentoring/request/CounterProposalModal"
 import ProposeDateModal from "@/components/mentoring/cockpit/ProposeDateModal"
 
@@ -535,7 +537,14 @@ function SessionClosedCard({
     createdAt: string
 }) {
     const [showModal, setShowModal] = useState(false)
+    const [showDonation, setShowDonation] = useState(false)
     const [rated, setRated] = useState(false)
+    const [donation, setDonation] = useState<DonationStatusResponse | null>(null)
+    const [donationRefresh, setDonationRefresh] = useState(0)
+
+    const isMe = userId === String(payload.mentorId)
+    const isJunior = !isMe
+    const partnerUsername = isMe ? payload.juniorUsername : payload.mentorUsername
 
     useEffect(() => {
         getSessionRatings(payload.sessionId)
@@ -543,8 +552,15 @@ function SessionClosedCard({
             .catch(() => { /* pas bloquant */ })
     }, [payload.sessionId])
 
-    const isMe = userId === String(payload.mentorId)
-    const partnerUsername = isMe ? payload.juniorUsername : payload.mentorUsername
+    useEffect(() => {
+        if (!isJunior) return
+        getSessionDonationStatus(payload.sessionId).then(setDonation).catch(() => { /* pas bloquant */ })
+    }, [isJunior, payload.sessionId, donationRefresh])
+
+    // Don abouti ou en attente de confirmation webhook : on ne repropose pas.
+    const donationStatus = donation?.payment?.status
+    const alreadyDonated = !!donationStatus && donationStatus !== 'failed' && donationStatus !== 'canceled'
+    const canDonate = isJunior && !!donation?.mentorReady && !alreadyDonated
 
     return (
         <>
@@ -573,6 +589,22 @@ function SessionClosedCard({
                             Noter
                         </button>
                     )}
+                    {canDonate && (
+                        <button
+                            type="button"
+                            onClick={() => setShowDonation(true)}
+                            className="flex items-center gap-1.5 text-xs font-medium border border-border px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
+                        >
+                            <Heart className="h-3 w-3" />
+                            Soutenir votre mentor
+                        </button>
+                    )}
+                    {isJunior && alreadyDonated && (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <Heart className="h-3.5 w-3.5 fill-current" />
+                            Don envoyé — merci !
+                        </div>
+                    )}
                     <p className="text-[10px] text-muted-foreground text-right">{formatMessageTime(createdAt)}</p>
                 </div>
             </div>
@@ -580,8 +612,19 @@ function SessionClosedCard({
                 <RatingModal
                     sessionId={payload.sessionId}
                     partnerUsername={partnerUsername}
+                    canDonate={canDonate}
+                    onDonate={() => { setShowModal(false); setShowDonation(true) }}
                     onClose={() => setShowModal(false)}
-                    onSubmitted={() => { setRated(true); setShowModal(false) }}
+                    onSubmitted={() => setRated(true)}
+                />,
+                document.body
+            )}
+            {showDonation && createPortal(
+                <DonationModal
+                    sessionId={payload.sessionId}
+                    mentorUsername={payload.mentorUsername}
+                    onClose={() => setShowDonation(false)}
+                    onDonated={() => { setShowDonation(false); setDonationRefresh(k => k + 1) }}
                 />,
                 document.body
             )}

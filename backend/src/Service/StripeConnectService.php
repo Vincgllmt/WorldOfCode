@@ -6,7 +6,7 @@ use App\Entity\User;
 use Stripe\StripeClient;
 
 /**
- * Gère les comptes connectés Stripe (Accounts v2, configuration recipient).
+ * Gère les comptes connectés Stripe (Connect classique, comptes Express).
  *
  * Flux : Junior paie WOC → destination charge → transfert automatique au mentor
  * La plateforme paie les frais Stripe et conserve l'application_fee_amount.
@@ -38,28 +38,20 @@ class StripeConnectService
     }
 
     /**
-     * Crée un compte connecté Stripe pour un mentor (Accounts v2, recipient).
-     * Retourne l'ID du compte Stripe (acct_xxx).
+     * Crée un compte connecté Stripe Express pour un mentor.
+     * Le mentor ne demande que la capability « transfers » (recevoir des virements
+     * depuis les destination charges de la plateforme). Retourne l'ID (acct_xxx).
      */
     public function createConnectedAccount(User $mentor): string
     {
-        $account = $this->stripe->v2->core->accounts->create([
-            'display_name' => $mentor->getUsername(),
-            'defaults' => [
-                'responsibilities' => [
-                    'fees_collector'   => 'application',
-                    'losses_collector' => 'application',
-                ],
+        $account = $this->stripe->accounts->create([
+            'type'          => 'express',
+            'email'         => $mentor->getEmail(),
+            'business_type' => 'individual',
+            'capabilities'  => [
+                'transfers' => ['requested' => true],
             ],
-            'configuration' => [
-                'recipient' => [
-                    'capabilities' => [
-                        'stripe_balance' => [
-                            'stripe_transfers' => ['requested' => true],
-                        ],
-                    ],
-                ],
-            ],
+            'metadata'      => ['woc_user_id' => (string) $mentor->getId()],
         ]);
 
         return $account->id;
@@ -83,13 +75,13 @@ class StripeConnectService
     }
 
     /**
-     * Vérifie si le compte connecté peut recevoir des virements (stripe_transfers actif).
+     * Vérifie si le compte connecté peut recevoir des virements (capability « transfers » active).
      */
     public function isTransfersEnabled(string $stripeAccountId): bool
     {
-        $account = $this->stripe->v2->core->accounts->retrieve($stripeAccountId);
+        $account = $this->stripe->accounts->retrieve($stripeAccountId);
 
-        return ($account->configuration->recipient->capabilities->stripe_balance->stripe_transfers->status ?? '') === 'active';
+        return ($account->capabilities?->transfers ?? null) === 'active';
     }
 
     /**

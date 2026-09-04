@@ -19,6 +19,11 @@ export interface MentorProfile {
   averageRating: number | null
   reliabilityRate: number | null
   totalSessions: number
+  /** Statut Stripe Connect — présent uniquement sur le profil du mentor courant. */
+  stripe?: {
+    onboarded: boolean
+    transfersEnabled: boolean
+  }
   createdAt: string
 }
 
