@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+#
+# Image d'outillage pour le job CI `coverage:backend`.
+# Contient PHP 8.4 + toutes les extensions requises + pcov + Composer, DÉJÀ compilés.
+# Le job de test ne fait donc plus que `composer install` (~15 s) au lieu de
+# recompiler gd / xdebug / pdo_* à chaque run (~3 min de `before_script`).
+#
+# Rebuild uniquement quand ce fichier change (job `build:ci-image:backend`).
+# Aligné sur backend/Dockerfile : mêmes extensions, même driver de couverture (pcov).
+
+FROM php:8.4-cli
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git \
+      unzip \
+      bc \
+      libicu-dev \
+      libzip-dev \
+      libxml2-dev \
+      libpng-dev \
+      libjpeg62-turbo-dev \
+      libwebp-dev \
+      libfreetype6-dev \
+      libsqlite3-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" intl pdo pdo_mysql pdo_sqlite zip gd exif \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+# Sanity check au build : échoue tôt si une extension attendue manque.
+RUN set -e; \
+    for ext in gd pdo_mysql pdo_sqlite zip intl exif pcov; do \
+      php -m | grep -qi "^${ext}$" || { echo "EXTENSION PHP MANQUANTE: ${ext}"; exit 1; }; \
+    done; \
+    composer --version
