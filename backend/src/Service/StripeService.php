@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\MentoringSession;
 use App\Entity\Payment;
 use App\Entity\User;
 use App\Enum\PaymentStatus;
@@ -35,6 +36,7 @@ class StripeService
      * @param int    $amountCents         Montant total en centimes (ex: 5000 = 50 €)
      * @param int    $applicationFeeCents Commission WOC en centimes (null = sans Connect)
      * @param string $destinationAccountId ID du compte Stripe connecté du mentor (acct_xxx)
+     * @param MentoringSession $session   Session de mentorat à l'origine du don (null = paiement hors session)
      */
     public function createPaymentIntent(
         User $payer,
@@ -43,14 +45,23 @@ class StripeService
         string $currency = 'eur',
         ?string $destinationAccountId = null,
         ?int $applicationFeeCents = null,
+        ?MentoringSession $session = null,
     ): PaymentIntent {
+        $metadata = [
+            'payer_id'  => $payer->getId(),
+            'mentor_id' => $mentor->getId(),
+        ];
+        if ($session !== null) {
+            $metadata['session_id'] = $session->getId();
+        }
+
         $params = [
             'amount'   => $amountCents,
             'currency' => $currency,
-            'metadata' => [
-                'payer_id'  => $payer->getId(),
-                'mentor_id' => $mentor->getId(),
-            ],
+            'metadata' => $metadata,
+            // Moyens de paiement activés sur le compte, sans redirection hors-site
+            // (le PaymentElement du front confirme avec redirect: 'if_required').
+            'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
         ];
 
         if ($destinationAccountId !== null && $applicationFeeCents !== null) {
@@ -65,7 +76,8 @@ class StripeService
             ->setMentor($mentor)
             ->setAmount($amountCents)
             ->setCurrency($currency)
-            ->setStripePaymentIntentId($intent->id);
+            ->setStripePaymentIntentId($intent->id)
+            ->setSession($session);
 
         $this->em->persist($payment);
         $this->em->flush();
@@ -134,9 +146,12 @@ class StripeService
             return;
         }
 
-        // payouts_enabled est vrai quand le compte a terminé le KYC et peut recevoir des virements.
-        $payoutsEnabled = (bool) ($event->data->object->payouts_enabled ?? false);
-        $profile->setStripeTransfersEnabled($payoutsEnabled);
+        // La capability « transfers » active = le compte peut recevoir les virements
+        // des destination charges. payouts_enabled sert de filet (KYC complet).
+        $object          = $event->data->object;
+        $transfersActive = ($object->capabilities?->transfers ?? null) === 'active';
+        $payoutsEnabled  = (bool) ($object->payouts_enabled ?? false);
+        $profile->setStripeTransfersEnabled($transfersActive || $payoutsEnabled);
         $this->em->flush();
     }
 }

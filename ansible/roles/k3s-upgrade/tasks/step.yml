@@ -1,0 +1,20 @@
+---
+# Un palier du chemin d'upgrade : k3s_step_version.
+# Le serveur passe en premier, puis les workers un par un. Le palier est
+# terminé partout avant que le suivant ne commence — c'est ce qui garantit
+# qu'on ne dépasse jamais une mineure d'écart entre l'API et les kubelets.
+
+- name: "Palier {{ k3s_step_version }} — annonce"
+  ansible.builtin.debug:
+    msg: "=== Palier {{ k3s_step_version }} ({{ k3s_scope_workers | length }} worker(s) à suivre) ==="
+
+- name: "Palier {{ k3s_step_version }} — serveur"
+  ansible.builtin.include_tasks:
+    file: server.yml
+
+- name: "Palier {{ k3s_step_version }} — workers"
+  ansible.builtin.include_tasks:
+    file: agent.yml
+  loop: "{{ k3s_scope_workers }}"
+  loop_control:
+    loop_var: k3s_target_node

@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: k3s_upgrade
+  author: woc
+  description: Upgrade an existing k3s cluster (server first, then agents)
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: Ubuntu
+      versions: ["jammy", "noble"]
+    - name: Debian
+      versions: ["bookworm"]
+dependencies: []

@@ -19,8 +19,9 @@ const csp = [
   "media-src 'self' blob:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${nsfwCdns}`,
-  `connect-src 'self' ${apiOrigin} ${arenaOrigin} ${socketHttpOrigin} ${socketWsOrigin} ${nsfwCdns}`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${nsfwCdns} https://js.stripe.com`,
+  `connect-src 'self' ${apiOrigin} ${arenaOrigin} ${socketHttpOrigin} ${socketWsOrigin} ${nsfwCdns} https://api.stripe.com`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
   "worker-src 'self' blob:",
 ].join('; ')
 

@@ -8,7 +8,9 @@ use App\Security\ArenaUser;
 use App\Security\ArenaUserProvider;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
+use Symfony\Component\Security\Core\User\InMemoryUser;
 
 /**
  * 🍄 Super Mario Bros — ArenaUserProvider
@@ -51,5 +53,28 @@ final class ArenaUserProviderTest extends TestCase
 
         self::assertTrue($provider->supportsClass(ArenaUser::class));
         self::assertFalse($provider->supportsClass(\stdClass::class));
+    }
+
+    public function testRefreshUserReloadsFromDatabase(): void
+    {
+        $connection = $this->createStub(Connection::class);
+        $connection->method('fetchAssociative')->willReturn([
+            'id' => '7',
+            'username' => 'MarioBros',
+            'role' => 'ROLE_ADMIN',
+        ]);
+
+        $refreshed = (new ArenaUserProvider($connection))->refreshUser(new ArenaUser(7, 'MarioBros', ['ROLE_ADMIN']));
+
+        self::assertInstanceOf(ArenaUser::class, $refreshed);
+        self::assertSame('MarioBros', $refreshed->getUserIdentifier());
+    }
+
+    public function testRefreshUserThrowsForUnsupportedUserType(): void
+    {
+        $provider = new ArenaUserProvider($this->createStub(Connection::class));
+
+        $this->expectException(UnsupportedUserException::class);
+        $provider->refreshUser(new InMemoryUser('BowserKoopa', null));
     }
 }

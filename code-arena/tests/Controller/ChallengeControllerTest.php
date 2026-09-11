@@ -64,6 +64,18 @@ final class ChallengeControllerTest extends TestCase
         return $challenge;
     }
 
+    /**
+     * Connexion stubée renvoyant les lignes de badges (challenge_id, code, icon)
+     * utilisées pour résoudre l'icône de médaille d'un défi.
+     */
+    private function makeBadgeConnection(array $rows = []): Connection
+    {
+        $connection = $this->createStub(Connection::class);
+        $connection->method('fetchAllAssociative')->willReturn($rows);
+
+        return $connection;
+    }
+
     // ========== OK — LIST ==========
 
     /**
@@ -84,6 +96,10 @@ final class ChallengeControllerTest extends TestCase
         $connection = $this->createStub(Connection::class);
         $connection->method('fetchFirstColumn')->willReturn([1]);         // maze résolu
         $connection->method('fetchAllKeyValue')->willReturn([1 => 100, 2 => 50]);
+        $connection->method('fetchAllAssociative')->willReturn([
+            ['challenge_id' => 1, 'code' => 'perfect', 'icon' => '/badges/maze-perfect.svg'],
+            ['challenge_id' => 1, 'code' => 'first_solve', 'icon' => '/badges/maze.svg'],
+        ]);
 
         $response = $this->makeController($user)->list($em, $connection);
 
@@ -95,6 +111,10 @@ final class ChallengeControllerTest extends TestCase
         $this->assertSame(100, $data[0]['successRate']);
         $this->assertFalse($data[1]['solved']);
         $this->assertSame(50, $data[1]['successRate']);
+        // L'icône du badge « first_solve » prime sur celle des autres badges…
+        $this->assertSame('/badges/maze.svg', $data[0]['badgeIcon']);
+        // …et un défi sans badge iconographié reste à null (repli côté front).
+        $this->assertNull($data[1]['badgeIcon']);
     }
 
     /**
@@ -140,13 +160,18 @@ final class ChallengeControllerTest extends TestCase
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('getRepository')->willReturn($repo);
 
-        $response = $this->makeController(new ArenaUser(self::USER_ID, self::USERNAME))->detail('fez', $em);
+        $connection = $this->makeBadgeConnection([
+            ['challenge_id' => 1, 'code' => 'first_solve', 'icon' => '/badges/fez.svg'],
+        ]);
+
+        $response = $this->makeController(new ArenaUser(self::USER_ID, self::USERNAME))->detail('fez', $em, $connection);
 
         $this->assertSame(200, $response->getStatusCode());
         $data = json_decode($response->getContent(), true);
         $this->assertSame('fez', $data['slug']);
         $this->assertCount(1, $data['publicTests']);
         $this->assertSame('4 4', $data['publicTests'][0]['stdin']);
+        $this->assertSame('/badges/fez.svg', $data['badgeIcon']);
     }
 
     // ========== NOK ==========
@@ -163,6 +188,6 @@ final class ChallengeControllerTest extends TestCase
         $em->method('getRepository')->willReturn($repo);
 
         $this->expectException(NotFoundHttpException::class);
-        $this->makeController(new ArenaUser(self::USER_ID, self::USERNAME))->detail('no-such-game', $em);
+        $this->makeController(new ArenaUser(self::USER_ID, self::USERNAME))->detail('no-such-game', $em, $this->makeBadgeConnection());
     }
 }

@@ -164,6 +164,30 @@ class AdminUserControllerTest extends TestCase
         $this->assertSame([], $payload['items']);
     }
 
+    public function testListFiltersByIsBannedQueryParam(): void
+    {
+        $admin = $this->buildAdmin();
+        $repo  = $this->createMock(UserRepository::class);
+        $repo->expects($this->once())
+            ->method('findPaginatedWithCounts')
+            ->with(
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                true,
+            )
+            ->willReturn(['items' => [], 'total' => 0]);
+
+        $response = $this->makeController($admin, $repo)->list(new Request(['isBanned' => 'true']));
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
     public function testListDeniesNonAdmin(): void
     {
         $admin = $this->buildAdmin();

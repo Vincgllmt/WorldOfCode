@@ -52,9 +52,20 @@ interface Props {
   partnerUsername: string
   onClose: () => void
   onSubmitted: () => void
+  /** Le partenaire (mentor) accepte les dons : on propose de le soutenir après la note. */
+  canDonate?: boolean
+  /** Ouvre le flux de don (le parent ferme cette modale et affiche DonationModal). */
+  onDonate?: () => void
 }
 
-export default function RatingModal({ sessionId, partnerUsername, onClose, onSubmitted }: Props) {
+export default function RatingModal({
+  sessionId,
+  partnerUsername,
+  onClose,
+  onSubmitted,
+  canDonate = false,
+  onDonate,
+}: Props) {
   const [score, setScore] = useState(0)
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
@@ -71,10 +82,13 @@ export default function RatingModal({ sessionId, partnerUsername, onClose, onSub
     try {
       await submitRating(sessionId, { score, comment: comment.trim() || undefined })
       setSuccess(true)
-      setTimeout(() => {
-        onSubmitted()
-        onClose()
-      }, 2000)
+      // Sans proposition de don : fermeture auto. Sinon on laisse le junior choisir.
+      if (!canDonate) {
+        setTimeout(() => {
+          onSubmitted()
+          onClose()
+        }, 2000)
+      }
     } catch (err: unknown) {
       setError((err as { message?: string }).message ?? 'Une erreur est survenue.')
     } finally {
@@ -98,6 +112,30 @@ export default function RatingModal({ sessionId, partnerUsername, onClose, onSub
             <p className="text-sm text-muted-foreground mt-1">
               Elle sera visible quand votre partenaire aura également noté.
             </p>
+
+            {canDonate && (
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="text-sm mb-4">
+                  Envie de remercier <strong>{partnerUsername}</strong> du temps qu&apos;il vous a consacré ?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { onSubmitted(); onClose() }}
+                    className="flex-1 border border-border rounded-lg py-2.5 text-sm hover:bg-muted transition-colors"
+                  >
+                    Plus tard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { onSubmitted(); onDonate?.() }}
+                    className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium"
+                  >
+                    Soutenir votre mentor
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -105,7 +143,7 @@ export default function RatingModal({ sessionId, partnerUsername, onClose, onSub
               Notez votre session
             </h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Comment s'est passée la session avec <strong>{partnerUsername}</strong> ?
+              Comment s&apos;est passée la session avec <strong>{partnerUsername}</strong> ?
             </p>
 
             {/* Étoiles */}

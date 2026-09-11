@@ -8,6 +8,7 @@ use App\Command\SyncGamesCommand;
 use App\Entity\Badge;
 use App\Entity\Challenge;
 use App\Entity\ChallengeTest;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\TestCase;
@@ -157,6 +158,140 @@ final class SyncGamesCommandTest extends TestCase
         $challenges = array_values(array_filter($persisted, static fn ($e) => $e instanceof Challenge));
         self::assertCount(1, $challenges);
         self::assertSame('sample', $challenges[0]->getSlug());
+    }
+
+    public function testSyncWarnsAndSucceedsWhenGamesDirectoryMissing(): void
+    {
+        $emptyDir = sys_get_temp_dir() . '/arena-sync-empty-' . uniqid('', true);
+        mkdir($emptyDir, 0o777, true);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $emptyDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('Aucun dossier games/.', $tester->getDisplay());
+
+        $this->rrmdir($emptyDir);
+    }
+
+    public function testSyncSkipsDirectoryWithInvalidGameJson(): void
+    {
+        $game = $this->projectDir . '/games/invalid';
+        mkdir($game, 0o777, true);
+        file_put_contents($game . '/game.json', json_encode([
+            'title' => 'Invalide', // difficulty et languages manquants
+        ]));
+
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $repo = $this->createStub(EntityRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repo);
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertStringContainsString('invalid : game.json invalide', $tester->getDisplay());
+
+        // Seul le jeu "sample" (valide, créé dans setUp) doit avoir été persisté.
+        $challenges = array_values(array_filter($persisted, static fn ($e) => $e instanceof Challenge));
+        self::assertCount(1, $challenges);
+        self::assertSame('sample', $challenges[0]->getSlug());
+    }
+
+    public function testSyncRemovesExistingChallengeTestsBeforeReinserting(): void
+    {
+        $existingChallenge = (new Challenge())->setSlug('sample');
+        $existingTest = (new ChallengeTest())
+            ->setChallenge($existingChallenge)
+            ->setStdin('OLD_INPUT')
+            ->setExpectedOutput('')
+            ->setIsPublic(true)
+            ->setWeight(1)
+            ->setPosition(0);
+
+        $testsProperty = new \ReflectionProperty(Challenge::class, 'tests');
+        $testsProperty->setAccessible(true);
+        $testsProperty->setValue($existingChallenge, new ArrayCollection([$existingTest]));
+
+        /** @var list<object> $removed */
+        $removed = [];
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $challengeRepo = $this->createStub(EntityRepository::class);
+        $challengeRepo->method('findOneBy')->willReturn($existingChallenge);
+
+        $badgeRepo = $this->createStub(EntityRepository::class);
+        $badgeRepo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturnMap([
+            [Challenge::class, $challengeRepo],
+            [Badge::class, $badgeRepo],
+        ]);
+        $em->method('remove')->willReturnCallback(function (object $entity) use (&$removed): void {
+            $removed[] = $entity;
+        });
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        self::assertSame([$existingTest], $removed);
+
+        $newTests = array_values(array_filter($persisted, static fn ($e) => $e instanceof ChallengeTest));
+        self::assertCount(1, $newTests);
+        self::assertSame('LE_INPUT', $newTests[0]->getStdin());
+    }
+
+    public function testSyncSkipsBadgeMissingCodeOrName(): void
+    {
+        $game = $this->projectDir . '/games/badgeless';
+        mkdir($game, 0o777, true);
+        file_put_contents($game . '/game.json', json_encode([
+            'title' => 'Badgeless',
+            'difficulty' => 'easy',
+            'languages' => ['python'],
+            'badges' => [
+                ['name' => 'Sans code'], // code manquant
+                ['code' => 'no_name'],   // name manquant
+            ],
+        ]));
+
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $repo = $this->createStub(EntityRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repo);
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        // Seul le badge valide "first_solve" du jeu "sample" (setUp) doit avoir été persisté ;
+        // les deux badges incomplets de "badgeless" doivent être ignorés.
+        $badges = array_values(array_filter($persisted, static fn ($e) => $e instanceof Badge));
+        self::assertCount(1, $badges);
+        self::assertSame('first_solve', $badges[0]->getCode());
     }
 
     private function rrmdir(string $dir): void

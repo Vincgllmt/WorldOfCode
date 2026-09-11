@@ -41,7 +41,7 @@ extraEnvVars:
   - name: MINIO_ROOT_PASSWORD_FILE
     value: "/vault/secrets/minio-root"
 
-defaultBuckets: "uploads"
+defaultBuckets: "uploads,gitlab-runner-cache"
 
 persistence:
   enabled: true

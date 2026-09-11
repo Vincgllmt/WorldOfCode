@@ -1,0 +1,16 @@
+---
+# Déploiement ciblé du GitLab Runner (rôle runner-gitlab) sur le control-plane.
+# Découplé du bootstrap cluster (playbooks/cluster.yml) pour des déploiements sûrs
+# et rapides du runner + son cache distribué (MinIO).
+#
+#   ansible-playbook -i inventory.yml playbooks/gitlab-runner.yml
+#
+- name: Deploy GitLab Runner + cache S3 (MinIO)
+  hosts: k8s_controllers
+  become: true
+  vars:
+    # Variables de garde normalement fournies par le rôle kubernetes.
+    kube_controller_group: k8s_controllers
+    kube_master: "{{ groups['k8s_controllers'][0] }}"
+  roles:
+    - runner-gitlab

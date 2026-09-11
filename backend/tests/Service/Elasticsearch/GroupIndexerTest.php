@@ -59,6 +59,24 @@ class GroupIndexerTest extends TestCase
         $this->assertFalse($this->makeIndexer()->createIndexIfNotExists());
     }
 
+    public function testDropIndexWhenPresent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(true);
+        $this->elasticClient->expects($this->once())
+            ->method('deleteIndex')
+            ->with(IndexDefinitions::GROUPS_INDEX);
+
+        $this->assertTrue($this->makeIndexer()->dropIndex());
+    }
+
+    public function testDropIndexSkippedWhenAbsent(): void
+    {
+        $this->elasticClient->method('indexExists')->willReturn(false);
+        $this->elasticClient->expects($this->never())->method('deleteIndex');
+
+        $this->assertFalse($this->makeIndexer()->dropIndex());
+    }
+
     public function testIndexSendsExpectedDocument(): void
     {
         $this->elasticClient->expects($this->once())
@@ -104,6 +122,14 @@ class GroupIndexerTest extends TestCase
             ->with(IndexDefinitions::GROUPS_INDEX, '9');
 
         $this->makeIndexer()->delete(9);
+    }
+
+    public function testDeleteSwallowsExceptions(): void
+    {
+        $this->elasticClient->method('deleteDocument')->willThrowException(new \RuntimeException('ES down'));
+
+        $this->makeIndexer()->delete(9);
+        $this->expectNotToPerformAssertions();
     }
 
     public function testBulkIndexProcessesGroups(): void

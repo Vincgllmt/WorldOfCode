@@ -262,6 +262,24 @@ class MentorProfileControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame(10, $payload['id']);
+        $this->assertFalse($payload['stripe']['onboarded']);
+        $this->assertFalse($payload['stripe']['transfersEnabled']);
+    }
+
+    public function testGetMyProfileExposesStripeStatusWhenOnboarded(): void
+    {
+        $bob = $this->buildUser(1);
+        $profile = $this->buildMentorProfile(10, $bob);
+        $profile->setStripeAccountId('acct_bob123')->setStripeTransfersEnabled(true);
+
+        $mentorRepo = $this->createMock(MentorProfileRepository::class);
+        $mentorRepo->method('findOneBy')->willReturn($profile);
+
+        $response = $this->makeController($bob, $mentorRepo)->getMyProfile();
+
+        $payload = json_decode($response->getContent() ?: '', true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['stripe']['onboarded']);
+        $this->assertTrue($payload['stripe']['transfersEnabled']);
     }
 
     public function testGetMyProfileReturns404WhenNoProfile(): void

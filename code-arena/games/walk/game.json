@@ -1,0 +1,12 @@
+{
+  "title": "La Promenade du Caméléon",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 50,
+  "image": "/games/walk/cover.jpg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Premiers pas", "description": "Être le premier à conduire le caméléon jusqu'à la fraise.", "icon": "/badges/walk.png" },
+    { "code": "perfect", "name": "Bonne marche", "description": "Réussir toutes les promenades.", "icon": "/badges/walk.png" }
+  ]
+}

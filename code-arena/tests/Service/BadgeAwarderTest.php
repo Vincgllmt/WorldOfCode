@@ -146,7 +146,7 @@ final class BadgeAwarderTest extends TestCase
         $userBadgeRepo = $this->createStub(EntityRepository::class);
         $userBadgeRepo->method('findOneBy')->willReturn(null);
 
-        $em = $this->createMock(EntityManagerInterface::class);
+        $em = $this->createStub(EntityManagerInterface::class);
         $em->method('getRepository')->willReturn($userBadgeRepo);
         $em->method('createQuery')->willReturn($query);
         $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {

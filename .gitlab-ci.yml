@@ -1,7 +1,12 @@
 variables:
+  # Adresse in-cluster (SVC DNS) : utilisée pour POUSSER les images (kaniko).
   REGISTRY_HOST: "registry-docker-registry.registry.svc.cluster.local:5000"
+  # Adresse NodePort : utilisée pour TIRER les images (kubelet), comme les
+  # déploiements applicatifs (cf. cluster/backend/values-*.yaml).
+  REGISTRY_PULL_HOST: "registry.woc:32000"
 
 stages:
+  - ci-image # Images d'outillage CI (rebuild rare, sur changement du Dockerfile.ci)
   - lint
   - test
   - build # Tous les builds Docker en parallèle
@@ -151,25 +156,61 @@ lint:frontend-backoffice:
   allow_failure: false
 
 # ===================================
+# JOB 0: IMAGE CI OUTILLAGE (Backend)
+# PHP 8.4 + extensions + pcov + Composer, pré-compilés.
+# Rebuild uniquement quand backend/Dockerfile.ci change (sinon : bouton manuel).
+# ===================================
+build:ci-image:backend:
+  stage: ci-image
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: [] # Écrase le before_script K8s global
+  script:
+    - echo "Configuration de l'authentification Kaniko..."
+    - AUTH=$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')
+    - 'echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"${AUTH}\"}}}" > /kaniko/.docker/config.json'
+    - 'echo "Build image CI : ${REGISTRY_HOST}/backend-ci:latest"'
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/backend"
+      --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile.ci"
+      --destination "${REGISTRY_HOST}/backend-ci:latest"
+      --destination "${REGISTRY_HOST}/backend-ci:${CI_COMMIT_SHORT_SHA}"
+      --insecure --skip-tls-verify --cache=true
+  rules:
+    # Rebuild automatique (bloquant) quand la recette de l'image change.
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/Dockerfile.ci
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - backend/Dockerfile.ci
+    # Sinon : bouton manuel non bloquant (reconstruction à la demande).
+    - when: manual
+      allow_failure: true
+
+# ===================================
 # JOB 2: COVERAGE (Backend Symfony)
 # ===================================
 coverage:backend:
   stage: test
-  image: php:8.4-cli # Écrase l'image K8s globale
+  # Image pré-construite : plus aucune compilation d'extension dans ce job.
+  image: ${REGISTRY_PULL_HOST}/backend-ci:latest
+  needs:
+    - job: "build:ci-image:backend"
+      optional: true
+  variables:
+    COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.cache/composer"
   cache:
     key:
       files:
         - backend/composer.lock
     paths:
       - backend/vendor/
+      # Cache de téléchargement Composer : si le lock change, seuls les
+      # paquets modifiés sont re-téléchargés (le reste vient du cache).
+      - .cache/composer/
   before_script: # Écrase le before_script K8s global
-    - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev bc
-    - docker-php-ext-install zip pdo pdo_mysql pdo_sqlite
-    # Installer Xdebug pour le coverage
-    - pecl install xdebug
-    - docker-php-ext-enable xdebug
-    # Installer Composer
-    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - cd backend
     - cp .env.example .env
     - composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -184,9 +225,9 @@ coverage:backend:
     - php bin/console doctrine:schema:create --env=test
 
     - echo "🧪 Running PHPUnit with Coverage..."
-    # Exécuter PHPUnit avec coverage et capturer la sortie
+    # Couverture via pcov (fourni par l'image CI, comme backend/Dockerfile).
     - |
-      XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-text --colors=never 2>&1 | tee coverage-output.txt
+      php vendor/bin/phpunit --coverage-text --colors=never 2>&1 | tee coverage-output.txt
       EXIT_CODE=${PIPESTATUS[0]}
 
     # Afficher le résumé du coverage
@@ -238,12 +279,15 @@ coverage:backend:
 coverage:code-arena:
   stage: test
   image: php:8.4-cli
+  variables:
+    COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.cache/composer"
   cache:
     key:
       files:
         - code-arena/composer.lock
     paths:
       - code-arena/vendor/
+      - .cache/composer/
   before_script:
     - apt-get update && apt-get install -y git unzip libzip-dev libsqlite3-dev openssl bc
     - docker-php-ext-install zip pdo pdo_sqlite

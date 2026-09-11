@@ -10,6 +10,8 @@ import { buildMazePreview } from './maze/preview'
 import { createMazeViewer } from './maze/viewer'
 import { buildPlatformerPreview } from './platformer/preview'
 import { createPlatformerViewer } from './platformer/viewer'
+import { buildWalkPreview } from './walk/preview'
+import { createWalkViewer } from './walk/viewer'
 
 /**
  * Module front d'un jeu : tout ce dont l'IDE a besoin pour un slug donné.
@@ -27,6 +29,8 @@ export interface GameModule {
 
 /** Registre des jeux : slug → module. */
 export const GAMES: Record<string, GameModule> = {
+  // Premier jeu : afficher du texte suffit à réussir le 1er cas, une boucle à tous les passer.
+  walk: { createViewer: createWalkViewer, buildPreview: buildWalkPreview },
   maze: { createViewer: createMazeViewer, buildPreview: buildMazePreview },
   platformer: { createViewer: createPlatformerViewer, buildPreview: buildPlatformerPreview },
   'mars-lander': { createViewer: createMarsLanderViewer, buildPreview: buildMarsLanderPreview },

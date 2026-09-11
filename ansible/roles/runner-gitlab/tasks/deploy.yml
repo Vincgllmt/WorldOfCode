@@ -22,6 +22,33 @@
       - runner_registration_token | length > 0
     fail_msg: "runner_registration_token is not set. Define it in group_vars (ideally vault)."
     success_msg: "Runner registration token provided."
+- name: Ensure runner cache secret key is provided
+  ansible.builtin.assert:
+    that:
+      - runner_cache_secret_key | default('') | length > 0
+    fail_msg: "runner_cache_secret_key manquant (à définir chiffré dans group_vars/all/vault.yml)."
+    success_msg: "Runner cache secret key provided."
+  when: runner_cache_enabled | bool
+
+# Secret S3 consommé par le chart (runners.cache.secretName). Doit exister AVANT
+# le déploiement Helm car le pod runner le monte. Credentials = user MinIO scopé
+# au seul bucket de cache (source de vérité : Vault secret/dev/minio-runner-cache).
+- name: Create GitLab runner S3 cache credentials secret
+  kubernetes.core.k8s:
+    kubeconfig: "{{ runner_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: "{{ runner_cache_secret_name }}"
+        namespace: "{{ runner_namespace }}"
+      stringData:
+        accesskey: "{{ runner_cache_access_key }}"
+        secretkey: "{{ runner_cache_secret_key }}"
+  when: runner_cache_enabled | bool
+
 - name: Add GitLab Helm repository
   kubernetes.core.helm_repository:
     name: "{{ runner_helm_repo_name }}"
@@ -31,16 +58,34 @@
   kubernetes.core.helm:
     name: "{{ runner_helm_release_name }}"
     chart_ref: "{{ runner_helm_repo_name }}/{{ runner_helm_chart_name }}"
+    chart_version: "{{ runner_helm_chart_version }}"
     release_namespace: "{{ runner_namespace }}"
     create_namespace: true
+    update_repo_cache: true   # rafraîchit l'index du repo (sinon chart_version introuvable)
     atomic: true
     values:
+      concurrent: "{{ runner_concurrent }}"
       gitlabUrl: "{{ runner_gitlab_url }}"
-      runnerToken: "{{ runner_registration_token }}"
+      runnerRegistrationToken: "{{ runner_registration_token }}"
       rbac:
         create: "{{ runner_rbac_create | bool }}"
-      serviceAccount:
-        create: "{{ runner_serviceaccount_create | bool }}"
-        name: "{{ runner_serviceaccount_name }}"
       runners:
-        tags: "{{ (runner_tags | default([])) | join(',') }}"
+        privileged: "{{ runner_privileged | bool }}"
+        # config.toml injecté tel quel : executor Kubernetes + cache distribué S3 (MinIO).
+        config: |
+          [[runners]]
+            [runners.kubernetes]
+              namespace = "{{ runner_kubernetes_namespace }}"
+              image = "{{ runner_build_image }}"
+            [runners.cache]
+              Type = "s3"
+              Shared = true
+              Path = "gitlab-runner"
+              [runners.cache.s3]
+                ServerAddress = "{{ runner_cache_s3_server }}"
+                BucketName = "{{ runner_cache_s3_bucket }}"
+                BucketLocation = "{{ runner_cache_s3_location }}"
+                Insecure = {{ runner_cache_s3_insecure | bool | lower }}
+        # Secret k8s (accesskey/secretkey) issu de Vault secret/dev/minio-runner-cache.
+        cache:
+          secretName: "{{ runner_cache_secret_name }}"

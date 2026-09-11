@@ -6,6 +6,7 @@
 
 # CI/CD artifacts
 .npm
+.cache/
 lint-output.txt
 coverage-output.txt
 coverage.xml

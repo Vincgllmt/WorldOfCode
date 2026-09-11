@@ -39,6 +39,14 @@
         </deprecationTrigger>
     </source>
 
+    <coverage>
+        <report>
+            <clover outputFile="coverage.xml"/>
+            <html outputDirectory="var/coverage/html"/>
+            <text outputFile="php://stdout"/>
+        </report>
+    </coverage>
+
     <extensions>
     </extensions>
 </phpunit>

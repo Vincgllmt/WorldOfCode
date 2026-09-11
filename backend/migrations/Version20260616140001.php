@@ -433,7 +433,7 @@ final class Version20260616140001 extends AbstractMigration
 
         // ── 9) Profils mentors : les 6 admins + 10 users, avec spécialités (tech_group) ──
         $mentorUserIds = array_merge(range(1, self::ADMIN_COUNT), [10, 15, 20, 25, 30, 35, 40, 45, 50, 55]);
-        $teachingStyles = ['Pédagogue et patient', 'Direct et pragmatique', 'Orienté pratique', 'Bienveillant, à l\'écoute'];
+        $teachingStyles = ['guided', 'direct', 'socratic', 'collaborative']; // valeurs de App\Enum\TeachingStyle
         $mentorProfileId = 1;
         $mentorProfileIds = [];
         $groupCount = count($groups);
