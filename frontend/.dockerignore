@@ -1,6 +1,10 @@
 node_modules
+# Le bundle standalone embarque ses propres node_modules tracés : à conserver.
+!.next/standalone/node_modules
 npm-debug.log
-.next
+# On garde .next/standalone et .next/static (artefacts de packaging),
+# on exclut seulement le cache de compilation (lourd, inutile dans l'image).
+.next/cache
 .git
 .gitignore
 # Secrets hors image (SEC-1)

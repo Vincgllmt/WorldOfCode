@@ -1,0 +1,77 @@
+---
+# Sauvegarde de la base d'état k3s avant le premier palier.
+#
+# Le cluster utilise le backend SQLite (pas etcd) : `k3s etcd-snapshot` ne
+# s'applique donc pas. La base est en mode WAL, ce qui rend une simple copie de
+# state.db à chaud potentiellement incohérente — elle peut attraper une écriture
+# à moitié faite.
+#
+# On passe donc par `sqlite3 .backup`, qui utilise l'API de sauvegarde en ligne
+# de SQLite : la copie est cohérente sans avoir à arrêter k3s, donc sans coupure
+# d'API supplémentaire.
+#
+# C'est le seul filet de sécurité de l'opération : un downgrade k3s n'est pas
+# supporté, une restauration passe par cette sauvegarde.
+
+- name: Sauvegarde de la base d'état k3s
+  when: k3s_upgrade_backup | bool
+  block:
+
+    - name: Installer sqlite3 (sauvegarde à chaud cohérente)
+      ansible.builtin.apt:
+        name: sqlite3
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Horodater la sauvegarde
+      ansible.builtin.set_fact:
+        k3s_backup_file: >-
+          {{ k3s_upgrade_backup_dir }}/state-{{
+             lookup('pipe', 'date -u +%Y%m%d-%H%M%S') }}.db
+
+    - name: Créer le répertoire de sauvegarde
+      ansible.builtin.file:
+        path: "{{ k3s_upgrade_backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Sauvegarder la base d'état k3s
+      ansible.builtin.command:
+        argv:
+          - sqlite3
+          - "{{ k3s_upgrade_db_path }}"
+          - ".backup '{{ k3s_backup_file }}'"
+      changed_when: true
+
+    - name: Vérifier l'intégrité de la sauvegarde
+      ansible.builtin.command:
+        argv:
+          - sqlite3
+          - "{{ k3s_backup_file }}"
+          - "PRAGMA integrity_check;"
+      register: k3s_backup_check
+      changed_when: false
+      failed_when: k3s_backup_check.stdout | trim != 'ok'
+
+    - name: Relever la taille de la sauvegarde
+      ansible.builtin.stat:
+        path: "{{ k3s_backup_file }}"
+      register: k3s_backup_stat
+
+    # En --check, l'installation et le .backup sont sautés : le fichier n'existe
+    # pas et il n'y a pas de taille à annoncer.
+    - name: Confirmer la sauvegarde
+      ansible.builtin.debug:
+        msg: >-
+          Sauvegarde OK : {{ k3s_backup_file }}
+          ({{ (k3s_backup_stat.stat.size / 1024 / 1024) | round(1) }} Mo,
+          integrity_check = ok)
+      when: k3s_backup_stat.stat.exists | bool
+
+    - name: Signaler la sauvegarde simulée
+      ansible.builtin.debug:
+        msg: "[check] Sauvegarde qui serait écrite : {{ k3s_backup_file }}"
+      when: not (k3s_backup_stat.stat.exists | bool)

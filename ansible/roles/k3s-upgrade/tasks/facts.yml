@@ -1,0 +1,24 @@
+---
+# Relève la version k3s installée sur chaque nœud du périmètre.
+# Joué sur tous les nœuds (play 1), donc sensible à --limit : seuls les nœuds
+# effectivement traités auront k3s_current_version défini, ce qui sert ensuite
+# à l'orchestrateur pour savoir qui mettre à jour.
+
+- name: Relever la version k3s installée
+  ansible.builtin.command: k3s --version
+  register: k3s_version_cmd
+  changed_when: false
+  check_mode: false
+
+- name: Extraire la version courante
+  ansible.builtin.set_fact:
+    # "k3s version v1.34.6+k3s1 (0c2b1d7)" -> "v1.34.6+k3s1"
+    k3s_current_version: "{{ k3s_version_cmd.stdout_lines[0].split()[2] }}"
+
+- name: Vérifier que la version est bien du 1.x
+  ansible.builtin.assert:
+    that:
+      - k3s_current_version is match('^v1\.\d+\.')
+    fail_msg: >-
+      Version k3s inattendue sur {{ inventory_hostname }} :
+      '{{ k3s_current_version }}'. Le calcul de paliers suppose une v1.x.

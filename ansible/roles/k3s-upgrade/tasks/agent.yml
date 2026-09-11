@@ -1,0 +1,96 @@
+---
+# Upgrade d'UN worker (k3s_target_node) vers k3s_step_version.
+#
+# Le play tourne sur le control-plane : les opérations kubectl (drain, wait,
+# uncordon) s'exécutent donc localement, et seules les actions sur le nœud
+# lui-même sont déléguées via delegate_to. Les workers passent ainsi un par un,
+# ce qui évite de drainer tout le cluster d'un coup.
+
+- name: "[{{ k3s_target_node }}] Relever la version installée"
+  ansible.builtin.command: k3s --version
+  delegate_to: "{{ k3s_target_node }}"
+  register: k3s_agent_version_cmd
+  changed_when: false
+  check_mode: false
+
+- name: "[{{ k3s_target_node }}] Déterminer si le palier est nécessaire"
+  ansible.builtin.set_fact:
+    k3s_agent_needs_step: >-
+      {{ k3s_agent_version_cmd.stdout_lines[0].split()[2] != k3s_step_version }}
+
+- name: "[{{ k3s_target_node }}] Déjà au palier {{ k3s_step_version }}"
+  ansible.builtin.debug:
+    msg: "{{ k3s_target_node }} est déjà au palier — rien à faire"
+  when: not (k3s_agent_needs_step | bool)
+
+- name: "[{{ k3s_target_node }}] Drain avant upgrade"
+  ansible.builtin.command: >-
+    k3s kubectl drain {{ k3s_target_node }}
+    --ignore-daemonsets
+    --delete-emptydir-data
+    --force
+    --timeout={{ k3s_upgrade_drain_timeout }}
+  environment:
+    KUBECONFIG: "{{ k3s_upgrade_kubeconfig }}"
+  when:
+    - k3s_agent_needs_step | bool
+    - k3s_upgrade_drain | bool
+  changed_when: true
+
+- name: "[{{ k3s_target_node }}] Réinstaller k3s agent au palier"
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sfL https://get.k3s.io | sh -s - agent
+  args:
+    executable: /bin/bash
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_step_version }}"
+  delegate_to: "{{ k3s_target_node }}"
+  when: k3s_agent_needs_step | bool
+  changed_when: true
+
+- name: "[{{ k3s_target_node }}] S'assurer que k3s-agent est démarré ET activé au boot"
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: true
+    daemon_reload: true
+  delegate_to: "{{ k3s_target_node }}"
+
+# `kubectl wait` plutôt que `get -o jsonpath` : le module command découpe ses
+# arguments à la shlex et supprime les guillemets internes, ce qui casserait
+# un filtre jsonpath du type ?(@.type=="Ready").
+- name: "[{{ k3s_target_node }}] Attendre le retour en Ready"
+  ansible.builtin.command: >-
+    k3s kubectl wait --for=condition=Ready
+    node/{{ k3s_target_node }}
+    --timeout={{ k3s_upgrade_ready_timeout }}
+  environment:
+    KUBECONFIG: "{{ k3s_upgrade_kubeconfig }}"
+  register: k3s_node_ready
+  until: k3s_node_ready.rc == 0
+  retries: "{{ k3s_upgrade_ready_retries }}"
+  delay: "{{ k3s_upgrade_ready_delay }}"
+  changed_when: false
+  check_mode: false
+
+# Volontairement hors condition k3s_agent_needs_step : si un passage précédent
+# s'est interrompu après le drain, le nœud est resté cordonné et doit être
+# rendu au scheduler même si sa version est déjà la bonne.
+- name: "[{{ k3s_target_node }}] Uncordon après upgrade"
+  ansible.builtin.command: k3s kubectl uncordon {{ k3s_target_node }}
+  environment:
+    KUBECONFIG: "{{ k3s_upgrade_kubeconfig }}"
+  when: k3s_upgrade_drain | bool
+  changed_when: true
+
+- name: "[{{ k3s_target_node }}] Confirmer la version après palier"
+  ansible.builtin.command: k3s --version
+  delegate_to: "{{ k3s_target_node }}"
+  register: k3s_agent_after
+  changed_when: false
+  check_mode: false
+
+- name: "[{{ k3s_target_node }}] Afficher la version"
+  ansible.builtin.debug:
+    msg: "{{ k3s_target_node }} : {{ k3s_agent_after.stdout_lines[0] }}"

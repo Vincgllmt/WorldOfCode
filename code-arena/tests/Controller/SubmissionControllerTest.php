@@ -197,6 +197,28 @@ final class SubmissionControllerTest extends TestCase
         $this->assertSame('failed', json_decode($response->getContent(), true)['status']);
     }
 
+    /**
+     * Un défi sans aucun cas de test (poids total nul) retourne "failed" avec un score de 0.
+     */
+    public function testSubmitWithNoTestsReturnsFailedWithZeroScore(): void
+    {
+        $user = new ArenaUser(self::USER_ID, self::USERNAME);
+
+        $piston = $this->createStub(PistonClientInterface::class);
+        $awarder = $this->createStub(BadgeAwarderInterface::class);
+
+        $response = $this->makeControllerWith($user, $piston, $awarder)->submit(
+            'celeste-mountain',
+            $this->submitRequest('celeste-mountain', ['language' => 'python', 'code' => 'pass']),
+            $this->makeEm($this->makeChallenge([])),
+        );
+
+        $this->assertSame(201, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertSame('failed', $data['status']);
+        $this->assertSame(0, $data['score']);
+    }
+
     // ========== OK — GET SUBMISSION ==========
 
     /**

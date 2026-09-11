@@ -1,0 +1,159 @@
+---
+# Calcule le chemin d'upgrade à partir de la seule mineure cible.
+#
+# La dernière version stable de chaque mineure traversée est résolue via le
+# serveur de channels k3s : le channel "v1.36" pointe sur la dernière 1.36
+# publiée, pré-versions exclues.
+#
+#   cluster en v1.34.6, k3s_upgrade_target_minor=1.36
+#     -> paliers [v1.35.6+k3s1, v1.36.2+k3s1]
+#
+#   cluster en v1.34.6, k3s_upgrade_target_minor=1.34
+#     -> paliers [v1.34.9+k3s1]   (dernier patch de la mineure en place)
+#
+# Joué une seule fois, sur le control-plane.
+
+- name: Vérifier que la mineure cible est renseignée
+  ansible.builtin.assert:
+    that:
+      - k3s_upgrade_target_minor | string | length > 0
+    fail_msg: >-
+      Mineure cible non renseignée. Exemple :
+      ansible-playbook playbooks/upgrade-cluster.yml -e k3s_upgrade_target_minor=1.36
+
+- name: Normaliser la mineure cible en nom de channel
+  ansible.builtin.set_fact:
+    k3s_target_channel: "v{{ k3s_upgrade_target_minor | string | regex_replace('^v', '') }}"
+
+- name: Vérifier le format de la mineure cible
+  ansible.builtin.assert:
+    that:
+      - k3s_target_channel is match('^v1\.\d+$')
+    fail_msg: >-
+      k3s_upgrade_target_minor doit être une mineure seule, ex "1.36"
+      (reçu : "{{ k3s_upgrade_target_minor }}"). Le patch n'est pas à préciser :
+      la dernière version stable de la mineure est résolue automatiquement.
+
+- name: Interroger le serveur de channels k3s
+  ansible.builtin.uri:
+    url: "{{ k3s_upgrade_channel_url }}"
+    return_content: true
+  register: k3s_channels
+  delegate_to: localhost
+  become: false
+  vars:
+    # group_vars/all/vault.yml définit ansible_become: true, et une variable
+    # l'emporte sur le mot-clé `become`. Sans cette neutralisation, la tâche
+    # déléguée tente un sudo sur le contrôleur Ansible.
+    ansible_become: false
+  changed_when: false
+  check_mode: false
+
+- name: Vérifier que la mineure cible est publiée
+  ansible.builtin.assert:
+    that:
+      - k3s_channels.json.data | selectattr('name', 'equalto', k3s_target_channel) | list | length > 0
+    fail_msg: >-
+      Aucun channel publié pour la mineure {{ k3s_target_channel }}.
+      Mineures disponibles :
+      {{ k3s_channels.json.data | map(attribute='name')
+         | select('match', '^v1\.\d+$') | join(', ') }}
+
+- name: Résoudre la version cible
+  ansible.builtin.set_fact:
+    k3s_upgrade_target: >-
+      {{ (k3s_channels.json.data
+          | selectattr('name', 'equalto', k3s_target_channel) | first).latest }}
+    k3s_target_minor: "{{ k3s_target_channel | regex_replace('^v1\\.', '') | int }}"
+
+- name: Recenser les nœuds du périmètre
+  ansible.builtin.set_fact:
+    # Un nœud n'a k3s_current_version que s'il est passé par facts.yml,
+    # donc uniquement s'il est dans le périmètre de --limit.
+    k3s_scope_nodes: >-
+      {{ groups[k3s_upgrade_cluster_group]
+         | map('extract', hostvars)
+         | selectattr('k3s_current_version', 'defined')
+         | map(attribute='inventory_hostname') | list }}
+
+- name: Isoler les workers du périmètre
+  ansible.builtin.set_fact:
+    # `select('in', ...)` plutôt qu'`intersect` : intersect passe par un set et
+    # rend un ordre arbitraire, alors qu'on veut traiter les workers dans
+    # l'ordre de l'inventaire pour que deux exécutions se ressemblent.
+    k3s_scope_workers: >-
+      {{ groups[k3s_upgrade_worker_group] | select('in', k3s_scope_nodes) | list }}
+
+- name: Vérifier qu'au moins un nœud a été inspecté
+  ansible.builtin.assert:
+    that:
+      - k3s_scope_nodes | length > 0
+    fail_msg: >-
+      Aucun nœud inspecté. Le play de relevé n'a atteint personne — --limit
+      exclut-il tout le cluster ?
+
+- name: Calculer les mineures en présence
+  ansible.builtin.set_fact:
+    k3s_scope_minors: >-
+      {{ k3s_scope_nodes
+         | map('extract', hostvars, 'k3s_current_version')
+         | map('regex_replace', '^v1\.(\d+)\..*$', '\1')
+         | map('int') | list }}
+
+- name: Vérifier que la cible n'est pas un downgrade
+  ansible.builtin.assert:
+    that:
+      - k3s_scope_minors | max | int <= k3s_target_minor | int
+    fail_msg: >-
+      Cible 1.{{ k3s_target_minor }} en deçà du cluster, qui est en mineures
+      {{ k3s_scope_minors | unique | sort | join(', ') }} — un downgrade n'est
+      pas supporté par Kubernetes.
+
+# Mineures à appliquer : de la suivante après la plus basse du cluster jusqu'à
+# la cible incluse. Le `min` couvre le cas où cible == mineure en place : on
+# applique alors la cible seule, pour rattraper le dernier patch.
+- name: Déterminer les mineures à traverser
+  ansible.builtin.set_fact:
+    k3s_upgrade_minors: >-
+      {{ range([k3s_scope_minors | min | int + 1, k3s_target_minor | int] | min,
+               k3s_target_minor | int + 1) | list }}
+
+- name: Vérifier que chaque mineure traversée est publiée
+  ansible.builtin.assert:
+    that:
+      - k3s_channels.json.data | selectattr('name', 'equalto', 'v1.' ~ item) | list | length > 0
+    fail_msg: >-
+      Pas de channel publié pour la mineure intermédiaire v1.{{ item }},
+      nécessaire pour aller de v1.{{ k3s_scope_minors | min }} à
+      1.{{ k3s_target_minor }}.
+  loop: "{{ k3s_upgrade_minors }}"
+  loop_control:
+    label: "v1.{{ item }}"
+
+- name: Construire le chemin d'upgrade
+  ansible.builtin.set_fact:
+    k3s_upgrade_path: >-
+      {{ (k3s_upgrade_path | default([]))
+         + [(k3s_channels.json.data
+             | selectattr('name', 'equalto', 'v1.' ~ item) | first).latest] }}
+  loop: "{{ k3s_upgrade_minors }}"
+  loop_control:
+    label: "v1.{{ item }}"
+
+- name: Vérifier le nombre de paliers
+  ansible.builtin.assert:
+    that:
+      - k3s_upgrade_path | length <= k3s_upgrade_max_steps | int
+    fail_msg: >-
+      {{ k3s_upgrade_path | length }} paliers à enchaîner
+      ({{ k3s_upgrade_path | join(' -> ') }}), au-delà de la limite
+      k3s_upgrade_max_steps={{ k3s_upgrade_max_steps }}.
+      Relever la limite en connaissance de cause, ou viser une mineure plus proche.
+
+- name: Afficher le chemin d'upgrade
+  ansible.builtin.debug:
+    msg:
+      - "Nœuds concernés : {{ k3s_scope_nodes | join(', ') }}"
+      - "Versions en place : {{ k3s_scope_nodes | map('extract', hostvars, 'k3s_current_version') | unique | join(', ') }}"
+      - "Mineure cible : 1.{{ k3s_target_minor }} -> {{ k3s_upgrade_target }}"
+      - "Chemin : {{ k3s_upgrade_path | join(' -> ') }}"

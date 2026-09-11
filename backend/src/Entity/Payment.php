@@ -36,6 +36,11 @@ class Payment
     #[ORM\Column(length: 255, unique: true)]
     private string $stripePaymentIntentId;
 
+    /** Session de mentorat à l'origine du paiement (nullable : un paiement peut exister hors session). */
+    #[ORM\ManyToOne(targetEntity: MentoringSession::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?MentoringSession $session = null;
+
     #[ORM\Column(type: 'datetime')]
     private \DateTime $createdAt;
 
@@ -74,6 +79,9 @@ class Payment
 
     public function getStripePaymentIntentId(): string { return $this->stripePaymentIntentId; }
     public function setStripePaymentIntentId(string $id): self { $this->stripePaymentIntentId = $id; return $this; }
+
+    public function getSession(): ?MentoringSession { return $this->session; }
+    public function setSession(?MentoringSession $session): self { $this->session = $session; return $this; }
 
     public function getCreatedAt(): \DateTime { return $this->createdAt; }
     public function getUpdatedAt(): \DateTime { return $this->updatedAt; }

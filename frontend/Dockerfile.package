@@ -1,0 +1,26 @@
+# Image runtime du frontend — PACKAGING UNIQUEMENT.
+#
+# La compilation Next.js (npm ci + next build) est faite en amont dans le job CI
+# `build:frontend:compile`, qui persiste .next/cache (cache distribué MinIO) pour
+# un build incrémental. Ce Dockerfile ne fait qu'assembler l'image à partir des
+# artefacts (sortie standalone), sans recompiler → build image en quelques secondes.
+#
+# (Dockerfile.prod reste disponible pour un build complet mono-étape hors CI.)
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Artefacts du job de compilation (next.config.ts : output: 'standalone')
+COPY public ./public
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+
+# SEC-12 : exécution non-root (node = uid 1000)
+RUN mkdir -p .next/cache && chown -R node:node /app
+USER node
+
+EXPOSE 3000
+
+# Serveur HTTP autonome généré par Next.js standalone
+CMD ["node", "server.js"]

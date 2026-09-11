@@ -1,0 +1,10 @@
+<?php
+// La Promenade du Cameleon - solution de reference (PHP)
+//
+// On lit la distance, puis on ecrit autant de lignes AVANCE.
+
+$n = (int) trim(fgets(STDIN));
+
+for ($i = 1; $i <= $n; $i++) {
+    echo "AVANCE\n";
+}

@@ -2,10 +2,12 @@
 
 namespace App\Tests\Service;
 
+use App\Entity\MentoringSession;
 use App\Entity\MentorProfile;
 use App\Entity\Payment;
 use App\Entity\User;
 use App\Enum\PaymentStatus;
+use App\Enum\SessionFormat;
 use App\Enum\UserRole;
 use App\Repository\MentorProfileRepository;
 use App\Repository\PaymentRepository;
@@ -63,6 +65,16 @@ class StripeServiceTest extends TestCase
             ->setStripeTransfersEnabled(false);
 
         return $profile;
+    }
+
+    private function buildSession(int $id, MentorProfile $mentor, User $junior): MentoringSession
+    {
+        $session = new MentoringSession();
+        (new \ReflectionProperty(MentoringSession::class, 'id'))->setValue($session, $id);
+        $session->setMentor($mentor)->setJunior($junior)->setFormat(SessionFormat::TEXT);
+        $session->onCreate();
+
+        return $session;
     }
 
     private function makeService(
@@ -350,6 +362,64 @@ class StripeServiceTest extends TestCase
         );
 
         $this->assertSame('pi_destination_test', $intent->id);
+    }
+
+    public function testCreatePaymentIntentLinksPaymentToSessionWhenProvided(): void
+    {
+        $mentorProfile = $this->buildMentorProfile();
+        $payer  = $this->buildUser(1);
+        $mentor = $mentorProfile->getUser();
+        $session = $this->buildSession(10, $mentorProfile, $payer);
+
+        $fakeIntent = json_encode([
+            'id'            => 'pi_session_test',
+            'object'        => 'payment_intent',
+            'amount'        => 1000,
+            'currency'      => 'eur',
+            'status'        => 'requires_payment_method',
+            'livemode'      => false,
+            'client_secret' => 'pi_session_test_secret',
+        ]);
+
+        $httpClient = $this->createMock(\Stripe\HttpClient\ClientInterface::class);
+        $httpClient->method('request')->willReturn([$fakeIntent, 200, []]);
+        \Stripe\ApiRequestor::setHttpClient($httpClient);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())
+            ->method('persist')
+            ->with($this->callback(fn (Payment $p) => $p->getSession() === $session));
+        $em->expects($this->once())->method('flush');
+
+        $this->makeService($em)->createPaymentIntent($payer, $mentor, 1000, 'eur', null, null, $session);
+    }
+
+    public function testCreatePaymentIntentLeavesSessionNullByDefault(): void
+    {
+        $payer  = $this->buildUser(1);
+        $mentor = $this->buildUser(2, 'BitersHorde');
+
+        $fakeIntent = json_encode([
+            'id'            => 'pi_no_session_test',
+            'object'        => 'payment_intent',
+            'amount'        => 1000,
+            'currency'      => 'eur',
+            'status'        => 'requires_payment_method',
+            'livemode'      => false,
+            'client_secret' => 'pi_no_session_test_secret',
+        ]);
+
+        $httpClient = $this->createMock(\Stripe\HttpClient\ClientInterface::class);
+        $httpClient->method('request')->willReturn([$fakeIntent, 200, []]);
+        \Stripe\ApiRequestor::setHttpClient($httpClient);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->once())
+            ->method('persist')
+            ->with($this->callback(fn (Payment $p) => $p->getSession() === null));
+        $em->expects($this->once())->method('flush');
+
+        $this->makeService($em)->createPaymentIntent($payer, $mentor, 1000, 'eur');
     }
 
     protected function tearDown(): void

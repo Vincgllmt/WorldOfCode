@@ -55,7 +55,7 @@ function buildGameBadge(challenge: ArenaChallengeDetail, awarded: string[]): Are
     badgeId: 0,
     name: awarded.map(badgeLabel).join(' · ') || challenge.title,
     description: null,
-    icon: null,
+    icon: challenge.badgeIcon ?? null,
     challengeSlug: challenge.slug,
     awardedAt: new Date().toISOString(),
   }

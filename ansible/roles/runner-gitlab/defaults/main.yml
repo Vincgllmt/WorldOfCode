@@ -15,9 +15,29 @@ runner_privileged: true
 runner_run_untagged: true
 runner_locked: false
 
+# Executor Kubernetes : nombre de jobs concurrents + image des build pods
+runner_concurrent: 2
+runner_kubernetes_namespace: gitlab-runner
+runner_build_image: ubuntu:22.04
+
+# Cache distribué S3 -> MinIO (dev). Le bucket est créé par le déploiement MinIO
+# (cluster/minio : defaultBuckets). Le user scopé est bootstrappé via
+# cluster/minio/bootstrap-runner-cache-user.sh, credentials dans Vault
+# (secret/dev/minio-runner-cache). Le secret k8s runner_cache_secret_name
+# (clés accesskey/secretkey) doit exister dans le namespace du runner.
+runner_cache_enabled: true
+runner_cache_secret_name: gitlab-runner-cache-s3
+runner_cache_access_key: gitlab-runner-cache      # non secret (nom d'utilisateur MinIO)
+# runner_cache_secret_key : fourni (chiffré) par group_vars/all/vault.yml
+runner_cache_s3_server: minio.dev.svc.cluster.local:9000
+runner_cache_s3_bucket: gitlab-runner-cache
+runner_cache_s3_location: us-east-1
+runner_cache_s3_insecure: true
+
 # GitLab connectivity
 runner_gitlab_url: https://rendu-git.etna-alternance.net
-runner_registration_token: "glrt-5HbAVf7FzamLgck0R8KJ1G86MQpwOmU5bzgKdDozCnU6MjBqFA.01.1e1sg5krr"
+# Token fourni (chiffré) par group_vars/all/vault.yml — ne JAMAIS le mettre en clair ici.
+runner_registration_token: ""
 
 # Timeouts / waits
 runner_wait_timeout: 600s
@@ -26,10 +46,11 @@ runner_wait_timeout: 600s
 runner_helm_repo_name: gitlab
 runner_helm_repo_url: https://charts.gitlab.io
 runner_helm_chart_name: gitlab-runner
+runner_helm_chart_version: "0.87.0"   # doit correspondre au runner live
 runner_helm_release_name: gitlab-runner
 
-# Use default ServiceAccount and external RBAC (ClusterRoleBinding to cluster-admin)
+# RBAC : le chart crée son propre ServiceAccount + Role (état du runner live).
 runner_serviceaccount_create: false
 runner_serviceaccount_name: default
-runner_rbac_create: false
+runner_rbac_create: true
 runner_clusterrolebinding_name: gitlab-runner-admin-binding

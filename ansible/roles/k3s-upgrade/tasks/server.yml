@@ -1,0 +1,84 @@
+---
+# Upgrade du serveur k3s vers k3s_step_version.
+# Ces tâches s'exécutent sur le control-plane, qui est l'hôte du play
+# orchestrateur — pas de délégation ici.
+#
+# Sur k3s il n'y a pas de "kubeadm upgrade apply" : on rejoue le script
+# d'installation en épinglant INSTALL_K3S_VERSION. Le script réécrit le binaire
+# et l'unité systemd, puis redémarre le service. La configuration
+# (/etc/rancher/k3s/config.yaml) est conservée telle quelle.
+
+- name: Relever la version du serveur
+  ansible.builtin.command: k3s --version
+  register: k3s_server_version_cmd
+  changed_when: false
+  check_mode: false
+
+- name: Déterminer si le serveur doit passer ce palier
+  ansible.builtin.set_fact:
+    k3s_server_needs_step: >-
+      {{ k3s_server_version_cmd.stdout_lines[0].split()[2] != k3s_step_version }}
+
+- name: "Serveur déjà en {{ k3s_step_version }}"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} est déjà au palier — rien à faire"
+  when: not (k3s_server_needs_step | bool)
+
+- name: Réinstaller k3s server au palier
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -sfL https://get.k3s.io | sh -s - server
+  args:
+    executable: /bin/bash
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_step_version }}"
+    # INSTALL_K3S_SKIP_ENABLE n'est volontairement PAS positionné ici :
+    # c'est ce flag (hérité de roles/kubernetes/tasks/init.yml) qui avait laissé
+    # l'unité k3s désactivée et fait tomber le cluster au reboot.
+  when: k3s_server_needs_step | bool
+  changed_when: true
+
+- name: S'assurer que l'unité k3s est démarrée ET activée au boot
+  ansible.builtin.systemd:
+    name: k3s
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Attendre le retour de l'API server
+  ansible.builtin.command: k3s kubectl get --raw=/readyz
+  environment:
+    KUBECONFIG: "{{ k3s_upgrade_kubeconfig }}"
+  register: k3s_readyz
+  until: k3s_readyz.rc == 0
+  retries: "{{ k3s_upgrade_api_retries }}"
+  delay: "{{ k3s_upgrade_api_delay }}"
+  changed_when: false
+  check_mode: false
+
+# `kubectl wait` plutôt que `get -o jsonpath` : le module command découpe ses
+# arguments à la shlex et supprime les guillemets internes, ce qui casserait
+# un filtre jsonpath du type ?(@.type=="Ready").
+- name: Attendre que le serveur repasse Ready
+  ansible.builtin.command: >-
+    k3s kubectl wait --for=condition=Ready
+    node/{{ inventory_hostname }}
+    --timeout={{ k3s_upgrade_ready_timeout }}
+  environment:
+    KUBECONFIG: "{{ k3s_upgrade_kubeconfig }}"
+  register: k3s_node_ready
+  until: k3s_node_ready.rc == 0
+  retries: "{{ k3s_upgrade_ready_retries }}"
+  delay: "{{ k3s_upgrade_ready_delay }}"
+  changed_when: false
+  check_mode: false
+
+- name: Confirmer la version du serveur après palier
+  ansible.builtin.command: k3s --version
+  register: k3s_server_after
+  changed_when: false
+  check_mode: false
+
+- name: Afficher la version du serveur
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} : {{ k3s_server_after.stdout_lines[0] }}"

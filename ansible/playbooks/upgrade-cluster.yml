@@ -1,0 +1,98 @@
+---
+# Mise à jour du cluster k3s vers une mineure cible.
+#
+# On ne renseigne QUE la mineure visée, ex "1.36". Le playbook résout sa
+# dernière version stable, relève la version en place, calcule les paliers
+# intermédiaires imposés par la règle de skew Kubernetes (une seule mineure
+# d'écart à la fois) et les enchaîne jusqu'à la cible.
+#
+#   cluster en v1.34.6, cible 1.36
+#     -> v1.35.x sur tout le cluster, puis v1.36.x sur tout le cluster
+#
+# À chaque palier : le serveur d'abord, puis les workers un par un (drain,
+# upgrade, uncordon). Le palier est terminé partout avant que le suivant ne
+# démarre, donc l'API ne prend jamais plus d'une mineure d'avance sur les
+# kubelets.
+#
+# UTILISATION :
+#   # Voir le chemin calculé sans rien modifier
+#   ansible-playbook playbooks/upgrade-cluster.yml \
+#     -e k3s_upgrade_target_minor=1.36 --check --diff
+#
+#   # Appliquer
+#   ansible-playbook playbooks/upgrade-cluster.yml \
+#     -e k3s_upgrade_target_minor=1.36
+#
+#   # Rattraper le dernier patch de la mineure en place
+#   ansible-playbook playbooks/upgrade-cluster.yml \
+#     -e k3s_upgrade_target_minor=1.34
+#
+#   # Chemin long : relever explicitement le garde-fou
+#   ansible-playbook playbooks/upgrade-cluster.yml \
+#     -e "k3s_upgrade_target_minor=1.38 k3s_upgrade_max_steps=4"
+#
+# Le patch ne se précise pas : le channel d'une mineure pointe toujours sur sa
+# dernière version stable, pré-versions (rc/alpha/beta) exclues.
+#
+# --limit :
+#   Le control-plane doit TOUJOURS rester dans le périmètre — c'est lui qui
+#   orchestre et qui porte kubectl. Pour ne traiter qu'une partie des workers :
+#     --limit 'k8s_controllers:kube-worker-01'
+#
+# AVERTISSEMENTS :
+#   - Le control-plane est unique : l'API est coupée ~1 min à chaque palier.
+#     Les workloads déjà planifiés continuent de tourner. Un cluster k3s en HA
+#     (plusieurs serveurs, etcd embarqué) demanderait un traitement différent
+#     et n'est pas géré ici.
+#   - La base d'état SQLite est sauvegardée automatiquement avant le premier
+#     palier (sqlite3 .backup, cohérent à chaud, sans coupure supplémentaire)
+#     dans /var/lib/rancher/k3s/server/db-backups. C'est le seul moyen de
+#     revenir en arrière : un downgrade k3s n'est pas supporté. Les sauvegardes
+#     ne sont pas purgées automatiquement, penser à faire le ménage.
+#   - Workers 03/04 (nœuds école) : joints par leurs IP Tailscale. Tailscale
+#     doit donc être actif sur la machine qui lance Ansible — vérifier avec
+#     `ansible k8s_workers -m ping` avant de se lancer. Sinon, se limiter aux
+#     nœuds joignables par IP publique :
+#       --limit 'k8s_controllers:kube-worker-01:kube-worker-02'
+#   - Stockage local-path : les pods à PVC local-path restent Pending pendant le
+#     drain de leur nœud et reviennent au uncordon. Comportement attendu.
+
+- name: Relever l'état du cluster
+  hosts: kubernetes
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Relever la version k3s de chaque nœud
+      ansible.builtin.include_role:
+        name: k3s-upgrade
+        tasks_from: facts.yml
+  tags: [k3s-upgrade]
+
+- name: Dérouler le chemin d'upgrade
+  hosts: k8s_controllers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Calculer le chemin d'upgrade
+      ansible.builtin.include_role:
+        name: k3s-upgrade
+        tasks_from: plan.yml
+
+    # Le garde k3s_upgrade_backup est porté par backup.yml, pas par un `when:`
+    # ici : une condition sur un include_role est évaluée avant le chargement du
+    # rôle, donc les defaults ne sont pas encore en scope.
+    - name: Sauvegarder la base d'état avant le premier palier
+      ansible.builtin.include_role:
+        name: k3s-upgrade
+        tasks_from: backup.yml
+
+    - name: Enchaîner les paliers jusqu'à la cible
+      ansible.builtin.include_role:
+        name: k3s-upgrade
+        tasks_from: step.yml
+      loop: "{{ k3s_upgrade_path }}"
+      loop_control:
+        loop_var: k3s_step_version
+        label: "{{ k3s_step_version }}"
+  tags: [k3s-upgrade]

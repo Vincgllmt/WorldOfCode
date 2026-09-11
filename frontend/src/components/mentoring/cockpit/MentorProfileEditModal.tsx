@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Search, X, Pencil } from 'lucide-react'
+import { Search, X, Pencil, Heart } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { updateMentorProfile } from '@/lib/api/mentoring/profile'
+import { startStripeOnboarding } from '@/lib/api/stripe'
 import type { MentorProfile } from '@/types/mentoring'
 
 interface TechGroup { id: number; name: string }
@@ -35,6 +36,7 @@ export default function MentorProfileEditModal({ profile, onSaved }: Props) {
   const [bio, setBio]                       = useState('')
   const [saving, setSaving]                 = useState(false)
   const [error, setError]                   = useState<string | null>(null)
+  const [stripeRedirecting, setStripeRedirecting] = useState(false)
 
   // Charger les groupes au premier ouverture
   useEffect(() => {
@@ -73,6 +75,24 @@ export default function MentorProfileEditModal({ profile, onSaved }: Props) {
 
   const toggle = (id: number) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const handleStripe = async () => {
+    setStripeRedirecting(true)
+    setError(null)
+    try {
+      window.location.href = await startStripeOnboarding()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Impossible de contacter Stripe.')
+      setStripeRedirecting(false)
+    }
+  }
+
+  const stripe = profile.stripe
+  const donationLabel = stripe?.transfersEnabled
+    ? { text: 'Paiements actifs', cls: 'text-emerald-600 dark:text-emerald-400' }
+    : stripe?.onboarded
+      ? { text: 'Vérification Stripe en cours', cls: 'text-amber-600 dark:text-amber-400' }
+      : { text: 'Non configuré — vous ne pouvez pas recevoir de dons', cls: 'text-muted-foreground' }
 
   const handleSave = async () => {
     if (selectedIds.length === 0) {
@@ -243,6 +263,27 @@ export default function MentorProfileEditModal({ profile, onSaved }: Props) {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Recevoir des dons */}
+              <div className="space-y-2 pt-1 border-t border-border">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Heart className="h-3.5 w-3.5" /> Recevoir des dons
+                </label>
+                <p className={`text-xs ${donationLabel.cls}`}>{donationLabel.text}</p>
+                <button
+                  type="button"
+                  onClick={handleStripe}
+                  disabled={stripeRedirecting}
+                  className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors disabled:opacity-50"
+                >
+                  {stripeRedirecting
+                    ? 'Redirection…'
+                    : stripe?.onboarded ? 'Gérer sur Stripe' : 'Configurer mes paiements'}
+                </button>
+                <p className="text-[10px] text-muted-foreground">
+                  Vos coordonnées bancaires sont gérées par Stripe et ne sont jamais stockées sur WOC.
+                </p>
               </div>
 
               {error && (

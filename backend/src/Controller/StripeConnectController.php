@@ -80,6 +80,17 @@ class StripeConnectController extends AbstractController
             return $this->json(['error' => 'Profil mentor introuvable.'], Response::HTTP_FORBIDDEN);
         }
 
+        // Vérification live : le webhook account.updated peut ne pas être encore arrivé
+        // (ex: retour immédiat de l'onboarding). On resynchronise le flag en base.
+        $accountId = $profile->getStripeAccountId();
+        if ($accountId !== null) {
+            $live = $this->connectService->isTransfersEnabled($accountId);
+            if ($live !== $profile->isStripeTransfersEnabled()) {
+                $profile->setStripeTransfersEnabled($live);
+                $this->em->flush();
+            }
+        }
+
         return $this->json([
             'stripe_account_id'      => $profile->getStripeAccountId(),
             'transfers_enabled'      => $profile->isStripeTransfersEnabled(),

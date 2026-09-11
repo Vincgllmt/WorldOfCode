@@ -1,19 +1,28 @@
-build:frontend:
+# Règles communes aux deux étapes du build frontend (compile + packaging).
+.frontend_build_rules: &frontend_build_rules
+  - if: '$CI_COMMIT_TAG =~ /^frontend-v.*$/'
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    changes:
+      - frontend/**/*
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    when: manual
+    allow_failure: true
+
+# ── Étape 1 : compilation Next.js ─────────────────────────────────────────────
+build:frontend:compile:
   stage: build
-  image:
-    name: gcr.io/kaniko-project/executor:v1.14.0-debug
-    entrypoint: [""]
-  before_script: []
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^frontend-v.*$/'
-    - if: '$CI_COMMIT_BRANCH == "dev"'
-      changes:
-        - frontend/**/*
-    - if: '$CI_COMMIT_BRANCH == "dev"'
-      when: manual
-      allow_failure: true
+  image: node:24-alpine
+  before_script:
+    - npm config set cache "${CI_PROJECT_DIR}/frontend/.npm" --global
+  rules: *frontend_build_rules
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/.npm
+      - frontend/.next/cache
   script:
-    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
         export API_DOMAIN="api-worldofcode.duckdns.org"
@@ -22,18 +31,42 @@ build:frontend:
         export API_DOMAIN="api-woc-dev.duckdns.org"
         export WOC_DOMAIN="woc-dev.duckdns.org"
       fi
+    - export NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api"
+    - export NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}"
+    - export NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}"
+    - export NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage"
+    - export NEXT_PUBLIC_ARENA_API_URL="https://${API_DOMAIN}"
+    - export NEXT_PUBLIC_ARENA_URL="https://${API_DOMAIN}"
+    - cd frontend
+    - npm ci --prefer-offline --no-audit --no-fund
+    - npm run build
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - frontend/.next/standalone
+      - frontend/.next/static
+      - frontend/public
+
+# ── Étape 2 : packaging de l'image (Kaniko) ───────────────────────────────────
+# Ne fait que COPY les artefacts compilés (Dockerfile.package) → image en quelques secondes.
+build:frontend:
+  stage: build
+  needs:
+    - job: build:frontend:compile
+      artifacts: true
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script: []
+  rules: *frontend_build_rules
+  script:
+    - export IMAGE_TAG=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
     - echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"$(printf "%s:%s" "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - |
       /kaniko/executor \
         --context "${CI_PROJECT_DIR}/frontend" \
-        --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile.prod" \
+        --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile.package" \
         --destination "${REGISTRY_HOST}/frontend:${IMAGE_TAG}" \
-        --build-arg NEXT_PUBLIC_API_URL="https://${API_DOMAIN}/api" \
-        --build-arg NEXT_PUBLIC_SOCKET_URL="https://${API_DOMAIN}" \
-        --build-arg NEXT_PUBLIC_WOC_URL="https://${WOC_DOMAIN}" \
-        --build-arg NEXT_PUBLIC_STORAGE_URL="https://${API_DOMAIN}/storage" \
-        --build-arg NEXT_PUBLIC_ARENA_API_URL="https://${API_DOMAIN}" \
-        --build-arg NEXT_PUBLIC_ARENA_URL="https://${API_DOMAIN}" \
         --insecure \
         --skip-tls-verify \
         --cache=true \
