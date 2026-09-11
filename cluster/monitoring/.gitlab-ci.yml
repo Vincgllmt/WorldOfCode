@@ -18,6 +18,8 @@ deploy:vm-stack:
   stage: deploy-monitoring
   needs: []
   when: manual
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   script:
     - helm repo add vm $VM_CHART_REPO
     - helm repo update vm
@@ -82,6 +84,8 @@ deploy:loki-stack:
   stage: deploy-monitoring
   needs: []
   when: manual
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   script:
     # 1. Ajout des repos
     - helm repo add grafana $LOKI_CHART_REPO

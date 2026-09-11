@@ -14,7 +14,8 @@ deploy:k6:
   stage: deploy-monitoring
   needs: []
   when: manual
-  allow_failure: false
+  # Job ops à la demande : ne doit pas bloquer les pipelines (feature/MR) en restant "manual".
+  allow_failure: true
   script:
     # 1. Namespace
     - kubectl create namespace "$K6_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
