@@ -84,6 +84,8 @@ services:
     container_name: projet_backoffice
     ports:
       - "2999:3000"
+    environment:
+      NEXT_PUBLIC_ARENA_API_URL: http://localhost:8082
     volumes:
       - ./backoffice:/app
       - /app/node_modules

@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Entity\Badge;
 use App\Entity\Challenge;
+use App\Entity\ChallengeSolution;
 use App\Entity\ChallengeTest;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -19,11 +20,21 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Synchronise les jeux définis dans games/<slug>/ vers la base (idempotent).
  *
  * Chaque dossier = un défi (slug = nom du dossier) :
- *   game.json (méta) · statement.md · referee.* · input.txt
+ *   game.json (méta) · statement.md · referee.* · tests/*.txt · solution.<ext>.txt
  */
 #[AsCommand(name: 'app:arena:sync', description: 'Synchronise les jeux de games/<slug>/ vers la base.')]
 final class SyncGamesCommand extends Command
 {
+    /** Extension d'un fichier solution.<ext>.txt → langage interne (cf. PistonService). */
+    private const SOLUTION_EXTENSIONS = [
+        'js'   => 'javascript',
+        'ts'   => 'typescript',
+        'py'   => 'python',
+        'php'  => 'php',
+        'java' => 'java',
+        'cpp'  => 'cpp',
+    ];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         #[Autowire('%kernel.project_dir%')]
@@ -109,6 +120,20 @@ final class SyncGamesCommand extends Command
                 $this->em->persist($test);
             }
 
+            // Solutions de référence : on remplace par les fichiers solution.<ext>.txt.
+            foreach ($challenge->getSolutions() as $existing) {
+                $this->em->remove($existing);
+            }
+            $this->em->flush();
+
+            foreach ($this->solutionFiles($dir) as $language => $file) {
+                $solution = (new ChallengeSolution())
+                    ->setChallenge($challenge)
+                    ->setLanguage($language)
+                    ->setCode((string) file_get_contents($file));
+                $this->em->persist($solution);
+            }
+
             // Badges : upsert par (challenge, code).
             $badgeRepo = $this->em->getRepository(Badge::class);
             foreach ((array) ($meta['badges'] ?? []) as $b) {
@@ -132,5 +157,29 @@ final class SyncGamesCommand extends Command
         $io->success(sprintf('%d jeu(x) synchronisé(s).', $count));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Fichiers solution.<ext>.txt du jeu, indexés par langage (extension inconnue ignorée).
+     *
+     * @return array<string, string> langage => chemin du fichier
+     */
+    private function solutionFiles(string $dir): array
+    {
+        $files = glob($dir . '/solution.*.txt') ?: [];
+        sort($files);
+
+        $solutions = [];
+        foreach ($files as $file) {
+            if (!preg_match('/^solution\.([a-z]+)\.txt$/', basename($file), $m)) {
+                continue;
+            }
+            $language = self::SOLUTION_EXTENSIONS[$m[1]] ?? null;
+            if (null !== $language) {
+                $solutions[$language] = $file;
+            }
+        }
+
+        return $solutions;
     }
 }

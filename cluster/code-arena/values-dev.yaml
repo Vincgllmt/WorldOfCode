@@ -24,7 +24,7 @@ containerPort: 8082
 
 env:
   APP_ENV: "dev"
-  CORS_ALLOW_ORIGIN: "^https?://(woc-dev\\.duckdns\\.org|api-woc-dev\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(woc-dev\\.duckdns\\.org|api-woc-dev\\.duckdns\\.org|backoffice-woc-dev\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   PISTON_URL: "http://piston.dev.svc.cluster.local:2000"
   DEFAULT_URI: "https://api-woc-dev.duckdns.org"
 

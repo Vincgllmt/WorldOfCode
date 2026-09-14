@@ -62,10 +62,16 @@ class Challenge
     #[ORM\OneToMany(targetEntity: Badge::class, mappedBy: 'challenge')]
     private Collection $badges;
 
+    /** @var Collection<int, ChallengeSolution> */
+    #[ORM\OneToMany(targetEntity: ChallengeSolution::class, mappedBy: 'challenge')]
+    #[ORM\OrderBy(['language' => 'ASC'])]
+    private Collection $solutions;
+
     public function __construct()
     {
         $this->tests = new ArrayCollection();
         $this->badges = new ArrayCollection();
+        $this->solutions = new ArrayCollection();
         $this->createdAt = new \DateTime();
         $this->updatedAt = new \DateTime();
     }
@@ -212,5 +218,11 @@ class Challenge
     public function getBadges(): Collection
     {
         return $this->badges;
+    }
+
+    /** @return Collection<int, ChallengeSolution> */
+    public function getSolutions(): Collection
+    {
+        return $this->solutions;
     }
 }

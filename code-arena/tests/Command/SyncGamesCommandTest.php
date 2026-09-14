@@ -7,6 +7,7 @@ namespace App\Tests\Command;
 use App\Command\SyncGamesCommand;
 use App\Entity\Badge;
 use App\Entity\Challenge;
+use App\Entity\ChallengeSolution;
 use App\Entity\ChallengeTest;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -130,6 +131,40 @@ final class SyncGamesCommandTest extends TestCase
         $stdins = array_map(static fn ($t) => $t->getStdin(), $testCases);
         sort($stdins);
         self::assertSame(['INPUT_1', 'INPUT_2', 'INPUT_3'], $stdins);
+    }
+
+    public function testSyncLoadsReferenceSolutionsByExtension(): void
+    {
+        $game = $this->projectDir . '/games/sample';
+        file_put_contents($game . '/solution.py.txt', 'print("sol")');
+        file_put_contents($game . '/solution.js.txt', 'console.log("sol")');
+        file_put_contents($game . '/solution.unknown.txt', 'ignored');
+
+        /** @var list<object> $persisted */
+        $persisted = [];
+
+        $repo = $this->createStub(EntityRepository::class);
+        $repo->method('findOneBy')->willReturn(null);
+
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repo);
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        $tester = new CommandTester(new SyncGamesCommand($em, $this->projectDir));
+        $tester->execute([]);
+        $tester->assertCommandIsSuccessful();
+
+        $solutions = array_values(array_filter($persisted, static fn ($e) => $e instanceof ChallengeSolution));
+        self::assertCount(2, $solutions);
+
+        $byLanguage = [];
+        foreach ($solutions as $solution) {
+            $byLanguage[$solution->getLanguage()] = $solution->getCode();
+        }
+        self::assertSame(['javascript' => 'console.log("sol")', 'python' => 'print("sol")'], $byLanguage);
+        self::assertSame('sample', $solutions[0]->getChallenge()->getSlug());
     }
 
     public function testSyncSkipsDirectoryWithoutGameJson(): void

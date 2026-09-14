@@ -15,6 +15,7 @@ games/<slug>/
     02.txt
     ...
   input.txt      # repli si tests/ absent : un unique cas de test
+  solution.<ext>.txt  # optionnel : solution de référence par langage (js, ts, py, php, java, cpp)
 ```
 
 Les cas de `tests/` sont triés par nom de fichier (`01.txt`, `02.txt`, …) ; cet ordre
@@ -36,6 +37,13 @@ fixe la position des cas affichés et exécutés. Tous sont publics (le joueur v
   ]
 }
 ```
+
+## Solutions de référence
+
+`solution.<ext>.txt` (ex. `solution.py.txt`, `solution.js.txt`) contient une solution qui
+doit passer **tous** les cas de test. Elles sont synchronisées en base (lecture seule) et
+consultables dans le backoffice, section Code Arena, où un bouton « Vérifier » les exécute
+sur tous les cas via le referee — pratique pour détecter un referee ou un cas cassé.
 
 ## Contrat du referee (exécuté dans Piston)
 

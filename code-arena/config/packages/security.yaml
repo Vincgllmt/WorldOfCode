@@ -17,4 +17,6 @@ security:
 
     access_control:
         - { path: ^/api/arena/health, roles: PUBLIC_ACCESS }
+        # Vue backoffice des jeux (solutions, referee) : administrateurs uniquement.
+        - { path: ^/api/arena/admin, roles: ROLE_ADMIN }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

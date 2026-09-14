@@ -24,7 +24,7 @@ containerPort: 8082
 
 env:
   APP_ENV: "prod"
-  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+  CORS_ALLOW_ORIGIN: "^https?://(worldofcode\\.duckdns\\.org|api-worldofcode\\.duckdns\\.org|backoffice-worldofcode\\.duckdns\\.org|localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
   PISTON_URL: "http://piston.production.svc.cluster.local:2000"
   DEFAULT_URI: "https://api-worldofcode.duckdns.org"
 

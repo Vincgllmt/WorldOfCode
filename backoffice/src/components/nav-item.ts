@@ -1,4 +1,4 @@
-import { LayoutDashboard, Layers, FileText, Users, Flag, MessageSquare, GraduationCap } from "lucide-react"
+import { LayoutDashboard, Layers, FileText, Users, Flag, MessageSquare, GraduationCap, Gamepad2 } from "lucide-react"
 
 export const ADMIN_NAV_ITEMS = [
   { href: "/",             label: "Dashboard",    icon: LayoutDashboard },
@@ -8,4 +8,5 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/groups",       label: "Groupes",      icon: Layers },
   { href: "/reports",      label: "Reports",      icon: Flag },
   { href: "/feedbacks",    label: "Feedbacks",    icon: MessageSquare },
+  { href: "/code-arena",   label: "Code Arena",   icon: Gamepad2 },
 ] as const
