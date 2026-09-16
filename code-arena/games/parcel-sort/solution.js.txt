@@ -1,0 +1,18 @@
+// Le hangar du cameleon - solution de reference (JavaScript)
+//
+// On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+// volume croissant. A volume egal, le plus petit id passe en premier : on
+// compare d'abord les volumes, et on departage sur l'id.
+const data = require('fs').readFileSync(0, 'utf8').split(/\s+/).filter(Boolean).map(Number)
+
+const n = data[0]
+const parcels = []
+
+for (let i = 0; i < n; i++) {
+  const [id, l, w, h] = data.slice(1 + i * 4, 5 + i * 4)
+  parcels.push({ id, volume: l * w * h })
+}
+
+parcels.sort((a, b) => (a.volume - b.volume) || (a.id - b.id))
+
+console.log(parcels.map((p) => p.id).join(' '))

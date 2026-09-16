@@ -16,6 +16,7 @@ const MEDALS: Record<string, { anime: string; statique: string }> = {
     anime: '/badges/mars-lander-anime.svg',
     statique: '/badges/mars-lander-statique.svg',
   },
+  'parcel-sort': { anime: '/badges/parcel-sort.png', statique: '/badges/parcel-sort.png' },
 }
 
 type BadgeMedalProps = {

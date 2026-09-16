@@ -1,0 +1,21 @@
+<?php
+// Le hangar du cameleon - solution de reference (PHP)
+//
+// On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+// volume croissant. A volume egal, le plus petit id passe en premier : on
+// compare d'abord les volumes, et on departage sur l'id.
+
+$data = preg_split('/\s+/', trim((string) stream_get_contents(STDIN)), -1, PREG_SPLIT_NO_EMPTY);
+$data = array_map('intval', $data);
+
+$n = $data[0];
+$parcels = [];
+
+for ($i = 0; $i < $n; $i++) {
+    [$id, $l, $w, $h] = array_slice($data, 1 + $i * 4, 4);
+    $parcels[] = ['id' => $id, 'volume' => $l * $w * $h];
+}
+
+usort($parcels, static fn (array $a, array $b): int => $a['volume'] <=> $b['volume'] ?: $a['id'] <=> $b['id']);
+
+echo implode(' ', array_column($parcels, 'id')), "\n";

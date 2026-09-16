@@ -1,0 +1,12 @@
+{
+  "title": "Le hangar du caméléon",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 100,
+  "image": "/games/parcel-sort/cover.jpg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Premier tri", "description": "Trier les colis du hangar pour la première fois." },
+    { "code": "perfect", "name": "Hangar impeccable", "description": "Trier tous les lots sans une seule erreur." }
+  ]
+}

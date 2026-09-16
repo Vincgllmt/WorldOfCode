@@ -8,6 +8,8 @@ import { buildMarsLanderPreview } from './mars-lander/preview'
 import { createMarsLanderViewer } from './mars-lander/viewer'
 import { buildMazePreview } from './maze/preview'
 import { createMazeViewer } from './maze/viewer'
+import { buildParcelSortPreview } from './parcel-sort/preview'
+import { createParcelSortViewer } from './parcel-sort/viewer'
 import { buildPlatformerPreview } from './platformer/preview'
 import { createPlatformerViewer } from './platformer/viewer'
 import { buildWalkPreview } from './walk/preview'
@@ -36,4 +38,5 @@ export const GAMES: Record<string, GameModule> = {
   'mars-lander': { createViewer: createMarsLanderViewer, buildPreview: buildMarsLanderPreview },
   'chameleon-colors': { createViewer: createChameleonColorsViewer, buildPreview: buildChameleonColorsPreview },
   'horse-race': { createViewer: createHorseRaceViewer, buildPreview: buildHorseRacePreview },
+  'parcel-sort': { createViewer: createParcelSortViewer, buildPreview: buildParcelSortPreview },
 }

@@ -1,0 +1,32 @@
+// Le hangar du cameleon - solution de reference (TypeScript)
+//
+// On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+// volume croissant. A volume egal, le plus petit id passe en premier : on
+// compare d'abord les volumes, et on departage sur l'id.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+interface Parcel {
+  id: number
+  volume: number
+}
+
+const data: number[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split(/\s+/)
+  .filter((token: string) => token.length > 0)
+  .map(Number)
+
+const n: number = data[0]
+const parcels: Parcel[] = []
+
+for (let i = 0; i < n; i++) {
+  const [id, l, w, h] = data.slice(1 + i * 4, 5 + i * 4)
+  parcels.push({ id, volume: l * w * h })
+}
+
+parcels.sort((a: Parcel, b: Parcel) => a.volume - b.volume || a.id - b.id)
+
+console.log(parcels.map((p: Parcel) => p.id).join(' '))

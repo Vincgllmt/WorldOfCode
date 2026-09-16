@@ -1,0 +1,61 @@
+// Le hangar du cameleon - solution de reference (Java)
+//
+// On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+// volume croissant. A volume egal, le plus petit id passe en premier : on
+// compare d'abord les volumes, et on departage sur l'id.
+//
+// Note : pas de record ici, le runtime Java de Piston (15) ne les active pas
+// par defaut ; une classe interne statique fait le meme travail.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
+public class Main {
+    private static final class Parcel {
+        final int id;
+        final long volume;
+
+        Parcel(int id, long volume) {
+            this.id = id;
+            this.volume = volume;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        StringBuilder input = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            input.append(line).append(' ');
+        }
+
+        StringTokenizer tokens = new StringTokenizer(input.toString());
+        int n = Integer.parseInt(tokens.nextToken());
+
+        List<Parcel> parcels = new ArrayList<Parcel>();
+        for (int i = 0; i < n; i++) {
+            int id = Integer.parseInt(tokens.nextToken());
+            long l = Long.parseLong(tokens.nextToken());
+            long w = Long.parseLong(tokens.nextToken());
+            long h = Long.parseLong(tokens.nextToken());
+            parcels.add(new Parcel(id, l * w * h));
+        }
+
+        parcels.sort((a, b) -> {
+            int byVolume = Long.compare(a.volume, b.volume);
+            return byVolume != 0 ? byVolume : Integer.compare(a.id, b.id);
+        });
+
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < parcels.size(); i++) {
+            if (i > 0) {
+                output.append(' ');
+            }
+            output.append(parcels.get(i).id);
+        }
+        System.out.println(output);
+    }
+}

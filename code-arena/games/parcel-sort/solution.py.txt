@@ -1,0 +1,20 @@
+# Le hangar du cameleon - solution de reference (Python)
+#
+# On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+# volume croissant. A volume egal, le plus petit id passe en premier : trier sur
+# le couple (volume, id) suffit, car les tuples se comparent element par element.
+import sys
+
+def main():
+    data = sys.stdin.read().split()
+    n = int(data[0])
+
+    parcels = []
+    for i in range(n):
+        pid, l, w, h = (int(x) for x in data[1 + i * 4:5 + i * 4])
+        parcels.append((l * w * h, pid))
+
+    parcels.sort()
+    print(' '.join(str(pid) for _, pid in parcels))
+
+main()

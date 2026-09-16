@@ -1,0 +1,33 @@
+// Le hangar du cameleon - solution de reference (C++)
+//
+// On lit les N colis, on calcule le volume l*w*h de chacun, puis on trie par
+// volume croissant. A volume egal, le plus petit id passe en premier : trier
+// sur la paire (volume, id) suffit, car les paires se comparent membre a membre.
+#include <algorithm>
+#include <iostream>
+#include <utility>
+#include <vector>
+
+int main() {
+    int n;
+    if (!(std::cin >> n)) {
+        return 0;
+    }
+
+    std::vector<std::pair<long long, int>> parcels;
+    parcels.reserve(n);
+
+    for (int i = 0; i < n; ++i) {
+        long long id, l, w, h;
+        std::cin >> id >> l >> w >> h;
+        parcels.emplace_back(l * w * h, static_cast<int>(id));
+    }
+
+    std::sort(parcels.begin(), parcels.end());
+
+    for (std::size_t i = 0; i < parcels.size(); ++i) {
+        std::cout << parcels[i].second << (i + 1 < parcels.size() ? ' ' : '\n');
+    }
+
+    return 0;
+}
