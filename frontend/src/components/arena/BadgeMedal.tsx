@@ -11,12 +11,14 @@ import { useState } from 'react'
  * verrouillé est simplement grisé/atténué (traitement fixe, sans variable de thème).
  */
 const MEDALS: Record<string, { anime: string; statique: string }> = {
-  maze: { anime: '/badges/cameleon-anime.svg', statique: '/badges/cameleon-statique.svg' },
+  maze: { anime: '/badges/maze.png', statique: '/badges/maze.png' },
   'mars-lander': {
     anime: '/badges/mars-lander-anime.svg',
     statique: '/badges/mars-lander-statique.svg',
   },
   'parcel-sort': { anime: '/badges/parcel-sort.png', statique: '/badges/parcel-sort.png' },
+  platformer: { anime: '/badges/cameleon-bros.svg', statique: '/badges/cameleon-bros.svg' },
+  'chameleon-colors': { anime: '/badges/chameleon-colors.png', statique: '/badges/chameleon-colors.png' },
 }
 
 type BadgeMedalProps = {
@@ -39,7 +41,7 @@ export default function BadgeMedal({ slug, name, icon, earned = true, size = 48 
   const lockedStyle = earned ? undefined : { filter: 'grayscale(1)', opacity: 0.4 }
 
   // Pas de visuel dédié au slug : si l'icône du badge est un chemin d'image
-  // (ex. /badges/cameleon-fraise-or.svg), on l'affiche en <img> ; sinon emoji.
+  // (ex. /badges/maze.png), on l'affiche en <img> ; sinon emoji.
   if (!medal) {
     const isImagePath = !!icon && (icon.startsWith('/') || /\.(svg|png|jpe?g|webp|gif)$/i.test(icon))
     if (isImagePath) {

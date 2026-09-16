@@ -6,7 +6,7 @@
   "image": "/games/maze/cover.jpg",
   "refereeLanguage": "python",
   "badges": [
-    { "code": "first_solve", "name": "Sortie trouvée", "description": "Résoudre le labyrinthe pour la première fois.", "icon": "/badges/cameleon-anime.svg" },
-    { "code": "perfect", "name": "Sans faute", "description": "Atteindre la sortie sans heurter de mur.", "icon": "/badges/cameleon-anime.svg" }
+    { "code": "first_solve", "name": "Sortie trouvée", "description": "Résoudre le labyrinthe pour la première fois.", "icon": "/badges/maze.png" },
+    { "code": "perfect", "name": "Sans faute", "description": "Atteindre la sortie sans heurter de mur.", "icon": "/badges/maze.png" }
   ]
 }
