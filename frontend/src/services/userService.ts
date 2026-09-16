@@ -101,3 +101,19 @@ export const createUserLink = async (userId: number, data: CreateLinkPayload): P
   if (!res.ok) throw new Error('Erreur lors de la création du lien')
   return res.json()
 }
+
+export const updateUserLink = async (userId: number, linkId: number, data: CreateLinkPayload): Promise<UserLink> => {
+  const res = await fetchWithAuth(`/user/${userId}/links/${linkId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('Erreur lors de la mise à jour du lien')
+  return res.json()
+}
+
+export const deleteUserLink = async (userId: number, linkId: number): Promise<void> => {
+  const res = await fetchWithAuth(`/user/${userId}/links/${linkId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('Erreur lors de la suppression du lien')
+}
