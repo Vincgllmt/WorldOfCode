@@ -3,7 +3,7 @@
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { linksSchema, type LinksFormValues } from '@/interfaces/user.schemas'
-import { useCreateLink } from '@/hooks/useOnboarding'
+import { useSyncLinks } from '@/hooks/useOnboarding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,6 +27,7 @@ type Props = {
 
 export default function StepLinks({ onSuccess, setIsSubmitting, profile }: Props) {
   const existingLinks = (profile?.links ?? []).map((link) => ({
+    id: link.id,
     type: link.type as LinkType,
     url: link.url,
   }))
@@ -48,19 +49,17 @@ export default function StepLinks({ onSuccess, setIsSubmitting, profile }: Props
     name: 'links',
   })
 
-  const createLink = useCreateLink()
+  const { syncLinks, isPending } = useSyncLinks()
 
   const onSubmit = async (data: LinksFormValues) => {
-    if (data.links.length === 0) {
+    if (data.links.length === 0 && existingLinks.length === 0) {
       onSuccess()
       return
     }
 
     setIsSubmitting(true)
     try {
-      for (const link of data.links) {
-        await createLink.mutateAsync({ type: link.type, url: link.url })
-      }
+      await syncLinks(profile?.links ?? [], data.links)
       toast.success('Liens enregistrés')
       onSuccess()
     } finally {
@@ -145,9 +144,9 @@ export default function StepLinks({ onSuccess, setIsSubmitting, profile }: Props
         Ajouter un lien
       </Button>
 
-      <Button type="submit" className="w-full gap-2" disabled={createLink.isPending}>
-        {createLink.isPending ? 'Enregistrement...' : 'Enregistrer et continuer'}
-        {!createLink.isPending && <ArrowRight className="h-4 w-4" />}
+      <Button type="submit" className="w-full gap-2" disabled={isPending}>
+        {isPending ? 'Enregistrement...' : 'Enregistrer et continuer'}
+        {!isPending && <ArrowRight className="h-4 w-4" />}
       </Button>
     </form>
   )

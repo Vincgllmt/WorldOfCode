@@ -3,7 +3,7 @@
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { linksSchema, type LinksFormValues } from '@/interfaces/user.schemas'
-import { useCreateLink } from '@/hooks/useOnboarding'
+import { useSyncLinks } from '@/hooks/useOnboarding'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -36,7 +36,7 @@ type EditLinksDialogProps = {
 export default function EditLinksDialog({ open, onOpenChange, user }: EditLinksDialogProps) {
   const { user: authUser } = useAuth()
   const queryClient = useQueryClient()
-  const createLink = useCreateLink()
+  const { syncLinks, isPending } = useSyncLinks()
 
   const {
     register,
@@ -49,6 +49,7 @@ export default function EditLinksDialog({ open, onOpenChange, user }: EditLinksD
     resolver: zodResolver(linksSchema),
     defaultValues: {
       links: user.links?.map((link) => ({
+        id: link.id,
         type: link.type,
         url: link.url,
       })) ?? [],
@@ -61,9 +62,7 @@ export default function EditLinksDialog({ open, onOpenChange, user }: EditLinksD
   })
 
   const onSubmit = async (data: LinksFormValues) => {
-    for (const link of data.links) {
-      await createLink.mutateAsync({ type: link.type, url: link.url })
-    }
+    await syncLinks(user.links ?? [], data.links)
     await queryClient.invalidateQueries({ queryKey: ['user', authUser?.id] })
     toast.success('Liens mis à jour')
     onOpenChange(false)
@@ -154,8 +153,8 @@ export default function EditLinksDialog({ open, onOpenChange, user }: EditLinksD
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={createLink.isPending}>
-              {createLink.isPending ? 'Enregistrement...' : 'Enregistrer'}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </div>
         </form>

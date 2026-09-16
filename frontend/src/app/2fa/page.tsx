@@ -42,14 +42,6 @@ export default function TwoFactorPage() {
         if (value && index < 5) {
             inputRefs.current[index + 1]?.focus()
         }
-
-        // Auto-submit si tous les champs sont remplis
-        if (value && index === 5) {
-            const fullCode = [...newCode].join('')
-            if (fullCode.length === 6) {
-                handleVerify(fullCode)
-            }
-        }
     }
 
     const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
@@ -69,11 +61,6 @@ export default function TwoFactorPage() {
 
         const lastIndex = Math.min(pasted.length, 5)
         inputRefs.current[lastIndex]?.focus()
-
-        // Auto-submit si 6 chiffres collés
-        if (pasted.length === 6) {
-            handleVerify(pasted)
-        }
     }
 
     const handleVerify = async (fullCode: string) => {

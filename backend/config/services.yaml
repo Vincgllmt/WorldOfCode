@@ -16,6 +16,8 @@ parameters:
   env(ELASTICSEARCH_HOST): 'http://elasticsearch:9200'
   env(ELASTICSEARCH_USERNAME): 'elastic'
   env(ELASTICSEARCH_PASSWORD): 'changeme'
+  # SEC-22 : la doc OpenAPI (/doc, /doc.json) est réservée aux admins, sauf en dev (voir when@dev en bas).
+  app.doc_role: ROLE_ADMIN
 
 services:
   # default configuration for services in *this* file
@@ -80,3 +82,7 @@ services:
   App\Service\Moderation\BlocklistService:
     arguments:
       $blocklistPath: '%kernel.project_dir%/config/moderation/blocklist.yaml'
+
+when@dev:
+  parameters:
+    app.doc_role: PUBLIC_ACCESS

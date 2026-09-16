@@ -29,11 +29,10 @@ security:
     - { path: ^/api/upload, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/user, roles: IS_AUTHENTICATED_FULLY }
-    # SEC-22 (fixé) : la doc OpenAPI n'est plus publique (reconnaissance d'API).
-    - { path: ^/doc, roles: ROLE_ADMIN }
+    # SEC-22 (fixé) : la doc OpenAPI n'est pas publique (reconnaissance d'API), sauf en dev (app.doc_role dans services.yaml).
+    - { path: ^/doc, roles: '%app.doc_role%' }
     - { path: ^/api/reset-password, roles: PUBLIC_ACCESS }
     - { path: ^/api/payment/webhook, roles: PUBLIC_ACCESS }
-    - { path: ^/doc.json, roles: ROLE_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

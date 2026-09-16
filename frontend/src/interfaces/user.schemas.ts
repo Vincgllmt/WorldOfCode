@@ -71,6 +71,7 @@ export type SkillsFormValues = z.infer<typeof skillsSchema>
 
 // --- Onboarding Step 4: Liens ---
 export const linkItemSchema = z.object({
+  id: z.number().optional(),
   type: z.enum(['github', 'gitlab', 'linkedin', 'portfolio', 'other']),
   url: z.string().url('URL invalide'),
 })
