@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -149,6 +149,9 @@ export default function UserSettingsModal({ userId, open, onOpenChange, initialT
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Réglages du profil</DialogTitle>
+          <DialogDescription>
+            Modifiez vos informations de profil, votre mot de passe ou vos préférences de notifications.
+          </DialogDescription>
         </DialogHeader>
         {isLoading ? (
           <div className="space-y-4">

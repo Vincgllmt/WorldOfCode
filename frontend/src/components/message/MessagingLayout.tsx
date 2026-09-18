@@ -181,11 +181,9 @@ export default function MessagingLayout({ children }: { children: React.ReactNod
                 {/* Panneau nouvelle conversation */}
                 {showNewConversation && (
                     <div className="border-b border-border">
-                        <Command className="bg-background rounded-none" shouldFilter={false}>
+                        <Command className="bg-background rounded-none" search={contactQuery} onSearchChange={setContactQuery}>
                             <CommandInput
                                 placeholder="Rechercher un contact..."
-                                value={contactQuery}
-                                onValueChange={setContactQuery}
                             />
                             <CommandList className="max-h-[300px]">
                                 {isLoadingContacts ? (

@@ -98,13 +98,17 @@ describe('MentorSessionRightPanel', () => {
     expect(screen.getByText('Ciblée')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Ouvrir le chat/i })).toHaveAttribute('href', '/message/conv-42')
 
-    await waitFor(() => expect(mockedGetNotes).toHaveBeenCalledWith(20))
+    expect(mockedGetNotes).toHaveBeenCalledWith(20)
     expect(mockedGetAppointments).toHaveBeenCalledWith(20)
+    // Attend la résolution effective (pas seulement l'appel) pour ne pas laisser
+    // de mise à jour d'état en suspens hors act() à la fin du test.
+    await screen.findByText("Aucune note pour l'instant.")
   })
 
-  it("n'affiche pas le lien de chat sans conversation", () => {
+  it("n'affiche pas le lien de chat sans conversation", async () => {
     render(<MentorSessionRightPanel session={{ ...baseSession, conversationId: null }} />)
     expect(screen.queryByRole('link', { name: /Ouvrir le chat/i })).not.toBeInTheDocument()
+    await screen.findByText("Aucune note pour l'instant.")
   })
 
   it('affiche les états vides des notes et rendez-vous', async () => {
@@ -199,6 +203,9 @@ describe('MentorSessionRightPanel', () => {
   it('ouvre la planification de rendez-vous et ajoute le rendez-vous créé', async () => {
     const user = userEvent.setup()
     render(<MentorSessionRightPanel session={baseSession} />)
+    // Laisse les effets de montage (chargement notes/rendez-vous) se résoudre
+    // avant d'interagir, pour éviter un update hors act() après la fin du test.
+    await screen.findByText('Aucun rendez-vous planifié.')
 
     await user.click(screen.getByRole('button', { name: /Planifier/i }))
     expect(screen.getByTestId('followup-modal')).toBeInTheDocument()

@@ -351,14 +351,27 @@ coverage:frontend:
       files:
         - frontend/package-lock.json
     paths:
+      # La clé de cache est le hash de package-lock.json : un hit garantit que
+      # node_modules correspond exactement à ce lockfile, donc `npm ci` (qui
+      # supprime et réinstalle tout à chaque fois, ~2 min ici) peut être sauté.
+      - frontend/node_modules
+      # Filet de secours : si le cache node_modules est absent (1er run, cache
+      # évincé, backend de cache indisponible), le cache npm évite au moins de
+      # retélécharger les tarballs.
       - .npm
   before_script: # Écrase le before_script K8s global
     - npm config set cache .npm --global
     - cd frontend
-    - npm ci
+    - |
+      if [ -d node_modules ] && [ -n "$(ls -A node_modules 2>/dev/null)" ]; then
+        echo "✅ node_modules restauré depuis le cache, npm ci sauté"
+      else
+        echo "📦 Installation des dépendances..."
+        npm ci --no-audit --no-fund --prefer-offline
+      fi
   script:
     - echo "🧪 Running Jest with Coverage..."
-    - npm run test:coverage
+    - npm run test:ci
   coverage: '/Statements\s*:\s*\d+\.?\d*%/'
   artifacts:
     reports:

@@ -196,6 +196,26 @@ describe('MessagingLayout', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/message/new-conv'))
   })
 
+  it('filtre les contacts au fil de la frappe dans la recherche de contact', async () => {
+    mockDefaults({
+      contacts: [
+        { id: 7, username: 'charlie', relation: 'mutual' },
+        { id: 8, username: 'dave', relation: 'following' },
+      ],
+    })
+    const user = userEvent.setup()
+    render(<MessagingLayout>enfant</MessagingLayout>)
+
+    await user.click(screen.getByTitle('Nouvelle conversation'))
+    expect(screen.getByText('charlie')).toBeInTheDocument()
+    expect(screen.getByText('dave')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Rechercher un contact...'), 'char')
+
+    expect(screen.getByText('charlie')).toBeInTheDocument()
+    expect(screen.queryByText('dave')).not.toBeInTheDocument()
+  })
+
   it("n'affiche pas un contact avec qui une conversation directe existe déjà", async () => {
     mockDefaults({
       conversations: [conv({ id: 'c1', participants: [{ id: 1, username: 'me' } as any, { id: 7, username: 'charlie' } as any] })],

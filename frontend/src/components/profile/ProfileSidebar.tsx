@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import FollowToggleButton from '@/components/follow/FollowToggleButton'
 import { useSettingsModal } from '@/contexts/SettingsModalContext'
 import UserFollowCounts from '@/components/account/UserFollowCounts'
@@ -249,6 +249,7 @@ export default function ProfileSidebar({
             <DialogContent className="max-w-sm">
               <DialogHeader>
                 <DialogTitle>Modifier la photo de profil</DialogTitle>
+                <DialogDescription>Choisissez un avatar ou importez une image depuis votre appareil.</DialogDescription>
               </DialogHeader>
               <AvatarPicker
                 value={pickerAvatar}
