@@ -24,6 +24,8 @@ import type {
 } from '@/interfaces/post'
 import { useAuth } from '@/hooks/useAuth'
 
+const DEFAULT_PAGE_SIZE = 10
+
 const postsKey = ['posts'] as const
 const infinitePostsKey = ['posts', 'infinite'] as const
 const postKey = (id: number | string) => ['post', id] as const
