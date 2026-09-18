@@ -118,11 +118,9 @@ export default function ShareToMessageDialog({ post, open, onOpenChange }: Props
 
                 {/* Sélecteur de contact */}
                 {!selectedContact ? (
-                    <Command className="rounded-lg border" shouldFilter={false}>
+                    <Command className="rounded-lg border" search={contactQuery} onSearchChange={setContactQuery}>
                         <CommandInput
                             placeholder="Rechercher un contact..."
-                            value={contactQuery}
-                            onValueChange={setContactQuery}
                         />
                         <CommandList className="max-h-[200px]">
                             {isLoadingContacts ? (
