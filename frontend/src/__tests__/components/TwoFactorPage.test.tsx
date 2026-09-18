@@ -146,7 +146,7 @@ describe('TwoFactorPage', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(mockVerify2FA).toHaveBeenCalledWith('847291')
+      expect(mockVerify2FA).toHaveBeenCalledWith('847291', false)
     })
   })
 

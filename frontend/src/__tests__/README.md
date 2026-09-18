@@ -30,13 +30,13 @@ npx jest src/__tests__/services/authService.test.ts
 
 ## Stack de test
 
-| Outil | Role |
-|---|---|
-| **Jest** | Framework de test (runner, assertions, mocks) |
-| **React Testing Library** | Rendu et interaction avec les composants React |
-| **@testing-library/user-event** | Simulation d'interactions utilisateur (clics, saisie) |
-| **@testing-library/jest-dom** | Matchers DOM (`toBeInTheDocument`, `toHaveValue`, etc.) |
-| **identity-obj-proxy** | Mock des imports CSS/SCSS |
+| Outil                           | Role                                                    |
+|---------------------------------|---------------------------------------------------------|
+| **Jest**                        | Framework de test (runner, assertions, mocks)           |
+| **React Testing Library**       | Rendu et interaction avec les composants React          |
+| **@testing-library/user-event** | Simulation d'interactions utilisateur (clics, saisie)   |
+| **@testing-library/jest-dom**   | Matchers DOM (`toBeInTheDocument`, `toHaveValue`, etc.) |
+| **identity-obj-proxy**          | Mock des imports CSS/SCSS                               |
 
 ## Structure
 

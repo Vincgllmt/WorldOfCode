@@ -25,7 +25,10 @@ describe('postService', () => {
     })
 
     it('lance une erreur si la creation echoue', async () => {
-      mockedFetch.mockResolvedValueOnce({ ok: false } as Response)
+      mockedFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({}),
+      } as Response)
       await expect(createPost({} as any)).rejects.toThrow('Erreur lors de la création du post')
     })
   })
@@ -109,7 +112,10 @@ describe('postService', () => {
     })
 
     it('lance une erreur si la mise a jour echoue', async () => {
-      mockedFetch.mockResolvedValueOnce({ ok: false } as Response)
+      mockedFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({}),
+      } as Response)
       await expect(updatePost(1, {} as any)).rejects.toThrow('Erreur lors de la modification du post')
     })
   })

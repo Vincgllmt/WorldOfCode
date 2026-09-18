@@ -338,3 +338,41 @@ coverage:code-arena:
       changes:
         - code-arena/**/*
   allow_failure: false
+
+# ===================================
+# JOB 4: COVERAGE (Frontend Next.js)
+# Seuil vérifié directement par Jest (coverageThreshold dans jest.config.js).
+# ===================================
+coverage:frontend:
+  stage: test
+  image: node:20-alpine # Écrase l'image K8s globale
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - .npm
+  before_script: # Écrase le before_script K8s global
+    - npm config set cache .npm --global
+    - cd frontend
+    - npm ci
+  script:
+    - echo "🧪 Running Jest with Coverage..."
+    - npm run test:coverage
+  coverage: '/Statements\s*:\s*\d+\.?\d*%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
+    paths:
+      - frontend/coverage/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - frontend/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - frontend/**/*
+  allow_failure: false
