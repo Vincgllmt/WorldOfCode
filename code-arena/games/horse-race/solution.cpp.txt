@@ -1,0 +1,78 @@
+// Course de Chevaux - solution de reference (C++)
+//
+// Modele "batch" de Code Arena : on lit tout le cas de test sur stdin,
+// on simule la course seconde par seconde (meme logique que referee.py),
+// puis on ecrit les noms dans l'ordre d'arrivee, un par ligne.
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
+struct Horse {
+    std::string name;
+    int speed;
+    int stamina;
+    long long position;
+};
+
+int main() {
+    long long distance = 0;
+    int n = 0;
+    if (!(std::cin >> distance >> n)) {
+        return 0;
+    }
+
+    std::vector<Horse> horses;
+    horses.reserve(n);
+    for (int i = 0; i < n; ++i) {
+        Horse horse;
+        std::cin >> horse.name >> horse.speed >> horse.stamina;
+        horse.position = 0;
+        horses.push_back(horse);
+    }
+
+    std::vector<std::string> finish_order;
+    std::vector<bool> finished(n, false);
+    long long t = 0;
+    const long long max_steps = distance * 10; // garde-fou
+
+    while (static_cast<int>(finish_order.size()) < n && t < max_steps) {
+        ++t;
+        std::vector<int> newly_done;
+
+        for (int i = 0; i < n; ++i) {
+            if (finished[i]) {
+                continue;
+            }
+            if (horses[i].stamina > 0) {
+                horses[i].position += horses[i].speed;
+                --horses[i].stamina;
+            } else {
+                horses[i].position += horses[i].speed / 2;
+            }
+
+            if (horses[i].position >= distance) {
+                finished[i] = true;
+                newly_done.push_back(i);
+            }
+        }
+
+        // Egalite : vitesse decroissante puis nom alphabetique
+        std::sort(newly_done.begin(), newly_done.end(), [&](int a, int b) {
+            if (horses[a].speed != horses[b].speed) {
+                return horses[a].speed > horses[b].speed;
+            }
+            return horses[a].name < horses[b].name;
+        });
+
+        for (std::size_t k = 0; k < newly_done.size(); ++k) {
+            finish_order.push_back(horses[newly_done[k]].name);
+        }
+    }
+
+    for (std::size_t i = 0; i < finish_order.size(); ++i) {
+        std::cout << finish_order[i] << '\n';
+    }
+
+    return 0;
+}

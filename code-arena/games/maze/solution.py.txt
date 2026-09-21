@@ -1,0 +1,52 @@
+# Labyrinthe - solution de reference (Python)
+#
+# Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+# en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G. Le BFS donne
+# le plus court chemin, mais n'importe quel chemin valide suffit au referee.
+import sys
+from collections import deque
+
+MOVES = (('U', 0, -1), ('D', 0, 1), ('L', -1, 0), ('R', 1, 0))
+
+def main():
+    lines = [l for l in sys.stdin.read().splitlines() if l != '']
+    cols, rows = (int(x) for x in lines[0].split()[:2])
+    grid = lines[1:1 + rows]
+
+    def cell(x, y):
+        row = grid[y] if y < len(grid) else ''
+        return row[x] if x < len(row) else '.'
+
+    start = goal = None
+    for y in range(rows):
+        for x in range(cols):
+            if cell(x, y) == 'S':
+                start = (x, y)
+            elif cell(x, y) == 'G':
+                goal = (x, y)
+
+    # came_from[case] = (case precedente, lettre du deplacement)
+    came_from = {start: None}
+    queue = deque([start])
+    while queue and goal not in came_from:
+        x, y = queue.popleft()
+        for letter, dx, dy in MOVES:
+            nxt = (x + dx, y + dy)
+            if not (0 <= nxt[0] < cols and 0 <= nxt[1] < rows):
+                continue
+            if cell(nxt[0], nxt[1]) == '#' or nxt in came_from:
+                continue
+            came_from[nxt] = ((x, y), letter)
+            queue.append(nxt)
+
+    path = []
+    node = goal
+    while came_from.get(node):
+        previous, letter = came_from[node]
+        path.append(letter)
+        node = previous
+    path.reverse()
+
+    print(''.join(path))
+
+main()

@@ -1,0 +1,94 @@
+// Labyrinthe - solution de reference (C++)
+//
+// Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+// en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G.
+#include <algorithm>
+#include <iostream>
+#include <queue>
+#include <string>
+#include <vector>
+
+int main() {
+    int cols = 0;
+    int rows = 0;
+    if (!(std::cin >> cols >> rows)) {
+        return 0;
+    }
+
+    std::vector<std::string> grid;
+    std::string line;
+    std::getline(std::cin, line); // fin de la ligne d'en-tete
+    while (static_cast<int>(grid.size()) < rows && std::getline(std::cin, line)) {
+        if (!line.empty() && line[line.size() - 1] == '\r') {
+            line.erase(line.size() - 1);
+        }
+        if (!line.empty()) {
+            grid.push_back(line);
+        }
+    }
+
+    const char letters[4] = {'U', 'D', 'L', 'R'};
+    const int dx[4] = {0, 0, -1, 1};
+    const int dy[4] = {-1, 1, 0, 0};
+
+    auto cell = [&](int x, int y) -> char {
+        if (y >= static_cast<int>(grid.size())) {
+            return '.';
+        }
+        const std::string& row = grid[y];
+        return x < static_cast<int>(row.size()) ? row[x] : '.';
+    };
+
+    int start = -1;
+    int goal = -1;
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            const char c = cell(x, y);
+            if (c == 'S') {
+                start = y * cols + x;
+            } else if (c == 'G') {
+                goal = y * cols + x;
+            }
+        }
+    }
+
+    // came_from[case] = case precedente (-1 si inexploree), letter_of[case] = deplacement.
+    std::vector<int> came_from(cols * rows, -1);
+    std::vector<char> letter_of(cols * rows, ' ');
+    std::vector<bool> seen(cols * rows, false);
+    seen[start] = true;
+
+    std::queue<int> queue;
+    queue.push(start);
+
+    while (!queue.empty() && !seen[goal]) {
+        const int current = queue.front();
+        queue.pop();
+        const int x = current % cols;
+        const int y = current / cols;
+        for (int d = 0; d < 4; ++d) {
+            const int nx = x + dx[d];
+            const int ny = y + dy[d];
+            if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) {
+                continue;
+            }
+            const int next = ny * cols + nx;
+            if (cell(nx, ny) == '#' || seen[next]) {
+                continue;
+            }
+            seen[next] = true;
+            came_from[next] = current;
+            letter_of[next] = letters[d];
+            queue.push(next);
+        }
+    }
+
+    std::string path;
+    for (int node = goal; came_from[node] != -1; node = came_from[node]) {
+        path += letter_of[node];
+    }
+    std::reverse(path.begin(), path.end());
+
+    std::cout << path << '\n';
+    return 0;
+}

@@ -1,0 +1,98 @@
+// Course de Chevaux - solution de reference (Java)
+//
+// Modele "batch" de Code Arena : on lit tout le cas de test sur stdin,
+// on simule la course seconde par seconde (meme logique que referee.py),
+// puis on ecrit les noms dans l'ordre d'arrivee, un par ligne.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
+public class Main {
+    private static final class Horse {
+        final String name;
+        final int speed;
+        int stamina;
+        long position;
+
+        Horse(String name, int speed, int stamina) {
+            this.name = name;
+            this.speed = speed;
+            this.stamina = stamina;
+            this.position = 0;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        List<String> lines = new ArrayList<String>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
+            if (!line.isEmpty()) {
+                lines.add(line);
+            }
+        }
+
+        StringTokenizer header = new StringTokenizer(lines.get(0));
+        int distance = Integer.parseInt(header.nextToken());
+        int n = Integer.parseInt(header.nextToken());
+
+        List<Horse> horses = new ArrayList<Horse>();
+        for (int i = 1; i <= n; i++) {
+            StringTokenizer tokens = new StringTokenizer(lines.get(i));
+            String name = tokens.nextToken();
+            int speed = Integer.parseInt(tokens.nextToken());
+            int stamina = Integer.parseInt(tokens.nextToken());
+            horses.add(new Horse(name, speed, stamina));
+        }
+
+        List<String> finishOrder = new ArrayList<String>();
+        boolean[] finished = new boolean[n];
+        int t = 0;
+        long maxSteps = (long) distance * 10; // garde-fou
+
+        while (finishOrder.size() < n && t < maxSteps) {
+            t++;
+            List<Horse> newlyDone = new ArrayList<Horse>();
+
+            for (int i = 0; i < n; i++) {
+                if (finished[i]) {
+                    continue;
+                }
+                Horse horse = horses.get(i);
+                if (horse.stamina > 0) {
+                    horse.position += horse.speed;
+                    horse.stamina--;
+                } else {
+                    horse.position += horse.speed / 2;
+                }
+
+                if (horse.position >= distance) {
+                    finished[i] = true;
+                    newlyDone.add(horse);
+                }
+            }
+
+            // Egalite : vitesse decroissante puis nom alphabetique
+            newlyDone.sort((a, b) -> a.speed != b.speed
+                ? Integer.compare(b.speed, a.speed)
+                : a.name.compareTo(b.name));
+
+            for (Horse horse : newlyDone) {
+                finishOrder.add(horse.name);
+            }
+        }
+
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < finishOrder.size(); i++) {
+            if (i > 0) {
+                output.append('\n');
+            }
+            output.append(finishOrder.get(i));
+        }
+        System.out.println(output);
+    }
+}

@@ -1,0 +1,80 @@
+// Labyrinthe - solution de reference (TypeScript)
+//
+// Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+// en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G.
+//
+// Notes sur le runtime TypeScript de Piston : il compile avec la bibliotheque ES5
+// (pas de Map ni de Set) et sans les types Node, d'ou require() declare a la main
+// et des tableaux indexes par numero de case plutot qu'une Map.
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .filter((l: string) => l !== '')
+
+const header: number[] = lines[0].trim().split(/\s+/).map(Number)
+const cols: number = header[0]
+const rows: number = header[1]
+const grid: string[] = lines.slice(1, 1 + rows)
+
+const LETTERS: string[] = ['U', 'D', 'L', 'R']
+const DX: number[] = [0, 0, -1, 1]
+const DY: number[] = [-1, 1, 0, 0]
+
+function cell(x: number, y: number): string {
+  const row: string = grid[y] || ''
+  return x < row.length ? row[x] : '.'
+}
+
+let start = 0
+let goal = 0
+for (let y = 0; y < rows; y++) {
+  for (let x = 0; x < cols; x++) {
+    const c: string = cell(x, y)
+    if (c === 'S') start = y * cols + x
+    else if (c === 'G') goal = y * cols + x
+  }
+}
+
+// cameFrom[case] = case precedente (-1 si inexploree), letterOf[case] = deplacement.
+const cameFrom: number[] = []
+const letterOf: string[] = []
+for (let i = 0; i < cols * rows; i++) {
+  cameFrom.push(-1)
+  letterOf.push('')
+}
+
+const seen: boolean[] = []
+for (let i = 0; i < cols * rows; i++) {
+  seen.push(false)
+}
+seen[start] = true
+
+const queue: number[] = [start]
+let head = 0
+
+while (head < queue.length && !seen[goal]) {
+  const current: number = queue[head++]
+  const x: number = current % cols
+  const y: number = Math.floor(current / cols)
+  for (let d = 0; d < LETTERS.length; d++) {
+    const nx: number = x + DX[d]
+    const ny: number = y + DY[d]
+    if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue
+    const next: number = ny * cols + nx
+    if (cell(nx, ny) === '#' || seen[next]) continue
+    seen[next] = true
+    cameFrom[next] = current
+    letterOf[next] = LETTERS[d]
+    queue.push(next)
+  }
+}
+
+const path: string[] = []
+for (let node = goal; cameFrom[node] !== -1; node = cameFrom[node]) {
+  path.push(letterOf[node])
+}
+path.reverse()
+
+console.log(path.join(''))

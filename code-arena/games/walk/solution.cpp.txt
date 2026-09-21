@@ -1,0 +1,17 @@
+// La Promenade du Cameleon - solution de reference (C++)
+//
+// On lit la distance, puis on ecrit autant de lignes AVANCE.
+#include <iostream>
+
+int main() {
+    int n;
+    if (!(std::cin >> n)) {
+        return 0;
+    }
+
+    for (int i = 1; i <= n; ++i) {
+        std::cout << "AVANCE" << '\n';
+    }
+
+    return 0;
+}

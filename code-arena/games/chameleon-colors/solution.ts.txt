@@ -1,0 +1,71 @@
+// Cameleon Gourmand - solution de reference (TypeScript)
+//
+// Les positions et les obstacles ne comptent pas : seules les COULEURS importent.
+// Il faut completer les series 1, 2, 3, ... jusqu'a la cible, chaque serie etant
+// d'une seule couleur (manger une couleur differente en cours de serie casse tout).
+//
+// Strategie : on attribue les series de la PLUS GRANDE a la plus petite, chacune a
+// la couleur qui a le plus de fruits restants. Les grosses series passent ainsi en
+// priorite, et les petites se contentent des restes. On emet ensuite les actions
+// dans l'ordre croissant des series (1 fruit, puis 2, ...), comme l'attend le jeu.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node ni la
+// bibliotheque ES2015 (pas de Map), d'ou require() declare et de simples objets.
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+const COLORS: string[] = ['R', 'G', 'B']
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .filter((l: string) => l.trim() !== '')
+
+const target: number = Number(lines[0].trim().split(/\s+/)[2])
+const nFruits: number = Number(lines[1].trim())
+
+// Numeros de fruits disponibles, par couleur (l'ordre de lecture = le numero).
+const byColor: { [color: string]: number[] } = {}
+const remaining: { [color: string]: number } = {}
+for (let c = 0; c < COLORS.length; c++) {
+  byColor[COLORS[c]] = []
+  remaining[COLORS[c]] = 0
+}
+for (let i = 0; i < nFruits; i++) {
+  const color: string = lines[2 + i].trim().split(/\s+/)[2]
+  if (!byColor[color]) {
+    byColor[color] = []
+    remaining[color] = 0
+  }
+  byColor[color].push(i)
+  remaining[color]++
+}
+
+// serieColor[taille] = couleur choisie pour la serie de cette taille
+const serieColor: { [size: number]: string } = {}
+for (let size = target; size >= 1; size--) {
+  let best: string | null = null
+  for (let c = 0; c < COLORS.length; c++) {
+    const color: string = COLORS[c]
+    if ((remaining[color] || 0) < size) continue
+    if (best === null || remaining[color] > remaining[best]) best = color
+  }
+  if (best === null) break // niveau infaisable : on s'arrete avec ce qu'on a
+  serieColor[size] = best
+  remaining[best] -= size
+}
+
+const out: string[] = []
+let skin: string | null = null
+for (let size = 1; size <= target; size++) {
+  const color: string = serieColor[size]
+  if (!color) break
+  if (skin !== color) {
+    out.push('SKIN ' + color)
+    skin = color
+  }
+  for (let k = 0; k < size; k++) {
+    out.push('EAT ' + byColor[color].shift())
+  }
+}
+
+console.log(out.join('\n'))

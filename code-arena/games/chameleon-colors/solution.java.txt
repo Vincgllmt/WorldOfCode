@@ -1,0 +1,102 @@
+// Cameleon Gourmand - solution de reference (Java)
+//
+// Les positions et les obstacles ne comptent pas : seules les COULEURS importent.
+// Il faut completer les series 1, 2, 3, ... jusqu'a la cible, chaque serie etant
+// d'une seule couleur (manger une couleur differente en cours de serie casse tout).
+//
+// Strategie : on attribue les series de la PLUS GRANDE a la plus petite, chacune a
+// la couleur qui a le plus de fruits restants. Les grosses series passent ainsi en
+// priorite, et les petites se contentent des restes. On emet ensuite les actions
+// dans l'ordre croissant des series (1 fruit, puis 2, ...), comme l'attend le jeu.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+
+public class Main {
+    private static final String[] COLORS = {"R", "G", "B"};
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        List<String> lines = new ArrayList<String>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!line.trim().isEmpty()) {
+                lines.add(line.trim());
+            }
+        }
+
+        StringTokenizer header = new StringTokenizer(lines.get(0));
+        header.nextToken();
+        header.nextToken();
+        int target = Integer.parseInt(header.nextToken());
+        int nFruits = Integer.parseInt(lines.get(1));
+
+        // Numeros de fruits disponibles, par couleur (l'ordre de lecture = le numero).
+        Map<String, Deque<Integer>> byColor = new HashMap<String, Deque<Integer>>();
+        Map<String, Integer> remaining = new HashMap<String, Integer>();
+        for (String color : COLORS) {
+            byColor.put(color, new ArrayDeque<Integer>());
+            remaining.put(color, 0);
+        }
+        for (int i = 0; i < nFruits; i++) {
+            StringTokenizer fruit = new StringTokenizer(lines.get(2 + i));
+            fruit.nextToken();
+            fruit.nextToken();
+            String color = fruit.nextToken();
+            if (!byColor.containsKey(color)) {
+                byColor.put(color, new ArrayDeque<Integer>());
+                remaining.put(color, 0);
+            }
+            byColor.get(color).add(i);
+            remaining.put(color, remaining.get(color) + 1);
+        }
+
+        // serieColor[taille] = couleur choisie pour la serie de cette taille
+        Map<Integer, String> serieColor = new HashMap<Integer, String>();
+        for (int size = target; size >= 1; size--) {
+            String best = null;
+            for (String color : COLORS) {
+                int left = remaining.containsKey(color) ? remaining.get(color) : 0;
+                if (left < size) {
+                    continue;
+                }
+                if (best == null || left > remaining.get(best)) {
+                    best = color;
+                }
+            }
+            if (best == null) {
+                break; // niveau infaisable : on s'arrete avec ce qu'on a
+            }
+            serieColor.put(size, best);
+            remaining.put(best, remaining.get(best) - size);
+        }
+
+        StringBuilder out = new StringBuilder();
+        String skin = null;
+        for (int size = 1; size <= target; size++) {
+            String color = serieColor.get(size);
+            if (color == null) {
+                break;
+            }
+            if (!color.equals(skin)) {
+                if (out.length() > 0) {
+                    out.append('\n');
+                }
+                out.append("SKIN ").append(color);
+                skin = color;
+            }
+            for (int k = 0; k < size; k++) {
+                out.append('\n').append("EAT ").append(byColor.get(color).poll());
+            }
+        }
+
+        System.out.println(out);
+    }
+}

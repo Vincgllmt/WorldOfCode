@@ -1,0 +1,19 @@
+// La Promenade du Cameleon - solution de reference (Java)
+//
+// On lit la distance, puis on ecrit autant de lignes AVANCE.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        int n = Integer.parseInt(reader.readLine().trim());
+
+        StringBuilder output = new StringBuilder();
+        for (int i = 1; i <= n; i++) {
+            output.append("AVANCE").append('\n');
+        }
+        System.out.print(output);
+    }
+}

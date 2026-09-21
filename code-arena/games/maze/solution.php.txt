@@ -1,0 +1,64 @@
+<?php
+// Labyrinthe - solution de reference (PHP)
+//
+// Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+// en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G.
+
+$lines = array_values(array_filter(
+    explode("\n", str_replace("\r", '', (string) stream_get_contents(STDIN))),
+    static fn (string $l): bool => $l !== ''
+));
+
+[$cols, $rows] = array_map('intval', preg_split('/\s+/', trim($lines[0])));
+$grid = array_slice($lines, 1, $rows);
+
+$moves = [['U', 0, -1], ['D', 0, 1], ['L', -1, 0], ['R', 1, 0]];
+
+$cell = static function (int $x, int $y) use ($grid): string {
+    $row = $grid[$y] ?? '';
+    return $x < strlen($row) ? $row[$x] : '.';
+};
+
+$start = $goal = [0, 0];
+for ($y = 0; $y < $rows; $y++) {
+    for ($x = 0; $x < $cols; $x++) {
+        if ($cell($x, $y) === 'S') {
+            $start = [$x, $y];
+        } elseif ($cell($x, $y) === 'G') {
+            $goal = [$x, $y];
+        }
+    }
+}
+
+$key = static fn (int $x, int $y): int => $y * $cols + $x;
+
+// $cameFrom[case] = [case precedente, lettre du deplacement] ; null pour le depart.
+$cameFrom = [$key($start[0], $start[1]) => null];
+$queue = [$start];
+$head = 0;
+
+while ($head < count($queue) && !array_key_exists($key($goal[0], $goal[1]), $cameFrom)) {
+    [$x, $y] = $queue[$head++];
+    foreach ($moves as [$letter, $dx, $dy]) {
+        $nx = $x + $dx;
+        $ny = $y + $dy;
+        if ($nx < 0 || $ny < 0 || $nx >= $cols || $ny >= $rows) {
+            continue;
+        }
+        if ($cell($nx, $ny) === '#' || array_key_exists($key($nx, $ny), $cameFrom)) {
+            continue;
+        }
+        $cameFrom[$key($nx, $ny)] = [[$x, $y], $letter];
+        $queue[] = [$nx, $ny];
+    }
+}
+
+$path = [];
+$node = $goal;
+while (!empty($cameFrom[$key($node[0], $node[1])])) {
+    [$previous, $letter] = $cameFrom[$key($node[0], $node[1])];
+    $path[] = $letter;
+    $node = $previous;
+}
+
+echo implode('', array_reverse($path)), "\n";

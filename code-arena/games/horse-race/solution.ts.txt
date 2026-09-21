@@ -1,0 +1,73 @@
+// Course de Chevaux - solution de reference (TypeScript)
+//
+// Modele "batch" de Code Arena : on lit tout le cas de test sur stdin,
+// on simule la course seconde par seconde (meme logique que referee.py),
+// puis on ecrit les noms dans l'ordre d'arrivee, un par ligne.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+interface Horse {
+  name: string
+  speed: number
+  stamina: number
+  position: number
+}
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l: string) => l.trim())
+  .filter((l: string) => l !== '')
+
+const header: number[] = lines[0].split(/\s+/).map(Number)
+const distance: number = header[0]
+const n: number = header[1]
+
+const horses: Horse[] = []
+for (let i = 1; i <= n; i++) {
+  const parts: string[] = lines[i].split(/\s+/)
+  horses.push({ name: parts[0], speed: Number(parts[1]), stamina: Number(parts[2]), position: 0 })
+}
+
+const finishOrder: string[] = []
+const finished: boolean[] = []
+for (let i = 0; i < n; i++) {
+  finished.push(false)
+}
+
+let t = 0
+const maxSteps: number = distance * 10 // garde-fou
+
+while (finishOrder.length < n && t < maxSteps) {
+  t++
+  const newlyDone: number[] = []
+
+  for (let i = 0; i < n; i++) {
+    if (finished[i]) continue
+    if (horses[i].stamina > 0) {
+      horses[i].position += horses[i].speed
+      horses[i].stamina--
+    } else {
+      horses[i].position += Math.floor(horses[i].speed / 2)
+    }
+
+    if (horses[i].position >= distance) {
+      finished[i] = true
+      newlyDone.push(i)
+    }
+  }
+
+  // Egalite : vitesse decroissante puis nom alphabetique
+  newlyDone.sort((a: number, b: number) => {
+    if (horses[a].speed !== horses[b].speed) return horses[b].speed - horses[a].speed
+    return horses[a].name < horses[b].name ? -1 : horses[a].name > horses[b].name ? 1 : 0
+  })
+
+  for (let k = 0; k < newlyDone.length; k++) {
+    finishOrder.push(horses[newlyDone[k]].name)
+  }
+}
+
+console.log(finishOrder.join('\n'))

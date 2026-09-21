@@ -1,0 +1,152 @@
+// Mars Lander - Episode 2 : solution de reference (C++)
+//
+// Modele "batch" de Code Arena : pas de boucle interactive. On lit l'etat initial
+// une seule fois, et on ecrit d'un coup TOUTE la sequence de commandes "rotate power".
+//
+// Astuce : la physique est deterministe et connue. On simule donc la descente
+// nous-memes (exactement comme le referee), en pilotant en boucle fermee a chaque
+// tour ; on enregistre les commandes demandees et on les imprime. Rejouees en
+// open-loop par le referee, elles reproduisent la meme trajectoire -> atterrissage.
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <vector>
+
+namespace {
+
+const double G = 3.711;
+const double PI = 3.141592653589793;
+
+// Arrondi "au plus proche, moities vers le pair" : c'est celui de Python, dont
+// cette solution reproduit la trajectoire au bit pres (std::round arrondit les
+// moities a l'oppose de zero, ce qui divergerait).
+int round_half_even(double value) {
+    const int lower = static_cast<int>(std::floor(value));
+    const double frac = value - lower;
+    if (frac > 0.5) {
+        return lower + 1;
+    }
+    if (frac < 0.5) {
+        return lower;
+    }
+    return lower % 2 == 0 ? lower : lower + 1;
+}
+
+double clamp_value(double value, double low, double high) {
+    return std::max(low, std::min(high, value));
+}
+
+double radians(double degrees) {
+    return degrees * PI / 180.0;
+}
+
+} // namespace
+
+int main() {
+    int n = 0;
+    if (!(std::cin >> n)) {
+        return 0;
+    }
+
+    // --- Entree : surface puis etat initial ---
+    std::vector<std::pair<double, double> > surface(n);
+    for (int i = 0; i < n; ++i) {
+        std::cin >> surface[i].first >> surface[i].second;
+    }
+
+    double x = 0.0;
+    double y = 0.0;
+    double hs = 0.0;
+    double vs = 0.0;
+    double raw_fuel = 0.0;
+    double raw_rotate = 0.0;
+    double raw_power = 0.0;
+    std::cin >> x >> y >> hs >> vs >> raw_fuel >> raw_rotate >> raw_power;
+
+    int fuel = static_cast<int>(raw_fuel);
+    int rotate = static_cast<int>(raw_rotate);
+    int power = static_cast<int>(raw_power);
+
+    // --- Zone d'atterrissage : segment plat le plus large ---
+    double best = -1.0;
+    double x1 = 0.0;
+    double x2 = 0.0;
+    double ly = 0.0;
+    for (int i = 0; i < n - 1; ++i) {
+        const std::pair<double, double>& a = surface[i];
+        const std::pair<double, double>& b = surface[i + 1];
+        if (a.second == b.second && std::fabs(b.first - a.first) > best) {
+            best = std::fabs(b.first - a.first);
+            x1 = std::min(a.first, b.first);
+            x2 = std::max(a.first, b.first);
+            ly = a.second;
+        }
+    }
+    const double cx = (x1 + x2) / 2.0;
+
+    std::string out;
+    for (int step = 0; step < 1200; ++step) {
+        const double alt = y - ly;
+        const bool centered = x1 + 150 < x && x < x2 - 150;
+
+        // Vitesse horizontale visee : 0 au-dessus de la zone, sinon viser le centre.
+        const double target_hs = centered ? 0.0 : clamp_value((cx - x) / 20.0, -25.0, 25.0);
+
+        // Angle : annuler la vitesse horizontale ; redresser (0) en approche finale.
+        int angle = 0;
+        if (alt > 250) {
+            angle = static_cast<int>(clamp_value(-(target_hs - hs) * 2, -40.0, 40.0));
+        } else {
+            angle = std::fabs(hs) <= 18 ? 0 : static_cast<int>(clamp_value(-hs * 2, -15.0, 15.0));
+        }
+
+        // Vitesse verticale visee : maintien d'altitude tant qu'on n'est pas aligne,
+        // puis descente reguliere, douce pres du sol.
+        double target_vs = 0.0;
+        if (alt > 200 && !(centered && std::fabs(hs) < 15)) {
+            target_vs = -4.0;
+        } else {
+            target_vs = -std::min(36.0, 12.0 + alt * 0.04);
+        }
+
+        // Puissance pour atteindre la vitesse verticale visee compte tenu de l'angle.
+        const double c = std::cos(radians(angle));
+        const int power_req = static_cast<int>(clamp_value(
+            round_half_even((target_vs - vs + G) / std::max(c, 0.4)), 0.0, 4.0));
+
+        if (!out.empty()) {
+            out += '\n';
+        }
+        out += std::to_string(angle) + " " + std::to_string(power_req);
+
+        // On avance l'etat avec EXACTEMENT la physique du referee (clamps inclus).
+        const int req_r = static_cast<int>(clamp_value(angle, -90.0, 90.0));
+        const int req_p = static_cast<int>(clamp_value(power_req, 0.0, 4.0));
+        rotate = std::max(rotate - 15, std::min(rotate + 15, req_r));
+        power = std::max(power - 1, std::min(power + 1, req_p));
+        if (power > fuel) {
+            power = fuel;
+        }
+        fuel -= power;
+        const double rad = radians(rotate);
+        const double ax = -std::sin(rad) * power;
+        const double ay = std::cos(rad) * power - G;
+        const double nx = x + hs + 0.5 * ax;
+        const double ny = y + vs + 0.5 * ay;
+        hs += ax;
+        vs += ay;
+
+        // Stop des qu'on touche la zone plane (ou qu'on sort du cadre).
+        if (ny <= ly && x1 <= nx && nx <= x2) {
+            break;
+        }
+        if (nx < 0 || nx >= 7000 || ny >= 3000) {
+            break;
+        }
+        x = nx;
+        y = ny;
+    }
+
+    std::cout << out << '\n';
+    return 0;
+}

@@ -1,0 +1,75 @@
+<?php
+// Cameleon Gourmand - solution de reference (PHP)
+//
+// Les positions et les obstacles ne comptent pas : seules les COULEURS importent.
+// Il faut completer les series 1, 2, 3, ... jusqu'a la cible, chaque serie etant
+// d'une seule couleur (manger une couleur differente en cours de serie casse tout).
+//
+// Strategie : on attribue les series de la PLUS GRANDE a la plus petite, chacune a
+// la couleur qui a le plus de fruits restants. Les grosses series passent ainsi en
+// priorite, et les petites se contentent des restes. On emet ensuite les actions
+// dans l'ordre croissant des series (1 fruit, puis 2, ...), comme l'attend le jeu.
+
+$colors = ['R', 'G', 'B'];
+
+$lines = array_values(array_filter(
+    explode("\n", str_replace("\r", '', (string) stream_get_contents(STDIN))),
+    static fn (string $l): bool => trim($l) !== ''
+));
+
+$target = (int) preg_split('/\s+/', trim($lines[0]))[2];
+$nFruits = (int) trim($lines[1]);
+
+// Numeros de fruits disponibles, par couleur (l'ordre de lecture = le numero).
+$byColor = [];
+$remaining = [];
+foreach ($colors as $color) {
+    $byColor[$color] = [];
+    $remaining[$color] = 0;
+}
+for ($i = 0; $i < $nFruits; $i++) {
+    $color = preg_split('/\s+/', trim($lines[2 + $i]))[2];
+    if (!isset($byColor[$color])) {
+        $byColor[$color] = [];
+        $remaining[$color] = 0;
+    }
+    $byColor[$color][] = $i;
+    $remaining[$color]++;
+}
+
+// $serieColor[taille] = couleur choisie pour la serie de cette taille
+$serieColor = [];
+for ($size = $target; $size >= 1; $size--) {
+    $best = null;
+    foreach ($colors as $color) {
+        if (($remaining[$color] ?? 0) < $size) {
+            continue;
+        }
+        if ($best === null || $remaining[$color] > $remaining[$best]) {
+            $best = $color;
+        }
+    }
+    if ($best === null) {
+        break; // niveau infaisable : on s'arrete avec ce qu'on a
+    }
+    $serieColor[$size] = $best;
+    $remaining[$best] -= $size;
+}
+
+$out = [];
+$skin = null;
+for ($size = 1; $size <= $target; $size++) {
+    $color = $serieColor[$size] ?? null;
+    if ($color === null) {
+        break;
+    }
+    if ($skin !== $color) {
+        $out[] = 'SKIN ' . $color;
+        $skin = $color;
+    }
+    for ($k = 0; $k < $size; $k++) {
+        $out[] = 'EAT ' . array_shift($byColor[$color]);
+    }
+}
+
+echo implode("\n", $out), "\n";

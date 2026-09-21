@@ -1,0 +1,53 @@
+# Course de Chevaux - solution de reference (Python)
+#
+# Modele "batch" de Code Arena : on lit tout le cas de test sur stdin,
+# on simule la course seconde par seconde (meme logique que referee.py),
+# puis on ecrit les noms dans l'ordre d'arrivee, un par ligne.
+import sys
+
+def main():
+    lines = [l.strip() for l in sys.stdin.read().splitlines() if l.strip() != '']
+
+    distance, n = (int(x) for x in lines[0].split())
+
+    horses = []
+    for i in range(1, n + 1):
+        name, speed, stamina = lines[i].split()
+        horses.append({
+            'name': name,
+            'speed': int(speed),
+            'stamina': int(stamina),
+            'position': 0,
+        })
+
+    finish_order = []
+    finished = [False] * n
+    t = 0
+    max_steps = distance * 10  # garde-fou
+
+    while len(finish_order) < n and t < max_steps:
+        t += 1
+        newly_done = []
+
+        for i in range(n):
+            if finished[i]:
+                continue
+            if horses[i]['stamina'] > 0:
+                horses[i]['position'] += horses[i]['speed']
+                horses[i]['stamina'] -= 1
+            else:
+                horses[i]['position'] += horses[i]['speed'] // 2
+
+            if horses[i]['position'] >= distance:
+                finished[i] = True
+                newly_done.append(i)
+
+        # Egalite : vitesse decroissante puis nom alphabetique
+        newly_done.sort(key=lambda i: (-horses[i]['speed'], horses[i]['name']))
+
+        for i in newly_done:
+            finish_order.append(horses[i]['name'])
+
+    print('\n'.join(finish_order))
+
+main()

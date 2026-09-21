@@ -1,0 +1,55 @@
+// Labyrinthe - solution de reference (JavaScript)
+//
+// Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+// en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G.
+const lines = require('fs').readFileSync(0, 'utf8').split('\n').filter((l) => l !== '')
+
+const [cols, rows] = lines[0].trim().split(/\s+/).map(Number)
+const grid = lines.slice(1, 1 + rows)
+
+const MOVES = [['U', 0, -1], ['D', 0, 1], ['L', -1, 0], ['R', 1, 0]]
+
+const cell = (x, y) => {
+  const row = grid[y] || ''
+  return x < row.length ? row[x] : '.'
+}
+
+const key = (x, y) => y * cols + x
+
+let start = null
+let goal = null
+for (let y = 0; y < rows; y++) {
+  for (let x = 0; x < cols; x++) {
+    if (cell(x, y) === 'S') start = [x, y]
+    else if (cell(x, y) === 'G') goal = [x, y]
+  }
+}
+
+// cameFrom[case] = { from: case precedente, letter: deplacement }
+const cameFrom = new Map([[key(start[0], start[1]), null]])
+const queue = [start]
+let head = 0
+
+while (head < queue.length && !cameFrom.has(key(goal[0], goal[1]))) {
+  const [x, y] = queue[head++]
+  for (const [letter, dx, dy] of MOVES) {
+    const nx = x + dx
+    const ny = y + dy
+    if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue
+    if (cell(nx, ny) === '#' || cameFrom.has(key(nx, ny))) continue
+    cameFrom.set(key(nx, ny), { from: [x, y], letter })
+    queue.push([nx, ny])
+  }
+}
+
+const path = []
+let node = goal
+let step = cameFrom.get(key(node[0], node[1]))
+while (step) {
+  path.push(step.letter)
+  node = step.from
+  step = cameFrom.get(key(node[0], node[1]))
+}
+path.reverse()
+
+console.log(path.join(''))

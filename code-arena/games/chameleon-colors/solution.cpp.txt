@@ -1,0 +1,90 @@
+// Cameleon Gourmand - solution de reference (C++)
+//
+// Les positions et les obstacles ne comptent pas : seules les COULEURS importent.
+// Il faut completer les series 1, 2, 3, ... jusqu'a la cible, chaque serie etant
+// d'une seule couleur (manger une couleur differente en cours de serie casse tout).
+//
+// Strategie : on attribue les series de la PLUS GRANDE a la plus petite, chacune a
+// la couleur qui a le plus de fruits restants. Les grosses series passent ainsi en
+// priorite, et les petites se contentent des restes. On emet ensuite les actions
+// dans l'ordre croissant des series (1 fruit, puis 2, ...), comme l'attend le jeu.
+#include <cstddef>
+#include <deque>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+
+int main() {
+    const std::string colors[3] = {"R", "G", "B"};
+
+    int cols = 0;
+    int rows = 0;
+    int target = 0;
+    if (!(std::cin >> cols >> rows >> target)) {
+        return 0;
+    }
+
+    int n_fruits = 0;
+    std::cin >> n_fruits;
+
+    // Numeros de fruits disponibles, par couleur (l'ordre de lecture = le numero).
+    std::map<std::string, std::deque<int> > by_color;
+    std::map<std::string, int> remaining;
+    for (int c = 0; c < 3; ++c) {
+        by_color[colors[c]] = std::deque<int>();
+        remaining[colors[c]] = 0;
+    }
+    for (int i = 0; i < n_fruits; ++i) {
+        int fx = 0;
+        int fy = 0;
+        std::string color;
+        std::cin >> fx >> fy >> color;
+        by_color[color].push_back(i);
+        remaining[color] += 1;
+    }
+
+    // serie_color[taille] = couleur choisie pour la serie de cette taille
+    std::map<int, std::string> serie_color;
+    for (int size = target; size >= 1; --size) {
+        std::string best;
+        for (int c = 0; c < 3; ++c) {
+            const std::string& color = colors[c];
+            if (remaining[color] < size) {
+                continue;
+            }
+            if (best.empty() || remaining[color] > remaining[best]) {
+                best = color;
+            }
+        }
+        if (best.empty()) {
+            break; // niveau infaisable : on s'arrete avec ce qu'on a
+        }
+        serie_color[size] = best;
+        remaining[best] -= size;
+    }
+
+    std::string out;
+    std::string skin;
+    for (int size = 1; size <= target; ++size) {
+        const std::map<int, std::string>::const_iterator found = serie_color.find(size);
+        if (found == serie_color.end()) {
+            break;
+        }
+        const std::string color = found->second;
+        if (color != skin) {
+            if (!out.empty()) {
+                out += '\n';
+            }
+            out += "SKIN " + color;
+            skin = color;
+        }
+        for (int k = 0; k < size; ++k) {
+            out += "\nEAT " + std::to_string(by_color[color].front());
+            by_color[color].pop_front();
+        }
+    }
+
+    std::cout << out << '\n';
+    return 0;
+}

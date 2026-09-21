@@ -1,0 +1,37 @@
+# Cameleon Bros - solution de reference (Python)
+#
+# Chaque portail envoie un type de probleme sur la 1re ligne et ses donnees sur la
+# 2e. On aiguille sur le type et on ecrit la reponse attendue, telle quelle.
+# Attention : IS_NEGATIVE attend "True"/"False" avec une majuscule, UNIQUE
+# deduplique les jetons tels qu'ils sont ecrits, et SORT trie par valeur.
+import sys
+
+def main():
+    lines = [l for l in sys.stdin.read().splitlines() if l.strip() != '']
+
+    problem_type = lines[0].strip().upper() if lines else ''
+    args = lines[1].strip() if len(lines) > 1 else ''
+
+    if problem_type == 'SUCCESSOR':
+        print(int(args) + 1)
+    elif problem_type == 'IS_NEGATIVE':
+        print('True' if int(args) < 0 else 'False')
+    elif problem_type == 'ABS':
+        print(abs(int(args)))
+    elif problem_type == 'MIN':
+        a, b = (int(x) for x in args.split())
+        print(min(a, b))
+    elif problem_type == 'SUM':
+        print(sum(int(x) for x in args.split()))
+    elif problem_type == 'REVERSE':
+        print(' '.join(reversed(args.split())))
+    elif problem_type == 'UNIQUE':
+        seen = []
+        for token in args.split():
+            if token not in seen:
+                seen.append(token)
+        print(' '.join(seen))
+    elif problem_type == 'SORT':
+        print(' '.join(str(x) for x in sorted(int(x) for x in args.split())))
+
+main()

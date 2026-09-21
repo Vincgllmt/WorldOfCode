@@ -1,0 +1,72 @@
+// Cameleon Bros - solution de reference (C++)
+//
+// Chaque portail envoie un type de probleme sur la 1re ligne et ses donnees sur la
+// 2e. On aiguille sur le type et on ecrit la reponse attendue, telle quelle.
+// Attention : IS_NEGATIVE attend "True"/"False" avec une majuscule, UNIQUE
+// deduplique les jetons tels qu'ils sont ecrits, et SORT trie par valeur.
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+int main() {
+    std::string problem_type;
+    if (!(std::cin >> problem_type)) {
+        return 0;
+    }
+    for (std::size_t i = 0; i < problem_type.size(); ++i) {
+        problem_type[i] = static_cast<char>(std::toupper(problem_type[i]));
+    }
+
+    std::vector<std::string> tokens;
+    std::string token;
+    while (std::cin >> token) {
+        tokens.push_back(token);
+    }
+
+    std::vector<long long> numbers;
+    numbers.reserve(tokens.size());
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        numbers.push_back(std::strtoll(tokens[i].c_str(), 0, 10));
+    }
+
+    if (problem_type == "SUCCESSOR") {
+        std::cout << numbers[0] + 1 << '\n';
+    } else if (problem_type == "IS_NEGATIVE") {
+        std::cout << (numbers[0] < 0 ? "True" : "False") << '\n';
+    } else if (problem_type == "ABS") {
+        std::cout << (numbers[0] < 0 ? -numbers[0] : numbers[0]) << '\n';
+    } else if (problem_type == "MIN") {
+        std::cout << std::min(numbers[0], numbers[1]) << '\n';
+    } else if (problem_type == "SUM") {
+        long long total = 0;
+        for (std::size_t i = 0; i < numbers.size(); ++i) {
+            total += numbers[i];
+        }
+        std::cout << total << '\n';
+    } else if (problem_type == "REVERSE") {
+        for (std::size_t i = tokens.size(); i > 0; --i) {
+            std::cout << tokens[i - 1] << (i > 1 ? " " : "\n");
+        }
+    } else if (problem_type == "UNIQUE") {
+        std::vector<std::string> seen;
+        for (std::size_t i = 0; i < tokens.size(); ++i) {
+            if (std::find(seen.begin(), seen.end(), tokens[i]) == seen.end()) {
+                seen.push_back(tokens[i]);
+            }
+        }
+        for (std::size_t i = 0; i < seen.size(); ++i) {
+            std::cout << seen[i] << (i + 1 < seen.size() ? " " : "\n");
+        }
+    } else if (problem_type == "SORT") {
+        std::vector<long long> sorted(numbers);
+        std::sort(sorted.begin(), sorted.end());
+        for (std::size_t i = 0; i < sorted.size(); ++i) {
+            std::cout << sorted[i] << (i + 1 < sorted.size() ? " " : "\n");
+        }
+    }
+
+    return 0;
+}

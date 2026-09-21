@@ -1,0 +1,57 @@
+# Cameleon Gourmand - solution de reference (Python)
+#
+# Les positions et les obstacles ne comptent pas : seules les COULEURS importent.
+# Il faut completer les series 1, 2, 3, ... jusqu'a la cible, chaque serie etant
+# d'une seule couleur (manger une couleur differente en cours de serie casse tout).
+#
+# Strategie : on attribue les series de la PLUS GRANDE a la plus petite, chacune a
+# la couleur qui a le plus de fruits restants. Les grosses series passent ainsi en
+# priorite, et les petites se contentent des restes. On emet ensuite les actions
+# dans l'ordre croissant des series (1 fruit, puis 2, ...), comme l'attend le jeu.
+import sys
+
+COLORS = ('R', 'G', 'B')
+
+def main():
+    lines = [l for l in sys.stdin.read().splitlines() if l.strip() != '']
+
+    target = int(lines[0].split()[2])
+    n_fruits = int(lines[1])
+
+    # Numeros de fruits disponibles, par couleur (l'ordre de lecture = le numero).
+    by_color = {c: [] for c in COLORS}
+    for i in range(n_fruits):
+        color = lines[2 + i].split()[2]
+        by_color.setdefault(color, []).append(i)
+
+    remaining = {c: len(by_color[c]) for c in by_color}
+
+    # serie_color[taille] = couleur choisie pour la serie de cette taille
+    serie_color = {}
+    for size in range(target, 0, -1):
+        best = None
+        for color in COLORS:
+            if remaining.get(color, 0) < size:
+                continue
+            if best is None or remaining[color] > remaining[best]:
+                best = color
+        if best is None:
+            break  # niveau infaisable : on s'arrete avec ce qu'on a
+        serie_color[size] = best
+        remaining[best] -= size
+
+    out = []
+    skin = None
+    for size in range(1, target + 1):
+        color = serie_color.get(size)
+        if color is None:
+            break
+        if skin != color:
+            out.append('SKIN ' + color)
+            skin = color
+        for _ in range(size):
+            out.append('EAT ' + str(by_color[color].pop(0)))
+
+    print('\n'.join(out))
+
+main()

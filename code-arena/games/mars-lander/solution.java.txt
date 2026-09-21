@@ -1,0 +1,151 @@
+// Mars Lander - Episode 2 : solution de reference (Java)
+//
+// Modele "batch" de Code Arena : pas de boucle interactive. On lit l'etat initial
+// une seule fois, et on ecrit d'un coup TOUTE la sequence de commandes "rotate power".
+//
+// Astuce : la physique est deterministe et connue. On simule donc la descente
+// nous-memes (exactement comme le referee), en pilotant en boucle fermee a chaque
+// tour ; on enregistre les commandes demandees et on les imprime. Rejouees en
+// open-loop par le referee, elles reproduisent la meme trajectoire -> atterrissage.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
+public class Main {
+    private static final double G = 3.711;
+
+    /**
+     * Arrondi "au plus proche, moities vers le pair" : c'est celui de Python, dont
+     * cette solution reproduit la trajectoire au bit pres (Math.round arrondit les
+     * moities vers le haut, ce qui divergerait).
+     */
+    private static int roundHalfEven(double value) {
+        int lower = (int) Math.floor(value);
+        double frac = value - lower;
+        if (frac > 0.5) {
+            return lower + 1;
+        }
+        if (frac < 0.5) {
+            return lower;
+        }
+        return lower % 2 == 0 ? lower : lower + 1;
+    }
+
+    private static double clamp(double value, double low, double high) {
+        return Math.max(low, Math.min(high, value));
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        List<String> lines = new ArrayList<String>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
+            if (!line.isEmpty()) {
+                lines.add(line);
+            }
+        }
+
+        // --- Entree : surface puis etat initial ---
+        int n = Integer.parseInt(new StringTokenizer(lines.get(0)).nextToken());
+        double[][] surface = new double[n][2];
+        for (int i = 0; i < n; i++) {
+            StringTokenizer point = new StringTokenizer(lines.get(1 + i));
+            surface[i][0] = Double.parseDouble(point.nextToken());
+            surface[i][1] = Double.parseDouble(point.nextToken());
+        }
+
+        StringTokenizer initial = new StringTokenizer(lines.get(1 + n));
+        double x = Double.parseDouble(initial.nextToken());
+        double y = Double.parseDouble(initial.nextToken());
+        double hs = Double.parseDouble(initial.nextToken());
+        double vs = Double.parseDouble(initial.nextToken());
+        int fuel = (int) Double.parseDouble(initial.nextToken());
+        int rotate = (int) Double.parseDouble(initial.nextToken());
+        int power = (int) Double.parseDouble(initial.nextToken());
+
+        // --- Zone d'atterrissage : segment plat le plus large ---
+        double best = -1.0;
+        double x1 = 0.0;
+        double x2 = 0.0;
+        double ly = 0.0;
+        for (int i = 0; i < n - 1; i++) {
+            double[] a = surface[i];
+            double[] b = surface[i + 1];
+            if (a[1] == b[1] && Math.abs(b[0] - a[0]) > best) {
+                best = Math.abs(b[0] - a[0]);
+                x1 = Math.min(a[0], b[0]);
+                x2 = Math.max(a[0], b[0]);
+                ly = a[1];
+            }
+        }
+        double cx = (x1 + x2) / 2.0;
+
+        StringBuilder out = new StringBuilder();
+        for (int step = 0; step < 1200; step++) {
+            double alt = y - ly;
+            boolean centered = x1 + 150 < x && x < x2 - 150;
+
+            // Vitesse horizontale visee : 0 au-dessus de la zone, sinon viser le centre.
+            double targetHs = centered ? 0.0 : clamp((cx - x) / 20.0, -25.0, 25.0);
+
+            // Angle : annuler la vitesse horizontale ; redresser (0) en approche finale.
+            int angle;
+            if (alt > 250) {
+                angle = (int) clamp(-(targetHs - hs) * 2, -40.0, 40.0);
+            } else {
+                angle = Math.abs(hs) <= 18 ? 0 : (int) clamp(-hs * 2, -15.0, 15.0);
+            }
+
+            // Vitesse verticale visee : maintien d'altitude tant qu'on n'est pas aligne,
+            // puis descente reguliere, douce pres du sol.
+            double targetVs;
+            if (alt > 200 && !(centered && Math.abs(hs) < 15)) {
+                targetVs = -4.0;
+            } else {
+                targetVs = -Math.min(36.0, 12.0 + alt * 0.04);
+            }
+
+            // Puissance pour atteindre la vitesse verticale visee compte tenu de l'angle.
+            double c = Math.cos(Math.toRadians(angle));
+            int powerReq = (int) clamp(roundHalfEven((targetVs - vs + G) / Math.max(c, 0.4)), 0.0, 4.0);
+
+            if (out.length() > 0) {
+                out.append('\n');
+            }
+            out.append(angle).append(' ').append(powerReq);
+
+            // On avance l'etat avec EXACTEMENT la physique du referee (clamps inclus).
+            int reqR = (int) clamp(angle, -90.0, 90.0);
+            int reqP = (int) clamp(powerReq, 0.0, 4.0);
+            rotate = (int) Math.max(rotate - 15, Math.min(rotate + 15, reqR));
+            power = (int) Math.max(power - 1, Math.min(power + 1, reqP));
+            if (power > fuel) {
+                power = fuel;
+            }
+            fuel -= power;
+            double rad = Math.toRadians(rotate);
+            double ax = -Math.sin(rad) * power;
+            double ay = Math.cos(rad) * power - G;
+            double nx = x + hs + 0.5 * ax;
+            double ny = y + vs + 0.5 * ay;
+            hs += ax;
+            vs += ay;
+
+            // Stop des qu'on touche la zone plane (ou qu'on sort du cadre).
+            if (ny <= ly && x1 <= nx && nx <= x2) {
+                break;
+            }
+            if (nx < 0 || nx >= 7000 || ny >= 3000) {
+                break;
+            }
+            x = nx;
+            y = ny;
+        }
+
+        System.out.println(out);
+    }
+}

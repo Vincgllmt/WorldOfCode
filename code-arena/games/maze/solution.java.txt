@@ -1,0 +1,97 @@
+// Labyrinthe - solution de reference (Java)
+//
+// Parcours en largeur (BFS) depuis S : on explore les cases voisines par couches,
+// en memorisant d'ou l'on vient, puis on remonte le chemin jusqu'a G.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.StringTokenizer;
+
+public class Main {
+    private static final char[] LETTERS = {'U', 'D', 'L', 'R'};
+    private static final int[] DX = {0, 0, -1, 1};
+    private static final int[] DY = {-1, 1, 0, 0};
+
+    private static int cols;
+    private static int rows;
+    private static List<String> grid = new ArrayList<String>();
+
+    private static char cell(int x, int y) {
+        String row = y < grid.size() ? grid.get(y) : "";
+        return x < row.length() ? row.charAt(x) : '.';
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        List<String> lines = new ArrayList<String>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!line.isEmpty()) {
+                lines.add(line);
+            }
+        }
+
+        StringTokenizer header = new StringTokenizer(lines.get(0));
+        cols = Integer.parseInt(header.nextToken());
+        rows = Integer.parseInt(header.nextToken());
+        for (int y = 0; y < rows && y + 1 < lines.size(); y++) {
+            grid.add(lines.get(y + 1));
+        }
+
+        int start = -1;
+        int goal = -1;
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                char c = cell(x, y);
+                if (c == 'S') {
+                    start = y * cols + x;
+                } else if (c == 'G') {
+                    goal = y * cols + x;
+                }
+            }
+        }
+
+        // cameFrom[case] = case precedente (-1 si inexploree), letterOf[case] = deplacement.
+        int[] cameFrom = new int[cols * rows];
+        char[] letterOf = new char[cols * rows];
+        for (int i = 0; i < cameFrom.length; i++) {
+            cameFrom[i] = -1;
+        }
+        boolean[] seen = new boolean[cols * rows];
+        seen[start] = true;
+
+        Deque<Integer> queue = new ArrayDeque<Integer>();
+        queue.add(start);
+
+        while (!queue.isEmpty() && !seen[goal]) {
+            int current = queue.poll();
+            int x = current % cols;
+            int y = current / cols;
+            for (int d = 0; d < LETTERS.length; d++) {
+                int nx = x + DX[d];
+                int ny = y + DY[d];
+                if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) {
+                    continue;
+                }
+                int next = ny * cols + nx;
+                if (cell(nx, ny) == '#' || seen[next]) {
+                    continue;
+                }
+                seen[next] = true;
+                cameFrom[next] = current;
+                letterOf[next] = LETTERS[d];
+                queue.add(next);
+            }
+        }
+
+        StringBuilder path = new StringBuilder();
+        for (int node = goal; cameFrom[node] != -1; node = cameFrom[node]) {
+            path.append(letterOf[node]);
+        }
+        System.out.println(path.reverse());
+    }
+}

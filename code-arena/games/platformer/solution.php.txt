@@ -1,0 +1,51 @@
+<?php
+// Cameleon Bros - solution de reference (PHP)
+//
+// Chaque portail envoie un type de probleme sur la 1re ligne et ses donnees sur la
+// 2e. On aiguille sur le type et on ecrit la reponse attendue, telle quelle.
+// Attention : IS_NEGATIVE attend "True"/"False" avec une majuscule, UNIQUE
+// deduplique les jetons tels qu'ils sont ecrits, et SORT trie par valeur.
+
+$lines = array_values(array_filter(
+    explode("\n", str_replace("\r", '', (string) stream_get_contents(STDIN))),
+    static fn (string $l): bool => trim($l) !== ''
+));
+
+$problemType = count($lines) > 0 ? strtoupper(trim($lines[0])) : '';
+$args = count($lines) > 1 ? trim($lines[1]) : '';
+$tokens = $args === '' ? [] : preg_split('/\s+/', $args);
+$numbers = array_map('intval', $tokens);
+
+switch ($problemType) {
+    case 'SUCCESSOR':
+        echo $numbers[0] + 1, "\n";
+        break;
+    case 'IS_NEGATIVE':
+        echo $numbers[0] < 0 ? "True\n" : "False\n";
+        break;
+    case 'ABS':
+        echo abs($numbers[0]), "\n";
+        break;
+    case 'MIN':
+        echo min($numbers[0], $numbers[1]), "\n";
+        break;
+    case 'SUM':
+        echo array_sum($numbers), "\n";
+        break;
+    case 'REVERSE':
+        echo implode(' ', array_reverse($tokens)), "\n";
+        break;
+    case 'UNIQUE':
+        $seen = [];
+        foreach ($tokens as $token) {
+            if (!in_array($token, $seen, true)) {
+                $seen[] = $token;
+            }
+        }
+        echo implode(' ', $seen), "\n";
+        break;
+    case 'SORT':
+        sort($numbers);
+        echo implode(' ', $numbers), "\n";
+        break;
+}
