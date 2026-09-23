@@ -1,0 +1,12 @@
+{
+  "title": "La Route des feux",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 50,
+  "image": "/games/traffic-lights/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Permis en poche", "description": "Être le premier à traverser la ville sans infraction.", "icon": "🚗" },
+    { "code": "perfect", "name": "Conduite exemplaire", "description": "Respecter tous les feux de tous les trajets.", "icon": "🚦" }
+  ]
+}

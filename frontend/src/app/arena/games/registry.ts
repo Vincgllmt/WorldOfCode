@@ -14,6 +14,8 @@ import { buildParcelSortPreview } from './parcel-sort/preview'
 import { createParcelSortViewer } from './parcel-sort/viewer'
 import { buildPlatformerPreview } from './platformer/preview'
 import { createPlatformerViewer } from './platformer/viewer'
+import { buildTrafficPreview } from './traffic-lights/preview'
+import { createTrafficViewer } from './traffic-lights/viewer'
 import { buildWalkPreview } from './walk/preview'
 import { createWalkViewer } from './walk/viewer'
 
@@ -42,4 +44,5 @@ export const GAMES: Record<string, GameModule> = {
   'horse-race': { createViewer: createHorseRaceViewer, buildPreview: buildHorseRacePreview },
   'parcel-sort': { createViewer: createParcelSortViewer, buildPreview: buildParcelSortPreview },
   countdown: { createViewer: createCountdownViewer, buildPreview: buildCountdownPreview },
+  'traffic-lights': { createViewer: createTrafficViewer, buildPreview: buildTrafficPreview },
 }

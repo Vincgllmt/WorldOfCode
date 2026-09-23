@@ -1,0 +1,23 @@
+// La Route des feux - solution de reference (Java)
+//
+// On lit le nombre de feux, puis pour chaque feu sa couleur. Une condition
+// choisit l'ordre a donner : PASSE au vert, RALENTIS a l'orange, STOP au rouge.
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int n = scanner.nextInt();
+
+        for (int i = 0; i < n; i++) {
+            String couleur = scanner.next();
+            if (couleur.equals("VERT")) {
+                System.out.println("PASSE");
+            } else if (couleur.equals("ORANGE")) {
+                System.out.println("RALENTIS");
+            } else {
+                System.out.println("STOP");
+            }
+        }
+    }
+}

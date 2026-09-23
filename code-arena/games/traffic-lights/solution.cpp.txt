@@ -1,0 +1,25 @@
+// La Route des feux - solution de reference (C++)
+//
+// On lit le nombre de feux, puis pour chaque feu sa couleur. Une condition
+// choisit l'ordre a donner : PASSE au vert, RALENTIS a l'orange, STOP au rouge.
+#include <iostream>
+#include <string>
+
+int main() {
+    int n;
+    std::cin >> n;
+
+    for (int i = 0; i < n; ++i) {
+        std::string couleur;
+        std::cin >> couleur;
+        if (couleur == "VERT") {
+            std::cout << "PASSE" << '\n';
+        } else if (couleur == "ORANGE") {
+            std::cout << "RALENTIS" << '\n';
+        } else {
+            std::cout << "STOP" << '\n';
+        }
+    }
+
+    return 0;
+}

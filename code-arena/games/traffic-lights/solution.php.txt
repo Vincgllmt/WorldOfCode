@@ -1,0 +1,18 @@
+<?php
+// La Route des feux - solution de reference (PHP)
+//
+// On lit le nombre de feux, puis pour chaque feu sa couleur. Une condition
+// choisit l'ordre a donner : PASSE au vert, RALENTIS a l'orange, STOP au rouge.
+
+$n = (int) trim(fgets(STDIN));
+
+for ($i = 0; $i < $n; $i++) {
+    $couleur = trim(fgets(STDIN));
+    if ($couleur === 'VERT') {
+        echo "PASSE\n";
+    } elseif ($couleur === 'ORANGE') {
+        echo "RALENTIS\n";
+    } else {
+        echo "STOP\n";
+    }
+}

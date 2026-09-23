@@ -1,0 +1,23 @@
+// La Route des feux - solution de reference (JavaScript)
+//
+// On lit le nombre de feux, puis pour chaque feu sa couleur. Une condition
+// choisit l'ordre a donner : PASSE au vert, RALENTIS a l'orange, STOP au rouge.
+
+const lines = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l) => l.trim())
+  .filter((l) => l !== '')
+
+const n = parseInt(lines[0], 10)
+
+for (let i = 1; i <= n; i++) {
+  const couleur = lines[i]
+  if (couleur === 'VERT') {
+    console.log('PASSE')
+  } else if (couleur === 'ORANGE') {
+    console.log('RALENTIS')
+  } else {
+    console.log('STOP')
+  }
+}

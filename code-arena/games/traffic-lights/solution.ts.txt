@@ -1,0 +1,27 @@
+// La Route des feux - solution de reference (TypeScript)
+//
+// On lit le nombre de feux, puis pour chaque feu sa couleur. Une condition
+// choisit l'ordre a donner : PASSE au vert, RALENTIS a l'orange, STOP au rouge.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l: string) => l.trim())
+  .filter((l: string) => l !== '')
+
+const n: number = parseInt(lines[0], 10)
+
+for (let i = 1; i <= n; i++) {
+  const couleur: string = lines[i]
+  if (couleur === 'VERT') {
+    console.log('PASSE')
+  } else if (couleur === 'ORANGE') {
+    console.log('RALENTIS')
+  } else {
+    console.log('STOP')
+  }
+}
