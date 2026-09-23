@@ -1,0 +1,13 @@
+<?php
+// Le Grand Feu d'artifice - solution de reference (PHP)
+//
+// On lit le nombre de depart, puis une boucle descend jusqu'a 1 en affichant
+// son compteur. Une fois la boucle terminee, on allume la meche avec FEU.
+
+$n = (int) trim(fgets(STDIN));
+
+for ($i = $n; $i >= 1; $i--) {
+    echo $i, "\n";
+}
+
+echo "FEU\n";

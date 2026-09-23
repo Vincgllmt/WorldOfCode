@@ -1,0 +1,18 @@
+// Le Grand Feu d'artifice - solution de reference (Java)
+//
+// On lit le nombre de depart, puis une boucle descend jusqu'a 1 en affichant
+// son compteur. Une fois la boucle terminee, on allume la meche avec FEU.
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int n = scanner.nextInt();
+
+        for (int i = n; i >= 1; i--) {
+            System.out.println(i);
+        }
+
+        System.out.println("FEU");
+    }
+}

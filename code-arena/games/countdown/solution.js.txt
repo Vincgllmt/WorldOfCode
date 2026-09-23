@@ -1,0 +1,12 @@
+// Le Grand Feu d'artifice - solution de reference (JavaScript)
+//
+// On lit le nombre de depart, puis une boucle descend jusqu'a 1 en affichant
+// son compteur. Une fois la boucle terminee, on allume la meche avec FEU.
+
+const n = parseInt(require('fs').readFileSync(0, 'utf8'), 10)
+
+for (let i = n; i >= 1; i--) {
+  console.log(i)
+}
+
+console.log('FEU')

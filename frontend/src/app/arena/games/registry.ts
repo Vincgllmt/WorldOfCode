@@ -2,6 +2,8 @@ import type { GameViewerFactory, Replay } from '@/components/arena/gameViewer'
 
 import { buildChameleonColorsPreview } from './chameleon-colors/preview'
 import { createChameleonColorsViewer } from './chameleon-colors/viewer'
+import { buildCountdownPreview } from './countdown/preview'
+import { createCountdownViewer } from './countdown/viewer'
 import { buildHorseRacePreview } from './horse-race/preview'
 import { createHorseRaceViewer } from './horse-race/viewer'
 import { buildMarsLanderPreview } from './mars-lander/preview'
@@ -39,4 +41,5 @@ export const GAMES: Record<string, GameModule> = {
   'chameleon-colors': { createViewer: createChameleonColorsViewer, buildPreview: buildChameleonColorsPreview },
   'horse-race': { createViewer: createHorseRaceViewer, buildPreview: buildHorseRacePreview },
   'parcel-sort': { createViewer: createParcelSortViewer, buildPreview: buildParcelSortPreview },
+  countdown: { createViewer: createCountdownViewer, buildPreview: buildCountdownPreview },
 }

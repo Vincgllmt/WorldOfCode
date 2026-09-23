@@ -1,0 +1,16 @@
+// Le Grand Feu d'artifice - solution de reference (TypeScript)
+//
+// On lit le nombre de depart, puis une boucle descend jusqu'a 1 en affichant
+// son compteur. Une fois la boucle terminee, on allume la meche avec FEU.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+const n: number = parseInt(require('fs').readFileSync(0, 'utf8').trim(), 10)
+
+for (let i = n; i >= 1; i--) {
+  console.log(i)
+}
+
+console.log('FEU')

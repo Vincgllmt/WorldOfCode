@@ -1,0 +1,17 @@
+// Le Grand Feu d'artifice - solution de reference (C++)
+//
+// On lit le nombre de depart, puis une boucle descend jusqu'a 1 en affichant
+// son compteur. Une fois la boucle terminee, on allume la meche avec FEU.
+#include <iostream>
+
+int main() {
+    int n;
+    std::cin >> n;
+
+    for (int i = n; i >= 1; --i) {
+        std::cout << i << '\n';
+    }
+
+    std::cout << "FEU" << '\n';
+    return 0;
+}

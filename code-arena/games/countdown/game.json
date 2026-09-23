@@ -1,0 +1,12 @@
+{
+  "title": "Le Grand Feu d'artifice",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 50,
+  "image": "/games/countdown/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Mise à feu", "description": "Être le premier à lancer le feu d'artifice.", "icon": "🎆" },
+    { "code": "perfect", "name": "Bouquet final", "description": "Réussir tous les comptes à rebours.", "icon": "🎇" }
+  ]
+}
