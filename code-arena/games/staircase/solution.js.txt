@@ -1,0 +1,15 @@
+// L'Escalier de briques - solution de reference (JavaScript)
+//
+// Une boucle parcourt les marches de 1 a N. Pour chaque marche, une seconde
+// boucle assemble la rangee brique par brique, puis on l'affiche.
+// (En JavaScript, '#'.repeat(i) ferait la rangee d'un coup : les deux marchent.)
+
+const n = parseInt(require('fs').readFileSync(0, 'utf8'), 10)
+
+for (let i = 1; i <= n; i++) {
+  let rangee = ''
+  for (let j = 0; j < i; j++) {
+    rangee += '#'
+  }
+  console.log(rangee)
+}

@@ -16,6 +16,8 @@ import { buildParcelSortPreview } from './parcel-sort/preview'
 import { createParcelSortViewer } from './parcel-sort/viewer'
 import { buildPlatformerPreview } from './platformer/preview'
 import { createPlatformerViewer } from './platformer/viewer'
+import { buildStaircasePreview } from './staircase/preview'
+import { createStaircaseViewer } from './staircase/viewer'
 import { buildTrafficPreview } from './traffic-lights/preview'
 import { createTrafficViewer } from './traffic-lights/viewer'
 import { buildWalkPreview } from './walk/preview'
@@ -47,5 +49,6 @@ export const GAMES: Record<string, GameModule> = {
   'parcel-sort': { createViewer: createParcelSortViewer, buildPreview: buildParcelSortPreview },
   countdown: { createViewer: createCountdownViewer, buildPreview: buildCountdownPreview },
   'traffic-lights': { createViewer: createTrafficViewer, buildPreview: buildTrafficPreview },
+  staircase: { createViewer: createStaircaseViewer, buildPreview: buildStaircasePreview },
   'caesar-cipher': { createViewer: createCaesarViewer, buildPreview: buildCaesarPreview },
 }

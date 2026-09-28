@@ -1,0 +1,13 @@
+# L'Escalier de briques - solution de reference (Python)
+#
+# Une boucle parcourt les marches de 1 a N. Pour chaque marche, une seconde
+# boucle assemble la rangee brique par brique, puis on l'affiche.
+# (En Python, "#" * i ferait la rangee d'un coup : les deux marchent.)
+
+n = int(input())
+
+for i in range(1, n + 1):
+    rangee = ""
+    for j in range(i):
+        rangee += "#"
+    print(rangee)

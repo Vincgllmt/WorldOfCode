@@ -1,0 +1,21 @@
+// L'Escalier de briques - solution de reference (C++)
+//
+// Une boucle parcourt les marches de 1 a N. Pour chaque marche, une seconde
+// boucle assemble la rangee brique par brique, puis on l'affiche.
+#include <iostream>
+#include <string>
+
+int main() {
+    int n;
+    std::cin >> n;
+
+    for (int i = 1; i <= n; ++i) {
+        std::string rangee;
+        for (int j = 0; j < i; ++j) {
+            rangee += '#';
+        }
+        std::cout << rangee << '\n';
+    }
+
+    return 0;
+}

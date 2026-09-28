@@ -1,0 +1,18 @@
+// L'Escalier de briques - solution de reference (TypeScript)
+//
+// Une boucle parcourt les marches de 1 a N. Pour chaque marche, une seconde
+// boucle assemble la rangee brique par brique, puis on l'affiche.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+const n: number = parseInt(require('fs').readFileSync(0, 'utf8').trim(), 10)
+
+for (let i = 1; i <= n; i++) {
+  let rangee = ''
+  for (let j = 0; j < i; j++) {
+    rangee += '#'
+  }
+  console.log(rangee)
+}

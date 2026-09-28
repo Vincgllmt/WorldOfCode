@@ -1,0 +1,16 @@
+<?php
+// L'Escalier de briques - solution de reference (PHP)
+//
+// Une boucle parcourt les marches de 1 a N. Pour chaque marche, une seconde
+// boucle assemble la rangee brique par brique, puis on l'affiche.
+// (En PHP, str_repeat('#', $i) ferait la rangee d'un coup : les deux marchent.)
+
+$n = (int) trim(fgets(STDIN));
+
+for ($i = 1; $i <= $n; $i++) {
+    $rangee = '';
+    for ($j = 0; $j < $i; $j++) {
+        $rangee .= '#';
+    }
+    echo $rangee, "\n";
+}

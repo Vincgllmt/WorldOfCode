@@ -1,0 +1,12 @@
+{
+  "title": "L'Escalier de briques",
+  "difficulty": "easy",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 75,
+  "image": "/games/staircase/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Premier maçon", "description": "Être le premier à bâtir l'escalier jusqu'au sommet.", "icon": "🧱" },
+    { "code": "perfect", "name": "Architecte", "description": "Construire tous les escaliers sans une brique de travers.", "icon": "🏗️" }
+  ]
+}
