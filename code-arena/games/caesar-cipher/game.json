@@ -1,0 +1,12 @@
+{
+  "title": "Le Message secret",
+  "difficulty": "medium",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 150,
+  "image": "/games/caesar-cipher/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Agent secret", "description": "Être le premier à percer tous les messages chiffrés.", "icon": "🕵️" },
+    { "code": "perfect", "name": "Briseur de codes", "description": "Déchiffrer tous les messages sans une lettre fausse.", "icon": "🔐" }
+  ]
+}

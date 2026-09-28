@@ -1,0 +1,37 @@
+// Le Message secret - solution de reference (Java)
+//
+// On ne connait pas le decalage : on essaie les 26. Pour chacun, on dechiffre
+// (chaque lettre recule de k rangs, modulo 26 pour boucler de A vers Z) et on
+// garde celui qui fait apparaitre l'indice dans le message en clair.
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+public class Main {
+    static String dechiffre(String message, int k) {
+        StringBuilder resultat = new StringBuilder();
+        for (char c : message.toCharArray()) {
+            if (c >= 'A' && c <= 'Z') {
+                int position = (c - 'A' - k + 26) % 26;
+                resultat.append((char) ('A' + position));
+            } else {
+                resultat.append(c);
+            }
+        }
+        return resultat.toString();
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String indice = reader.readLine().trim();
+        String message = reader.readLine().replaceAll("\\s+$", "");
+
+        for (int k = 0; k < 26; k++) {
+            String clair = dechiffre(message, k);
+            if (clair.contains(indice)) {
+                System.out.println(clair);
+                break;
+            }
+        }
+    }
+}

@@ -1,0 +1,47 @@
+// Le Message secret - solution de reference (C++)
+//
+// On ne connait pas le decalage : on essaie les 26. Pour chacun, on dechiffre
+// (chaque lettre recule de k rangs, modulo 26 pour boucler de A vers Z) et on
+// garde celui qui fait apparaitre l'indice dans le message en clair.
+#include <iostream>
+#include <string>
+
+std::string dechiffre(const std::string& message, int k) {
+    std::string resultat;
+    for (char c : message) {
+        if (c >= 'A' && c <= 'Z') {
+            int position = (c - 'A' - k + 26) % 26;
+            resultat += static_cast<char>('A' + position);
+        } else {
+            resultat += c;
+        }
+    }
+    return resultat;
+}
+
+// Retire les espaces et retours chariot en fin de ligne.
+std::string rtrim(std::string s) {
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\r' || s.back() == '\n')) {
+        s.pop_back();
+    }
+    return s;
+}
+
+int main() {
+    std::string indice;
+    std::string message;
+    std::getline(std::cin, indice);
+    std::getline(std::cin, message);
+    indice = rtrim(indice);
+    message = rtrim(message);
+
+    for (int k = 0; k < 26; ++k) {
+        std::string clair = dechiffre(message, k);
+        if (clair.find(indice) != std::string::npos) {
+            std::cout << clair << '\n';
+            break;
+        }
+    }
+
+    return 0;
+}

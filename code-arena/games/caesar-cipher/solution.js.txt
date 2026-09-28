@@ -1,0 +1,30 @@
+// Le Message secret - solution de reference (JavaScript)
+//
+// On ne connait pas le decalage : on essaie les 26. Pour chacun, on dechiffre
+// (chaque lettre recule de k rangs, modulo 26 pour boucler de A vers Z) et on
+// garde celui qui fait apparaitre l'indice dans le message en clair.
+
+function dechiffre(message, k) {
+  let resultat = ''
+  for (const c of message) {
+    if (c >= 'A' && c <= 'Z') {
+      const position = (c.charCodeAt(0) - 65 - k + 26) % 26
+      resultat += String.fromCharCode(65 + position)
+    } else {
+      resultat += c
+    }
+  }
+  return resultat
+}
+
+const lines = require('fs').readFileSync(0, 'utf8').split('\n')
+const indice = lines[0].trim()
+const message = lines[1].replace(/\s+$/, '')
+
+for (let k = 0; k < 26; k++) {
+  const clair = dechiffre(message, k)
+  if (clair.includes(indice)) {
+    console.log(clair)
+    break
+  }
+}

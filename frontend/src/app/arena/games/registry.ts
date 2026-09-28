@@ -1,5 +1,7 @@
 import type { GameViewerFactory, Replay } from '@/components/arena/gameViewer'
 
+import { buildCaesarPreview } from './caesar-cipher/preview'
+import { createCaesarViewer } from './caesar-cipher/viewer'
 import { buildChameleonColorsPreview } from './chameleon-colors/preview'
 import { createChameleonColorsViewer } from './chameleon-colors/viewer'
 import { buildCountdownPreview } from './countdown/preview'
@@ -45,4 +47,5 @@ export const GAMES: Record<string, GameModule> = {
   'parcel-sort': { createViewer: createParcelSortViewer, buildPreview: buildParcelSortPreview },
   countdown: { createViewer: createCountdownViewer, buildPreview: buildCountdownPreview },
   'traffic-lights': { createViewer: createTrafficViewer, buildPreview: buildTrafficPreview },
+  'caesar-cipher': { createViewer: createCaesarViewer, buildPreview: buildCaesarPreview },
 }

@@ -1,0 +1,32 @@
+<?php
+// Le Message secret - solution de reference (PHP)
+//
+// On ne connait pas le decalage : on essaie les 26. Pour chacun, on dechiffre
+// (chaque lettre recule de k rangs, modulo 26 pour boucler de A vers Z) et on
+// garde celui qui fait apparaitre l'indice dans le message en clair.
+
+function dechiffre(string $message, int $k): string
+{
+    $resultat = '';
+    for ($i = 0; $i < strlen($message); $i++) {
+        $c = $message[$i];
+        if ($c >= 'A' && $c <= 'Z') {
+            $position = (ord($c) - ord('A') - $k + 26) % 26;
+            $resultat .= chr(ord('A') + $position);
+        } else {
+            $resultat .= $c;
+        }
+    }
+    return $resultat;
+}
+
+$indice = trim(fgets(STDIN));
+$message = rtrim(fgets(STDIN));
+
+for ($k = 0; $k < 26; $k++) {
+    $clair = dechiffre($message, $k);
+    if (strpos($clair, $indice) !== false) {
+        echo $clair, "\n";
+        break;
+    }
+}

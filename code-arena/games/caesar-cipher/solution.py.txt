@@ -1,0 +1,26 @@
+# Le Message secret - solution de reference (Python)
+#
+# On ne connait pas le decalage : on essaie les 26. Pour chacun, on dechiffre
+# (chaque lettre recule de k rangs, modulo 26 pour boucler de A vers Z) et on
+# garde celui qui fait apparaitre l'indice dans le message en clair.
+
+
+def dechiffre(message, k):
+    resultat = ""
+    for c in message:
+        if "A" <= c <= "Z":
+            position = (ord(c) - ord("A") - k + 26) % 26
+            resultat += chr(ord("A") + position)
+        else:
+            resultat += c
+    return resultat
+
+
+indice = input().strip()
+message = input().rstrip()
+
+for k in range(26):
+    clair = dechiffre(message, k)
+    if indice in clair:
+        print(clair)
+        break
