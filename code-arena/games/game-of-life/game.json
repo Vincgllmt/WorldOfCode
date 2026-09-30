@@ -1,0 +1,12 @@
+{
+  "title": "La Boîte de Petri",
+  "difficulty": "medium",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 200,
+  "image": "/games/game-of-life/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Biologiste", "description": "Être le premier à prédire l'avenir de toutes les cultures.", "icon": "🧫" },
+    { "code": "perfect", "name": "Maître de la vie", "description": "Prédire toutes les générations sans une seule cellule fausse.", "icon": "🦠" }
+  ]
+}

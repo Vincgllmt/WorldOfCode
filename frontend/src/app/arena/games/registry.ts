@@ -6,6 +6,8 @@ import { buildChameleonColorsPreview } from './chameleon-colors/preview'
 import { createChameleonColorsViewer } from './chameleon-colors/viewer'
 import { buildCountdownPreview } from './countdown/preview'
 import { createCountdownViewer } from './countdown/viewer'
+import { buildLifePreview } from './game-of-life/preview'
+import { createLifeViewer } from './game-of-life/viewer'
 import { buildHorseRacePreview } from './horse-race/preview'
 import { createHorseRaceViewer } from './horse-race/viewer'
 import { buildMarsLanderPreview } from './mars-lander/preview'
@@ -53,5 +55,6 @@ export const GAMES: Record<string, GameModule> = {
   'traffic-lights': { createViewer: createTrafficViewer, buildPreview: buildTrafficPreview },
   staircase: { createViewer: createStaircaseViewer, buildPreview: buildStaircasePreview },
   'caesar-cipher': { createViewer: createCaesarViewer, buildPreview: buildCaesarPreview },
+  'game-of-life': { createViewer: createLifeViewer, buildPreview: buildLifePreview },
   sudoku: { createViewer: createSudokuViewer, buildPreview: buildSudokuPreview },
 }

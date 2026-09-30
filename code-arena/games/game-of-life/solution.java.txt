@@ -1,0 +1,59 @@
+// La Boite de Petri - solution de reference (Java)
+//
+// Jeu de la vie : chaque generation est calculee dans une NOUVELLE grille, en ne
+// lisant que l'ancienne (toutes les cases changent "en meme temps"). Les cases
+// hors de la grille comptent comme mortes.
+import java.util.Scanner;
+
+public class Main {
+    static int voisines(char[][] grille, int x, int y, int largeur, int hauteur) {
+        int total = 0;
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur && grille[ny][nx] == '#') {
+                    total++;
+                }
+            }
+        }
+        return total;
+    }
+
+    static char[][] generationSuivante(char[][] grille, int largeur, int hauteur) {
+        char[][] suivante = new char[hauteur][largeur];
+        for (int y = 0; y < hauteur; y++) {
+            for (int x = 0; x < largeur; x++) {
+                int n = voisines(grille, x, y, largeur, hauteur);
+                boolean vivante = grille[y][x] == '#';
+                suivante[y][x] = (n == 3 || (vivante && n == 2)) ? '#' : '.';
+            }
+        }
+        return suivante;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int largeur = scanner.nextInt();
+        int hauteur = scanner.nextInt();
+        int generations = scanner.nextInt();
+
+        char[][] grille = new char[hauteur][];
+        for (int y = 0; y < hauteur; y++) {
+            grille[y] = scanner.next().toCharArray();
+        }
+
+        for (int g = 0; g < generations; g++) {
+            grille = generationSuivante(grille, largeur, hauteur);
+        }
+
+        StringBuilder sortie = new StringBuilder();
+        for (char[] ligne : grille) {
+            sortie.append(ligne).append('\n');
+        }
+        System.out.print(sortie);
+    }
+}

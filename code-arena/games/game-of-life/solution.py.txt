@@ -1,0 +1,41 @@
+# La Boite de Petri - solution de reference (Python)
+#
+# Jeu de la vie : chaque generation est calculee dans une NOUVELLE grille, en ne
+# lisant que l'ancienne (toutes les cases changent "en meme temps"). Les cases
+# hors de la grille comptent comme mortes.
+
+
+def voisines(grille, x, y, largeur, hauteur):
+    total = 0
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dx == 0 and dy == 0:
+                continue
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < largeur and 0 <= ny < hauteur and grille[ny][nx] == "#":
+                total += 1
+    return total
+
+
+def generation_suivante(grille, largeur, hauteur):
+    suivante = []
+    for y in range(hauteur):
+        ligne = ""
+        for x in range(largeur):
+            n = voisines(grille, x, y, largeur, hauteur)
+            vivante = grille[y][x] == "#"
+            if n == 3 or (vivante and n == 2):
+                ligne += "#"
+            else:
+                ligne += "."
+        suivante.append(ligne)
+    return suivante
+
+
+largeur, hauteur, generations = map(int, input().split())
+grille = [input().strip() for _ in range(hauteur)]
+
+for _ in range(generations):
+    grille = generation_suivante(grille, largeur, hauteur)
+
+print("\n".join(grille))

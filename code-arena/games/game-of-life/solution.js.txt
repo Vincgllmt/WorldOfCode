@@ -1,0 +1,47 @@
+// La Boite de Petri - solution de reference (JavaScript)
+//
+// Jeu de la vie : chaque generation est calculee dans une NOUVELLE grille, en ne
+// lisant que l'ancienne (toutes les cases changent "en meme temps"). Les cases
+// hors de la grille comptent comme mortes.
+
+function voisines(grille, x, y, largeur, hauteur) {
+  let total = 0
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue
+      const nx = x + dx
+      const ny = y + dy
+      if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur && grille[ny][nx] === '#') total++
+    }
+  }
+  return total
+}
+
+function generationSuivante(grille, largeur, hauteur) {
+  const suivante = []
+  for (let y = 0; y < hauteur; y++) {
+    let ligne = ''
+    for (let x = 0; x < largeur; x++) {
+      const n = voisines(grille, x, y, largeur, hauteur)
+      const vivante = grille[y][x] === '#'
+      ligne += n === 3 || (vivante && n === 2) ? '#' : '.'
+    }
+    suivante.push(ligne)
+  }
+  return suivante
+}
+
+const lines = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l) => l.trim())
+  .filter((l) => l !== '')
+
+const [largeur, hauteur, generations] = lines[0].split(/\s+/).map(Number)
+let grille = lines.slice(1, 1 + hauteur)
+
+for (let g = 0; g < generations; g++) {
+  grille = generationSuivante(grille, largeur, hauteur)
+}
+
+console.log(grille.join('\n'))

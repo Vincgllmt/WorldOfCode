@@ -1,0 +1,60 @@
+// La Boite de Petri - solution de reference (C++)
+//
+// Jeu de la vie : chaque generation est calculee dans une NOUVELLE grille, en ne
+// lisant que l'ancienne (toutes les cases changent "en meme temps"). Les cases
+// hors de la grille comptent comme mortes.
+#include <iostream>
+#include <string>
+#include <vector>
+
+int voisines(const std::vector<std::string>& grille, int x, int y, int largeur, int hauteur) {
+    int total = 0;
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0) {
+                continue;
+            }
+            const int nx = x + dx;
+            const int ny = y + dy;
+            if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur && grille[ny][nx] == '#') {
+                ++total;
+            }
+        }
+    }
+    return total;
+}
+
+std::vector<std::string> generationSuivante(const std::vector<std::string>& grille, int largeur, int hauteur) {
+    std::vector<std::string> suivante(hauteur, std::string(largeur, '.'));
+    for (int y = 0; y < hauteur; ++y) {
+        for (int x = 0; x < largeur; ++x) {
+            const int n = voisines(grille, x, y, largeur, hauteur);
+            const bool vivante = grille[y][x] == '#';
+            if (n == 3 || (vivante && n == 2)) {
+                suivante[y][x] = '#';
+            }
+        }
+    }
+    return suivante;
+}
+
+int main() {
+    int largeur = 0;
+    int hauteur = 0;
+    int generations = 0;
+    std::cin >> largeur >> hauteur >> generations;
+
+    std::vector<std::string> grille(hauteur);
+    for (int y = 0; y < hauteur; ++y) {
+        std::cin >> grille[y];
+    }
+
+    for (int g = 0; g < generations; ++g) {
+        grille = generationSuivante(grille, largeur, hauteur);
+    }
+
+    for (const std::string& ligne : grille) {
+        std::cout << ligne << '\n';
+    }
+    return 0;
+}

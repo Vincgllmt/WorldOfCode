@@ -1,0 +1,54 @@
+// La Boite de Petri - solution de reference (TypeScript)
+//
+// Jeu de la vie : chaque generation est calculee dans une NOUVELLE grille, en ne
+// lisant que l'ancienne (toutes les cases changent "en meme temps"). Les cases
+// hors de la grille comptent comme mortes.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+function voisines(grille: string[], x: number, y: number, largeur: number, hauteur: number): number {
+  let total = 0
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue
+      const nx: number = x + dx
+      const ny: number = y + dy
+      if (nx >= 0 && nx < largeur && ny >= 0 && ny < hauteur && grille[ny][nx] === '#') total++
+    }
+  }
+  return total
+}
+
+function generationSuivante(grille: string[], largeur: number, hauteur: number): string[] {
+  const suivante: string[] = []
+  for (let y = 0; y < hauteur; y++) {
+    let ligne = ''
+    for (let x = 0; x < largeur; x++) {
+      const n: number = voisines(grille, x, y, largeur, hauteur)
+      const vivante: boolean = grille[y][x] === '#'
+      ligne += n === 3 || (vivante && n === 2) ? '#' : '.'
+    }
+    suivante.push(ligne)
+  }
+  return suivante
+}
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l: string) => l.trim())
+  .filter((l: string) => l !== '')
+
+const header: number[] = lines[0].split(/\s+/).map(Number)
+const largeur: number = header[0]
+const hauteur: number = header[1]
+const generations: number = header[2]
+let grille: string[] = lines.slice(1, 1 + hauteur)
+
+for (let g = 0; g < generations; g++) {
+  grille = generationSuivante(grille, largeur, hauteur)
+}
+
+console.log(grille.join('\n'))
