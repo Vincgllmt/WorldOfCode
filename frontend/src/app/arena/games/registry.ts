@@ -18,6 +18,8 @@ import { buildPlatformerPreview } from './platformer/preview'
 import { createPlatformerViewer } from './platformer/viewer'
 import { buildStaircasePreview } from './staircase/preview'
 import { createStaircaseViewer } from './staircase/viewer'
+import { buildSudokuPreview } from './sudoku/preview'
+import { createSudokuViewer } from './sudoku/viewer'
 import { buildTrafficPreview } from './traffic-lights/preview'
 import { createTrafficViewer } from './traffic-lights/viewer'
 import { buildWalkPreview } from './walk/preview'
@@ -51,4 +53,5 @@ export const GAMES: Record<string, GameModule> = {
   'traffic-lights': { createViewer: createTrafficViewer, buildPreview: buildTrafficPreview },
   staircase: { createViewer: createStaircaseViewer, buildPreview: buildStaircasePreview },
   'caesar-cipher': { createViewer: createCaesarViewer, buildPreview: buildCaesarPreview },
+  sudoku: { createViewer: createSudokuViewer, buildPreview: buildSudokuPreview },
 }

@@ -1,0 +1,46 @@
+# Le Maitre du Sudoku - solution de reference (Python)
+#
+# Backtracking (retour sur trace) : on cherche une case vide, on y essaie chaque
+# chiffre autorise, et on resout recursivement le reste de la grille. Si la suite
+# echoue, on efface le chiffre et on essaie le suivant.
+
+
+def autorise(grille, ligne, colonne, chiffre):
+    for i in range(9):
+        if grille[ligne][i] == chiffre or grille[i][colonne] == chiffre:
+            return False
+    # Coin en haut a gauche du carre 3x3 qui contient la case.
+    l0 = 3 * (ligne // 3)
+    c0 = 3 * (colonne // 3)
+    for l in range(l0, l0 + 3):
+        for c in range(c0, c0 + 3):
+            if grille[l][c] == chiffre:
+                return False
+    return True
+
+
+def resoudre(grille):
+    for ligne in range(9):
+        for colonne in range(9):
+            if grille[ligne][colonne] == 0:
+                for chiffre in range(1, 10):
+                    if autorise(grille, ligne, colonne, chiffre):
+                        grille[ligne][colonne] = chiffre
+                        if resoudre(grille):
+                            return True
+                        grille[ligne][colonne] = 0
+                # Aucun chiffre ne convient : une hypothese precedente etait fausse.
+                return False
+    # Plus aucune case vide : la grille est resolue.
+    return True
+
+
+grille = []
+for _ in range(9):
+    ligne = input().strip()
+    grille.append([0 if c == "." else int(c) for c in ligne])
+
+resoudre(grille)
+
+for ligne in grille:
+    print("".join(str(chiffre) for chiffre in ligne))

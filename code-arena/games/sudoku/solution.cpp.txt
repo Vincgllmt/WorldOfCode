@@ -1,0 +1,70 @@
+// Le Maitre du Sudoku - solution de reference (C++)
+//
+// Backtracking (retour sur trace) : on cherche une case vide, on y essaie chaque
+// chiffre autorise, et on resout recursivement le reste de la grille. Si la suite
+// echoue, on efface le chiffre et on essaie le suivant.
+#include <iostream>
+#include <string>
+
+int grille[9][9];
+
+bool autorise(int ligne, int colonne, int chiffre) {
+    for (int i = 0; i < 9; ++i) {
+        if (grille[ligne][i] == chiffre || grille[i][colonne] == chiffre) {
+            return false;
+        }
+    }
+    // Coin en haut a gauche du carre 3x3 qui contient la case.
+    const int l0 = 3 * (ligne / 3);
+    const int c0 = 3 * (colonne / 3);
+    for (int l = l0; l < l0 + 3; ++l) {
+        for (int c = c0; c < c0 + 3; ++c) {
+            if (grille[l][c] == chiffre) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool resoudre() {
+    for (int ligne = 0; ligne < 9; ++ligne) {
+        for (int colonne = 0; colonne < 9; ++colonne) {
+            if (grille[ligne][colonne] == 0) {
+                for (int chiffre = 1; chiffre <= 9; ++chiffre) {
+                    if (autorise(ligne, colonne, chiffre)) {
+                        grille[ligne][colonne] = chiffre;
+                        if (resoudre()) {
+                            return true;
+                        }
+                        grille[ligne][colonne] = 0;
+                    }
+                }
+                // Aucun chiffre ne convient : une hypothese precedente etait fausse.
+                return false;
+            }
+        }
+    }
+    // Plus aucune case vide : la grille est resolue.
+    return true;
+}
+
+int main() {
+    for (int l = 0; l < 9; ++l) {
+        std::string ligne;
+        std::cin >> ligne;
+        for (int c = 0; c < 9; ++c) {
+            grille[l][c] = ligne[c] == '.' ? 0 : ligne[c] - '0';
+        }
+    }
+
+    resoudre();
+
+    for (int l = 0; l < 9; ++l) {
+        for (int c = 0; c < 9; ++c) {
+            std::cout << grille[l][c];
+        }
+        std::cout << '\n';
+    }
+    return 0;
+}

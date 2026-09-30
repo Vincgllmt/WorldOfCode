@@ -1,0 +1,58 @@
+// Le Maitre du Sudoku - solution de reference (TypeScript)
+//
+// Backtracking (retour sur trace) : on cherche une case vide, on y essaie chaque
+// chiffre autorise, et on resout recursivement le reste de la grille. Si la suite
+// echoue, on efface le chiffre et on essaie le suivant.
+//
+// Note : le runtime TypeScript de Piston n'embarque pas les types Node, on
+// declare donc require() a la main plutot que d'importer le module "fs".
+declare function require(name: string): { readFileSync(fd: number, encoding: string): string }
+
+function autorise(grille: number[][], ligne: number, colonne: number, chiffre: number): boolean {
+  for (let i = 0; i < 9; i++) {
+    if (grille[ligne][i] === chiffre || grille[i][colonne] === chiffre) return false
+  }
+  // Coin en haut a gauche du carre 3x3 qui contient la case.
+  const l0: number = 3 * Math.floor(ligne / 3)
+  const c0: number = 3 * Math.floor(colonne / 3)
+  for (let l = l0; l < l0 + 3; l++) {
+    for (let c = c0; c < c0 + 3; c++) {
+      if (grille[l][c] === chiffre) return false
+    }
+  }
+  return true
+}
+
+function resoudre(grille: number[][]): boolean {
+  for (let ligne = 0; ligne < 9; ligne++) {
+    for (let colonne = 0; colonne < 9; colonne++) {
+      if (grille[ligne][colonne] === 0) {
+        for (let chiffre = 1; chiffre <= 9; chiffre++) {
+          if (autorise(grille, ligne, colonne, chiffre)) {
+            grille[ligne][colonne] = chiffre
+            if (resoudre(grille)) return true
+            grille[ligne][colonne] = 0
+          }
+        }
+        // Aucun chiffre ne convient : une hypothese precedente etait fausse.
+        return false
+      }
+    }
+  }
+  // Plus aucune case vide : la grille est resolue.
+  return true
+}
+
+const lines: string[] = require('fs')
+  .readFileSync(0, 'utf8')
+  .split('\n')
+  .map((l: string) => l.trim())
+  .filter((l: string) => l !== '')
+
+const grille: number[][] = lines
+  .slice(0, 9)
+  .map((l: string) => l.split('').map((c: string) => (c === '.' ? 0 : Number(c))))
+
+resoudre(grille)
+
+console.log(grille.map((ligne: number[]) => ligne.join('')).join('\n'))

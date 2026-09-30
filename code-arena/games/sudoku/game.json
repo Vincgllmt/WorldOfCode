@@ -1,0 +1,12 @@
+{
+  "title": "Le Maître du Sudoku",
+  "difficulty": "hard",
+  "languages": ["javascript", "typescript", "python", "php", "java", "cpp"],
+  "maxScore": 300,
+  "image": "/games/sudoku/cover.svg",
+  "refereeLanguage": "python",
+  "badges": [
+    { "code": "first_solve", "name": "Disciple du maître", "description": "Être le premier à résoudre toutes les grilles du maître.", "icon": "🧩" },
+    { "code": "perfect", "name": "Grand maître", "description": "Résoudre toutes les grilles, jusqu'à la plus redoutable.", "icon": "🏯" }
+  ]
+}
