@@ -8,6 +8,10 @@ const createJestConfig = nextJest({
 const config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  // Le runner CI (pod K8s) exécute la suite ~3 à 5x plus lentement qu'en local :
+  // les tests d'interaction (userEvent) proches de 1 s en local y dépassaient
+  // le timeout par défaut de 5 s.
+  testTimeout: 15000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

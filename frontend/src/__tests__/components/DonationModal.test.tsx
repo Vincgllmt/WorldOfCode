@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DonationModal from '@/components/mentoring/session/DonationModal'
 import { createDonationIntent } from '@/lib/api/payment'
@@ -63,17 +63,31 @@ describe('DonationModal', () => {
     })
     confirmPayment.mockResolvedValueOnce({ paymentIntent: { status: 'succeeded' } })
     const onDonated = jest.fn()
+    const onClose = jest.fn()
+    // Fake timers : le modal attend 2 s avant de notifier, inutile de les attendre réellement.
+    jest.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
 
-    render(
-      <DonationModal sessionId={7} mentorUsername="Marc" onClose={jest.fn()} onDonated={onDonated} />,
-    )
+    try {
+      render(
+        <DonationModal sessionId={7} mentorUsername="Marc" onClose={onClose} onDonated={onDonated} />,
+      )
 
-    await userEvent.click(screen.getByRole('button', { name: '5,00 €' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Continuer' }))
-    await screen.findByTestId('payment-element')
-    await userEvent.click(screen.getByRole('button', { name: 'Payer' }))
+      await user.click(screen.getByRole('button', { name: '5,00 €' }))
+      await user.click(screen.getByRole('button', { name: 'Continuer' }))
+      await screen.findByTestId('payment-element')
+      await user.click(screen.getByRole('button', { name: 'Payer' }))
 
-    expect(await screen.findByText(/Merci pour votre don/i)).toBeInTheDocument()
-    await waitFor(() => expect(onDonated).toHaveBeenCalled(), { timeout: 3000 })
+      expect(await screen.findByText(/Merci pour votre don/i)).toBeInTheDocument()
+      expect(onDonated).not.toHaveBeenCalled()
+
+      act(() => {
+        jest.advanceTimersByTime(2000)
+      })
+      expect(onDonated).toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })

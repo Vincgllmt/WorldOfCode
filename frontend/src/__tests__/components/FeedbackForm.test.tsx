@@ -70,7 +70,10 @@ describe('FeedbackForm', () => {
     await rateField("Facilité d'utilisation", 3)
     await rateField('Qualité du contenu', 5)
     await user.click(screen.getByRole('button', { name: '8' }))
-    await user.type(screen.getByPlaceholderText(/Partagez vos suggestions/i), 'Très bonne plateforme')
+    // paste plutôt que type : taper caractère par caractère re-rend le formulaire
+    // à chaque frappe et fait dépasser le timeout sur les runners CI plus lents.
+    await user.click(screen.getByPlaceholderText(/Partagez vos suggestions/i))
+    await user.paste('Très bonne plateforme')
     await user.click(screen.getByRole('button', { name: /Envoyer mon avis/i }))
 
     expect(mockMutate).toHaveBeenCalledWith(
