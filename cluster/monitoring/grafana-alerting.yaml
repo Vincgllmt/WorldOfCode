@@ -46,7 +46,8 @@ data:
           - uid: google-chat-woc
             type: googlechat
             settings:
-              url: "https://chat.googleapis.com/v1/spaces/AAQAsdDI51U/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=FCVHkdyJ8-jM6ixoIGdiSJDaYJBgtan_Mo_wZ8e3TS4"
+              # Injecté via env sur le pod Grafana (Secret grafana-googlechat-webhook)
+              url: "$__env{GOOGLE_CHAT_WEBHOOK_URL}"
               message: '{{ template "woc-alert-template" . }}'
             disableResolveMessage: false
 
