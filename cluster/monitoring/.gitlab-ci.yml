@@ -48,6 +48,9 @@ deploy:monitoring:alerting:
       when: manual
       allow_failure: true
   script:
+    # GOOGLE_CHAT_WEBHOOK_URL : variable CI/CD GitLab (masked + protected)
+    - test -n "$GOOGLE_CHAT_WEBHOOK_URL" || { echo "GOOGLE_CHAT_WEBHOOK_URL manquante"; exit 1; }
+    - kubectl create secret generic grafana-googlechat-webhook -n "$MONITORING_NAMESPACE" --from-literal=url="$GOOGLE_CHAT_WEBHOOK_URL" --dry-run=client -o yaml | kubectl apply -f -
     - kubectl delete job grafana-alerting-setup -n "$MONITORING_NAMESPACE" --ignore-not-found
     - kubectl apply -f cluster/monitoring/grafana-alerting-job.yaml
     - kubectl wait --for=condition=complete job/grafana-alerting-setup -n "$MONITORING_NAMESPACE" --timeout=120s
